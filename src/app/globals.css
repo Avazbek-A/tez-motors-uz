@@ -169,3 +169,76 @@ html {
     padding-right: 2rem;
   }
 }
+
+/* Print styles */
+@media print {
+  header, footer, .fixed, .sticky,
+  [aria-label="WhatsApp"],
+  [aria-label="Scroll to top"],
+  [aria-label="Request callback"] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  .container-custom {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  .glass, .glass-dark {
+    background: white !important;
+    backdrop-filter: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .text-gradient {
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    color: #1a1f36 !important;
+  }
+
+  a { text-decoration: underline; }
+
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-slide-in-right {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .rounded-2xl { border-radius: 8px !important; }
+  .shadow-sm, .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: none !important; }
+
+  /* Car detail print optimization */
+  .lg\\:col-span-3 { width: 60% !important; float: left !important; }
+  .lg\\:col-span-2 { width: 38% !important; float: right !important; }
+}
+
+/* Selection color */
+::selection {
+  background: var(--lime);
+  color: var(--navy);
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

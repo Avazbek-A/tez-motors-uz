@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, X } from "lucide-react";
+import { Menu, Phone, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
 import { NAV_LINKS, SITE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
 import { SocialLinks } from "@/components/shared/social-links";
+import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -76,6 +77,11 @@ export function Header() {
 
             {/* Right side */}
             <div className="flex items-center gap-3">
+              <div className="hidden md:block w-48 xl:w-56">
+                <SearchAutocomplete
+                  placeholder={locale === "ru" ? "Поиск авто..." : "Search..."}
+                />
+              </div>
               <LanguageSwitcher isScrolled={isScrolled} />
 
               <a
