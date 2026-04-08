@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, Package
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const adminNav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/cars", label: "Cars", icon: Car },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/orders", label: "Orders", icon: Package },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },

@@ -5,6 +5,7 @@ import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import { NAV_LINKS, SITE_CONFIG } from "@/lib/constants";
 import { SocialLinks } from "@/components/shared/social-links";
+import { Newsletter } from "@/components/shared/newsletter";
 
 export function Footer() {
   const { locale, dictionary } = useLocale();
@@ -112,6 +113,11 @@ export function Footer() {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Newsletter */}
+        <div className="mt-12">
+          <Newsletter />
         </div>
       </div>
 
