@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-import { Calculator, ArrowRight } from "lucide-react";
+import { Calculator, ArrowRight, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { FinancingCalculator } from "@/components/calculator/financing-calculator";
 import { useLocale } from "@/i18n/locale-context";
 import { FUEL_TYPES } from "@/lib/constants";
 import { formatPrice, cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ function calculateImportCost(
 
 export default function CalculatorPage() {
   const { locale, dictionary } = useLocale();
+  const [activeTab, setActiveTab] = useState<"import" | "financing">("import");
   const [carPrice, setCarPrice] = useState("");
   const [engineVolume, setEngineVolume] = useState("1.5");
   const [fuelType, setFuelType] = useState("petrol");
@@ -103,6 +105,35 @@ export default function CalculatorPage() {
           subtitle={dictionary.calculator.subtitle}
         />
 
+        {/* Tab switcher */}
+        <div className="max-w-4xl mx-auto flex gap-2 mb-8">
+          <button
+            onClick={() => setActiveTab("import")}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
+              activeTab === "import" ? "bg-navy text-white shadow-lg" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <Calculator className="w-4 h-4" />
+            {locale === "ru" ? "Импорт" : locale === "uz" ? "Import" : "Import Cost"}
+          </button>
+          <button
+            onClick={() => setActiveTab("financing")}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
+              activeTab === "financing" ? "bg-navy text-white shadow-lg" : "bg-muted text-muted-foreground hover:bg-muted/80"
+            )}
+          >
+            <CreditCard className="w-4 h-4" />
+            {locale === "ru" ? "Рассрочка" : locale === "uz" ? "Bo'lib to'lash" : "Financing"}
+          </button>
+        </div>
+
+        {activeTab === "financing" ? (
+          <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <FinancingCalculator />
+          </div>
+        ) : (
         <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form */}
           <div
@@ -219,6 +250,7 @@ export default function CalculatorPage() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
