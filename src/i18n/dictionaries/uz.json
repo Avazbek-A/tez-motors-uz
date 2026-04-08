@@ -1,0 +1,205 @@
+{
+  "nav": {
+    "home": "Bosh sahifa",
+    "catalog": "Katalog",
+    "calculator": "Kalkulyator",
+    "about": "Biz haqimizda",
+    "faq": "FAQ",
+    "contacts": "Kontaktlar",
+    "admin": "Admin"
+  },
+  "hero": {
+    "title": "Xitoydan avtomobil import",
+    "titleAccent": "O'zbekistonga",
+    "subtitle": "Biz sizning orzuingizdagi avtomobilni Xitoydan topamiz, sotib olamiz va yetkazib beramiz. Shaffof narxlar, to'liq qo'llab-quvvatlash, har bir bosqichda kafolat.",
+    "cta": "Avtomobil tanlash",
+    "ctaSecondary": "Narxni hisoblash",
+    "stats": {
+      "cars": "avtomobil yetkazildi",
+      "clients": "mamnun mijozlar",
+      "experience": "yillik tajriba",
+      "cities": "shaharga yetkazib berish"
+    }
+  },
+  "features": {
+    "title": "Nimaga bizni tanlashadi",
+    "subtitle": "Biz avtomobil importini oddiy va xavfsiz qilamiz",
+    "items": [
+      {
+        "title": "Hammasi kiritilgan",
+        "description": "Tanlashdan ro'yxatga olishgacha to'liq tsikl. Hech narsa haqida tashvishlanishingiz shart emas."
+      },
+      {
+        "title": "Shaffof narxlar",
+        "description": "Yashirin to'lovlar yo'q. Oldindan to'lov qilishdan oldin to'liq narxni bilasiz."
+      },
+      {
+        "title": "Yetkazib berish kafolati",
+        "description": "Avtomobilingizni 25-45 kun ichida yetkazib beramiz. Har bir avtomobil tashish vaqtida sug'urta qilinadi."
+      },
+      {
+        "title": "Ishonchli hamkor",
+        "description": "Xitoy dilerlari va auktsionlari bilan to'g'ridan-to'g'ri ishlaymiz. Har bir avtomobil tekshiruvdan o'tadi."
+      }
+    ]
+  },
+  "hotOffers": {
+    "title": "Issiq takliflar",
+    "subtitle": "Mavjud va eng yaxshi narxlarda buyurtma berish mumkin bo'lgan avtomobillar",
+    "viewAll": "Hammasini ko'rish",
+    "new": "Yangi",
+    "mileage": "Yurgan yo'li",
+    "engine": "Dvigatel",
+    "power": "Quvvat",
+    "hp": "o.k.",
+    "transmission": {
+      "automatic": "Avtomat",
+      "manual": "Mexanika",
+      "cvt": "Variator",
+      "robot": "Robot"
+    },
+    "order": "Buyurtma berish",
+    "details": "Batafsil"
+  },
+  "process": {
+    "title": "Biz qanday ishlaymiz",
+    "subtitle": "Yangi avtomobilingizga 6 oddiy qadam"
+  },
+  "guarantees": {
+    "title": "Bizning kafolatlarimiz",
+    "subtitle": "Har bir bosqichda to'liq javobgarlikni o'z zimmamizga olamiz",
+    "items": [
+      {
+        "title": "Yuridik tozalik",
+        "description": "Avtomobil tarixi, VIN-kod va hujjatlarni to'liq tekshirish. Yuklamalar yo'qligini kafolatlaymiz."
+      },
+      {
+        "title": "Moliyaviy xavfsizlik",
+        "description": "Belgilangan narx bo'yicha shartnoma asosida ishlaymiz. Pulingiz har bir bosqichda himoyalangan."
+      },
+      {
+        "title": "Avtomobil kafolati",
+        "description": "Avtomobilning texnik holati bo'yicha kafolat beramiz. Topshirishdan oldin to'liq diagnostika."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Shaffof narx belgilash",
+    "subtitle": "Bizning narxlarimizni vositachilar orqali sotib olish bilan solishtiring",
+    "ourPrice": "Bizning narx",
+    "competitorPrice": "Vositachilar orqali",
+    "carPrice": "Avtomobil narxi",
+    "customs": "Bojxona to'lovlari",
+    "delivery": "Yetkazib berish",
+    "service": "Bizning komissiya",
+    "total": "Jami",
+    "savings": "Sizning tejamkorligingiz"
+  },
+  "reviews": {
+    "title": "Mijozlar fikrlari",
+    "subtitle": "Mijozlarimiz biz haqimizda nima deyishadi"
+  },
+  "faqSection": {
+    "title": "Ko'p so'raladigan savollar",
+    "subtitle": "Eng mashhur savollarga javoblar",
+    "viewAll": "Barcha savollar"
+  },
+  "contact": {
+    "title": "Ariza qoldirish",
+    "subtitle": "Formani to'ldiring va biz 30 daqiqa ichida siz bilan bog'lanamiz",
+    "name": "Ismingiz",
+    "phone": "Telefon",
+    "email": "Email",
+    "message": "Xabar",
+    "submit": "Ariza yuborish",
+    "success": "Ariza yuborildi! Tez orada siz bilan bog'lanamiz.",
+    "error": "Xatolik yuz berdi. Qaytadan urinib ko'ring."
+  },
+  "catalog": {
+    "title": "Avtomobillar katalogi",
+    "subtitle": "Katalogimizdan avtomobil tanlang yoki Xitoydan istalgan avtomobilni buyurtma bering",
+    "filters": {
+      "brand": "Marka",
+      "allBrands": "Barcha markalar",
+      "bodyType": "Kuzov",
+      "allTypes": "Barcha turlar",
+      "fuelType": "Yoqilg'i",
+      "allFuels": "Barchasi",
+      "priceRange": "Narx",
+      "yearRange": "Yil",
+      "search": "Nom bo'yicha qidirish...",
+      "reset": "Filtrlarni tiklash",
+      "results": "avtomobil topildi"
+    },
+    "noResults": "Avtomobillar topilmadi. Filtrlarni o'zgartirib ko'ring.",
+    "orderCar": "Bu avtomobilni buyurtma berish"
+  },
+  "calculator": {
+    "title": "Narx kalkulyatori",
+    "subtitle": "Xitoydan avtomobil import qilishning taxminiy narxini hisoblang",
+    "carPrice": "Avtomobil narxi (USD)",
+    "engineVolume": "Dvigatel hajmi (l)",
+    "fuelType": "Yoqilg'i turi",
+    "year": "Ishlab chiqarilgan yili",
+    "calculate": "Hisoblash",
+    "result": {
+      "title": "Hisoblash natijasi",
+      "carPrice": "Avtomobil narxi",
+      "customsDuty": "Bojxona boji",
+      "exciseTax": "Aksiz solig'i",
+      "vat": "QQS (12%)",
+      "delivery": "Yetkazib berish",
+      "serviceFee": "Bizning komissiya",
+      "total": "Jami kalit topshirish",
+      "note": "* Bu taxminiy hisob. Aniq narxni menejerimizdan bilib oling."
+    }
+  },
+  "about": {
+    "title": "Tez Motors haqida",
+    "subtitle": "Xitoydan avtomobil importi bo'yicha ishonchli hamkoringiz",
+    "story": "Tez Motors — O'zbekiston aholisiga to'g'ridan-to'g'ri Xitoydan qulay narxlarda sifatli avtomobillar sotib olishga yordam beradigan mutaxassislar jamoasi.",
+    "mission": "Bizning vazifamiz — Xitoy avtomobilini sotib olishni mahalliy avtosalondan sotib olish kabi oson qilish.",
+    "values": {
+      "title": "Bizning qadriyatlarimiz",
+      "transparency": "Shaffoflik",
+      "reliability": "Ishonchlilik",
+      "speed": "Tezlik",
+      "quality": "Sifat"
+    }
+  },
+  "footer": {
+    "description": "Xitoydan O'zbekistonga avtomobil importi. Tanlashdan ro'yxatga olishgacha to'liq tsikl.",
+    "navigation": "Navigatsiya",
+    "contacts": "Kontaktlar",
+    "social": "Ijtimoiy tarmoqlar",
+    "rights": "Barcha huquqlar himoyalangan",
+    "workingHours": "Du-Sha: 09:00 - 19:00"
+  },
+  "common": {
+    "learnMore": "Batafsil",
+    "getConsultation": "Konsultatsiya olish",
+    "callUs": "Bizga qo'ng'iroq qiling",
+    "writeUs": "Bizga yozing",
+    "from": "dan",
+    "year": "y.",
+    "km": "km",
+    "hp": "o.k.",
+    "l": "l"
+  },
+  "admin": {
+    "title": "Administrator paneli",
+    "dashboard": "Boshqaruv paneli",
+    "cars": "Avtomobillar",
+    "inquiries": "Arizalar",
+    "reviews": "Sharhlar",
+    "faqs": "FAQ",
+    "settings": "Sozlamalar",
+    "addCar": "Avtomobil qo'shish",
+    "editCar": "Tahrirlash",
+    "deleteCar": "O'chirish",
+    "totalCars": "Jami avtomobillar",
+    "totalInquiries": "Arizalar",
+    "newInquiries": "Yangi arizalar",
+    "totalReviews": "Sharhlar"
+  }
+}

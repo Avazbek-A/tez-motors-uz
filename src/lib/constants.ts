@@ -1,0 +1,109 @@
+export const SITE_CONFIG = {
+  name: "Tez Motors",
+  description: "Импорт автомобилей из Китая в Узбекистан — надежно, быстро, выгодно",
+  url: "https://tezmotors.uz",
+  phone: "+998 90 123 45 67",
+  phoneRaw: "+998901234567",
+  email: "info@tezmotors.uz",
+  telegram: "https://t.me/tezmotors",
+  instagram: "https://instagram.com/tezmotors",
+  whatsapp: "https://wa.me/998901234567",
+  address: "г. Ташкент, ул. Амира Темура, 100",
+  workingHours: "Пн-Сб: 09:00 - 19:00",
+  foundedYear: 2024,
+};
+
+export const NAV_LINKS = [
+  { href: "/", label: { ru: "Главная", uz: "Bosh sahifa", en: "Home" } },
+  { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
+  { href: "/compare", label: { ru: "Сравнение", uz: "Solishtirish", en: "Compare" } },
+  { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
+  { href: "/about", label: { ru: "О нас", uz: "Biz haqimizda", en: "About" } },
+  { href: "/faq", label: { ru: "FAQ", uz: "FAQ", en: "FAQ" } },
+  { href: "/contacts", label: { ru: "Контакты", uz: "Kontaktlar", en: "Contacts" } },
+] as const;
+
+export const CAR_BRANDS = [
+  "BYD", "Chery", "Haval", "Geely", "Changan", "JETOUR", "Tank",
+  "Li Auto", "NIO", "Zeekr", "Exeed", "Hongqi", "Dongfeng", "GAC",
+  "Great Wall", "MG", "Omoda", "Jaecoo", "Voyah", "XPeng",
+] as const;
+
+export const BODY_TYPES = [
+  { value: "sedan", label: { ru: "Седан", uz: "Sedan", en: "Sedan" } },
+  { value: "suv", label: { ru: "Внедорожник", uz: "SUV", en: "SUV" } },
+  { value: "crossover", label: { ru: "Кроссовер", uz: "Krossover", en: "Crossover" } },
+  { value: "hatchback", label: { ru: "Хэтчбек", uz: "Xetchbek", en: "Hatchback" } },
+  { value: "minivan", label: { ru: "Минивэн", uz: "Miniven", en: "Minivan" } },
+  { value: "coupe", label: { ru: "Купе", uz: "Kupe", en: "Coupe" } },
+] as const;
+
+export const FUEL_TYPES = [
+  { value: "petrol", label: { ru: "Бензин", uz: "Benzin", en: "Petrol" } },
+  { value: "electric", label: { ru: "Электро", uz: "Elektr", en: "Electric" } },
+  { value: "hybrid", label: { ru: "Гибрид", uz: "Gibrid", en: "Hybrid" } },
+  { value: "phev", label: { ru: "Плагин-гибрид", uz: "Plagin-gibrid", en: "PHEV" } },
+] as const;
+
+export const PROCESS_STEPS = [
+  {
+    step: 1,
+    title: { ru: "Заявка", uz: "Ariza", en: "Application" },
+    description: {
+      ru: "Оставьте заявку на сайте или свяжитесь с нами",
+      uz: "Saytda ariza qoldiring yoki biz bilan bog'laning",
+      en: "Submit an application or contact us directly",
+    },
+    icon: "FileText",
+  },
+  {
+    step: 2,
+    title: { ru: "Подбор авто", uz: "Avto tanlash", en: "Car Selection" },
+    description: {
+      ru: "Подберём автомобиль под ваш бюджет и пожелания",
+      uz: "Byudjet va xohishlaringizga mos avtomobilni tanlaymiz",
+      en: "We select a car matching your budget and preferences",
+    },
+    icon: "Search",
+  },
+  {
+    step: 3,
+    title: { ru: "Договор и оплата", uz: "Shartnoma va to'lov", en: "Contract & Payment" },
+    description: {
+      ru: "Заключаем договор и вносите предоплату",
+      uz: "Shartnoma tuzamiz va oldindan to'lov qilasiz",
+      en: "Sign the contract and make the deposit",
+    },
+    icon: "FileCheck",
+  },
+  {
+    step: 4,
+    title: { ru: "Покупка в Китае", uz: "Xitoyda xarid", en: "Purchase in China" },
+    description: {
+      ru: "Выкупаем автомобиль на аукционе или у дилера",
+      uz: "Avtomobilni auksionda yoki dilerdan sotib olamiz",
+      en: "We purchase the vehicle at auction or from a dealer",
+    },
+    icon: "ShoppingCart",
+  },
+  {
+    step: 5,
+    title: { ru: "Доставка", uz: "Yetkazib berish", en: "Shipping" },
+    description: {
+      ru: "Отправляем авто морем/по ж/д в Узбекистан",
+      uz: "Avtomobilni dengiz/temir yo'l orqali O'zbekistonga jo'natamiz",
+      en: "Ship the car by sea/rail to Uzbekistan",
+    },
+    icon: "Ship",
+  },
+  {
+    step: 6,
+    title: { ru: "Получение", uz: "Qabul qilish", en: "Delivery" },
+    description: {
+      ru: "Таможенное оформление и передача вам автомобиля",
+      uz: "Bojxona rasmiylashtiruvi va avtomobilni sizga topshirish",
+      en: "Customs clearance and handover of your vehicle",
+    },
+    icon: "CarFront",
+  },
+] as const;

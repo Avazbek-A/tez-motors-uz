@@ -1,0 +1,205 @@
+{
+  "nav": {
+    "home": "Home",
+    "catalog": "Catalog",
+    "calculator": "Calculator",
+    "about": "About",
+    "faq": "FAQ",
+    "contacts": "Contacts",
+    "admin": "Admin"
+  },
+  "hero": {
+    "title": "Import Cars from China",
+    "titleAccent": "to Uzbekistan",
+    "subtitle": "We'll find, buy, and deliver your dream car from China. Transparent pricing, full support, guaranteed at every step.",
+    "cta": "Find a Car",
+    "ctaSecondary": "Calculate Cost",
+    "stats": {
+      "cars": "cars delivered",
+      "clients": "happy clients",
+      "experience": "years of experience",
+      "cities": "delivery cities"
+    }
+  },
+  "features": {
+    "title": "Why Choose Us",
+    "subtitle": "We make car importing simple and safe",
+    "items": [
+      {
+        "title": "All-Inclusive",
+        "description": "Full cycle from selection to registration. You don't have to worry about anything."
+      },
+      {
+        "title": "Transparent Pricing",
+        "description": "No hidden fees. You know the full cost before making a deposit."
+      },
+      {
+        "title": "Delivery Guarantee",
+        "description": "We deliver your car in 25-45 days. Every vehicle is insured during transit."
+      },
+      {
+        "title": "Trusted Partner",
+        "description": "Direct work with Chinese dealers and auctions. Every car passes inspection."
+      }
+    ]
+  },
+  "hotOffers": {
+    "title": "Hot Offers",
+    "subtitle": "Cars in stock and available to order at the best prices",
+    "viewAll": "View All",
+    "new": "New",
+    "mileage": "Mileage",
+    "engine": "Engine",
+    "power": "Power",
+    "hp": "hp",
+    "transmission": {
+      "automatic": "Automatic",
+      "manual": "Manual",
+      "cvt": "CVT",
+      "robot": "Automated"
+    },
+    "order": "Order",
+    "details": "Details"
+  },
+  "process": {
+    "title": "How We Work",
+    "subtitle": "6 simple steps to your new car"
+  },
+  "guarantees": {
+    "title": "Our Guarantees",
+    "subtitle": "We take full responsibility at every stage",
+    "items": [
+      {
+        "title": "Legal Purity",
+        "description": "Complete vehicle history, VIN check, and document verification. We guarantee no encumbrances."
+      },
+      {
+        "title": "Financial Security",
+        "description": "We work under contract with fixed pricing. Your money is protected at every stage."
+      },
+      {
+        "title": "Vehicle Warranty",
+        "description": "We provide warranty on the vehicle's technical condition. Full diagnostics before handover."
+      }
+    ]
+  },
+  "pricing": {
+    "title": "Transparent Pricing",
+    "subtitle": "Compare our prices with buying through middlemen",
+    "ourPrice": "Our Price",
+    "competitorPrice": "Through Middlemen",
+    "carPrice": "Car Cost",
+    "customs": "Customs Duties",
+    "delivery": "Delivery",
+    "service": "Our Commission",
+    "total": "Total",
+    "savings": "Your Savings"
+  },
+  "reviews": {
+    "title": "Client Reviews",
+    "subtitle": "What our clients say about us"
+  },
+  "faqSection": {
+    "title": "FAQ",
+    "subtitle": "Answers to the most common questions",
+    "viewAll": "All Questions"
+  },
+  "contact": {
+    "title": "Leave a Request",
+    "subtitle": "Fill out the form and we'll contact you within 30 minutes",
+    "name": "Your Name",
+    "phone": "Phone",
+    "email": "Email",
+    "message": "Message",
+    "submit": "Submit Request",
+    "success": "Request sent! We'll contact you shortly.",
+    "error": "An error occurred. Please try again."
+  },
+  "catalog": {
+    "title": "Car Catalog",
+    "subtitle": "Choose a car from our catalog or order any car from China",
+    "filters": {
+      "brand": "Brand",
+      "allBrands": "All Brands",
+      "bodyType": "Body",
+      "allTypes": "All Types",
+      "fuelType": "Fuel",
+      "allFuels": "All",
+      "priceRange": "Price",
+      "yearRange": "Year",
+      "search": "Search by name...",
+      "reset": "Reset Filters",
+      "results": "cars found"
+    },
+    "noResults": "No cars found. Try changing your filters.",
+    "orderCar": "Order This Car"
+  },
+  "calculator": {
+    "title": "Cost Calculator",
+    "subtitle": "Calculate the approximate cost of importing a car from China",
+    "carPrice": "Car Price (USD)",
+    "engineVolume": "Engine Volume (L)",
+    "fuelType": "Fuel Type",
+    "year": "Year",
+    "calculate": "Calculate",
+    "result": {
+      "title": "Calculation Result",
+      "carPrice": "Car Price",
+      "customsDuty": "Customs Duty",
+      "exciseTax": "Excise Tax",
+      "vat": "VAT (12%)",
+      "delivery": "Delivery",
+      "serviceFee": "Our Commission",
+      "total": "Total Turnkey",
+      "note": "* This is an approximate calculation. Contact our manager for the exact cost."
+    }
+  },
+  "about": {
+    "title": "About Tez Motors",
+    "subtitle": "Your reliable partner for car imports from China",
+    "story": "Tez Motors is a team of professionals helping Uzbekistan residents purchase quality vehicles directly from China at competitive prices.",
+    "mission": "Our mission is to make buying a Chinese car as simple as buying from a local dealership.",
+    "values": {
+      "title": "Our Values",
+      "transparency": "Transparency",
+      "reliability": "Reliability",
+      "speed": "Speed",
+      "quality": "Quality"
+    }
+  },
+  "footer": {
+    "description": "Car imports from China to Uzbekistan. Full cycle from selection to registration.",
+    "navigation": "Navigation",
+    "contacts": "Contacts",
+    "social": "Social Media",
+    "rights": "All rights reserved",
+    "workingHours": "Mon-Sat: 09:00 - 19:00"
+  },
+  "common": {
+    "learnMore": "Learn More",
+    "getConsultation": "Get Consultation",
+    "callUs": "Call Us",
+    "writeUs": "Write to Us",
+    "from": "from",
+    "year": "yr",
+    "km": "km",
+    "hp": "hp",
+    "l": "L"
+  },
+  "admin": {
+    "title": "Admin Panel",
+    "dashboard": "Dashboard",
+    "cars": "Cars",
+    "inquiries": "Inquiries",
+    "reviews": "Reviews",
+    "faqs": "FAQ",
+    "settings": "Settings",
+    "addCar": "Add Car",
+    "editCar": "Edit",
+    "deleteCar": "Delete",
+    "totalCars": "Total Cars",
+    "totalInquiries": "Inquiries",
+    "newInquiries": "New Inquiries",
+    "totalReviews": "Reviews"
+  }
+}
