@@ -6,6 +6,7 @@ import { WhyChina } from "@/components/sections/why-china";
 import { ProcessTimeline } from "@/components/sections/process-timeline";
 import { Guarantees } from "@/components/sections/guarantees";
 import { PricingComparison } from "@/components/sections/pricing-comparison";
+import { VideoReviews } from "@/components/sections/video-reviews";
 import { Reviews } from "@/components/sections/reviews";
 import { FAQPreview } from "@/components/sections/faq-preview";
 import { ContactForm } from "@/components/sections/contact-form";
@@ -33,6 +34,7 @@ export default function HomePage() {
         <ProcessTimeline />
         <Guarantees />
         <PricingComparison />
+        <VideoReviews />
         <Reviews reviews={publishedReviews} />
         <FAQPreview faqs={publishedFaqs} />
         <ContactForm />

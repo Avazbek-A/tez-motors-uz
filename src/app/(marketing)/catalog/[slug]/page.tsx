@@ -15,6 +15,7 @@ import { useLocale } from "@/i18n/locale-context";
 import { CarGallery } from "@/components/catalog/car-gallery";
 import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
+import { RelatedCars } from "@/components/catalog/related-cars";
 import { MOCK_CARS } from "@/lib/mock-data";
 import { formatPrice } from "@/lib/utils";
 
@@ -202,6 +203,9 @@ export default function CarDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Related cars */}
+        <RelatedCars currentCar={car} />
       </div>
     </div>
   );
