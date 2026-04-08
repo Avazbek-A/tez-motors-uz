@@ -125,7 +125,17 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="container-custom py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-white/40 text-xs">
           <p>&copy; {year} Tez Motors. {dictionary.footer.rights}.</p>
-          <p>Tez Motors — Import from China to Uzbekistan</p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-white/60 transition-colors">
+              {locale === "ru" ? "Конфиденциальность" : "Privacy"}
+            </Link>
+            <Link href="/terms" className="hover:text-white/60 transition-colors">
+              {locale === "ru" ? "Условия" : "Terms"}
+            </Link>
+            <Link href="/track" className="hover:text-white/60 transition-colors">
+              {locale === "ru" ? "Отслеживание" : "Track Order"}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
