@@ -6,20 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CarCard } from "@/components/catalog/car-card";
+import { RecentlyViewed } from "@/components/catalog/recently-viewed";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { MOCK_CARS } from "@/lib/mock-data";
+import { formatPrice } from "@/lib/utils";
 import { CAR_BRANDS, BODY_TYPES, FUEL_TYPES } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { CarFilters } from "@/types/car";
+
+type SortOption = "default" | "price_asc" | "price_desc" | "year_desc" | "name_asc";
 
 export default function CatalogPage() {
   const { locale, dictionary } = useLocale();
   const [filters, setFilters] = useState<CarFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("default");
 
   const filteredCars = useMemo(() => {
-    return MOCK_CARS.filter((car) => {
+    let cars = MOCK_CARS.filter((car) => {
       if (filters.brand && car.brand !== filters.brand) return false;
       if (filters.body_type && car.body_type !== filters.body_type) return false;
       if (filters.fuel_type && car.fuel_type !== filters.fuel_type) return false;
@@ -32,7 +37,17 @@ export default function CatalogPage() {
       }
       return true;
     });
-  }, [filters]);
+
+    // Sort
+    switch (sortBy) {
+      case "price_asc": cars.sort((a, b) => a.price_usd - b.price_usd); break;
+      case "price_desc": cars.sort((a, b) => b.price_usd - a.price_usd); break;
+      case "year_desc": cars.sort((a, b) => b.year - a.year); break;
+      case "name_asc": cars.sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`)); break;
+    }
+
+    return cars;
+  }, [filters, sortBy]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
@@ -72,9 +87,22 @@ export default function CatalogPage() {
               <Badge variant="default" className="ml-1">{activeFilterCount}</Badge>
             )}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            {filteredCars.length} {dictionary.catalog.filters.results}
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              {filteredCars.length} {dictionary.catalog.filters.results}
+            </p>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="h-9 rounded-lg border border-border px-3 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-lime"
+            >
+              <option value="default">{locale === "ru" ? "По умолчанию" : "Default"}</option>
+              <option value="price_asc">{locale === "ru" ? "Цена ↑" : "Price ↑"}</option>
+              <option value="price_desc">{locale === "ru" ? "Цена ↓" : "Price ↓"}</option>
+              <option value="year_desc">{locale === "ru" ? "Новые" : "Newest"}</option>
+              <option value="name_asc">{locale === "ru" ? "По имени" : "Name A-Z"}</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex gap-8">
@@ -162,6 +190,51 @@ export default function CatalogPage() {
               </div>
             </div>
 
+            {/* Price range filter */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">{dictionary.catalog.filters.priceRange}</h4>
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.price_min || ""}
+                    onChange={(e) => setFilters({ ...filters, price_min: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full h-9 rounded-lg border border-border px-3 text-xs focus:outline-none focus:ring-2 focus:ring-lime"
+                  />
+                  <span className="text-muted-foreground self-center">—</span>
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.price_max || ""}
+                    onChange={(e) => setFilters({ ...filters, price_max: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full h-9 rounded-lg border border-border px-3 text-xs focus:outline-none focus:ring-2 focus:ring-lime"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "< $20k", min: undefined, max: 20000 },
+                    { label: "$20-30k", min: 20000, max: 30000 },
+                    { label: "$30-40k", min: 30000, max: 40000 },
+                    { label: "> $40k", min: 40000, max: undefined },
+                  ].map((range, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setFilters({ ...filters, price_min: range.min, price_max: range.max })}
+                      className={cn(
+                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors",
+                        filters.price_min === range.min && filters.price_max === range.max
+                          ? "bg-lime/15 border-lime text-lime-dark"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      )}
+                    >
+                      {range.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {activeFilterCount > 0 && (
               <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
                 <X className="w-4 h-4" />
@@ -194,6 +267,9 @@ export default function CatalogPage() {
             )}
           </div>
         </div>
+
+        {/* Recently viewed */}
+        <RecentlyViewed />
       </div>
     </div>
   );

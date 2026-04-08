@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft, Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
   Zap, Send, Loader2, CheckCircle, Info
@@ -16,6 +16,7 @@ import { CarGallery } from "@/components/catalog/car-gallery";
 import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
+import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { MOCK_CARS } from "@/lib/mock-data";
 import { formatPrice } from "@/lib/utils";
 
@@ -23,10 +24,16 @@ export default function CarDetailPage() {
   const params = useParams();
   const { locale, dictionary } = useLocale();
   const car = MOCK_CARS.find((c) => c.slug === params.slug);
+  const { addViewed } = useRecentlyViewed();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
+
+  // Track recently viewed
+  useEffect(() => {
+    if (car) addViewed(car.id);
+  }, [car, addViewed]);
 
   if (!car) {
     return (
