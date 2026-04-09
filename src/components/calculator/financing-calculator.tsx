@@ -97,7 +97,7 @@ export function FinancingCalculator() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-border p-8 space-y-6">
+      <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-6">
         <div>
           <label className="text-sm font-semibold mb-2 block">{t.carPrice}</label>
           <Input type="number" value={carPrice} onChange={(e) => setCarPrice(e.target.value)} min="1000" className="h-14 text-lg" />
@@ -112,9 +112,9 @@ export function FinancingCalculator() {
             step="5"
             value={downPaymentPct}
             onChange={(e) => setDownPaymentPct(e.target.value)}
-            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-lime"
+            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-blue"
           />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <div className="flex justify-between text-xs text-white/60 mt-1">
             <span>10%</span>
             <span>80%</span>
           </div>
@@ -135,8 +135,8 @@ export function FinancingCalculator() {
                 className={cn(
                   "py-2.5 rounded-xl text-sm font-medium border transition-all",
                   termMonths === String(m)
-                    ? "bg-lime/15 border-lime text-lime-dark"
-                    : "border-border text-muted-foreground hover:bg-muted"
+                    ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
+                    : "border-white/10 text-white/60 hover:bg-white/5"
                 )}
               >
                 {m} {locale === "ru" ? "мес" : "mo"}
@@ -148,8 +148,8 @@ export function FinancingCalculator() {
 
       {/* Result */}
       {result && (
-        <div className="bg-white rounded-2xl border border-border overflow-hidden animate-fade-in-up">
-          <div className="bg-navy text-white p-6">
+        <div className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+          <div className="bg-[#0a0a0f] text-white p-6">
             <h3 className="text-lg font-bold">{t.result}</h3>
           </div>
           <div className="p-6 space-y-3">
@@ -160,14 +160,14 @@ export function FinancingCalculator() {
               { icon: DollarSign, label: t.totalPayment, value: formatPrice(result.totalPayment) },
               { icon: Percent, label: t.overpayment, value: formatPrice(result.totalInterest), destructive: true },
             ].map((row, i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+              <div key={i} className="flex items-center justify-between py-2 border-b border-white/10 last:border-0">
                 <div className="flex items-center gap-2">
-                  <row.icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{row.label}</span>
+                  <row.icon className="w-4 h-4 text-white/60" />
+                  <span className="text-sm text-white/60">{row.label}</span>
                 </div>
                 <span className={cn(
-                  "text-sm font-semibold",
-                  row.highlight && "text-lg text-navy",
+                  "text-sm font-semibold text-white",
+                  row.highlight && "text-lg text-neon-blue",
                   row.destructive && "text-red-500"
                 )}>
                   {row.value}
@@ -175,14 +175,14 @@ export function FinancingCalculator() {
               </div>
             ))}
           </div>
-          <div className="bg-lime/10 p-6 border-t-2 border-lime">
+          <div className="bg-neon-blue/10 p-6 border-t-2 border-neon-blue">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-lg">{t.monthly}</span>
-              <span className="text-2xl font-bold text-navy">{formatPrice(result.monthlyPayment)}</span>
+              <span className="font-bold text-lg text-white">{t.monthly}</span>
+              <span className="text-2xl font-bold text-neon-blue">{formatPrice(result.monthlyPayment)}</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">{locale === "ru" ? `на ${result.months} месяцев` : `for ${result.months} months`}</p>
+            <p className="text-xs text-white/60 mt-2">{locale === "ru" ? `на ${result.months} месяцев` : `for ${result.months} months`}</p>
           </div>
-          <div className="p-4 text-xs text-muted-foreground text-center">{t.note}</div>
+          <div className="p-4 text-xs text-white/60 text-center">{t.note}</div>
         </div>
       )}
     </div>

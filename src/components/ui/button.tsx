@@ -6,17 +6,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-blue focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0f] disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
   {
     variants: {
       variant: {
-        default: "bg-lime text-navy hover:bg-lime-dark shadow-lg hover:shadow-xl hover:-translate-y-0.5",
-        secondary: "bg-navy text-white hover:bg-navy-light shadow-lg hover:shadow-xl hover:-translate-y-0.5",
-        outline: "border-2 border-navy text-navy hover:bg-navy hover:text-white",
-        outlineLight: "border-2 border-white/30 text-white hover:bg-white/10",
-        ghost: "text-foreground hover:bg-muted",
-        link: "text-navy underline-offset-4 hover:underline",
-        destructive: "bg-destructive text-white hover:bg-red-600",
+        default: "bg-gradient-to-r from-neon-blue to-neon-cyan text-[#0a0a0f] font-bold hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] hover:-translate-y-0.5",
+        secondary: "bg-gradient-to-r from-neon-purple to-[#a78bfa] text-white hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:-translate-y-0.5",
+        outline: "border border-neon-blue/50 text-neon-blue bg-transparent hover:bg-neon-blue/10 hover:shadow-[0_0_15px_rgba(0,212,255,0.2)]",
+        outlineLight: "border border-white/20 text-white hover:bg-white/5 hover:border-neon-blue/50",
+        ghost: "text-white/70 hover:bg-white/5 hover:text-white",
+        link: "text-neon-blue underline-offset-4 hover:underline",
+        destructive: "bg-gradient-to-r from-destructive to-neon-pink text-white hover:shadow-[0_0_20px_rgba(255,45,135,0.4)]",
+        cyber: "bg-[#0a0a0f] border border-neon-green/50 text-neon-green font-mono uppercase tracking-wider hover:bg-neon-green/10 hover:shadow-[0_0_20px_rgba(34,255,136,0.3)] hover:border-neon-green",
       },
       size: {
         default: "h-11 px-6 py-2",

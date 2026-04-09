@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
 
 interface AnimatedCounterProps {
   end: number;
@@ -54,7 +55,7 @@ export function AnimatedCounter({
   }, [end, duration]);
 
   return (
-    <span ref={ref} className={className}>
+    <span ref={ref} className={cn("font-mono text-neon-green drop-shadow-[0_0_8px_rgba(34,255,136,0.6)]", className)}>
       {prefix}{count.toLocaleString()}{suffix}
     </span>
   );

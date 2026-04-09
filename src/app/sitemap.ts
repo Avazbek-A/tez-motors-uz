@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { MOCK_CARS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://tezmotors.uz";
 
   const staticPages = [
@@ -13,12 +13,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/contacts`, lastModified: new Date(), changeFrequency: "monthly" as const, priority: 0.8 },
   ];
 
-  const carPages = MOCK_CARS.map((car) => ({
-    url: `${baseUrl}/catalog/${car.slug}`,
-    lastModified: new Date(car.updated_at),
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  }));
+  try {
+    const supabase = await createClient();
+    const { data: cars } = await supabase
+      .from("cars")
+      .select("slug, updated_at")
+      .eq("is_available", true);
 
-  return [...staticPages, ...carPages];
+    const carPages = (cars || []).map((car) => ({
+      url: `${baseUrl}/catalog/${car.slug}`,
+      lastModified: new Date(car.updated_at),
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    }));
+
+    return [...staticPages, ...carPages];
+  } catch {
+    return staticPages;
+  }
 }

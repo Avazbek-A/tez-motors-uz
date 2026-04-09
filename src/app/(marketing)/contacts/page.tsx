@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Phone, Mail, MapPin, Clock, Send, Loader2, CheckCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Send, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,22 +14,29 @@ export default function ContactsPage() {
   const { dictionary } = useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
     try {
-      await fetch("/api/inquiry", {
+      const res = await fetch("/api/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, type: "general", source_page: "contacts" }),
       });
-      setIsSuccess(true);
-      setForm({ name: "", phone: "", email: "", message: "" });
-      setTimeout(() => setIsSuccess(false), 5000);
+      if (res.ok) {
+        setIsSuccess(true);
+        setForm({ name: "", phone: "", email: "", message: "" });
+        setTimeout(() => setIsSuccess(false), 5000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setFormError(data.error || dictionary.contact.error);
+      }
     } catch {
-      // silent
+      setFormError(dictionary.contact.error);
     } finally {
       setIsSubmitting(false);
     }
@@ -55,19 +62,19 @@ export default function ContactsPage() {
           <div
             className="animate-fade-in-up space-y-6"
           >
-            <div className="bg-white rounded-2xl border border-border p-8 space-y-6">
+            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-6">
               {contactInfo.map((item, i) => (
                 <div key={i} className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-lime/15 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-lime-dark" />
+                  <div className="w-12 h-12 rounded-xl bg-neon-blue/15 flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-neon-blue" />
                   </div>
                   <div>
                     {item.href ? (
-                      <a href={item.href} className="text-foreground font-medium hover:text-lime-dark transition-colors">
+                      <a href={item.href} className="text-white font-medium hover:text-neon-blue transition-colors">
                         {item.label}
                       </a>
                     ) : (
-                      <p className="text-foreground font-medium">{item.label}</p>
+                      <p className="text-white font-medium">{item.label}</p>
                     )}
                   </div>
                 </div>
@@ -95,8 +102,8 @@ export default function ContactsPage() {
             </div>
 
             {/* Map placeholder */}
-            <div className="bg-muted rounded-2xl h-64 flex items-center justify-center border border-border">
-              <div className="text-center text-muted-foreground">
+            <div className="bg-[#0a0a0f] rounded-2xl h-64 flex items-center justify-center border border-white/10">
+              <div className="text-center text-white/60">
                 <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Map will be displayed here</p>
               </div>
@@ -109,12 +116,12 @@ export default function ContactsPage() {
             style={{ animationDelay: "100ms" }}
           >
             {isSuccess ? (
-              <div className="bg-white rounded-2xl border border-border p-12 text-center">
-                <CheckCircle className="w-16 h-16 text-lime-dark mx-auto mb-4" />
+              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-12 text-center">
+                <CheckCircle className="w-16 h-16 text-neon-blue mx-auto mb-4" />
                 <p className="text-lg font-semibold">{dictionary.contact.success}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border p-8 space-y-5">
+              <form onSubmit={handleSubmit} className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-5">
                 <h3 className="text-xl font-bold">{dictionary.contact.title}</h3>
                 <Input
                   placeholder={dictionary.contact.name}
@@ -141,6 +148,11 @@ export default function ContactsPage() {
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                   rows={5}
                 />
+                {formError && (
+                  <p className="text-sm text-red-400 flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />{formError}
+                  </p>
+                )}
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

@@ -1,28 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Fuel, Gauge, Zap, Settings2, CarFront } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
 import { formatPrice } from "@/lib/utils";
 import type { Car } from "@/types/car";
 
 const brandGradients: Record<string, string> = {
-  BYD: "from-blue-900/20 via-blue-800/10 to-sky-700/5",
-  Chery: "from-red-900/15 via-red-800/8 to-orange-700/5",
-  Haval: "from-emerald-900/15 via-emerald-800/8 to-green-700/5",
-  Geely: "from-indigo-900/15 via-indigo-800/8 to-violet-700/5",
-  Changan: "from-slate-900/20 via-slate-800/10 to-gray-700/5",
-  JETOUR: "from-cyan-900/15 via-cyan-800/8 to-teal-700/5",
-  Tank: "from-amber-900/20 via-amber-800/10 to-yellow-700/5",
-  Zeekr: "from-violet-900/20 via-violet-800/10 to-purple-700/5",
-  "Li Auto": "from-zinc-900/20 via-zinc-800/10 to-stone-700/5",
-  Exeed: "from-rose-900/15 via-rose-800/8 to-pink-700/5",
-  Omoda: "from-orange-900/15 via-orange-800/8 to-amber-700/5",
-  Hongqi: "from-red-950/20 via-red-900/10 to-red-800/5",
-  GAC: "from-sky-900/15 via-sky-800/8 to-blue-700/5",
-  XPeng: "from-teal-900/15 via-teal-800/8 to-emerald-700/5",
+  BYD: "from-[#00d4ff]/15 via-[#00d4ff]/5 to-transparent",
+  Chery: "from-[#ff2d87]/15 via-[#ff2d87]/5 to-transparent",
+  Haval: "from-[#22ff88]/15 via-[#22ff88]/5 to-transparent",
+  Geely: "from-[#8b5cf6]/15 via-[#8b5cf6]/5 to-transparent",
+  Changan: "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-transparent",
+  JETOUR: "from-[#00d4ff]/15 via-[#22ff88]/5 to-transparent",
+  Tank: "from-[#ff2d87]/15 via-[#8b5cf6]/5 to-transparent",
+  Zeekr: "from-[#8b5cf6]/20 via-[#00d4ff]/5 to-transparent",
+  "Li Auto": "from-[#22ff88]/10 via-[#00d4ff]/5 to-transparent",
+  Exeed: "from-[#ff2d87]/15 via-[#8b5cf6]/5 to-transparent",
+  Omoda: "from-[#ff2d87]/10 via-[#22ff88]/5 to-transparent",
+  Hongqi: "from-[#ff2d87]/20 via-[#ff2d87]/5 to-transparent",
+  GAC: "from-[#00d4ff]/15 via-[#8b5cf6]/5 to-transparent",
+  XPeng: "from-[#22ff88]/15 via-[#00d4ff]/5 to-transparent",
+};
+
+const brandBorderColors: Record<string, string> = {
+  BYD: "group-hover:border-[#00d4ff]/60",
+  Chery: "group-hover:border-[#ff2d87]/60",
+  Haval: "group-hover:border-[#22ff88]/60",
+  Geely: "group-hover:border-[#8b5cf6]/60",
+  Changan: "group-hover:border-[#00d4ff]/50",
+  JETOUR: "group-hover:border-[#00d4ff]/60",
+  Tank: "group-hover:border-[#ff2d87]/60",
+  Zeekr: "group-hover:border-[#8b5cf6]/60",
+  "Li Auto": "group-hover:border-[#22ff88]/50",
+  Exeed: "group-hover:border-[#ff2d87]/60",
+  Omoda: "group-hover:border-[#ff2d87]/50",
+  Hongqi: "group-hover:border-[#ff2d87]/60",
+  GAC: "group-hover:border-[#00d4ff]/60",
+  XPeng: "group-hover:border-[#22ff88]/60",
 };
 
 interface CarCardProps {
@@ -32,30 +49,42 @@ interface CarCardProps {
 export function CarCard({ car }: CarCardProps) {
   const { dictionary } = useLocale();
   const transmissionLabel = dictionary.hotOffers.transmission[car.transmission] || car.transmission;
-  const gradient = brandGradients[car.brand] || "from-navy/10 via-navy/5 to-muted";
+  const gradient = brandGradients[car.brand] || "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-transparent";
+  const borderColor = brandBorderColors[car.brand] || "group-hover:border-neon-blue/50";
 
   return (
     <Link
       href={`/catalog/${car.slug}`}
-      className="group block bg-white rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      className={`group block bg-[#0d0d15] rounded-2xl border border-white/[0.06] overflow-hidden shadow-sm hover:shadow-[0_0_30px_rgba(0,212,255,0.15)] transition-all duration-300 hover:-translate-y-1 ${borderColor}`}
     >
       {/* Image */}
       <div className={`relative aspect-[4/3] bg-gradient-to-br ${gradient} overflow-hidden`}>
-        {/* Brand watermark */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <CarFront className="w-16 h-16 text-navy/10 group-hover:text-navy/15 transition-colors duration-500 group-hover:scale-110" />
-          <span className="text-navy/15 text-xs font-bold mt-2 tracking-wider uppercase">
-            {car.brand}
-          </span>
-        </div>
+        {/* Real image if available */}
+        {(car.thumbnail || car.images?.[0]) ? (
+          <Image
+            src={car.thumbnail || car.images![0]}
+            alt={`${car.brand} ${car.model}`}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          />
+        ) : (
+          /* Brand watermark placeholder */
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <CarFront className="w-16 h-16 text-neon-blue/10 group-hover:text-neon-blue/20 transition-colors duration-500 group-hover:scale-110" />
+            <span className="text-neon-blue/15 text-xs font-bold mt-2 tracking-wider uppercase font-mono">
+              {car.brand}
+            </span>
+          </div>
+        )}
 
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-lime/0 group-hover:bg-lime/5 transition-colors duration-300" />
+        <div className="absolute inset-0 bg-neon-blue/0 group-hover:bg-neon-blue/5 transition-colors duration-300" />
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex gap-2">
           {car.mileage === 0 && (
-            <Badge variant="default" className="bg-lime text-navy shadow-sm">
+            <Badge variant="default" className="bg-neon-green/90 text-[#0a0a0f] shadow-[0_0_10px_rgba(34,255,136,0.3)]">
               {dictionary.hotOffers.new}
             </Badge>
           )}
@@ -75,9 +104,9 @@ export function CarCard({ car }: CarCardProps) {
 
         {/* Price overlay on image */}
         <div className="absolute bottom-3 right-3">
-          <div className="bg-white/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-sm">
-            <p className="text-xs text-muted-foreground leading-none">{dictionary.common.from}</p>
-            <p className="text-lg font-bold text-navy leading-tight">{formatPrice(car.price_usd)}</p>
+          <div className="bg-[#0a0a0f]/80 backdrop-blur-md rounded-xl px-3 py-1.5 border border-neon-blue/30 shadow-[0_0_15px_rgba(0,212,255,0.15)]">
+            <p className="text-xs text-neon-blue/60 leading-none font-mono">{dictionary.common.from}</p>
+            <p className="text-lg font-bold text-neon-green leading-tight font-mono">{formatPrice(car.price_usd)}</p>
           </div>
         </div>
       </div>
@@ -85,32 +114,32 @@ export function CarCard({ car }: CarCardProps) {
       {/* Content */}
       <div className="p-5">
         <div className="mb-3">
-          <h3 className="text-lg font-bold text-foreground group-hover:text-lime-dark transition-colors">
+          <h3 className="text-lg font-bold text-white/90 group-hover:text-neon-blue transition-colors">
             {car.brand} {car.model}
           </h3>
-          <p className="text-sm text-muted-foreground">{car.year} {dictionary.common.year}</p>
+          <p className="text-sm text-white/60 font-mono">{car.year} {dictionary.common.year}</p>
         </div>
 
         {/* Specs */}
         <div className="flex flex-wrap gap-x-4 gap-y-1.5">
           {car.engine_volume && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Fuel className="w-3.5 h-3.5 text-lime-dark/60" />
+            <div className="flex items-center gap-1.5 text-xs text-white/60">
+              <Fuel className="w-3.5 h-3.5 text-neon-blue/50" />
               {car.engine_volume} {dictionary.common.l}
             </div>
           )}
           {car.engine_power && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Gauge className="w-3.5 h-3.5 text-lime-dark/60" />
+            <div className="flex items-center gap-1.5 text-xs text-white/60">
+              <Gauge className="w-3.5 h-3.5 text-neon-blue/50" />
               {car.engine_power} {dictionary.common.hp}
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Settings2 className="w-3.5 h-3.5 text-lime-dark/60" />
+          <div className="flex items-center gap-1.5 text-xs text-white/60">
+            <Settings2 className="w-3.5 h-3.5 text-neon-blue/50" />
             {transmissionLabel}
           </div>
           {car.drivetrain && (
-            <div className="text-xs text-muted-foreground font-medium uppercase">
+            <div className="text-xs text-white/60 font-medium uppercase">
               {car.drivetrain}
             </div>
           )}

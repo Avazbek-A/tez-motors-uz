@@ -1,22 +1,66 @@
 import Link from "next/link";
+import { Home, Search, Car } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30">
-      <div className="text-center px-6">
-        <div className="w-24 h-24 rounded-full bg-navy/10 flex items-center justify-center mx-auto mb-6">
-          <span className="text-4xl font-bold text-navy">404</span>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="text-center max-w-lg mx-auto">
+        {/* Big 404 */}
+        <div className="relative mb-8">
+          <p className="text-[120px] font-black leading-none text-white/[0.04] select-none">
+            404
+          </p>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+              <Car className="w-10 h-10 text-white/30" />
+            </div>
+          </div>
         </div>
-        <h1 className="text-2xl font-bold text-foreground mb-3">Page Not Found</h1>
-        <p className="text-muted-foreground mb-8 max-w-md">
-          The page you are looking for does not exist or has been moved.
+
+        <h1 className="text-2xl font-bold text-white mb-3">
+          Страница не найдена
+        </h1>
+        <p className="text-white/50 text-sm mb-10 leading-relaxed">
+          Возможно, автомобиль уже продан или ссылка устарела.
+          <br />
+          Посмотрите актуальный каталог — там много интересного.
         </p>
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center h-12 px-8 bg-lime text-navy font-semibold rounded-xl hover:bg-lime-dark transition-colors"
-        >
-          Go Home
-        </Link>
+
+        {/* Quick links */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
+          <Link
+            href="/"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-sm font-medium transition-colors border border-white/[0.08]"
+          >
+            <Home className="w-4 h-4" />
+            На главную
+          </Link>
+          <Link
+            href="/catalog"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-sm font-medium transition-colors border border-cyan-500/20"
+          >
+            <Search className="w-4 h-4" />
+            Смотреть каталог
+          </Link>
+        </div>
+
+        {/* Quick nav */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-white/40">
+          {[
+            { href: "/catalog", label: "Каталог" },
+            { href: "/compare", label: "Сравнение" },
+            { href: "/reviews", label: "Отзывы" },
+            { href: "/contacts", label: "Контакты" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="py-2 px-3 rounded-lg hover:bg-white/[0.04] hover:text-white/60 transition-colors"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

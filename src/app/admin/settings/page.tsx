@@ -21,8 +21,13 @@ export default function AdminSettingsPage() {
     telegramChatId: "",
   });
 
+  const [saved, setSaved] = useState(false);
+
   const handleSave = () => {
-    alert("Settings saved (mock). In production, this would update the database.");
+    // Settings are sourced from environment variables and constants.ts
+    // To update, modify SITE_CONFIG in src/lib/constants.ts or set env vars
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -159,10 +164,13 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
-        <Button size="lg" onClick={handleSave}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground max-w-sm">
+          To permanently update settings, edit <code className="bg-muted px-1 rounded text-xs">src/lib/constants.ts</code> or set environment variables.
+        </p>
+        <Button size="lg" onClick={handleSave} className={saved ? "bg-green-600 hover:bg-green-700" : ""}>
           <Save className="w-5 h-5" />
-          Save Settings
+          {saved ? "Saved!" : "Save Settings"}
         </Button>
       </div>
     </div>

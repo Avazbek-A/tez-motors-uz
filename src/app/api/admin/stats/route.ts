@@ -1,47 +1,75 @@
 import { NextResponse } from "next/server";
-import { MOCK_CARS, MOCK_REVIEWS, MOCK_FAQS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  // In production, these would be Supabase queries
-  const totalCars = MOCK_CARS.length;
-  const availableCars = MOCK_CARS.filter((c) => c.is_available).length;
-  const hotOffers = MOCK_CARS.filter((c) => c.is_hot_offer).length;
-  const totalReviews = MOCK_REVIEWS.filter((r) => r.is_published).length;
-  const totalFaqs = MOCK_FAQS.filter((f) => f.is_published).length;
+  try {
+    const supabase = await createClient();
 
-  const brandCounts: Record<string, number> = {};
-  MOCK_CARS.forEach((car) => {
-    brandCounts[car.brand] = (brandCounts[car.brand] || 0) + 1;
-  });
+    // Fetch all data in parallel
+    const [carsResult, reviewsResult, faqsResult, inquiriesResult] = await Promise.all([
+      supabase.from("cars").select("*"),
+      supabase.from("reviews").select("*"),
+      supabase.from("faqs").select("*"),
+      supabase.from("inquiries").select("*"),
+    ]);
 
-  const bodyTypeCounts: Record<string, number> = {};
-  MOCK_CARS.forEach((car) => {
-    bodyTypeCounts[car.body_type] = (bodyTypeCounts[car.body_type] || 0) + 1;
-  });
+    const cars = carsResult.data || [];
+    const reviews = reviewsResult.data || [];
+    const faqs = faqsResult.data || [];
+    const inquiries = inquiriesResult.data || [];
 
-  const fuelTypeCounts: Record<string, number> = {};
-  MOCK_CARS.forEach((car) => {
-    fuelTypeCounts[car.fuel_type] = (fuelTypeCounts[car.fuel_type] || 0) + 1;
-  });
+    const totalCars = cars.length;
+    const availableCars = cars.filter((c) => c.is_available).length;
+    const hotOffers = cars.filter((c) => c.is_hot_offer).length;
 
-  const avgPrice = Math.round(MOCK_CARS.reduce((s, c) => s + c.price_usd, 0) / totalCars);
-  const minPrice = Math.min(...MOCK_CARS.map((c) => c.price_usd));
-  const maxPrice = Math.max(...MOCK_CARS.map((c) => c.price_usd));
+    const brandCounts: Record<string, number> = {};
+    cars.forEach((car) => {
+      brandCounts[car.brand] = (brandCounts[car.brand] || 0) + 1;
+    });
 
-  return NextResponse.json({
-    cars: {
-      total: totalCars,
-      available: availableCars,
-      hotOffers,
-      avgPrice,
-      minPrice,
-      maxPrice,
-      byBrand: brandCounts,
-      byBodyType: bodyTypeCounts,
-      byFuelType: fuelTypeCounts,
-    },
-    reviews: { total: totalReviews },
-    faqs: { total: totalFaqs },
-    generatedAt: new Date().toISOString(),
-  });
+    const bodyTypeCounts: Record<string, number> = {};
+    cars.forEach((car) => {
+      bodyTypeCounts[car.body_type] = (bodyTypeCounts[car.body_type] || 0) + 1;
+    });
+
+    const fuelTypeCounts: Record<string, number> = {};
+    cars.forEach((car) => {
+      fuelTypeCounts[car.fuel_type] = (fuelTypeCounts[car.fuel_type] || 0) + 1;
+    });
+
+    const prices = cars.map((c) => c.price_usd);
+    const avgPrice = totalCars > 0 ? Math.round(prices.reduce((s, p) => s + p, 0) / totalCars) : 0;
+    const minPrice = totalCars > 0 ? Math.min(...prices) : 0;
+    const maxPrice = totalCars > 0 ? Math.max(...prices) : 0;
+
+    return NextResponse.json({
+      cars: {
+        total: totalCars,
+        available: availableCars,
+        hotOffers,
+        avgPrice,
+        minPrice,
+        maxPrice,
+        byBrand: brandCounts,
+        byBodyType: bodyTypeCounts,
+        byFuelType: fuelTypeCounts,
+      },
+      reviews: {
+        total: reviews.filter((r) => r.is_published).length,
+        pending: reviews.filter((r) => !r.is_published).length,
+      },
+      faqs: { total: faqs.filter((f) => f.is_published).length },
+      inquiries: {
+        total: inquiries.length,
+        new: inquiries.filter((i) => i.status === "new").length,
+        contacted: inquiries.filter((i) => i.status === "contacted").length,
+        in_progress: inquiries.filter((i) => i.status === "in_progress").length,
+        closed: inquiries.filter((i) => i.status === "closed").length,
+      },
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Stats error:", err);
+    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+  }
 }

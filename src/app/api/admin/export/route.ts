@@ -1,38 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-// GET - Export inquiries as CSV
-export async function GET(request: NextRequest) {
-  // Fetch inquiries from the in-memory store via internal API
-  const baseUrl = request.nextUrl.origin;
-  const res = await fetch(`${baseUrl}/api/inquiry`);
-  const data = await res.json();
-
-  const inquiries = data.inquiries || [];
-
-  if (inquiries.length === 0) {
-    return new NextResponse("No inquiries to export", { status: 404 });
+const escape = (val: string | number | boolean | null | undefined) => {
+  if (val === null || val === undefined) return "";
+  const str = String(val);
+  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
   }
+  return str;
+};
 
-  // Build CSV
-  const headers = ["ID", "Name", "Phone", "Email", "Type", "Status", "Message", "Source", "Created At"];
-  const rows = inquiries.map((inq: Record<string, string>) => [
-    inq.id,
-    `"${(inq.name || "").replace(/"/g, '""')}"`,
-    inq.phone,
-    inq.email || "",
-    inq.type,
-    inq.status,
-    `"${(inq.message || "").replace(/"/g, '""')}"`,
-    inq.source_page || "",
-    inq.created_at,
-  ]);
+// GET - Export data as CSV
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type") || "inquiries";
 
-  const csv = [headers.join(","), ...rows.map((r: string[]) => r.join(","))].join("\n");
+  try {
+    const supabase = await createClient();
+    const date = new Date().toISOString().split("T")[0];
 
-  return new NextResponse(csv, {
-    headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename=inquiries-${new Date().toISOString().split("T")[0]}.csv`,
-    },
-  });
+    if (type === "cars") {
+      const { data: cars, error } = await supabase
+        .from("cars")
+        .select("id, brand, model, year, price_usd, body_type, fuel_type, transmission, is_available, is_hot_offer, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      if (!cars || cars.length === 0) {
+        return new NextResponse("No data to export", { status: 404 });
+      }
+
+      const headers = ["ID", "Brand", "Model", "Year", "Price USD", "Body", "Fuel", "Transmission", "Available", "Hot", "Created At"];
+      const rows = cars.map((c) => [
+        escape(c.id),
+        escape(c.brand),
+        escape(c.model),
+        escape(c.year),
+        escape(c.price_usd),
+        escape(c.body_type),
+        escape(c.fuel_type),
+        escape(c.transmission),
+        escape(c.is_available),
+        escape(c.is_hot_offer),
+        escape(c.created_at),
+      ]);
+
+      const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
+      return new NextResponse(csv, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename=cars-${date}.csv`,
+        },
+      });
+    }
+
+    // Default: inquiries
+    const { data: inquiries, error } = await supabase
+      .from("inquiries")
+      .select("id, name, phone, type, status, message, source_page, car_id, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    if (!inquiries || inquiries.length === 0) {
+      return new NextResponse("No data to export", { status: 404 });
+    }
+
+    const headers = ["ID", "Name", "Phone", "Type", "Status", "Message", "Source", "Car ID", "Created At"];
+    const rows = inquiries.map((inq) => [
+      escape(inq.id),
+      escape(inq.name),
+      escape(inq.phone),
+      escape(inq.type),
+      escape(inq.status),
+      escape(inq.message),
+      escape(inq.source_page),
+      escape(inq.car_id),
+      escape(inq.created_at),
+    ]);
+
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename=inquiries-${date}.csv`,
+      },
+    });
+  } catch (error) {
+    console.error("Export error:", error);
+    return new NextResponse("Export failed", { status: 500 });
+  }
 }

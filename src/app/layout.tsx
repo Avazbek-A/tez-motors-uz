@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -10,6 +10,12 @@ import "./globals.css";
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "cyrillic"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
@@ -29,6 +35,12 @@ export const metadata: Metadata = {
     "Haval Узбекистан",
   ],
   authors: [{ name: "Tez Motors" }],
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tez Motors",
+  },
   openGraph: {
     type: "website",
     locale: "ru_RU",
@@ -36,6 +48,20 @@ export const metadata: Metadata = {
     title: "Tez Motors — Импорт авто из Китая в Узбекистан",
     description:
       "Подбор, покупка и доставка автомобилей из Китая. Прозрачные цены и полное сопровождение сделки.",
+    images: [
+      {
+        url: "https://tezmotors.uz/images/og-default.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Tez Motors — Импорт авто из Китая",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tez Motors — Импорт авто из Китая",
+    description: "Подбор, покупка и доставка автомобилей из Китая в Узбекистан.",
+    images: ["https://tezmotors.uz/images/og-default.jpg"],
   },
 };
 
@@ -49,7 +75,7 @@ export default async function RootLayout({
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale} className={`${inter.variable} h-full antialiased`}>
+    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
       <head>
         <OrganizationSchema />
         <WebsiteSchema />

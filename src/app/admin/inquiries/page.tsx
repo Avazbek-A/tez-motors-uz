@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 
 import {
   Search, Phone, Mail, MessageSquare, Clock,
-  CheckCircle, XCircle, ArrowRight, Eye, RefreshCw, Download
+  CheckCircle, XCircle, ArrowRight, Eye, RefreshCw, Download, Trash2, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface Inquiry {
@@ -39,12 +39,20 @@ const typeLabels: Record<string, string> = {
   calculator: "Calculator",
 };
 
+const STATUS_OPTIONS = ["new", "contacted", "in_progress", "closed"] as const;
+
 export default function AdminInquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const showFeedback = (type: "success" | "error", message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 3000);
+  };
 
   const fetchInquiries = () => {
     setLoading(true);
@@ -60,6 +68,37 @@ export default function AdminInquiriesPage() {
   useEffect(() => {
     fetchInquiries();
   }, []);
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    const res = await fetch(`/api/inquiry/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    if (res.ok) {
+      setInquiries(inquiries.map((i) =>
+        i.id === id ? { ...i, status: newStatus } : i
+      ));
+      if (selectedInquiry?.id === id) {
+        setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+      }
+      showFeedback("success", "Status updated");
+    } else {
+      showFeedback("error", "Failed to update status");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this inquiry?")) return;
+    const res = await fetch(`/api/inquiry/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setInquiries(inquiries.filter((i) => i.id !== id));
+      if (selectedInquiry?.id === id) setSelectedInquiry(null);
+      showFeedback("success", "Inquiry deleted");
+    } else {
+      showFeedback("error", "Failed to delete inquiry");
+    }
+  };
 
   const filtered = inquiries.filter((inq) => {
     if (statusFilter !== "all" && inq.status !== statusFilter) return false;
@@ -103,9 +142,20 @@ export default function AdminInquiriesPage() {
         </div>
       </div>
 
+      {feedback && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in ${
+          feedback.type === "success"
+            ? "bg-green-500/10 border border-green-500/20 text-green-400"
+            : "bg-red-500/10 border border-red-500/20 text-red-400"
+        }`}>
+          {feedback.type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {feedback.message}
+        </div>
+      )}
+
       {/* Status tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2">
-        {(["all", "new", "contacted", "in_progress", "closed"] as const).map((status) => (
+        {(["all", ...STATUS_OPTIONS] as const).map((status) => (
           <button
             key={status}
             onClick={() => setStatusFilter(status)}
@@ -204,13 +254,13 @@ export default function AdminInquiriesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedInquiry(null)} />
           <div
-            className="animate-fade-in relative bg-white rounded-2xl w-full max-w-lg p-8 shadow-2xl"
+            className="animate-fade-in relative bg-[#0d0d15] border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl"
           >
             <h2 className="text-xl font-bold mb-4">Inquiry Details</h2>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-navy/10 flex items-center justify-center">
-                  <span className="text-lg font-bold text-navy">
+                <div className="w-12 h-12 rounded-full bg-white/[0.06] flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">
                     {selectedInquiry.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -220,36 +270,71 @@ export default function AdminInquiriesPage() {
                 </div>
               </div>
               {selectedInquiry.message && (
-                <div className="bg-muted/50 rounded-xl p-4">
-                  <p className="text-sm">{selectedInquiry.message}</p>
+                <div className="bg-white/[0.04] rounded-xl p-4">
+                  <p className="text-sm text-white/80">{selectedInquiry.message}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs">Type</p>
-                  <p className="font-medium">{typeLabels[selectedInquiry.type] || selectedInquiry.type}</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs">Status</p>
-                  <p className="font-medium">{selectedInquiry.status}</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs">Source</p>
-                  <p className="font-medium">{selectedInquiry.source_page || "N/A"}</p>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-muted-foreground text-xs">Date</p>
-                  <p className="font-medium">{new Date(selectedInquiry.created_at).toLocaleString()}</p>
+
+              {/* Status changer */}
+              <div>
+                <p className="text-sm font-medium mb-2">Change Status</p>
+                <div className="flex gap-2 flex-wrap">
+                  {STATUS_OPTIONS.map((status) => {
+                    const cfg = statusConfig[status];
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => updateStatus(selectedInquiry.id, status)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                          selectedInquiry.status === status
+                            ? "bg-navy text-white border-navy"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setSelectedInquiry(null)}>Close</Button>
-                <Button asChild>
-                  <a href={`tel:${selectedInquiry.phone}`}>
-                    <Phone className="w-4 h-4" />
-                    Call
-                  </a>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-white/[0.04] rounded-lg p-3">
+                  <p className="text-white/40 text-xs">Type</p>
+                  <p className="font-medium text-white">{typeLabels[selectedInquiry.type] || selectedInquiry.type}</p>
+                </div>
+                <div className="bg-white/[0.04] rounded-lg p-3">
+                  <p className="text-white/40 text-xs">Status</p>
+                  <p className="font-medium text-white">{selectedInquiry.status}</p>
+                </div>
+                <div className="bg-white/[0.04] rounded-lg p-3">
+                  <p className="text-white/40 text-xs">Source</p>
+                  <p className="font-medium text-white">{selectedInquiry.source_page || "N/A"}</p>
+                </div>
+                <div className="bg-white/[0.04] rounded-lg p-3">
+                  <p className="text-white/40 text-xs">Date</p>
+                  <p className="font-medium text-white">{new Date(selectedInquiry.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="flex justify-between pt-4 border-t border-white/10">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(selectedInquiry.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
                 </Button>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setSelectedInquiry(null)}>Close</Button>
+                  <Button asChild>
+                    <a href={`tel:${selectedInquiry.phone}`}>
+                      <Phone className="w-4 h-4" />
+                      Call
+                    </a>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

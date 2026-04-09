@@ -4,6 +4,7 @@ import { Play, ExternalLink } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { TiltCard } from "@/components/effects";
 
 const videos = [
   {
@@ -40,39 +41,42 @@ export function VideoReviews() {
     : "Watch reviews of delivered cars";
 
   return (
-    <section className="py-20 md:py-28 bg-navy relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-navy-dark/50 to-transparent" />
+    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent" />
 
       <div className="container-custom relative z-10">
         <SectionHeading title={title} subtitle={subtitle} light />
 
         <div ref={ref} className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {videos.map((video, index) => (
-            <div
+            <TiltCard
               key={video.id}
-              className={`group glass rounded-2xl overflow-hidden hover:bg-white/12 transition-all duration-300 cursor-pointer ${
-                isVisible ? "animate-fade-in-up" : "opacity-0"
-              }`}
-              style={{ animationDelay: `${index * 100}ms` }}
+              className={`${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+              maxTilt={8}
             >
-              {/* Thumbnail */}
-              <div className="aspect-video bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center relative">
-                <div className="w-16 h-16 rounded-full bg-lime/20 flex items-center justify-center group-hover:bg-lime/30 transition-colors group-hover:scale-110 duration-300">
-                  <Play className="w-7 h-7 text-lime ml-1" />
+              <div
+                className="group bg-[#0d0d15] border border-neon-blue/10 rounded-2xl overflow-hidden hover:border-neon-blue/30 hover:shadow-[0_0_30px_rgba(0,212,255,0.08)] transition-all duration-300 cursor-pointer"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                {/* Thumbnail */}
+                <div className="aspect-video bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 flex items-center justify-center relative">
+                  <div className="w-16 h-16 rounded-full bg-neon-blue/10 border border-neon-blue/30 flex items-center justify-center group-hover:bg-neon-blue/20 group-hover:shadow-[0_0_25px_rgba(0,212,255,0.3)] transition-all duration-300 group-hover:scale-110">
+                    <Play className="w-7 h-7 text-neon-blue ml-1" />
+                  </div>
+                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white/80 text-xs px-2 py-1 rounded-lg border border-white/10">
+                    {video.duration}
+                  </div>
                 </div>
-                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg">
-                  {video.duration}
-                </div>
-              </div>
 
-              {/* Info */}
-              <div className="p-4">
-                <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-lime transition-colors">
-                  {video.title[locale as keyof typeof video.title]}
-                </h3>
-                <p className="text-white/40 text-xs">{video.car}</p>
+                {/* Info */}
+                <div className="p-4">
+                  <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-neon-blue transition-colors">
+                    {video.title[locale as keyof typeof video.title]}
+                  </h3>
+                  <p className="text-white/60 text-xs">{video.car}</p>
+                </div>
               </div>
-            </div>
+            </TiltCard>
           ))}
         </div>
       </div>

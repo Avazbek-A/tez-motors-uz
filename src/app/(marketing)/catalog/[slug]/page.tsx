@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
-  Zap, Send, Loader2, CheckCircle, Info
+  Zap, Send, Loader2, CheckCircle, Info, AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,30 +17,57 @@ import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
-import { MOCK_CARS } from "@/lib/mock-data";
 import { formatPrice } from "@/lib/utils";
+import type { Car } from "@/types/car";
 
 export default function CarDetailPage() {
   const params = useParams();
   const { locale, dictionary } = useLocale();
-  const car = MOCK_CARS.find((c) => c.slug === params.slug);
   const { addViewed } = useRecentlyViewed();
 
+  const [car, setCar] = useState<Car | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
 
-  // Track recently viewed
   useEffect(() => {
-    if (car) addViewed(car.id);
-  }, [car, addViewed]);
+    fetch(`/api/cars/${params.slug}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.car) {
+          setCar(data.car);
+          addViewed(data.car.id);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [params.slug]);
+
+  if (loading) {
+    return (
+      <div className="pt-32 pb-16 text-center container-custom">
+        <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto mb-3" />
+        <p className="text-white/60">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
+      </div>
+    );
+  }
 
   if (!car) {
     return (
-      <div className="pt-32 pb-16 text-center container-custom">
-        <h1 className="text-2xl font-bold mb-4">Car not found</h1>
+      <div className="pt-32 pb-16 text-center container-custom max-w-md mx-auto">
+        <div className="text-6xl font-black text-white/[0.04] mb-6">404</div>
+        <h1 className="text-xl font-bold mb-3 text-white">
+          {locale === "ru" ? "Автомобиль не найден" : locale === "uz" ? "Avtomobil topilmadi" : "Car not found"}
+        </h1>
+        <p className="text-white/50 text-sm mb-8">
+          {locale === "ru" ? "Возможно, этот автомобиль уже продан или ссылка устарела." : "This car may have been sold or the link is outdated."}
+        </p>
         <Button asChild>
-          <Link href="/catalog">Back to Catalog</Link>
+          <Link href="/catalog">
+            {locale === "ru" ? "← Вернуться в каталог" : "← Back to Catalog"}
+          </Link>
         </Button>
       </div>
     );
@@ -51,8 +78,9 @@ export default function CarDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
     try {
-      await fetch("/api/inquiry", {
+      const res = await fetch("/api/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -62,11 +90,16 @@ export default function CarDetailPage() {
           source_page: `/catalog/${car.slug}`,
         }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setFormError(data.error || (locale === "ru" ? "Ошибка отправки. Попробуйте ещё раз." : "Failed to send. Please try again."));
+        return;
+      }
       setIsSuccess(true);
       setForm({ name: "", phone: "", message: "" });
       setTimeout(() => setIsSuccess(false), 5000);
     } catch {
-      // silent
+      setFormError(locale === "ru" ? "Нет соединения. Проверьте интернет." : "No connection. Check your internet.");
     } finally {
       setIsSubmitting(false);
     }
@@ -101,25 +134,25 @@ export default function CarDetailPage() {
             </div>
 
             {description && (
-              <div className="bg-white rounded-2xl border border-border p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-                <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <Info className="w-5 h-5 text-lime-dark" />
+              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+                <h2 className="font-bold text-lg mb-3 flex items-center gap-2 text-white">
+                  <Info className="w-5 h-5 text-neon-blue" />
                   {locale === "ru" ? "Описание" : locale === "uz" ? "Tavsif" : "Description"}
                 </h2>
-                <p className="text-muted-foreground leading-relaxed">{description}</p>
+                <p className="text-white/60 leading-relaxed">{description}</p>
               </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-border p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-              <h2 className="font-bold text-lg mb-4">
+            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+              <h2 className="font-bold text-lg mb-4 text-white">
                 {locale === "ru" ? "Характеристики" : locale === "uz" ? "Xususiyatlar" : "Specifications"}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {specs.map((spec, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                    <spec.icon className="w-5 h-5 text-lime-dark shrink-0" />
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                    <spec.icon className="w-5 h-5 text-neon-blue shrink-0" />
                     <div>
-                      <p className="text-xs text-muted-foreground">{spec.label}</p>
+                      <p className="text-xs text-white/60">{spec.label}</p>
                       <p className="text-sm font-semibold">{spec.value}</p>
                     </div>
                   </div>
@@ -127,10 +160,10 @@ export default function CarDetailPage() {
               </div>
 
               {Object.keys(car.specs).length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {Object.entries(car.specs).map(([key, value]) => (
-                    <div key={key} className="p-3 rounded-xl bg-muted/50">
-                      <p className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
+                    <div key={key} className="p-3 rounded-xl bg-white/5">
+                      <p className="text-xs text-white/60 capitalize">{key.replace(/_/g, " ")}</p>
                       <p className="text-sm font-semibold">{String(value)}</p>
                     </div>
                   ))}
@@ -140,24 +173,24 @@ export default function CarDetailPage() {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl border border-border p-6 sticky top-24 animate-slide-in-right">
+            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 sticky top-24 animate-slide-in-right">
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   {car.mileage === 0 && <Badge>New</Badge>}
                   {car.fuel_type === "electric" && <Badge variant="info">EV</Badge>}
                   {car.fuel_type === "phev" && <Badge variant="info">PHEV</Badge>}
                 </div>
-                <h1 className="text-2xl font-bold text-foreground">
+                <h1 className="text-2xl font-bold text-white">
                   {car.brand} {car.model}
                 </h1>
-                <p className="text-muted-foreground">{car.year}</p>
+                <p className="text-white/60">{car.year}</p>
               </div>
 
-              <div className="bg-lime/10 rounded-xl p-4 mb-4">
-                <p className="text-xs text-muted-foreground mb-1">{dictionary.common.from}</p>
-                <p className="text-3xl font-bold text-navy">{formatPrice(car.price_usd)}</p>
+              <div className="bg-neon-blue/10 rounded-xl p-4 mb-4">
+                <p className="text-xs text-white/60 mb-1">{dictionary.common.from}</p>
+                <p className="text-3xl font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
                 {car.price_uzs && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-sm text-white/60 mt-1">
                     ~ {formatPrice(car.price_uzs, "UZS")}
                   </p>
                 )}
@@ -165,12 +198,12 @@ export default function CarDetailPage() {
 
               <ShareButtons
                 title={`${car.brand} ${car.model} ${car.year} — ${formatPrice(car.price_usd)} | Tez Motors`}
-                className="mb-6 pb-4 border-b border-border"
+                className="mb-6 pb-4 border-b border-white/10"
               />
 
               {isSuccess ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="w-12 h-12 text-lime-dark mx-auto mb-3" />
+                  <CheckCircle className="w-12 h-12 text-neon-blue mx-auto mb-3" />
                   <p className="font-semibold">{dictionary.contact.success}</p>
                 </div>
               ) : (
@@ -195,6 +228,11 @@ export default function CarDetailPage() {
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={3}
                   />
+                  {formError && (
+                    <p className="text-sm text-red-400 flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 shrink-0" />{formError}
+                    </p>
+                  )}
                   <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <Loader2 className="w-5 h-5 animate-spin" />

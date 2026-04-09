@@ -52,13 +52,13 @@ export function CookieConsent() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-fade-in-up">
       <div className="container-custom">
-        <div className="bg-navy text-white rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xl border border-white/10">
-          <p className="text-sm text-white/80 flex-1">{t.message}</p>
+        <div className="glass border border-neon-blue/20 rounded-2xl p-4 md:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[0_0_30px_rgba(0,212,255,0.1)]">
+          <p className="text-sm text-white/70 flex-1">{t.message}</p>
           <div className="flex items-center gap-2 shrink-0">
-            <Button size="sm" onClick={accept}>
+            <Button size="sm" onClick={accept} className="bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)]">
               {t.accept}
             </Button>
-            <Button size="sm" variant="ghost" onClick={decline} className="text-white/60 hover:text-white hover:bg-white/10">
+            <Button size="sm" variant="ghost" onClick={decline} className="text-white/60 hover:text-white hover:bg-white/5">
               {t.decline}
             </Button>
           </div>

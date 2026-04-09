@@ -14,9 +14,9 @@ export default function PrivacyPage() {
         <SectionHeading title={title} />
 
         <div className="max-w-3xl mx-auto prose prose-sm">
-          <div className="bg-white rounded-2xl border border-border p-8 md:p-12 space-y-6 text-muted-foreground leading-relaxed">
+          <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 md:p-12 space-y-6 text-white/60 leading-relaxed">
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "1. Общие положения" : "1. General Provisions"}
               </h2>
               <p>
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "2. Сбор информации" : "2. Information Collection"}
               </h2>
               <p>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "3. Использование информации" : "3. Use of Information"}
               </h2>
               <p>
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "4. Защита данных" : "4. Data Protection"}
               </h2>
               <p>
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "5. Файлы cookie" : "5. Cookies"}
               </h2>
               <p>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-foreground mb-3">
+              <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "6. Контакты" : "6. Contact"}
               </h2>
               <p>
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
               </p>
             </section>
 
-            <p className="text-xs text-muted-foreground/60 pt-4 border-t border-border">
+            <p className="text-xs text-white/60 pt-4 border-t border-white/10">
               {locale === "ru" ? "Последнее обновление: Январь 2025" : "Last updated: January 2025"}
             </p>
           </div>

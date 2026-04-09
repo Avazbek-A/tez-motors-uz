@@ -15,12 +15,35 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
-import { MOCK_CARS, MOCK_REVIEWS, MOCK_FAQS } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
 
-export default function HomePage() {
-  const hotOfferCars = MOCK_CARS.filter((c) => c.is_hot_offer).slice(0, 12);
-  const publishedReviews = MOCK_REVIEWS.filter((r) => r.is_published);
-  const publishedFaqs = MOCK_FAQS.filter((f) => f.is_published).slice(0, 5);
+export default async function HomePage() {
+  const supabase = await createClient();
+
+  const [carsResult, reviewsResult, faqsResult] = await Promise.all([
+    supabase
+      .from("cars")
+      .select("*")
+      .eq("is_available", true)
+      .eq("is_hot_offer", true)
+      .order("order_position")
+      .limit(12),
+    supabase
+      .from("reviews")
+      .select("*")
+      .eq("is_published", true)
+      .order("order_position"),
+    supabase
+      .from("faqs")
+      .select("*")
+      .eq("is_published", true)
+      .order("order_position")
+      .limit(5),
+  ]);
+
+  const hotOfferCars = carsResult.data || [];
+  const publishedReviews = reviewsResult.data || [];
+  const publishedFaqs = faqsResult.data || [];
 
   return (
     <>

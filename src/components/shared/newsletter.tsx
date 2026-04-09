@@ -19,33 +19,41 @@ export function Newsletter() {
   };
   const t = labels[locale as keyof typeof labels] || labels.ru;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      setSuccess(true);
-      setEmail("");
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source_page: window.location.pathname }),
+      });
+      if (res.ok) {
+        setSuccess(true);
+        setEmail("");
+        setTimeout(() => setSuccess(false), 4000);
+      }
+    } catch { /* silent */ } finally {
       setLoading(false);
-      setTimeout(() => setSuccess(false), 3000);
-    }, 500);
+    }
   };
 
   return (
-    <div className="bg-gradient-to-r from-navy to-navy-light rounded-2xl p-8 text-white">
+    <div className="bg-[#0d0d15] border border-neon-blue/20 rounded-2xl p-8 text-white">
       <div className="flex items-start gap-4 mb-4">
-        <div className="w-12 h-12 rounded-xl bg-lime/20 flex items-center justify-center shrink-0">
-          <Mail className="w-6 h-6 text-lime" />
+        <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center shrink-0">
+          <Mail className="w-6 h-6 text-neon-blue" />
         </div>
         <div>
           <h3 className="font-bold text-lg">{t.title}</h3>
-          <p className="text-white/50 text-sm mt-1">{t.subtitle}</p>
+          <p className="text-white/60 text-sm mt-1">{t.subtitle}</p>
         </div>
       </div>
 
       {success ? (
-        <div className="flex items-center gap-2 bg-lime/20 rounded-xl p-4">
-          <CheckCircle className="w-5 h-5 text-lime" />
-          <span className="text-lime font-medium text-sm">{t.success}</span>
+        <div className="flex items-center gap-2 bg-neon-green/10 border border-neon-green/20 rounded-xl p-4">
+          <CheckCircle className="w-5 h-5 text-neon-green" />
+          <span className="text-neon-green font-medium text-sm">{t.success}</span>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex gap-2">
@@ -55,9 +63,9 @@ export function Newsletter() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t.placeholder}
             required
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime flex-1"
+            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue flex-1"
           />
-          <Button type="submit" size="default" disabled={loading} className="shrink-0">
+          <Button type="submit" size="default" disabled={loading} className="shrink-0 bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)]">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.button}
           </Button>
         </form>

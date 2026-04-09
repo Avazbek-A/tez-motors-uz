@@ -45,9 +45,9 @@ export function WhyChina() {
     : "Chinese automotive industry has become a world market leader";
 
   return (
-    <section className="py-20 md:py-28 bg-muted/50">
+    <section className="py-20 md:py-28 bg-[#0a0a0f]">
       <div className="container-custom">
-        <SectionHeading title={title} subtitle={subtitle} />
+        <SectionHeading title={title} subtitle={subtitle} light />
 
         <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map((item, index) => {
@@ -55,16 +55,19 @@ export function WhyChina() {
             return (
               <div
                 key={index}
-                className={`bg-white rounded-2xl p-6 border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 ${
+                className={`bg-[#0d0d15] rounded-2xl p-6 border border-neon-blue/10 hover:border-neon-blue/30 hover:shadow-[0_0_30px_rgba(0,212,255,0.08)] transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="w-12 h-12 rounded-xl bg-lime/15 flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-lime-dark" />
+                {/* Neon accent line at top */}
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neon-blue/40 to-transparent" />
+
+                <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center mb-4">
+                  <Icon className="w-6 h-6 text-neon-blue" />
                 </div>
-                <h3 className="text-base font-bold text-foreground mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                <h3 className="text-base font-bold text-white mb-2">{item.title}</h3>
+                <p className="text-sm text-white/60 leading-relaxed">{item.desc}</p>
               </div>
             );
           })}

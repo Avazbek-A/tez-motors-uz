@@ -1,57 +1,93 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Package, Truck, CheckCircle, Clock, Ship, FileCheck, Loader2 } from "lucide-react";
+import { Search, Package, Truck, CheckCircle, Clock, Ship, FileCheck, PhoneCall, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
-const orderStatuses = [
-  { key: "confirmed", icon: FileCheck, label: { ru: "Заказ подтверждён", uz: "Buyurtma tasdiqlandi", en: "Order Confirmed" } },
-  { key: "purchasing", icon: Package, label: { ru: "Выкуп авто", uz: "Avto sotib olinmoqda", en: "Purchasing" } },
-  { key: "shipping", icon: Ship, label: { ru: "В пути", uz: "Yo'lda", en: "Shipping" } },
-  { key: "customs", icon: Clock, label: { ru: "Таможня", uz: "Bojxona", en: "Customs" } },
-  { key: "delivery", icon: Truck, label: { ru: "Доставка", uz: "Yetkazish", en: "Delivery" } },
-  { key: "completed", icon: CheckCircle, label: { ru: "Доставлено", uz: "Yetkazildi", en: "Delivered" } },
+const statusSteps = [
+  { key: "new", icon: FileCheck, label: { ru: "Заявка получена", uz: "Ariza qabul qilindi", en: "Application Received" } },
+  { key: "contacted", icon: PhoneCall, label: { ru: "Менеджер связался", uz: "Menejer bog'landi", en: "Manager Contacted" } },
+  { key: "in_progress", icon: Ship, label: { ru: "В обработке", uz: "Jarayonda", en: "In Progress" } },
+  { key: "closed", icon: CheckCircle, label: { ru: "Завершено", uz: "Yakunlandi", en: "Completed" } },
 ];
 
-// Mock order data
-const mockOrders: Record<string, { car: string; status: number; date: string; eta: string }> = {
-  "TM-2024-001": { car: "BYD Song Plus DM-i 2024", status: 3, date: "2024-10-15", eta: "2024-11-20" },
-  "TM-2024-002": { car: "Chery Tiggo 8 Pro Max 2024", status: 5, date: "2024-09-01", eta: "2024-10-15" },
+const statusIndex: Record<string, number> = {
+  new: 0,
+  contacted: 1,
+  in_progress: 2,
+  closed: 3,
 };
+
+const typeLabels: Record<string, Record<string, string>> = {
+  inquiry: { ru: "Заявка на авто", uz: "Avto so'rovi", en: "Car Inquiry" },
+  callback: { ru: "Обратный звонок", uz: "Qayta qo'ng'iroq", en: "Callback" },
+  test_drive: { ru: "Тест-драйв", uz: "Test-drive", en: "Test Drive" },
+};
+
+interface Inquiry {
+  id: string;
+  name: string;
+  phone: string;
+  type: string;
+  status: string;
+  message: string | null;
+  created_at: string;
+  car: { brand: string; model: string; year: number } | null;
+}
 
 export default function TrackOrderPage() {
   const { locale } = useLocale();
-  const [orderId, setOrderId] = useState("");
-  const [order, setOrder] = useState<typeof mockOrders[string] | null>(null);
+  const [phone, setPhone] = useState("");
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const title = locale === "ru" ? "Отслеживание заказа" : locale === "uz" ? "Buyurtmani kuzatish" : "Track Order";
-  const subtitle = locale === "ru"
-    ? "Введите номер заказа для отслеживания статуса доставки"
-    : locale === "uz" ? "Yetkazish holatini kuzatish uchun buyurtma raqamini kiriting"
-    : "Enter your order number to track delivery status";
+  const title =
+    locale === "ru"
+      ? "Статус заявки"
+      : locale === "uz"
+      ? "Ariza holati"
+      : "Application Status";
+  const subtitle =
+    locale === "ru"
+      ? "Введите номер телефона, чтобы узнать статус вашей заявки"
+      : locale === "uz"
+      ? "Arizangiz holatini bilish uchun telefon raqamingizni kiriting"
+      : "Enter your phone number to check your application status";
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setNotFound(false);
-    setOrder(null);
+    setInquiries([]);
+    setSearched(false);
 
-    // Simulate API call
-    setTimeout(() => {
-      const found = mockOrders[orderId.toUpperCase()];
-      if (found) {
-        setOrder(found);
+    try {
+      const res = await fetch(
+        `/api/track?phone=${encodeURIComponent(phone.trim())}`
+      );
+      const data = await res.json();
+
+      if (data.success) {
+        setSearched(true);
+        if (data.inquiries.length === 0) {
+          setNotFound(true);
+        } else {
+          setInquiries(data.inquiries);
+        }
       } else {
         setNotFound(true);
       }
+    } catch {
+      setNotFound(true);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -62,100 +98,182 @@ export default function TrackOrderPage() {
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSearch} className="flex gap-3 mb-12">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
               <Input
-                value={orderId}
-                onChange={(e) => setOrderId(e.target.value)}
-                placeholder={locale === "ru" ? "Номер заказа (напр. TM-2024-001)" : "Order number (e.g. TM-2024-001)"}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder={
+                  locale === "ru"
+                    ? "Ваш номер телефона (напр. +998901234567)"
+                    : locale === "uz"
+                    ? "Telefon raqamingiz (masalan +998901234567)"
+                    : "Your phone number (e.g. +998901234567)"
+                }
                 className="pl-12 h-14 text-base rounded-2xl"
                 required
+                type="tel"
               />
             </div>
-            <Button type="submit" size="lg" className="rounded-2xl px-8" disabled={loading}>
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (locale === "ru" ? "Найти" : "Search")}
+            <Button
+              type="submit"
+              size="lg"
+              className="rounded-2xl px-8"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : locale === "ru" ? (
+                "Найти"
+              ) : locale === "uz" ? (
+                "Qidirish"
+              ) : (
+                "Search"
+              )}
             </Button>
           </form>
 
-          {notFound && (
-            <div className="text-center py-12 bg-muted/50 rounded-2xl border border-border">
-              <Package className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-muted-foreground">
-                {locale === "ru" ? "Заказ не найден. Проверьте номер заказа." : "Order not found. Please check the order number."}
+          {notFound && searched && (
+            <div className="text-center py-12 bg-[#0a0a0f] rounded-2xl border border-white/10">
+              <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
+              <p className="text-white/60 text-sm">
+                {locale === "ru"
+                  ? "Заявки по этому номеру не найдены."
+                  : locale === "uz"
+                  ? "Bu raqam bo'yicha arizalar topilmadi."
+                  : "No applications found for this number."}
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {locale === "ru" ? "Попробуйте: TM-2024-001" : "Try: TM-2024-001"}
+              <p className="text-xs text-white/40 mt-2">
+                {locale === "ru"
+                  ? "Убедитесь, что ввели правильный номер телефона"
+                  : locale === "uz"
+                  ? "Telefon raqamini to'g'ri kiritganingizga ishonch hosil qiling"
+                  : "Make sure you entered the correct phone number"}
               </p>
             </div>
           )}
 
-          {order && (
-            <div className="animate-fade-in-up">
-              {/* Order info */}
-              <div className="bg-white rounded-2xl border border-border p-6 mb-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{locale === "ru" ? "Заказ" : "Order"}</p>
-                    <p className="text-lg font-bold">{orderId.toUpperCase()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{locale === "ru" ? "Автомобиль" : "Car"}</p>
-                    <p className="font-semibold">{order.car}</p>
-                  </div>
-                </div>
-                <div className="flex gap-6 mt-4 pt-4 border-t border-border text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{locale === "ru" ? "Дата заказа" : "Order date"}</p>
-                    <p className="font-medium">{new Date(order.date).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{locale === "ru" ? "Ожидаемая доставка" : "Expected delivery"}</p>
-                    <p className="font-medium">{new Date(order.eta).toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
+          {inquiries.length > 0 && (
+            <div className="space-y-6 animate-fade-in-up">
+              {inquiries.map((inquiry) => {
+                const stepIdx = statusIndex[inquiry.status] ?? 0;
+                const typeLabel =
+                  typeLabels[inquiry.type]?.[locale] ?? inquiry.type;
 
-              {/* Status timeline */}
-              <div className="bg-white rounded-2xl border border-border p-6">
-                <h3 className="font-bold mb-6">{locale === "ru" ? "Статус доставки" : "Delivery Status"}</h3>
-                <div className="space-y-0">
-                  {orderStatuses.map((status, index) => {
-                    const isComplete = index < order.status;
-                    const isCurrent = index === order.status;
-                    const Icon = status.icon;
-                    return (
-                      <div key={status.key} className="flex items-start gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all",
-                            isComplete ? "bg-lime text-navy" : isCurrent ? "bg-navy text-white animate-pulse" : "bg-muted text-muted-foreground"
-                          )}>
-                            <Icon className="w-5 h-5" />
-                          </div>
-                          {index < orderStatuses.length - 1 && (
-                            <div className={cn(
-                              "w-0.5 h-12",
-                              isComplete ? "bg-lime" : "bg-border"
-                            )} />
-                          )}
-                        </div>
-                        <div className="pt-2">
-                          <p className={cn(
-                            "font-semibold text-sm",
-                            isComplete || isCurrent ? "text-foreground" : "text-muted-foreground"
-                          )}>
-                            {status.label[locale as keyof typeof status.label]}
+                return (
+                  <div
+                    key={inquiry.id}
+                    className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="p-5 border-b border-white/10">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.06] text-white/60 mb-2">
+                            {typeLabel}
+                          </span>
+                          <p className="font-semibold text-white">
+                            {inquiry.car
+                              ? `${inquiry.car.brand} ${inquiry.car.model} ${inquiry.car.year}`
+                              : inquiry.name}
                           </p>
-                          {isCurrent && (
-                            <p className="text-xs text-lime-dark mt-0.5">
-                              {locale === "ru" ? "Текущий статус" : "Current status"}
+                          {inquiry.message && (
+                            <p className="text-sm text-white/50 mt-1 flex items-start gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                              {inquiry.message}
                             </p>
                           )}
                         </div>
+                        <p className="text-xs text-white/40 shrink-0">
+                          {new Date(inquiry.created_at).toLocaleDateString(
+                            locale === "ru" ? "ru-RU" : locale === "uz" ? "uz-UZ" : "en-US"
+                          )}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    {/* Status timeline */}
+                    <div className="p-5">
+                      <div className="space-y-0">
+                        {statusSteps.map((step, index) => {
+                          const isComplete = index < stepIdx;
+                          const isCurrent = index === stepIdx;
+                          const Icon = step.icon;
+                          return (
+                            <div
+                              key={step.key}
+                              className="flex items-start gap-4"
+                            >
+                              <div className="flex flex-col items-center">
+                                <div
+                                  className={cn(
+                                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
+                                    isComplete
+                                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                      : isCurrent
+                                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 animate-pulse"
+                                      : "bg-white/[0.04] text-white/30 border border-white/[0.08]"
+                                  )}
+                                >
+                                  <Icon className="w-4 h-4" />
+                                </div>
+                                {index < statusSteps.length - 1 && (
+                                  <div
+                                    className={cn(
+                                      "w-px h-10",
+                                      isComplete
+                                        ? "bg-cyan-500/30"
+                                        : "bg-white/[0.06]"
+                                    )}
+                                  />
+                                )}
+                              </div>
+                              <div className="pt-1.5 pb-2">
+                                <p
+                                  className={cn(
+                                    "font-medium text-sm",
+                                    isComplete || isCurrent
+                                      ? "text-white"
+                                      : "text-white/30"
+                                  )}
+                                >
+                                  {step.label[locale as keyof typeof step.label]}
+                                </p>
+                                {isCurrent && (
+                                  <p className="text-xs text-purple-400 mt-0.5">
+                                    {locale === "ru"
+                                      ? "Текущий статус"
+                                      : locale === "uz"
+                                      ? "Joriy holat"
+                                      : "Current status"}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Help text */}
+          {!searched && (
+            <div className="text-center mt-8">
+              <div className="flex items-center justify-center gap-3 text-white/30">
+                <Truck className="w-5 h-5" />
+                <Clock className="w-5 h-5" />
+                <Ship className="w-5 h-5" />
               </div>
+              <p className="text-sm text-white/30 mt-3">
+                {locale === "ru"
+                  ? "Отслеживайте статус вашей заявки в реальном времени"
+                  : locale === "uz"
+                  ? "Arizangiz holatini real vaqtda kuzating"
+                  : "Track your application status in real time"}
+              </p>
             </div>
           )}
         </div>

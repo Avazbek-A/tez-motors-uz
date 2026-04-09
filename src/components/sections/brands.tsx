@@ -4,20 +4,21 @@ import Link from "next/link";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { FloatingShapes } from "@/components/effects";
 
 const brands = [
-  { name: "BYD", color: "from-blue-600 to-blue-800" },
-  { name: "Chery", color: "from-red-600 to-red-800" },
-  { name: "Haval", color: "from-emerald-600 to-emerald-800" },
-  { name: "Geely", color: "from-indigo-600 to-indigo-800" },
-  { name: "Changan", color: "from-slate-600 to-slate-800" },
-  { name: "JETOUR", color: "from-cyan-600 to-cyan-800" },
-  { name: "Tank", color: "from-amber-600 to-amber-800" },
-  { name: "Zeekr", color: "from-violet-600 to-violet-800" },
-  { name: "Li Auto", color: "from-zinc-600 to-zinc-800" },
-  { name: "Exeed", color: "from-rose-600 to-rose-800" },
-  { name: "Omoda", color: "from-orange-600 to-orange-800" },
-  { name: "XPeng", color: "from-teal-600 to-teal-800" },
+  { name: "BYD", color: "from-neon-blue to-neon-purple" },
+  { name: "Chery", color: "from-neon-pink to-neon-purple" },
+  { name: "Haval", color: "from-neon-green to-neon-blue" },
+  { name: "Geely", color: "from-neon-purple to-neon-blue" },
+  { name: "Changan", color: "from-neon-cyan to-neon-blue" },
+  { name: "JETOUR", color: "from-neon-blue to-neon-green" },
+  { name: "Tank", color: "from-neon-pink to-neon-purple" },
+  { name: "Zeekr", color: "from-neon-purple to-neon-pink" },
+  { name: "Li Auto", color: "from-neon-cyan to-neon-purple" },
+  { name: "Exeed", color: "from-neon-pink to-neon-blue" },
+  { name: "Omoda", color: "from-neon-green to-neon-cyan" },
+  { name: "XPeng", color: "from-neon-blue to-neon-pink" },
 ];
 
 export function Brands() {
@@ -32,8 +33,11 @@ export function Brands() {
     : "We import vehicles from leading Chinese manufacturers";
 
   return (
-    <section className="py-16 md:py-24">
-      <div className="container-custom">
+    <section className="py-16 md:py-24 bg-[#0a0a0f] relative overflow-hidden">
+      {/* Floating shapes background */}
+      <FloatingShapes count={6} />
+
+      <div className="container-custom relative z-10">
         <SectionHeading title={title} subtitle={subtitle} />
 
         <div
@@ -44,17 +48,17 @@ export function Brands() {
             <Link
               key={brand.name}
               href={`/catalog?brand=${encodeURIComponent(brand.name)}`}
-              className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-lg border border-border bg-white ${
+              className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-white/[0.06] bg-[#0d0d15]/80 backdrop-blur-sm hover:border-neon-blue/25 hover:shadow-[0_0_20px_rgba(0,212,255,0.08)] ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 40}ms` }}
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all duration-300`}>
                 <span className="text-white font-bold text-xs">
                   {brand.name.charAt(0)}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-foreground group-hover:text-lime-dark transition-colors">
+              <p className="text-sm font-semibold text-white/70 group-hover:text-neon-blue transition-colors duration-300">
                 {brand.name}
               </p>
             </Link>
