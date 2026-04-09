@@ -41,6 +41,10 @@ yarn-error.log*
 
 # cloudflare
 .wrangler
+.open-next/
+
+# supabase
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

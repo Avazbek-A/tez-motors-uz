@@ -1,6 +1,10 @@
 name = "tez-motors"
+main = ".open-next/worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-[site]
-bucket = ".vercel/output/static"
+[assets]
+directory = ".open-next/assets"
+
+[observability]
+enabled = true
