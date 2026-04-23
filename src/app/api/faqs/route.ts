@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { faqWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const all = searchParams.get("all") && isAdminRequest(request);
 
   try {
-    const supabase = await createClient();
+    const supabase = all ? createServiceClient() : await createClient();
     let query = supabase.from("faqs").select("*").order("order_position", { ascending: true });
 
     if (!all) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = result.data;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { data: faq, error } = await supabase
       .from("faqs")

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   const pageSize = searchParams.get("page_size");
 
   try {
-    const supabase = await createClient();
+    const supabase = all ? createServiceClient() : await createClient();
 
     // Pagination mode: use count + range
     if (page !== null) {
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = result.data;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const slug = `${data.brand}-${data.model}-${data.year}`
       .toLowerCase()

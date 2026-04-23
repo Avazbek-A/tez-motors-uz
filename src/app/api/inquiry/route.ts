@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { requireAdmin } from "@/lib/auth";
 
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     let query = supabase.from("inquiries").select("*").order("created_at", { ascending: false });
 
     if (status && status !== "all") {

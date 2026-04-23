@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 
 const escape = (val: string | number | boolean | null | undefined) => {
   if (val === null || val === undefined) return "";
-  const str = String(val);
+  let str = String(val);
+  // Prevent CSV formula injection when Excel/Sheets opens the file
+  if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") || "inquiries";
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const date = new Date().toISOString().split("T")[0];
 
     if (type === "cars") {

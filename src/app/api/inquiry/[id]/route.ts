@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { inquiryUpdateSchema } from "@/lib/schemas/car";
 import { requireAdmin } from "@/lib/auth";
 
@@ -24,7 +24,7 @@ export async function PUT(
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { data, error } = await supabase
       .from("inquiries")
@@ -57,7 +57,7 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     const { error } = await supabase.from("inquiries").delete().eq("id", id);
 
     if (error) {

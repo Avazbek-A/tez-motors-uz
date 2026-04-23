@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const unauth = requireAdmin(request);
   if (unauth) return unauth;
   try {
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     // Fetch all data in parallel
     const [carsResult, reviewsResult, faqsResult, inquiriesResult] = await Promise.all([
