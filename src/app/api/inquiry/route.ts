@@ -25,18 +25,24 @@ function checkRateLimit(ip: string): boolean {
 const inquirySchema = z.object({
   name: z.string().min(2).max(100),
   phone: z.string().min(5).max(20),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z.string().email().max(200).optional().or(z.literal("")),
   message: z.string().max(2000).optional(),
   type: z.enum(["general", "car_inquiry", "callback", "calculator"]).default("general"),
-  car_id: z.string().optional(),
-  source_page: z.string().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i).optional(),
+  source_page: z.string().max(200).optional(),
+  metadata: z.record(z.string(), z.unknown()).refine(
+    (v) => JSON.stringify(v).length <= 4000,
+    "metadata too large",
+  ).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Please try again later." },

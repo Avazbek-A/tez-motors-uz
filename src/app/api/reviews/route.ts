@@ -51,9 +51,13 @@ export async function POST(request: NextRequest) {
     const data = result.data;
     const supabase = await createClient();
 
+    // Public submissions must go through moderation — ignore any attempt to self-publish or reorder
+    const isAdmin = isAdminRequest(request);
+    const payload = isAdmin ? data : { ...data, is_published: false, order_position: 0 };
+
     const { data: review, error } = await supabase
       .from("reviews")
-      .insert(data)
+      .insert(payload)
       .select()
       .single();
 
