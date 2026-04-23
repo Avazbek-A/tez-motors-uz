@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-context";
 import { cn } from "@/lib/utils";
+import { Turnstile } from "@/components/shared/turnstile";
 
 export function CallbackWidget() {
   const { locale } = useLocale();
@@ -15,6 +16,7 @@ export function CallbackWidget() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const labels = {
     ru: { title: "Перезвоните мне", name: "Ваше имя", phone: "Телефон", submit: "Жду звонка", success: "Мы перезвоним!", error: "Ошибка отправки. Попробуйте ещё раз." },
@@ -32,7 +34,7 @@ export function CallbackWidget() {
       const res = await fetch("/api/callback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, turnstile_token: turnstileToken ?? undefined }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -106,6 +108,7 @@ export function CallbackWidget() {
                     required
                     className="h-10 text-sm bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue focus:ring-neon-blue/30"
                   />
+                  <Turnstile onToken={setTurnstileToken} />
                   {error && (
                     <p className="text-xs text-red-400 flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />{error}

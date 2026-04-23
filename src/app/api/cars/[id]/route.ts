@@ -53,7 +53,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   const { id } = await params;
 
@@ -93,7 +93,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   const { id } = await params;
 

@@ -6,7 +6,7 @@ import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const all = searchParams.get("all") && isAdminRequest(request);
+  const all = searchParams.get("all") && (await isAdminRequest(request));
 
   try {
     const supabase = all ? createServiceClient() : await createClient();
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     // Public submissions must go through moderation — ignore any attempt to self-publish or reorder
-    const isAdmin = isAdminRequest(request);
+    const isAdmin = (await isAdminRequest(request));
     const payload = isAdmin ? data : { ...data, is_published: false, order_position: 0 };
 
     const { data: review, error } = await supabase

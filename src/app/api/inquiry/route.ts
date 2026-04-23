@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { requireAdmin } from "@/lib/auth";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const checkRateLimit = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 });
 
@@ -25,6 +26,7 @@ const inquirySchema = z.object({
   ).optional(),
   // Honeypot: real clients don't render or fill this. Must be empty/absent.
   website: z.string().max(0).optional(),
+  turnstile_token: z.string().max(4096).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -39,6 +41,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = inquirySchema.parse(body);
+
+    const ok = await verifyTurnstile(data.turnstile_token, getClientIp(request));
+    if (!ok) {
+      return NextResponse.json(
+        { success: false, error: "Captcha verification failed" },
+        { status: 400 },
+      );
+    }
 
     const supabase = createServiceClient();
 
@@ -91,7 +101,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");

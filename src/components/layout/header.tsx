@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { Menu, Phone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
-import { NAV_LINKS, SITE_CONFIG } from "@/lib/constants";
+import { NAV_LINKS } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
 import { SocialLinks } from "@/components/shared/social-links";
@@ -17,6 +18,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { locale, dictionary } = useLocale();
+  const settings = useSiteSettings();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -94,11 +96,11 @@ export function Header() {
               <LanguageSwitcher isScrolled={isScrolled} />
 
               <a
-                href={`tel:${SITE_CONFIG.phoneRaw}`}
+                href={`tel:${settings.phoneRaw}`}
                 className="hidden md:flex items-center gap-2 text-sm font-semibold text-white/80 hover:text-neon-blue transition-colors"
               >
                 <Phone className="w-4 h-4" />
-                {SITE_CONFIG.phone}
+                {settings.phone}
               </a>
 
               <div className="hidden xl:flex">
@@ -153,11 +155,11 @@ export function Header() {
               ))}
               <div className="border-t border-white/10 mt-2 pt-3 flex flex-col gap-3">
                 <a
-                  href={`tel:${SITE_CONFIG.phoneRaw}`}
+                  href={`tel:${settings.phoneRaw}`}
                   className="flex items-center gap-2 px-4 py-2 text-white font-semibold"
                 >
                   <Phone className="w-5 h-5 text-neon-blue" />
-                  {SITE_CONFIG.phone}
+                  {settings.phone}
                 </a>
                 <div className="px-4">
                   <SocialLinks isScrolled={false} />

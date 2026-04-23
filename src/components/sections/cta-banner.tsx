@@ -4,12 +4,13 @@ import Link from "next/link";
 import { ArrowRight, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
-import { SITE_CONFIG } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { ScanlineOverlay } from "@/components/effects";
 
 export function CtaBanner() {
   const { dictionary } = useLocale();
+  const settings = useSiteSettings();
   const { ref, isVisible } = useScrollReveal();
 
   return (
@@ -39,7 +40,7 @@ export function CtaBanner() {
                 </Link>
               </Button>
               <Button size="xl" variant="outline" className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 hover:border-neon-blue/50" asChild>
-                <a href={`tel:${SITE_CONFIG.phoneRaw}`}>
+                <a href={`tel:${settings.phoneRaw}`}>
                   <Phone className="w-5 h-5" />
                   {dictionary.common.callUs}
                 </a>

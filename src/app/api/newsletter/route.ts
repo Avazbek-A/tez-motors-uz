@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const checkRateLimit = createRateLimiter({ max: 3, windowMs: 5 * 60 * 1000 });
 
 const schema = z.object({
   email: z.string().email().max(200),
   source_page: z.string().optional(),
+  turnstile_token: z.string().max(4096).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,12 +24,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = schema.parse(body);
 
+    const ok = await verifyTurnstile(data.turnstile_token, getClientIp(request));
+    if (!ok) {
+      return NextResponse.json(
+        { success: false, error: "Captcha verification failed" },
+        { status: 400 }
+      );
+    }
+
     const supabase = createServiceClient();
 
-    // Store subscription as a special inquiry type
     const { error } = await supabase.from("inquiries").insert({
       name: "Newsletter Subscriber",
-      phone: data.email,
+      phone: "-",
+      email: data.email,
       type: "newsletter",
       status: "new",
       source_page: data.source_page || "newsletter-widget",

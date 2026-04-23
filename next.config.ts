@@ -28,6 +28,21 @@ const nextConfig: NextConfig = {
   },
   output: "standalone",
   async headers() {
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: blob: https:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
+      "frame-src 'self' https://yandex.com https://yandex.ru https://*.yandex.net https://*.maps.yandex.net https://challenges.cloudflare.com",
+      "frame-ancestors 'self'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
@@ -40,6 +55,8 @@ const nextConfig: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains; preload",
           },
+          // Report-only to start — flip to Content-Security-Policy after observing prod for violations.
+          { key: "Content-Security-Policy-Report-Only", value: csp },
         ],
       },
     ];

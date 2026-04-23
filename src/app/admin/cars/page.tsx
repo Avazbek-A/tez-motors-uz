@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 
 import {
-  Plus, Search, Edit, Trash2, Eye, MoreHorizontal,
-  Car, Filter, ArrowUpDown, Loader2, RefreshCw, CheckCircle, AlertCircle, Download
+  Plus, Search, Edit, Trash2, Eye,
+  Car, Loader2, RefreshCw, CheckCircle, AlertCircle, Download,
+  Upload, X, ArrowLeft, ArrowRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -280,10 +281,57 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [descriptionRu, setDescriptionRu] = useState(car?.description_ru || "");
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
   const [isAvailable, setIsAvailable] = useState(car?.is_available ?? true);
+  const [images, setImages] = useState<string[]>(car?.images || []);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploadError(null);
+    const uploads = Array.from(files);
+    setUploadingCount((c) => c + uploads.length);
+    const newUrls: string[] = [];
+    for (const file of uploads) {
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setUploadError(data?.error || `Upload failed for ${file.name}`);
+        } else if (data.url) {
+          newUrls.push(data.url);
+        }
+      } catch {
+        setUploadError(`Network error uploading ${file.name}`);
+      } finally {
+        setUploadingCount((c) => c - 1);
+      }
+    }
+    if (newUrls.length) setImages((prev) => [...prev, ...newUrls]);
+  };
+
+  const removeImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const moveImage = (idx: number, dir: -1 | 1) => {
+    setImages((prev) => {
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setFormError(null);
+    setFieldErrors({});
 
     const slug = `${brand}-${model}-${year}`.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
@@ -304,7 +352,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       is_hot_offer: isHotOffer,
       is_available: isAvailable,
       mileage: 0,
-      images: car?.images || [],
+      images,
       specs: car?.specs || {},
     };
 
@@ -321,15 +369,26 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
         onSaved();
         onClose();
       } else {
-        const data = await res.json();
-        alert(data.error || "Failed to save car");
+        const data = await res.json().catch(() => ({}));
+        const nextFieldErrors: Record<string, string> = {};
+        const issues: Array<{ path?: unknown[]; message?: string }> =
+          data?.errors ?? data?.issues ?? [];
+        for (const issue of issues) {
+          const key = Array.isArray(issue.path) ? String(issue.path[0] ?? "") : "";
+          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message || "Invalid value";
+        }
+        setFieldErrors(nextFieldErrors);
+        setFormError(data.error || "Failed to save car");
       }
     } catch {
-      alert("Network error");
+      setFormError("Network error");
     } finally {
       setSaving(false);
     }
   };
+
+  const err = (k: string) =>
+    fieldErrors[k] ? <p className="text-xs text-red-400 mt-1">{fieldErrors[k]}</p> : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -346,10 +405,12 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             <div>
               <label className="text-sm font-medium mb-1 block">Brand</label>
               <Input value={brand} onChange={(e) => setBrand(e.target.value)} required />
+              {err("brand")}
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Model</label>
               <Input value={model} onChange={(e) => setModel(e.target.value)} required />
+              {err("model")}
             </div>
           </div>
 
@@ -433,6 +494,70 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             />
           </div>
 
+          <div>
+            <label className="text-sm font-medium mb-2 block">Images</label>
+            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-6 cursor-pointer hover:border-lime/50 transition-colors text-sm text-muted-foreground">
+              <Upload className="w-4 h-4" />
+              {uploadingCount > 0
+                ? `Uploading ${uploadingCount}…`
+                : "Click to upload JPG / PNG / WebP (max 5 MB each)"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {uploadError && (
+              <p className="text-xs text-red-500 mt-2">{uploadError}</p>
+            )}
+            {images.length > 0 && (
+              <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3">
+                {images.map((url, idx) => (
+                  <div key={`${url}-${idx}`} className="relative group rounded-lg overflow-hidden border border-white/10">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-24 object-cover" />
+                    {idx === 0 && (
+                      <span className="absolute top-1 left-1 bg-lime text-navy text-[10px] font-bold px-1.5 py-0.5 rounded">COVER</span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={() => moveImage(idx, -1)}
+                        disabled={idx === 0}
+                        className="text-white disabled:opacity-30 p-1"
+                        title="Move left"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(idx)}
+                        className="text-red-300 hover:text-red-200 p-1"
+                        title="Remove"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(idx, 1)}
+                        disabled={idx === images.length - 1}
+                        className="text-white disabled:opacity-30 p-1"
+                        title="Move right"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -453,6 +578,12 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               <span className="text-sm">Available</span>
             </label>
           </div>
+
+          {formError && (
+            <div className="bg-red-500/10 border border-red-500/20 text-red-300 text-sm px-3 py-2 rounded-lg">
+              {formError}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

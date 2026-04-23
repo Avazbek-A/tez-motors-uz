@@ -1,12 +1,13 @@
 "use client";
 
-import { SITE_CONFIG } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import { cn } from "@/lib/utils";
 
 export function SocialLinks({ isScrolled }: { isScrolled: boolean }) {
+  const settings = useSiteSettings();
   const links = [
     {
-      href: SITE_CONFIG.telegram,
+      href: settings.telegram,
       label: "Telegram",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -15,7 +16,7 @@ export function SocialLinks({ isScrolled }: { isScrolled: boolean }) {
       ),
     },
     {
-      href: SITE_CONFIG.instagram,
+      href: settings.instagram,
       label: "Instagram",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -24,7 +25,7 @@ export function SocialLinks({ isScrolled }: { isScrolled: boolean }) {
       ),
     },
     {
-      href: SITE_CONFIG.whatsapp,
+      href: settings.whatsapp,
       label: "WhatsApp",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

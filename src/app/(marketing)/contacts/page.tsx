@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
-import { SITE_CONFIG } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
+import { Turnstile } from "@/components/shared/turnstile";
 
 export default function ContactsPage() {
   const { dictionary } = useLocale();
+  const settings = useSiteSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", email: "", message: "" });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,7 @@ export default function ContactsPage() {
       const res = await fetch("/api/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, type: "general", source_page: "contacts" }),
+        body: JSON.stringify({ ...form, type: "general", source_page: "contacts", turnstile_token: turnstileToken ?? undefined }),
       });
       if (res.ok) {
         setIsSuccess(true);
@@ -43,11 +46,13 @@ export default function ContactsPage() {
   };
 
   const contactInfo = [
-    { icon: Phone, label: SITE_CONFIG.phone, href: `tel:${SITE_CONFIG.phoneRaw}` },
-    { icon: Mail, label: SITE_CONFIG.email, href: `mailto:${SITE_CONFIG.email}` },
-    { icon: MapPin, label: SITE_CONFIG.address, href: undefined },
+    { icon: Phone, label: settings.phone, href: `tel:${settings.phoneRaw}` },
+    { icon: Mail, label: settings.email, href: `mailto:${settings.email}` },
+    { icon: MapPin, label: settings.address, href: undefined },
     { icon: Clock, label: dictionary.footer.workingHours, href: undefined },
   ];
+
+  const mapQuery = encodeURIComponent(settings.address);
 
   return (
     <div className="pt-24 pb-16">
@@ -84,7 +89,7 @@ export default function ContactsPage() {
             {/* Messenger buttons */}
             <div className="grid grid-cols-2 gap-4">
               <a
-                href={SITE_CONFIG.whatsapp}
+                href={settings.whatsapp}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl p-4 font-semibold transition-colors"
@@ -92,7 +97,7 @@ export default function ContactsPage() {
                 WhatsApp
               </a>
               <a
-                href={SITE_CONFIG.telegram}
+                href={settings.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl p-4 font-semibold transition-colors"
@@ -101,12 +106,16 @@ export default function ContactsPage() {
               </a>
             </div>
 
-            {/* Map placeholder */}
-            <div className="bg-[#0a0a0f] rounded-2xl h-64 flex items-center justify-center border border-white/10">
-              <div className="text-center text-white/60">
-                <MapPin className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Map will be displayed here</p>
-              </div>
+            <div className="bg-[#0a0a0f] rounded-2xl h-64 overflow-hidden border border-white/10">
+              <iframe
+                title="Map"
+                src={`https://yandex.com/map-widget/v1/?text=${mapQuery}&z=15`}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                loading="lazy"
+                className="block"
+              />
             </div>
           </div>
 
@@ -148,6 +157,7 @@ export default function ContactsPage() {
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                   rows={5}
                 />
+                <Turnstile onToken={setTurnstileToken} />
                 {formError && (
                   <p className="text-sm text-red-400 flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4 shrink-0" />{formError}

@@ -5,12 +5,14 @@ import { Mail, Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-context";
+import { Turnstile } from "@/components/shared/turnstile";
 
 export function Newsletter() {
   const { locale } = useLocale();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const labels = {
     ru: { title: "Подпишитесь на новинки", subtitle: "Получайте уведомления о новых автомобилях и специальных предложениях", placeholder: "Ваш email", button: "Подписаться", success: "Вы подписаны!" },
@@ -26,7 +28,7 @@ export function Newsletter() {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source_page: window.location.pathname }),
+        body: JSON.stringify({ email, source_page: window.location.pathname, turnstile_token: turnstileToken ?? undefined }),
       });
       if (res.ok) {
         setSuccess(true);
@@ -57,6 +59,7 @@ export function Newsletter() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="flex gap-2">
+          <Turnstile onToken={setTurnstileToken} />
           <Input
             type="email"
             value={email}

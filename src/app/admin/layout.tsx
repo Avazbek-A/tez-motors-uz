@@ -4,16 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, Package, ExternalLink
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const adminNav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/cars", label: "Cars", icon: Car },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/orders", label: "Orders", icon: Package },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
@@ -25,6 +24,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   if (pathname === "/admin/login") {
     return <>{children}</>;

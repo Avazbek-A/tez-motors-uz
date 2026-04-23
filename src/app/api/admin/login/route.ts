@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { ADMIN_COOKIE } from "@/lib/auth";
+import {
+  ADMIN_COOKIE,
+  SESSION_TTL_SECONDS,
+  generateOpaqueToken,
+  sha256Hex,
+} from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({ password: z.string().min(1).max(200) });
@@ -21,8 +27,7 @@ export async function POST(request: Request) {
   }
 
   const expected = process.env.ADMIN_PASSWORD;
-  const sessionToken = process.env.ADMIN_SESSION_TOKEN;
-  if (!expected || !sessionToken) {
+  if (!expected) {
     return NextResponse.json({ error: "Admin auth not configured" }, { status: 500 });
   }
 
@@ -30,13 +35,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
 
+  const token = generateOpaqueToken();
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(Date.now() + SESSION_TTL_SECONDS * 1000);
+
+  try {
+    const supabase = createServiceClient();
+    const { error } = await supabase.from("admin_sessions").insert({
+      token_hash: tokenHash,
+      expires_at: expiresAt.toISOString(),
+      user_agent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+      ip: getClientIp(request).slice(0, 64),
+    });
+    if (error) {
+      return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
+  }
+
   const response = NextResponse.json({ success: true });
-  response.cookies.set(ADMIN_COOKIE, sessionToken, {
+  response.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24,
+    maxAge: SESSION_TTL_SECONDS,
   });
   return response;
 }

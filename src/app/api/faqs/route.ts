@@ -6,7 +6,7 @@ import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const all = searchParams.get("all") && isAdminRequest(request);
+  const all = searchParams.get("all") && (await isAdminRequest(request));
 
   try {
     const supabase = all ? createServiceClient() : await createClient();
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   try {
     const body = await request.json();

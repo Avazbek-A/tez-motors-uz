@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const hotOnly = searchParams.get("hot_only");
   const rawSearch = searchParams.get("search");
   const search = rawSearch ? sanitizeSearch(rawSearch) : null;
-  const all = searchParams.get("all") && isAdminRequest(request);
+  const all = searchParams.get("all") && (await isAdminRequest(request));
   const limit = parseIntSafe(searchParams.get("limit"), 1, 100);
   const ids = searchParams.get("ids"); // comma-separated IDs
   const page = searchParams.get("page");
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
 
 // POST - add a new car (admin)
 export async function POST(request: NextRequest) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   try {
     const body = await request.json();

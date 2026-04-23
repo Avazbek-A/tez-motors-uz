@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 
 export async function GET(request: Request) {
-  const unauth = requireAdmin(request);
+  const unauth = await requireAdmin(request);
   if (unauth) return unauth;
   try {
     const supabase = createServiceClient();

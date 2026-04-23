@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
-import { NAV_LINKS, SITE_CONFIG } from "@/lib/constants";
+import { NAV_LINKS } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
 
 export function Footer() {
   const { locale, dictionary } = useLocale();
+  const settings = useSiteSettings();
   const year = new Date().getFullYear();
 
   return (
@@ -67,25 +69,25 @@ export function Footer() {
             <ul className="space-y-3">
               <li>
                 <a
-                  href={`tel:${SITE_CONFIG.phoneRaw}`}
+                  href={`tel:${settings.phoneRaw}`}
                   className="flex items-center gap-3 text-white/50 hover:text-neon-blue transition-colors text-sm"
                 >
                   <Phone className="w-4 h-4 shrink-0 text-neon-blue/50" />
-                  {SITE_CONFIG.phone}
+                  {settings.phone}
                 </a>
               </li>
               <li>
                 <a
-                  href={`mailto:${SITE_CONFIG.email}`}
+                  href={`mailto:${settings.email}`}
                   className="flex items-center gap-3 text-white/50 hover:text-neon-blue transition-colors text-sm"
                 >
                   <Mail className="w-4 h-4 shrink-0 text-neon-purple/50" />
-                  {SITE_CONFIG.email}
+                  {settings.email}
                 </a>
               </li>
               <li className="flex items-start gap-3 text-white/50 text-sm">
                 <MapPin className="w-4 h-4 shrink-0 mt-0.5 text-neon-pink/50" />
-                {SITE_CONFIG.address}
+                {settings.address}
               </li>
               <li className="flex items-center gap-3 text-white/50 text-sm">
                 <Clock className="w-4 h-4 shrink-0 text-neon-green/50" />
@@ -101,7 +103,7 @@ export function Footer() {
             </h3>
             <div className="space-y-3">
               <a
-                href={SITE_CONFIG.whatsapp}
+                href={settings.whatsapp}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/20 rounded-xl px-4 py-3 transition-all text-sm font-medium hover:shadow-[0_0_15px_rgba(34,255,136,0.15)]"
@@ -112,7 +114,7 @@ export function Footer() {
                 WhatsApp
               </a>
               <a
-                href={SITE_CONFIG.telegram}
+                href={settings.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/20 rounded-xl px-4 py-3 transition-all text-sm font-medium hover:shadow-[0_0_15px_rgba(0,212,255,0.15)]"

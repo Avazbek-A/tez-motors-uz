@@ -3,6 +3,7 @@ import { z } from "zod";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 const checkRateLimit = createRateLimiter({ max: 3, windowMs: 5 * 60 * 1000 });
 
@@ -11,6 +12,7 @@ const callbackSchema = z.object({
   phone: z.string().min(5).max(20),
   // Honeypot: must be empty/absent
   website: z.string().max(0).optional(),
+  turnstile_token: z.string().max(4096).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -21,6 +23,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = callbackSchema.parse(body);
+
+    const ok = await verifyTurnstile(data.turnstile_token, getClientIp(request));
+    if (!ok) {
+      return NextResponse.json(
+        { success: false, error: "Captcha verification failed" },
+        { status: 400 },
+      );
+    }
 
     // Persist to Supabase
     const supabase = createServiceClient();

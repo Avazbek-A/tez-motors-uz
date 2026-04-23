@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SITE_CONFIG } from "@/lib/constants";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import { cn } from "@/lib/utils";
 
 export function WhatsAppButton() {
+  const settings = useSiteSettings();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -16,7 +17,7 @@ export function WhatsAppButton() {
 
   return (
     <a
-      href={SITE_CONFIG.whatsapp}
+      href={settings.whatsapp}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="WhatsApp"

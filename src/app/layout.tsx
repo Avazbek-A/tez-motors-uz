@@ -49,20 +49,11 @@ export const metadata: Metadata = {
     title: "Tez Motors — Импорт авто из Китая в Узбекистан",
     description:
       "Подбор, покупка и доставка автомобилей из Китая. Прозрачные цены и полное сопровождение сделки.",
-    images: [
-      {
-        url: "https://tezmotors.uz/images/og-default.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Tez Motors — Импорт авто из Китая",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tez Motors — Импорт авто из Китая",
     description: "Подбор, покупка и доставка автомобилей из Китая в Узбекистан.",
-    images: ["https://tezmotors.uz/images/og-default.jpg"],
   },
 };
 

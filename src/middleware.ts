@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ADMIN_COOKIE } from "@/lib/auth";
+const ADMIN_COOKIE = "admin_session";
 
 export const runtime = "experimental-edge";
 
+/**
+ * UX-level gate: redirect to login if no admin cookie is present.
+ * Actual auth enforcement lives in API routes (requireAdmin), which
+ * verifies the cookie against the admin_sessions table.
+ */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
-    const token = process.env.ADMIN_SESSION_TOKEN;
     const cookie = request.cookies.get(ADMIN_COOKIE)?.value;
-    const authHeader = request.headers.get("authorization");
-    const bearer = authHeader?.startsWith("Bearer ")
-      ? authHeader.slice("Bearer ".length)
-      : null;
-
-    const authed = Boolean(token) && (cookie === token || bearer === token);
-
-    if (!authed) {
+    if (!cookie) {
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
