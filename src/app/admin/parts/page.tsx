@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload, FileDown, FileUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,13 @@ export default function AdminPartsPage() {
   const [editing, setEditing] = useState<Partial<Part> | null>(null);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    inserted: number;
+    updated: number;
+    skipped: number;
+    errors: Array<{ row: number; slug?: string; message: string }>;
+  } | null>(null);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -56,6 +63,35 @@ export default function AdminPartsPage() {
   useEffect(() => {
     fetchParts();
   }, [fetchParts]);
+
+  const handleImport = async (file: File) => {
+    setImporting(true);
+    setImportReport(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/parts/import", {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback("error", data.error || "Import failed");
+        return;
+      }
+      setImportReport(data);
+      const { inserted = 0, updated = 0, skipped = 0 } = data;
+      showFeedback(
+        skipped > 0 ? "error" : "success",
+        `Imported ${inserted} new, updated ${updated}, skipped ${skipped}`,
+      );
+      fetchParts();
+    } catch (e) {
+      showFeedback("error", e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const filtered = parts.filter((p) => {
     if (categoryFilter && p.category !== categoryFilter) return false;
@@ -123,10 +159,46 @@ export default function AdminPartsPage() {
           <h1 className="text-2xl font-bold">Parts Catalog</h1>
           <p className="text-muted-foreground text-sm">Manage spare parts inventory.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchParts} disabled={loading}>
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.location.href = "/api/admin/parts/template";
+            }}
+            title="Download CSV template"
+          >
+            <FileDown className="w-4 h-4 mr-1" /> Template
+          </Button>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file);
+                e.target.value = "";
+              }}
+            />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium cursor-pointer hover:bg-accent",
+                importing && "opacity-60 cursor-not-allowed",
+              )}
+            >
+              {importing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileUp className="w-4 h-4" />
+              )}
+              Import CSV
+            </span>
+          </label>
           <Button size="sm" onClick={() => setEditing(emptyPart())}>
             <Plus className="w-4 h-4 mr-1" /> Add Part
           </Button>
@@ -143,6 +215,35 @@ export default function AdminPartsPage() {
           )}
         >
           {feedback.message}
+        </div>
+      )}
+
+      {importReport && importReport.errors.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-medium text-amber-500">
+              {importReport.errors.length} row{importReport.errors.length === 1 ? "" : "s"} skipped
+            </p>
+            <button
+              type="button"
+              onClick={() => setImportReport(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <ul className="max-h-48 overflow-auto space-y-1 text-xs text-muted-foreground">
+            {importReport.errors.slice(0, 50).map((err, idx) => (
+              <li key={idx}>
+                <span className="font-mono text-amber-500/80">row {err.row}</span>
+                {err.slug ? <span className="text-muted-foreground"> ({err.slug})</span> : null}
+                : {err.message}
+              </li>
+            ))}
+            {importReport.errors.length > 50 && (
+              <li className="italic">…and {importReport.errors.length - 50} more</li>
+            )}
+          </ul>
         </div>
       )}
 
