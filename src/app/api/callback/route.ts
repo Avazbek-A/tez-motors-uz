@@ -22,7 +22,10 @@ const callbackSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip =
+      request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 });
     }
