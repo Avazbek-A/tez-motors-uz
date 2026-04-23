@@ -39,26 +39,50 @@ interface Inquiry {
   car: { brand: string; model: string; year: number } | null;
 }
 
+const LABELS = {
+  ru: {
+    title: "Статус заявки",
+    subtitle: "Введите номер телефона, чтобы узнать статус вашей заявки",
+    phonePlaceholder: "Ваш номер телефона (напр. +998901234567)",
+    search: "Найти",
+    notFound: "Заявки по этому номеру не найдены.",
+    notFoundHint: "Убедитесь, что ввели правильный номер телефона",
+    currentStatus: "Текущий статус",
+    helpText: "Отслеживайте статус вашей заявки в реальном времени",
+  },
+  uz: {
+    title: "Ariza holati",
+    subtitle: "Arizangiz holatini bilish uchun telefon raqamingizni kiriting",
+    phonePlaceholder: "Telefon raqamingiz (masalan +998901234567)",
+    search: "Qidirish",
+    notFound: "Bu raqam bo'yicha arizalar topilmadi.",
+    notFoundHint: "Telefon raqamini to'g'ri kiritganingizga ishonch hosil qiling",
+    currentStatus: "Joriy holat",
+    helpText: "Arizangiz holatini real vaqtda kuzating",
+  },
+  en: {
+    title: "Application Status",
+    subtitle: "Enter your phone number to check your application status",
+    phonePlaceholder: "Your phone number (e.g. +998901234567)",
+    search: "Search",
+    notFound: "No applications found for this number.",
+    notFoundHint: "Make sure you entered the correct phone number",
+    currentStatus: "Current status",
+    helpText: "Track your application status in real time",
+  },
+} as const;
+
 export default function TrackOrderPage() {
   const { locale } = useLocale();
+  const t = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
   const [phone, setPhone] = useState("");
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const title =
-    locale === "ru"
-      ? "Статус заявки"
-      : locale === "uz"
-      ? "Ariza holati"
-      : "Application Status";
-  const subtitle =
-    locale === "ru"
-      ? "Введите номер телефона, чтобы узнать статус вашей заявки"
-      : locale === "uz"
-      ? "Arizangiz holatini bilish uchun telefon raqamingizni kiriting"
-      : "Enter your phone number to check your application status";
+  const title = t.title;
+  const subtitle = t.subtitle;
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,13 +126,7 @@ export default function TrackOrderPage() {
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder={
-                  locale === "ru"
-                    ? "Ваш номер телефона (напр. +998901234567)"
-                    : locale === "uz"
-                    ? "Telefon raqamingiz (masalan +998901234567)"
-                    : "Your phone number (e.g. +998901234567)"
-                }
+                placeholder={t.phonePlaceholder}
                 className="pl-12 h-14 text-base rounded-2xl"
                 required
                 type="tel"
@@ -122,12 +140,8 @@ export default function TrackOrderPage() {
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
-              ) : locale === "ru" ? (
-                "Найти"
-              ) : locale === "uz" ? (
-                "Qidirish"
               ) : (
-                "Search"
+                t.search
               )}
             </Button>
           </form>
@@ -135,20 +149,8 @@ export default function TrackOrderPage() {
           {notFound && searched && (
             <div className="text-center py-12 bg-[#0a0a0f] rounded-2xl border border-white/10">
               <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/60 text-sm">
-                {locale === "ru"
-                  ? "Заявки по этому номеру не найдены."
-                  : locale === "uz"
-                  ? "Bu raqam bo'yicha arizalar topilmadi."
-                  : "No applications found for this number."}
-              </p>
-              <p className="text-xs text-white/40 mt-2">
-                {locale === "ru"
-                  ? "Убедитесь, что ввели правильный номер телефона"
-                  : locale === "uz"
-                  ? "Telefon raqamini to'g'ri kiritganingizga ishonch hosil qiling"
-                  : "Make sure you entered the correct phone number"}
-              </p>
+              <p className="text-white/60 text-sm">{t.notFound}</p>
+              <p className="text-xs text-white/40 mt-2">{t.notFoundHint}</p>
             </div>
           )}
 
@@ -239,13 +241,7 @@ export default function TrackOrderPage() {
                                   {step.label[locale as keyof typeof step.label]}
                                 </p>
                                 {isCurrent && (
-                                  <p className="text-xs text-purple-400 mt-0.5">
-                                    {locale === "ru"
-                                      ? "Текущий статус"
-                                      : locale === "uz"
-                                      ? "Joriy holat"
-                                      : "Current status"}
-                                  </p>
+                                  <p className="text-xs text-purple-400 mt-0.5">{t.currentStatus}</p>
                                 )}
                               </div>
                             </div>
@@ -267,13 +263,7 @@ export default function TrackOrderPage() {
                 <Clock className="w-5 h-5" />
                 <Ship className="w-5 h-5" />
               </div>
-              <p className="text-sm text-white/30 mt-3">
-                {locale === "ru"
-                  ? "Отслеживайте статус вашей заявки в реальном времени"
-                  : locale === "uz"
-                  ? "Arizangiz holatini real vaqtda kuzating"
-                  : "Track your application status in real time"}
-              </p>
+              <p className="text-sm text-white/30 mt-3">{t.helpText}</p>
             </div>
           )}
         </div>

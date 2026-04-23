@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-import { Car, MessageSquare, Star, HelpCircle, ArrowUpRight, Clock } from "lucide-react";
+import Link from "next/link";
+import { Car, MessageSquare, Star, HelpCircle, ArrowUpRight, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -23,9 +25,12 @@ interface Inquiry {
   source_page?: string;
 }
 
+const PAGE_SIZE = 10;
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin/stats")
@@ -104,8 +109,11 @@ export default function AdminDashboard() {
 
       {/* Recent inquiries */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-4">
           <CardTitle>Recent Inquiries</CardTitle>
+          <Link href="/admin/inquiries" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+            View all <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
         </CardHeader>
         <CardContent>
           {inquiries.length === 0 ? (
@@ -114,7 +122,7 @@ export default function AdminDashboard() {
             </p>
           ) : (
             <div className="space-y-3">
-              {inquiries.slice(0, 10).map((inquiry) => (
+              {inquiries.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE).map((inquiry) => (
                 <div
                   key={inquiry.id}
                   className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
@@ -140,6 +148,21 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+              {inquiries.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between pt-3 border-t border-border text-sm">
+                  <span className="text-muted-foreground">
+                    {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, inquiries.length)} of {inquiries.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+                      <ChevronLeft className="w-4 h-4" /> Prev
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPage((p) => ((p + 1) * PAGE_SIZE >= inquiries.length ? p : p + 1))} disabled={(page + 1) * PAGE_SIZE >= inquiries.length}>
+                      Next <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

@@ -9,8 +9,57 @@ import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import type { Review } from "@/types/car";
 
+const LABELS = {
+  ru: {
+    title: "Отзывы клиентов",
+    subtitle: "Что говорят о нас наши клиенты",
+    leaveReview: "Оставить отзыв",
+    leaveReviewHeading: "Оставить отзыв",
+    reviewsCount: "отзывов",
+    yourRating: "Ваша оценка",
+    namePlaceholder: "Ваше имя",
+    carPlaceholder: "Какой автомобиль купили?",
+    reviewPlaceholder: "Расскажите о вашем опыте...",
+    submit: "Отправить",
+    successMsg: "Спасибо за отзыв! Он будет опубликован после модерации.",
+    errorSend: "Ошибка отправки. Попробуйте ещё раз.",
+    errorNet: "Нет соединения. Проверьте интернет.",
+  },
+  uz: {
+    title: "Mijozlar fikrlari",
+    subtitle: "Mijozlarimiz biz haqimizda nima deyishadi",
+    leaveReview: "Fikr qoldirish",
+    leaveReviewHeading: "Fikr qoldirish",
+    reviewsCount: "fikr",
+    yourRating: "Bahoyingiz",
+    namePlaceholder: "Ismingiz",
+    carPlaceholder: "Qaysi avtomobilni sotib oldingiz?",
+    reviewPlaceholder: "Tajribangiz haqida gapirib bering...",
+    submit: "Yuborish",
+    successMsg: "Fikr uchun rahmat! Moderatsiyadan keyin e'lon qilinadi.",
+    errorSend: "Yuborishda xatolik. Qayta urinib ko'ring.",
+    errorNet: "Ulanish yo'q. Internetni tekshiring.",
+  },
+  en: {
+    title: "Customer Reviews",
+    subtitle: "What our clients say about us",
+    leaveReview: "Leave Review",
+    leaveReviewHeading: "Leave a Review",
+    reviewsCount: "reviews",
+    yourRating: "Your Rating",
+    namePlaceholder: "Your name",
+    carPlaceholder: "Which car did you buy?",
+    reviewPlaceholder: "Tell us about your experience...",
+    submit: "Submit",
+    successMsg: "Thank you! Your review will be published after moderation.",
+    errorSend: "Failed to send. Please try again.",
+    errorNet: "No connection. Check your internet.",
+  },
+} as const;
+
 export default function ReviewsPage() {
   const { locale } = useLocale();
+  const t = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -30,11 +79,8 @@ export default function ReviewsPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  const title = locale === "ru" ? "Отзывы клиентов" : locale === "uz" ? "Mijozlar fikrlari" : "Customer Reviews";
-  const subtitle = locale === "ru"
-    ? "Что говорят о нас наши клиенты"
-    : locale === "uz" ? "Mijozlarimiz biz haqimizda nima deyishadi"
-    : "What our clients say about us";
+  const title = t.title;
+  const subtitle = t.subtitle;
 
   const getReviewText = (review: Review) => {
     if (locale === "uz") return review.review_text_uz;
@@ -62,14 +108,14 @@ export default function ReviewsPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setSubmitError(data.error || (locale === "ru" ? "Ошибка отправки. Попробуйте ещё раз." : "Failed to send. Please try again."));
+        setSubmitError(data.error || t.errorSend);
         return;
       }
       setIsSuccess(true);
       form.reset();
       setTimeout(() => { setIsSuccess(false); setShowForm(false); }, 3000);
     } catch {
-      setSubmitError(locale === "ru" ? "Нет соединения. Проверьте интернет." : "No connection. Check your internet.");
+      setSubmitError(t.errorNet);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,10 +139,10 @@ export default function ReviewsPage() {
                 <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <p className="text-xs text-white/60 mt-1">{reviews.length} {locale === "ru" ? "отзывов" : "reviews"}</p>
+            <p className="text-xs text-white/60 mt-1">{reviews.length} {t.reviewsCount}</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)}>
-            {locale === "ru" ? "Оставить отзыв" : "Leave Review"}
+            {t.leaveReview}
           </Button>
         </div>
 
@@ -106,15 +152,15 @@ export default function ReviewsPage() {
             {isSuccess ? (
               <div className="bg-neon-blue/10 rounded-2xl border border-neon-blue/20 p-8 text-center">
                 <CheckCircle className="w-12 h-12 text-neon-blue mx-auto mb-3" />
-                <p className="font-semibold">{locale === "ru" ? "Спасибо за отзыв! Он будет опубликован после модерации." : "Thank you! Your review will be published after moderation."}</p>
+                <p className="font-semibold">{t.successMsg}</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 space-y-4">
-                <h3 className="font-bold">{locale === "ru" ? "Оставить отзыв" : "Leave a Review"}</h3>
+                <h3 className="font-bold">{t.leaveReviewHeading}</h3>
 
                 {/* Star rating */}
                 <div>
-                  <p className="text-sm font-medium mb-2">{locale === "ru" ? "Ваша оценка" : "Your Rating"}</p>
+                  <p className="text-sm font-medium mb-2">{t.yourRating}</p>
                   <div className="flex gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <button
@@ -133,9 +179,9 @@ export default function ReviewsPage() {
                   </div>
                 </div>
 
-                <Input name="name" placeholder={locale === "ru" ? "Ваше имя" : "Your name"} required />
-                <Input name="car" placeholder={locale === "ru" ? "Какой автомобиль купили?" : "Which car did you buy?"} />
-                <Textarea name="review" placeholder={locale === "ru" ? "Расскажите о вашем опыте..." : "Tell us about your experience..."} rows={4} required />
+                <Input name="name" placeholder={t.namePlaceholder} required />
+                <Input name="car" placeholder={t.carPlaceholder} />
+                <Textarea name="review" placeholder={t.reviewPlaceholder} rows={4} required />
 
                 {submitError && (
                   <p className="text-sm text-red-400 flex items-center gap-1.5">
@@ -143,7 +189,7 @@ export default function ReviewsPage() {
                   </p>
                 )}
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />{locale === "ru" ? "Отправить" : "Submit"}</>}
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />{t.submit}</>}
                 </Button>
               </form>
             )}

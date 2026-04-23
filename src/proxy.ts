@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 const ADMIN_COOKIE = "admin_session";
 
-export const runtime = "experimental-edge";
-
 /**
  * UX-level gate: redirect to login if no admin cookie is present.
  * Actual auth enforcement lives in API routes (requireAdmin), which
  * verifies the cookie against the admin_sessions table.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {

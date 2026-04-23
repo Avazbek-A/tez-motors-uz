@@ -15,6 +15,44 @@ export default function AdminReviewsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () => setSelected(new Set(reviews.map((r) => r.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkSetPublished = async (publish: boolean) => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`/api/reviews/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_published: publish }),
+        }),
+      ),
+    );
+    const okIds = new Set<string>();
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled" && r.value.ok) okIds.add(ids[i]);
+    });
+    setReviews((prev) => prev.map((r) => (okIds.has(r.id) ? { ...r, is_published: publish } : r)));
+    clearSelection();
+    setBulkBusy(false);
+    showFeedback(
+      okIds.size === ids.length ? "success" : "error",
+      `${okIds.size}/${ids.length} ${publish ? "published" : "unpublished"}`,
+    );
+  };
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -81,6 +119,23 @@ export default function AdminReviewsPage() {
         </div>
       </div>
 
+      {reviews.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Button type="button" size="sm" variant="outline" onClick={selected.size === reviews.length ? clearSelection : selectAll}>
+            {selected.size === reviews.length ? "Clear selection" : "Select all"}
+          </Button>
+          <span className="text-muted-foreground">{selected.size} selected</span>
+          <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(true)}>
+            {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            Publish selected
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(false)}>
+            {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+            Unpublish selected
+          </Button>
+        </div>
+      )}
+
       {feedback && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in ${
           feedback.type === "success"
@@ -107,9 +162,18 @@ export default function AdminReviewsPage() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="font-semibold">{review.client_name}</p>
-                      <p className="text-xs text-muted-foreground">{review.car_description}</p>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(review.id)}
+                        onChange={() => toggleSelect(review.id)}
+                        className="mt-1 rounded"
+                        aria-label="Select review"
+                      />
+                      <div>
+                        <p className="font-semibold">{review.client_name}</p>
+                        <p className="text-xs text-muted-foreground">{review.car_description}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       {review.is_published ? (

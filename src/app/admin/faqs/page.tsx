@@ -15,6 +15,44 @@ export default function AdminFAQsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () => setSelected(new Set(faqs.map((f) => f.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkSetPublished = async (publish: boolean) => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`/api/faqs/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_published: publish }),
+        }),
+      ),
+    );
+    const okIds = new Set<string>();
+    results.forEach((r, i) => {
+      if (r.status === "fulfilled" && r.value.ok) okIds.add(ids[i]);
+    });
+    setFaqs((prev) => prev.map((f) => (okIds.has(f.id) ? { ...f, is_published: publish } : f)));
+    clearSelection();
+    setBulkBusy(false);
+    showFeedback(
+      okIds.size === ids.length ? "success" : "error",
+      `${okIds.size}/${ids.length} ${publish ? "published" : "unpublished"}`,
+    );
+  };
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -81,6 +119,23 @@ export default function AdminFAQsPage() {
         </div>
       </div>
 
+      {faqs.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Button type="button" size="sm" variant="outline" onClick={selected.size === faqs.length ? clearSelection : selectAll}>
+            {selected.size === faqs.length ? "Clear selection" : "Select all"}
+          </Button>
+          <span className="text-muted-foreground">{selected.size} selected</span>
+          <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(true)}>
+            {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            Publish selected
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(false)}>
+            {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
+            Unpublish selected
+          </Button>
+        </div>
+      )}
+
       {feedback && (
         <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in ${
           feedback.type === "success"
@@ -107,6 +162,13 @@ export default function AdminFAQsPage() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(faq.id)}
+                      onChange={() => toggleSelect(faq.id)}
+                      className="mt-1 rounded"
+                      aria-label="Select FAQ"
+                    />
                     <div className="mt-1 text-muted-foreground cursor-grab">
                       <GripVertical className="w-5 h-5" />
                     </div>
