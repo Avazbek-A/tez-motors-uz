@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, Maximize2, X, CarFront } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +40,13 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
           )}
         >
           {hasImages ? (
-            <img
+            <Image
               src={images[activeIndex]}
               alt={`${brand} ${model} - ${activeIndex + 1}`}
-              className="w-full h-full object-cover"
+              fill
+              sizes="(min-width: 1024px) 60vw, 100vw"
+              className="object-cover"
+              priority={activeIndex === 0}
             />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center">

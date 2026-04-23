@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { reviewWriteSchema } from "@/lib/schemas/car";
+import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const all = searchParams.get("all"); // admin: include unpublished
+  const all = searchParams.get("all") && isAdminRequest(request);
 
   try {
     const supabase = await createClient();
@@ -22,7 +23,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ reviews: [], total: 0 }, { status: 500 });
     }
 
-    return NextResponse.json({ reviews: reviews || [], total: reviews?.length || 0 });
+    return NextResponse.json(
+      { reviews: reviews || [], total: reviews?.length || 0 },
+      {
+        headers: all
+          ? {}
+          : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=1800" },
+      },
+    );
   } catch {
     return NextResponse.json({ reviews: [], total: 0, error: "Internal server error" }, { status: 500 });
   }

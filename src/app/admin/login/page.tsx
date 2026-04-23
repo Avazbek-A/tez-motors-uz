@@ -20,12 +20,24 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
 
-    // Simple password check - in production use Supabase Auth
-    if (password === "admin123") {
-      document.cookie = "admin_auth=tez-motors-admin-2024;path=/;max-age=86400";
-      router.push(redirect);
-    } else {
-      setError("Неверный пароль / Incorrect password");
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (res.ok) {
+        router.push(redirect);
+        router.refresh();
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "Incorrect password");
+    } catch {
+      setError("Network error");
+    } finally {
       setLoading(false);
     }
   };
@@ -54,6 +66,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter admin password"
                 required
+                autoComplete="current-password"
                 className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime"
               />
             </div>
@@ -73,10 +86,6 @@ export default function AdminLoginPage() {
               "Sign In"
             )}
           </Button>
-
-          <p className="text-center text-white/30 text-xs">
-            Default password: admin123
-          </p>
         </form>
       </div>
     </div>

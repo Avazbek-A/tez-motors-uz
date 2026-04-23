@@ -34,7 +34,7 @@ export async function sendTelegramNotification(data: {
     .join("\n");
 
   try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -43,9 +43,12 @@ export async function sendTelegramNotification(data: {
         parse_mode: "Markdown",
       }),
     });
-  } catch {
-    // Silent - notification is non-critical
-    console.error("Failed to send Telegram notification");
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("Telegram notify non-OK", res.status, body.slice(0, 500));
+    }
+  } catch (err) {
+    console.error("Telegram notify failed", err);
   }
 }
 

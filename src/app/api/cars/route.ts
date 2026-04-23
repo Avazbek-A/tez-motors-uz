@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
+import { requireAdmin, isAdminRequest } from "@/lib/auth";
+
+const publicCacheHeaders = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+};
 
 // GET all cars with optional filters
 export async function GET(request: NextRequest) {
@@ -13,7 +17,7 @@ export async function GET(request: NextRequest) {
   const priceMax = searchParams.get("price_max");
   const hotOnly = searchParams.get("hot_only");
   const search = searchParams.get("search");
-  const all = searchParams.get("all"); // admin: include unavailable
+  const all = searchParams.get("all") && isAdminRequest(request);
   const limit = searchParams.get("limit");
   const ids = searchParams.get("ids"); // comma-separated IDs
   const page = searchParams.get("page");
@@ -57,12 +61,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ cars: [], total: 0, error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({
-        cars: cars || [],
-        total: count || 0,
-        page: pageNum,
-        page_size: size,
-      });
+      return NextResponse.json(
+        { cars: cars || [], total: count || 0, page: pageNum, page_size: size },
+        { headers: all ? {} : publicCacheHeaders },
+      );
     }
 
     // Legacy mode (no pagination)
@@ -96,11 +98,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cars: [], total: 0, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({
-      cars: cars || [],
-      total: cars?.length || 0,
-      filters: { brand, bodyType, fuelType, priceMin, priceMax },
-    });
+    return NextResponse.json(
+      {
+        cars: cars || [],
+        total: cars?.length || 0,
+        filters: { brand, bodyType, fuelType, priceMin, priceMax },
+      },
+      { headers: all ? {} : publicCacheHeaders },
+    );
   } catch (err) {
     console.error("API error:", err);
     return NextResponse.json({ cars: [], total: 0, error: "Internal server error" }, { status: 500 });
@@ -109,6 +114,8 @@ export async function GET(request: NextRequest) {
 
 // POST - add a new car (admin)
 export async function POST(request: NextRequest) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   try {
     const body = await request.json();
     const result = carWriteSchema.safeParse(body);

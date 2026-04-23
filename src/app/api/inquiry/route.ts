@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendTelegramNotification } from "@/lib/telegram";
+import { requireAdmin } from "@/lib/auth";
 
 // Simple in-memory rate limiting: max 5 submissions per IP per 10 minutes
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -97,6 +98,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
 

@@ -19,6 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz"),
   title: {
     default: "Tez Motors — Импорт авто из Китая в Узбекистан",
     template: "%s | Tez Motors",

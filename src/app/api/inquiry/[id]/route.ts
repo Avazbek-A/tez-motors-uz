@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { inquiryUpdateSchema } from "@/lib/schemas/car";
+import { requireAdmin } from "@/lib/auth";
 
 // PUT - update inquiry status only
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   const { id } = await params;
 
   try {
@@ -49,6 +52,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   const { id } = await params;
 
   try {

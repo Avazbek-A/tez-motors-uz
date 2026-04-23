@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { faqWriteSchema } from "@/lib/schemas/car";
+import { requireAdmin, isAdminRequest } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const all = searchParams.get("all"); // admin: include unpublished
+  const all = searchParams.get("all") && isAdminRequest(request);
 
   try {
     const supabase = await createClient();
@@ -22,13 +23,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ faqs: [], total: 0 }, { status: 500 });
     }
 
-    return NextResponse.json({ faqs: faqs || [], total: faqs?.length || 0 });
+    return NextResponse.json(
+      { faqs: faqs || [], total: faqs?.length || 0 },
+      {
+        headers: all
+          ? {}
+          : { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" },
+      },
+    );
   } catch {
     return NextResponse.json({ faqs: [], total: 0, error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   try {
     const body = await request.json();
     const result = faqWriteSchema.safeParse(body);

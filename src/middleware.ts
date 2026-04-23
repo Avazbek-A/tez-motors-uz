@@ -1,29 +1,26 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { ADMIN_COOKIE } from "@/lib/auth";
 
 export const runtime = "experimental-edge";
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Admin auth: simple password-based protection
-  // In production, replace with Supabase Auth
-  if (pathname.startsWith("/admin")) {
-    const adminAuth = request.cookies.get("admin_auth")?.value;
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const token = process.env.ADMIN_SESSION_TOKEN;
+    const cookie = request.cookies.get(ADMIN_COOKIE)?.value;
+    const authHeader = request.headers.get("authorization");
+    const bearer = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length)
+      : null;
 
-    if (adminAuth !== "tez-motors-admin-2024") {
-      // Check for auth header (for API access)
-      const authHeader = request.headers.get("authorization");
-      if (authHeader === "Bearer tez-motors-admin-2024") {
-        return NextResponse.next();
-      }
+    const authed = Boolean(token) && (cookie === token || bearer === token);
 
-      // Redirect to admin login
-      if (pathname !== "/admin/login") {
-        const loginUrl = new URL("/admin/login", request.url);
-        loginUrl.searchParams.set("redirect", pathname);
-        return NextResponse.redirect(loginUrl);
-      }
+    if (!authed) {
+      const loginUrl = new URL("/admin/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

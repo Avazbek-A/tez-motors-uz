@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
+import { requireAdmin } from "@/lib/auth";
 
 // GET single car by ID or slug
 export async function GET(
@@ -34,7 +35,14 @@ export async function GET(
       return NextResponse.json({ error: "Car not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ car });
+    return NextResponse.json(
+      { car },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600",
+        },
+      },
+    );
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -45,6 +53,8 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   const { id } = await params;
 
   try {
@@ -83,6 +93,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauth = requireAdmin(request);
+  if (unauth) return unauth;
   const { id } = await params;
 
   try {
