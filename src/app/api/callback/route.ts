@@ -2,18 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createServiceClient } from "@/lib/supabase/server";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
-// Simple rate limiter: 3 requests per 5 minutes per IP
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const window = 5 * 60 * 1000;
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) { rateLimitMap.set(ip, { count: 1, resetAt: now + window }); return true; }
-  if (entry.count >= 3) return false;
-  entry.count++;
-  return true;
-}
+const checkRateLimit = createRateLimiter({ max: 3, windowMs: 5 * 60 * 1000 });
 
 const callbackSchema = z.object({
   name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
@@ -24,11 +15,7 @@ const callbackSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
-    if (!checkRateLimit(ip)) {
+    if (!checkRateLimit(getClientIp(request))) {
       return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 });
     }
 

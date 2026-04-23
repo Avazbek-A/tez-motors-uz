@@ -1,31 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ADMIN_COOKIE } from "@/lib/auth";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({ password: z.string().min(1).max(200) });
-
-const attempts = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 10 * 60 * 1000;
-const MAX_ATTEMPTS = 10;
-
-function checkAttempts(ip: string) {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false;
-  entry.count++;
-  return true;
-}
+const checkAttempts = createRateLimiter({ max: 10, windowMs: 10 * 60 * 1000 });
 
 export async function POST(request: Request) {
-  const ip =
-    request.headers.get("cf-connecting-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    "unknown";
-  if (!checkAttempts(ip)) {
+  if (!checkAttempts(getClientIp(request))) {
     return NextResponse.json(
       { error: "Too many attempts. Try again later." },
       { status: 429 },

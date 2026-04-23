@@ -3,24 +3,9 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { requireAdmin } from "@/lib/auth";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
-// Simple in-memory rate limiting: max 5 submissions per IP per 10 minutes
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const window = 10 * 60 * 1000; // 10 minutes
-  const maxRequests = 5;
-
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + window });
-    return true;
-  }
-  if (entry.count >= maxRequests) return false;
-  entry.count++;
-  return true;
-}
+const checkRateLimit = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 });
 
 const inquirySchema = z.object({
   name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
@@ -45,11 +30,7 @@ const inquirySchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      "unknown";
-    if (!checkRateLimit(ip)) {
+    if (!checkRateLimit(getClientIp(request))) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Please try again later." },
         { status: 429 }
