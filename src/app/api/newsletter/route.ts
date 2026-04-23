@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = schema.parse(body);
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     // Store subscription as a special inquiry type
     const { error } = await supabase.from("inquiries").insert({

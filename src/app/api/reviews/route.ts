@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = result.data;
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     // Public submissions must go through moderation — ignore any attempt to self-publish or reorder
     const isAdmin = isAdminRequest(request);

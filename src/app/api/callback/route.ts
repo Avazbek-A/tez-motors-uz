@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendTelegramNotification } from "@/lib/telegram";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 
 // Simple rate limiter: 3 requests per 5 minutes per IP
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const data = callbackSchema.parse(body);
 
     // Persist to Supabase
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     await supabase.from("inquiries").insert({
       name: data.name,
       phone: data.phone,

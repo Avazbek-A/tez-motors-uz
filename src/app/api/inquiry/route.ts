@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { requireAdmin } from "@/lib/auth";
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = inquirySchema.parse(body);
 
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     const { data: inquiry, error } = await supabase
       .from("inquiries")
