@@ -56,7 +56,8 @@
       "automatic": "Automatic",
       "manual": "Manual",
       "cvt": "CVT",
-      "robot": "Automated"
+      "robot": "Automated",
+      "dct": "DCT"
     },
     "order": "Order",
     "details": "Details"

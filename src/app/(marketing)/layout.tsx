@@ -3,6 +3,7 @@ import { Footer } from "@/components/layout/footer";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
 import { CallbackWidget } from "@/components/shared/callback-widget";
+import { FavoritesPill } from "@/components/shared/favorites-pill";
 import { CookieConsent } from "@/components/shared/cookie-consent";
 import { SiteSettingsProvider } from "@/lib/site-settings-context";
 import { getSiteSettings } from "@/lib/site-settings-server";
@@ -20,6 +21,7 @@ export default async function MarketingLayout({
       <Footer />
       <WhatsAppButton />
       <CallbackWidget />
+      <FavoritesPill />
       <ScrollToTop />
       <CookieConsent />
     </SiteSettingsProvider>

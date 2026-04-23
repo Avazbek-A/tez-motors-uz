@@ -23,6 +23,7 @@ interface Inquiry {
   status: string;
   created_at: string;
   source_page?: string;
+  follow_up_date?: string | null;
 }
 
 const PAGE_SIZE = 10;
@@ -74,6 +75,7 @@ export default function AdminDashboard() {
       color: "text-purple-600 bg-purple-100",
     },
   ];
+  const dueInquiries = inquiries.filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(23, 59, 59, 999) >= Date.now()).slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -106,6 +108,27 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {dueInquiries.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Due Today / Overdue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {dueInquiries.map((inq) => (
+              <div key={inq.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
+                <div>
+                  <p className="font-medium">{inq.name}</p>
+                  <p className="text-sm text-muted-foreground">{inq.phone}</p>
+                </div>
+                <Badge variant={inq.status === "new" ? "warning" : "secondary"}>
+                  {inq.follow_up_date}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent inquiries */}
       <Card>

@@ -5,8 +5,10 @@ import Image from "next/image";
 import { Fuel, Gauge, Zap, Settings2, CarFront } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { formatPrice } from "@/lib/utils";
 import type { Car } from "@/types/car";
+import { FavoriteButton } from "./favorite-button";
 
 const brandGradients: Record<string, string> = {
   BYD: "from-[#00d4ff]/15 via-[#00d4ff]/5 to-transparent",
@@ -47,14 +49,17 @@ interface CarCardProps {
 }
 
 export function CarCard({ car }: CarCardProps) {
-  const { dictionary } = useLocale();
+  const { locale, dictionary } = useLocale();
   const transmissionLabel = dictionary.hotOffers.transmission[car.transmission] || car.transmission;
   const gradient = brandGradients[car.brand] || "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-transparent";
   const borderColor = brandBorderColors[car.brand] || "group-hover:border-neon-blue/50";
+  const discount = car.original_price_usd && car.original_price_usd > car.price_usd
+    ? Math.round((1 - car.price_usd / car.original_price_usd) * 100)
+    : 0;
 
   return (
     <Link
-      href={`/catalog/${car.slug}`}
+      href={localizedPath(locale, `/catalog/${car.slug}`)}
       className={`group block bg-[#0d0d15] rounded-2xl border border-white/[0.06] overflow-hidden shadow-sm hover:shadow-[0_0_30px_rgba(0,212,255,0.15)] transition-all duration-300 hover:-translate-y-1 ${borderColor}`}
     >
       {/* Image */}
@@ -88,6 +93,12 @@ export function CarCard({ car }: CarCardProps) {
               {dictionary.hotOffers.new}
             </Badge>
           )}
+          {car.inventory_status === "reserved" && (
+            <Badge variant="secondary">Reserved</Badge>
+          )}
+          {car.inventory_status === "sold" && (
+            <Badge variant="destructive">Sold</Badge>
+          )}
           {car.fuel_type === "electric" && (
             <Badge variant="info" className="shadow-sm">
               <Zap className="w-3 h-3 mr-1" />
@@ -102,11 +113,26 @@ export function CarCard({ car }: CarCardProps) {
           )}
         </div>
 
+        <div className="absolute top-3 right-3">
+          <FavoriteButton carId={car.id} />
+        </div>
+
         {/* Price overlay on image */}
         <div className="absolute bottom-3 right-3">
           <div className="bg-[#0a0a0f]/80 backdrop-blur-md rounded-xl px-3 py-1.5 border border-neon-blue/30 shadow-[0_0_15px_rgba(0,212,255,0.15)]">
             <p className="text-xs text-neon-blue/60 leading-none font-mono">{dictionary.common.from}</p>
-            <p className="text-lg font-bold text-neon-green leading-tight font-mono">{formatPrice(car.price_usd)}</p>
+            {discount > 0 ? (
+              <div className="space-y-0.5">
+                <p className="text-xs text-white/45 line-through font-mono">
+                  {formatPrice(car.original_price_usd!)}
+                </p>
+                <p className="text-lg font-bold text-neon-green leading-tight font-mono">
+                  {formatPrice(car.price_usd)} <span className="text-xs text-amber-300 align-middle">-{discount}%</span>
+                </p>
+              </div>
+            ) : (
+              <p className="text-lg font-bold text-neon-green leading-tight font-mono">{formatPrice(car.price_usd)}</p>
+            )}
           </div>
         </div>
       </div>

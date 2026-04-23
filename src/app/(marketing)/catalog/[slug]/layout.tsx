@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SITE_CONFIG } from "@/lib/constants";
 import { formatPrice } from "@/lib/utils";
+import { getLocaleFromCookie } from "@/i18n/config";
 
 export async function generateMetadata({
   params,
@@ -14,7 +16,7 @@ export async function generateMetadata({
     const supabase = await createClient();
     const { data: car } = await supabase
       .from("cars")
-      .select("brand, model, year, price_usd, description_ru, fuel_type, body_type, images, thumbnail")
+      .select("brand, model, year, price_usd, original_price_usd, description_ru, fuel_type, body_type, images, thumbnail, transmission, engine_volume, engine_power, inventory_status")
       .eq("slug", slug)
       .single();
 
@@ -31,7 +33,7 @@ export async function generateMetadata({
       `${car.brand} ${car.model} ${car.year} — купить из Китая в Узбекистан. ` +
         `${formatPrice(car.price_usd)}. ${car.body_type}, ${car.fuel_type}. Tez Motors.`;
 
-    const imageUrl = car.thumbnail || car.images?.[0] || `${SITE_CONFIG.url}/images/og-car.jpg`;
+    const imageUrl = car.thumbnail || car.images?.[0] || `${SITE_CONFIG.url}/opengraph-image`;
 
     return {
       title,
@@ -57,6 +59,11 @@ export async function generateMetadata({
       },
       alternates: {
         canonical: `${SITE_CONFIG.url}/catalog/${slug}`,
+        languages: {
+          ru: `${SITE_CONFIG.url}/ru/catalog/${slug}`,
+          uz: `${SITE_CONFIG.url}/uz/catalog/${slug}`,
+          en: `${SITE_CONFIG.url}/en/catalog/${slug}`,
+        },
       },
     };
   } catch {
@@ -69,6 +76,11 @@ export async function generateMetadata({
 
 async function CarDetailSchemaInjector({ slug }: { slug: string }) {
   try {
+    const requestHeaders = await headers();
+    const cookieStore = await cookies();
+    const locale =
+      (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
+      getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
     const supabase = await createClient();
     const { data: car } = await supabase
       .from("cars")
@@ -80,11 +92,15 @@ async function CarDetailSchemaInjector({ slug }: { slug: string }) {
 
     const schema = {
       "@context": "https://schema.org",
-      "@type": "Product",
+      "@type": "Vehicle",
       name: `${car.brand} ${car.model} ${car.year}`,
       description: car.description_ru || `${car.brand} ${car.model} ${car.year} — купить из Китая`,
       image: car.images?.[0] || car.thumbnail,
       brand: { "@type": "Brand", name: car.brand },
+      model: car.model,
+      vehicleModelDate: String(car.year),
+      vehicleConfiguration: car.transmission,
+      fuelType: car.fuel_type,
       offers: {
         "@type": "Offer",
         price: car.price_usd,
@@ -92,11 +108,9 @@ async function CarDetailSchemaInjector({ slug }: { slug: string }) {
         availability: car.is_available
           ? "https://schema.org/InStock"
           : "https://schema.org/OutOfStock",
-        url: `${SITE_CONFIG.url}/catalog/${slug}`,
+        url: `${SITE_CONFIG.url}/${locale}/catalog/${slug}`,
         seller: { "@type": "Organization", name: SITE_CONFIG.name },
       },
-      vehicleConfiguration: car.transmission,
-      fuelType: car.fuel_type,
       modelDate: String(car.year),
       ...(car.engine_volume && {
         vehicleEngine: {

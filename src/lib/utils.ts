@@ -35,3 +35,12 @@ export function slugify(text: string): string {
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+export function formatDate(value: string | Date, locale = "ru-RU"): string {
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}

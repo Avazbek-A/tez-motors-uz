@@ -23,6 +23,8 @@ interface Inquiry {
   source_page?: string;
   car_id?: string;
   created_at: string;
+  notes?: string | null;
+  follow_up_date?: string | null;
 }
 
 const statusConfig = {
@@ -37,6 +39,11 @@ const typeLabels: Record<string, string> = {
   car_inquiry: "Car Inquiry",
   callback: "Callback",
   calculator: "Calculator",
+  reservation: "Reservation",
+  test_drive: "Test Drive",
+  trade_in: "Trade-in",
+  newsletter: "Newsletter",
+  service: "Service",
 };
 
 const STATUS_OPTIONS = ["new", "contacted", "in_progress", "closed"] as const;
@@ -69,18 +76,34 @@ export default function AdminInquiriesPage() {
     fetchInquiries();
   }, []);
 
-  const updateStatus = async (id: string, newStatus: string) => {
+  const saveInquiry = async (id: string, patch?: Partial<Pick<Inquiry, "status" | "notes" | "follow_up_date">>) => {
     const res = await fetch(`/api/inquiry/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
+      body: JSON.stringify({
+        status: patch?.status ?? selectedInquiry?.status ?? "new",
+        notes: patch?.notes ?? selectedInquiry?.notes ?? null,
+        follow_up_date: patch?.follow_up_date ?? selectedInquiry?.follow_up_date ?? null,
+      }),
     });
     if (res.ok) {
       setInquiries(inquiries.map((i) =>
-        i.id === id ? { ...i, status: newStatus } : i
+        i.id === id
+          ? {
+              ...i,
+              status: patch?.status ?? i.status,
+              notes: patch?.notes ?? i.notes,
+              follow_up_date: patch?.follow_up_date ?? i.follow_up_date,
+            }
+          : i
       ));
       if (selectedInquiry?.id === id) {
-        setSelectedInquiry({ ...selectedInquiry, status: newStatus });
+        setSelectedInquiry({
+          ...selectedInquiry,
+          status: patch?.status ?? selectedInquiry.status,
+          notes: patch?.notes ?? selectedInquiry.notes,
+          follow_up_date: patch?.follow_up_date ?? selectedInquiry.follow_up_date,
+        });
       }
       showFeedback("success", "Status updated");
     } else {
@@ -275,6 +298,26 @@ export default function AdminInquiriesPage() {
                 </div>
               )}
 
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium mb-2">Notes</p>
+                  <textarea
+                    value={selectedInquiry.notes ?? ""}
+                    onChange={(e) => setSelectedInquiry({ ...selectedInquiry, notes: e.target.value })}
+                    className="w-full min-h-[96px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
+                    placeholder="Internal notes for the team"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-medium mb-2">Follow-up Date</p>
+                  <Input
+                    type="date"
+                    value={selectedInquiry.follow_up_date ?? ""}
+                    onChange={(e) => setSelectedInquiry({ ...selectedInquiry, follow_up_date: e.target.value })}
+                  />
+                </div>
+              </div>
+
               {/* Status changer */}
               <div>
                 <p className="text-sm font-medium mb-2">Change Status</p>
@@ -284,7 +327,7 @@ export default function AdminInquiriesPage() {
                     return (
                       <button
                         key={status}
-                        onClick={() => updateStatus(selectedInquiry.id, status)}
+                        onClick={() => saveInquiry(selectedInquiry.id, { status })}
                         className={cn(
                           "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
                           selectedInquiry.status === status
@@ -327,6 +370,9 @@ export default function AdminInquiriesPage() {
                   Delete
                 </Button>
                 <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => saveInquiry(selectedInquiry.id, { notes: selectedInquiry.notes ?? null, follow_up_date: selectedInquiry.follow_up_date ?? null })}>
+                    Save
+                  </Button>
                   <Button variant="outline" onClick={() => setSelectedInquiry(null)}>Close</Button>
                   <Button asChild>
                     <a href={`tel:${selectedInquiry.phone}`}>

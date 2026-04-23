@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CarCard } from "@/components/catalog/car-card";
 import { useLocale } from "@/i18n/locale-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
+import { localizedPath } from "@/lib/locale-path";
 import type { Car } from "@/types/car";
 
 interface RelatedCarsProps {
@@ -51,7 +52,7 @@ export function RelatedCars({ currentCar, maxCount = 4 }: RelatedCarsProps) {
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-2xl font-bold text-white">{title}</h2>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/catalog">
+          <Link href={localizedPath(locale, "/catalog")}>
             {locale === "ru" ? "Все авто" : "All cars"}
             <ArrowRight className="w-4 h-4" />
           </Link>

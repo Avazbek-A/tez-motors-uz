@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { FloatingShapes } from "@/components/effects";
 
@@ -47,7 +48,7 @@ export function Brands() {
           {brands.map((brand, index) => (
             <Link
               key={brand.name}
-              href={`/catalog?brand=${encodeURIComponent(brand.name)}`}
+              href={localizedPath(locale, `/catalog?brand=${encodeURIComponent(brand.name)}`)}
               className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-white/[0.06] bg-[#0d0d15]/80 backdrop-blur-sm hover:border-neon-blue/25 hover:shadow-[0_0_20px_rgba(0,212,255,0.08)] ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}

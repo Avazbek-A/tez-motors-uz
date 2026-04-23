@@ -16,9 +16,14 @@ import { CarGallery } from "@/components/catalog/car-gallery";
 import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
+import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { formatPrice } from "@/lib/utils";
+import { localizedPath } from "@/lib/locale-path";
 import type { Car } from "@/types/car";
+import { Turnstile } from "@/components/shared/turnstile";
+import { ReservationModal } from "@/components/car/reservation-modal";
+import { TestDriveModal } from "@/components/car/test-drive-modal";
 
 export default function CarDetailPage() {
   const params = useParams();
@@ -31,6 +36,9 @@ export default function CarDetailPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [showReserve, setShowReserve] = useState(false);
+  const [showTestDrive, setShowTestDrive] = useState(false);
 
   useEffect(() => {
     fetch(`/api/cars/${params.slug}`)
@@ -65,7 +73,7 @@ export default function CarDetailPage() {
           {locale === "ru" ? "Возможно, этот автомобиль уже продан или ссылка устарела." : "This car may have been sold or the link is outdated."}
         </p>
         <Button asChild>
-          <Link href="/catalog">
+          <Link href={localizedPath(locale, "/catalog")}>
             {locale === "ru" ? "← Вернуться в каталог" : "← Back to Catalog"}
           </Link>
         </Button>
@@ -74,6 +82,9 @@ export default function CarDetailPage() {
   }
 
   const description = locale === "uz" ? car.description_uz : locale === "en" ? car.description_en : car.description_ru;
+  const discount = car.original_price_usd && car.original_price_usd > car.price_usd
+    ? Math.round((1 - car.price_usd / car.original_price_usd) * 100)
+    : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +99,7 @@ export default function CarDetailPage() {
           type: "car_inquiry",
           car_id: car.id,
           source_page: `/catalog/${car.slug}`,
+          turnstile_token: turnstileToken ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -132,6 +144,20 @@ export default function CarDetailPage() {
             <div className="animate-fade-in-up">
               <CarGallery images={car.images} brand={car.brand} model={car.model} />
             </div>
+
+            {car.video_url && (
+              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+                <div className="aspect-video">
+                  <iframe
+                    title={`${car.brand} ${car.model} video`}
+                    src={car.video_url}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
 
             {description && (
               <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
@@ -188,7 +214,16 @@ export default function CarDetailPage() {
 
               <div className="bg-neon-blue/10 rounded-xl p-4 mb-4">
                 <p className="text-xs text-white/60 mb-1">{dictionary.common.from}</p>
-                <p className="text-3xl font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
+                {discount > 0 ? (
+                  <>
+                    <p className="text-sm text-white/45 line-through">{formatPrice(car.original_price_usd!)}</p>
+                    <p className="text-3xl font-bold text-neon-blue">
+                      {formatPrice(car.price_usd)} <span className="text-sm text-amber-300">-{discount}%</span>
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-3xl font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
+                )}
                 {car.price_uzs && (
                   <p className="text-sm text-white/60 mt-1">
                     ~ {formatPrice(car.price_uzs, "UZS")}
@@ -201,6 +236,35 @@ export default function CarDetailPage() {
                 className="mb-6 pb-4 border-b border-white/10"
               />
 
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="text-sm text-white/60">
+                  {locale === "ru" ? "Сохранить в избранное" : "Save to favorites"}
+                </div>
+                <FavoriteButton carId={car.id} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowTestDrive(true)}
+                >
+                  Test drive
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setShowReserve(true)}
+                  disabled={car.inventory_status !== "available"}
+                >
+                  Reserve
+                </Button>
+              </div>
+              <Button type="button" variant="outline" asChild className="w-full mb-4">
+                <a href={`/api/cars/${car.id}/pdf`} download>
+                  Download PDF spec sheet
+                </a>
+              </Button>
+
               {isSuccess ? (
                 <div className="text-center py-8">
                   <CheckCircle className="w-12 h-12 text-neon-blue mx-auto mb-3" />
@@ -209,6 +273,11 @@ export default function CarDetailPage() {
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <h3 className="font-semibold">{dictionary.catalog.orderCar}</h3>
+                  {car.inventory_status !== "available" && (
+                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white/60">
+                      {car.inventory_status === "reserved" ? "This car is currently reserved." : "This car is sold."}
+                    </div>
+                  )}
                   <Input
                     placeholder={dictionary.contact.name}
                     value={form.name}
@@ -228,6 +297,7 @@ export default function CarDetailPage() {
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                     rows={3}
                   />
+                  <Turnstile onToken={setTurnstileToken} />
                   {formError && (
                     <p className="text-sm text-red-400 flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4 shrink-0" />{formError}
@@ -252,6 +322,19 @@ export default function CarDetailPage() {
         {/* Related cars */}
         <RelatedCars currentCar={car} />
       </div>
+
+      <ReservationModal
+        carId={car.id}
+        carName={`${car.brand} ${car.model}`}
+        open={showReserve}
+        onClose={() => setShowReserve(false)}
+      />
+      <TestDriveModal
+        carId={car.id}
+        carName={`${car.brand} ${car.model}`}
+        open={showTestDrive}
+        onClose={() => setShowTestDrive(false)}
+      />
     </div>
   );
 }

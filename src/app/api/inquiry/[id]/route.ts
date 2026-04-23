@@ -28,7 +28,12 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from("inquiries")
-      .update({ status: result.data.status })
+      .update({
+        status: result.data.status,
+        notes: result.data.notes ?? null,
+        follow_up_date: result.data.follow_up_date ?? null,
+        assigned_to: result.data.assigned_to ?? null,
+      })
       .eq("id", id)
       .select()
       .single();

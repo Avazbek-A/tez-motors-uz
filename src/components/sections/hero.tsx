@@ -5,6 +5,7 @@ import { ArrowRight, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { ParticleBackground, GlitchText, TypedText, TiltCard } from "@/components/effects";
 
 const stats = [
@@ -92,13 +93,13 @@ export function Hero() {
             style={{ animationDelay: "300ms" }}
           >
             <Button size="xl" className="group relative bg-neon-blue hover:bg-neon-blue/90 text-black font-bold shadow-[0_0_20px_rgba(0,212,255,0.3)] hover:shadow-[0_0_30px_rgba(0,212,255,0.5)] transition-all duration-300" asChild>
-              <Link href="/catalog">
+              <Link href={localizedPath(locale, "/catalog")}>
                 {dictionary.hero.cta}
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
             <Button size="xl" variant="outlineLight" className="border-neon-purple/40 text-neon-purple hover:bg-neon-purple/10 hover:border-neon-purple/60 hover:shadow-[0_0_20px_rgba(139,92,246,0.2)] transition-all duration-300" asChild>
-              <Link href="/calculator">
+              <Link href={localizedPath(locale, "/calculator")}>
                 <Calculator className="w-5 h-5" />
                 {dictionary.hero.ctaSecondary}
               </Link>

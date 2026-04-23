@@ -9,6 +9,7 @@ import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { ParticleBackground } from "@/components/effects";
+import { Turnstile } from "@/components/shared/turnstile";
 
 export function ContactForm() {
   const { dictionary } = useLocale();
@@ -17,6 +18,7 @@ export function ContactForm() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,12 @@ export function ContactForm() {
       const res = await fetch("/api/inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, type: "general", source_page: "homepage" }),
+        body: JSON.stringify({
+          ...formData,
+          type: "general",
+          source_page: "homepage",
+          turnstile_token: turnstileToken ?? undefined,
+        }),
       });
       if (res.ok) {
         setIsSuccess(true);
@@ -86,6 +93,7 @@ export function ContactForm() {
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30 focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
                 rows={4}
               />
+              <Turnstile onToken={setTurnstileToken} />
               {formError && (
                 <p className="text-sm text-red-400 flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4 shrink-0" />{formError}

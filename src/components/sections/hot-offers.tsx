@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { CarCard } from "@/components/catalog/car-card";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { GridBackground } from "@/components/effects";
 import type { Car } from "@/types/car";
@@ -15,7 +16,7 @@ interface HotOffersProps {
 }
 
 export function HotOffers({ cars }: HotOffersProps) {
-  const { dictionary } = useLocale();
+  const { locale, dictionary } = useLocale();
   const { ref, isVisible } = useScrollReveal();
 
   return (
@@ -40,7 +41,7 @@ export function HotOffers({ cars }: HotOffersProps) {
             asChild
             className="shrink-0 border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 hover:border-neon-blue/50 transition-all"
           >
-            <Link href="/catalog">
+            <Link href={localizedPath(locale, "/catalog")}>
               {dictionary.hotOffers.viewAll}
               <ArrowRight className="w-4 h-4" />
             </Link>

@@ -124,9 +124,20 @@ export default function ReviewsPage() {
   const avgRating = reviews.length > 0
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : "5.0";
+  const aggregateSchema = reviews.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "AggregateRating",
+    ratingValue: Number(avgRating),
+    reviewCount: reviews.length,
+    bestRating: 5,
+    worstRating: 1,
+  } : null;
 
   return (
     <div className="pt-24 pb-16">
+      {aggregateSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateSchema) }} />
+      )}
       <div className="container-custom">
         <SectionHeading title={title} subtitle={subtitle} />
 

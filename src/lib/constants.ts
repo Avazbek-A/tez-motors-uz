@@ -16,9 +16,13 @@ export const SITE_CONFIG = {
 export const NAV_LINKS = [
   { href: "/", label: { ru: "Главная", uz: "Bosh sahifa", en: "Home" } },
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
+  { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
   { href: "/compare", label: { ru: "Сравнение", uz: "Solishtirish", en: "Compare" } },
   { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
   { href: "/about", label: { ru: "О нас", uz: "Biz haqimizda", en: "About" } },
+  { href: "/sell-your-car", label: { ru: "Продать авто", uz: "Mashina sotish", en: "Sell Your Car" } },
+  { href: "/blog", label: { ru: "Блог", uz: "Blog", en: "Blog" } },
+  { href: "/favorites", label: { ru: "Избранное", uz: "Sevimlilar", en: "Favorites" } },
   { href: "/faq", label: { ru: "FAQ", uz: "FAQ", en: "FAQ" } },
   { href: "/contacts", label: { ru: "Контакты", uz: "Kontaktlar", en: "Contacts" } },
 ] as const;

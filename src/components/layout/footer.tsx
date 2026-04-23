@@ -7,6 +7,7 @@ import { NAV_LINKS } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
+import { localizedPath } from "@/lib/locale-path";
 
 export function Footer() {
   const { locale, dictionary } = useLocale();
@@ -30,7 +31,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href={localizedPath(locale, "/")} className="flex items-center gap-2 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center group-hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] transition-shadow">
                 <span className="text-[#0a0a0f] font-black text-lg">TM</span>
               </div>
@@ -51,7 +52,7 @@ export function Footer() {
               {NAV_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
-                    href={link.href}
+                    href={localizedPath(locale, link.href)}
                     className="text-white/50 hover:text-neon-blue transition-colors text-sm"
                   >
                     {link.label[locale]}
@@ -145,13 +146,13 @@ export function Footer() {
         <div className="container-custom py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-white/30 text-xs">
           <p>&copy; {year} Tez Motors. {dictionary.footer.rights}.</p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-neon-blue/60 transition-colors">
+            <Link href={localizedPath(locale, "/privacy")} className="hover:text-neon-blue/60 transition-colors">
               {locale === "ru" ? "Конфиденциальность" : "Privacy"}
             </Link>
-            <Link href="/terms" className="hover:text-neon-blue/60 transition-colors">
+            <Link href={localizedPath(locale, "/terms")} className="hover:text-neon-blue/60 transition-colors">
               {locale === "ru" ? "Условия" : "Terms"}
             </Link>
-            <Link href="/track" className="hover:text-neon-blue/60 transition-colors">
+            <Link href={localizedPath(locale, "/track")} className="hover:text-neon-blue/60 transition-colors">
               {locale === "ru" ? "Отслеживание" : "Track Order"}
             </Link>
           </div>

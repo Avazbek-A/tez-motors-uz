@@ -4,12 +4,13 @@ import Link from "next/link";
 import { ArrowRight, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { ScanlineOverlay } from "@/components/effects";
 
 export function CtaBanner() {
-  const { dictionary } = useLocale();
+  const { locale, dictionary } = useLocale();
   const settings = useSiteSettings();
   const { ref, isVisible } = useScrollReveal();
 
@@ -34,7 +35,7 @@ export function CtaBanner() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="xl" className="bg-neon-blue hover:bg-neon-blue/80 text-black font-bold" asChild>
-                <Link href="/contacts">
+                <Link href={localizedPath(locale, "/contacts")}>
                   {dictionary.contact.submit}
                   <ArrowRight className="w-5 h-5" />
                 </Link>

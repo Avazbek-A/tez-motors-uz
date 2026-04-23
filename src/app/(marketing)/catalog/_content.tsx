@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useMemo, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,12 @@ import { RecentlyViewed } from "@/components/catalog/recently-viewed";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { CAR_BRANDS, BODY_TYPES, FUEL_TYPES } from "@/lib/constants";
+import { localizedPath } from "@/lib/locale-path";
 import { cn } from "@/lib/utils";
 import type { Car, CarFilters } from "@/types/car";
 
 type SortOption = "default" | "price_asc" | "price_desc" | "year_desc" | "name_asc";
+const PAGE_SIZE = 12;
 
 function CatalogContent() {
   const { locale, dictionary } = useLocale();
@@ -25,6 +27,10 @@ function CatalogContent() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [searchText, setSearchText] = useState(searchParams.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
 
   // Initialize filters from URL params
   const [filters, setFilters] = useState<CarFilters>(() => ({
@@ -41,7 +47,7 @@ function CatalogContent() {
   );
 
   // Sync filters to URL
-  const syncToUrl = useCallback((newFilters: CarFilters, newSort: SortOption) => {
+  const syncToUrl = useCallback((newFilters: CarFilters, newSort: SortOption, newPage = 1) => {
     const params = new URLSearchParams();
     if (newFilters.brand) params.set("brand", newFilters.brand);
     if (newFilters.body_type) params.set("body_type", newFilters.body_type);
@@ -50,58 +56,58 @@ function CatalogContent() {
     if (newFilters.price_max) params.set("price_max", String(newFilters.price_max));
     if (newFilters.search) params.set("q", newFilters.search);
     if (newSort !== "default") params.set("sort", newSort);
+    if (newPage > 1) params.set("page", String(newPage));
     const query = params.toString();
-    router.replace(query ? `/catalog?${query}` : "/catalog", { scroll: false });
-  }, [router]);
+    router.replace(localizedPath(locale, query ? `/catalog?${query}` : "/catalog"), { scroll: false });
+  }, [locale, router]);
 
   const updateFilters = (newFilters: CarFilters) => {
     setFilters(newFilters);
-    syncToUrl(newFilters, sortBy);
+    setPage(1);
+    syncToUrl(newFilters, sortBy, 1);
   };
 
   const updateSort = (newSort: SortOption) => {
     setSortBy(newSort);
-    syncToUrl(filters, newSort);
+    setPage(1);
+    syncToUrl(filters, newSort, 1);
   };
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(searchText), 300);
+    return () => clearTimeout(timeout);
+  }, [searchText]);
+
+  useEffect(() => {
     setLoading(true);
-    fetch("/api/cars")
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("page_size", String(PAGE_SIZE));
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    if (filters.brand) params.set("brand", filters.brand);
+    if (filters.body_type) params.set("body_type", filters.body_type);
+    if (filters.fuel_type) params.set("fuel_type", filters.fuel_type);
+    if (filters.price_min) params.set("price_min", String(filters.price_min));
+    if (filters.price_max) params.set("price_max", String(filters.price_max));
+    if (sortBy !== "default") params.set("sort", sortBy);
+
+    fetch(`/api/cars?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         setCars(data.cars || []);
+        setTotal(data.total || 0);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
-
-  const filteredCars = useMemo(() => {
-    let result = cars.filter((car) => {
-      if (filters.brand && car.brand !== filters.brand) return false;
-      if (filters.body_type && car.body_type !== filters.body_type) return false;
-      if (filters.fuel_type && car.fuel_type !== filters.fuel_type) return false;
-      if (filters.price_min && car.price_usd < filters.price_min) return false;
-      if (filters.price_max && car.price_usd > filters.price_max) return false;
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        const match = `${car.brand} ${car.model}`.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      return true;
-    });
-
-    switch (sortBy) {
-      case "price_asc": result = [...result].sort((a, b) => a.price_usd - b.price_usd); break;
-      case "price_desc": result = [...result].sort((a, b) => b.price_usd - a.price_usd); break;
-      case "year_desc": result = [...result].sort((a, b) => b.year - a.year); break;
-      case "name_asc": result = [...result].sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`)); break;
-    }
-
-    return result;
-  }, [cars, filters, sortBy]);
+  }, [page, filters, sortBy, debouncedSearch]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
-  const resetFilters = () => updateFilters({});
+  const resetFilters = () => {
+    setSearchText("");
+    setDebouncedSearch("");
+    setPage(1);
+    updateFilters({});
+  };
 
   return (
     <div className="pt-24 pb-16">
@@ -117,8 +123,12 @@ function CatalogContent() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
             <Input
               placeholder={dictionary.catalog.filters.search}
-              value={filters.search || ""}
-              onChange={(e) => updateFilters({ ...filters, search: e.target.value || undefined })}
+              value={searchText}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchText(value);
+                updateFilters({ ...filters, search: value || undefined });
+              }}
               className="pl-12 h-14 text-base rounded-2xl"
             />
           </div>
@@ -139,7 +149,7 @@ function CatalogContent() {
           </Button>
           <div className="flex items-center gap-3 ml-auto">
             <p className="text-sm text-white/60">
-              {loading ? "..." : filteredCars.length} {dictionary.catalog.filters.results}
+              {loading ? "..." : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)}`} / {total} {dictionary.catalog.filters.results}
             </p>
             <select
               value={sortBy}
@@ -300,7 +310,7 @@ function CatalogContent() {
                 <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto mb-3" />
                 <p className="text-white/60">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
               </div>
-            ) : filteredCars.length === 0 ? (
+            ) : cars.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-white/60 text-lg">{dictionary.catalog.noResults}</p>
                 <Button variant="outline" onClick={resetFilters} className="mt-4">
@@ -309,7 +319,7 @@ function CatalogContent() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredCars.map((car, index) => (
+                {cars.map((car, index) => (
                   <div
                     key={car.id}
                     className="animate-fade-in-up"
@@ -322,6 +332,36 @@ function CatalogContent() {
             )}
           </div>
         </div>
+
+        {!loading && total > PAGE_SIZE && (
+          <div className="mt-10 flex items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => {
+                const next = Math.max(1, p - 1);
+                syncToUrl(filters, sortBy, next);
+                return next;
+              })}
+              disabled={page === 1}
+            >
+              Prev
+            </Button>
+            <span className="text-sm text-white/60">
+              Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            </span>
+            <Button
+              variant="outline"
+              onClick={() => setPage((p) => {
+                const next = p * PAGE_SIZE >= total ? p : p + 1;
+                syncToUrl(filters, sortBy, next);
+                return next;
+              })}
+              disabled={page * PAGE_SIZE >= total}
+            >
+              Next
+            </Button>
+          </div>
+        )}
 
         {/* Recently viewed */}
         <RecentlyViewed />

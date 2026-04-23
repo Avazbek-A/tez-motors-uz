@@ -24,8 +24,16 @@ const statusIndex: Record<string, number> = {
 
 const typeLabels: Record<string, Record<string, string>> = {
   inquiry: { ru: "Заявка на авто", uz: "Avto so'rovi", en: "Car Inquiry" },
+  car_inquiry: { ru: "Заявка на авто", uz: "Avto so'rovi", en: "Car Inquiry" },
   callback: { ru: "Обратный звонок", uz: "Qayta qo'ng'iroq", en: "Callback" },
   test_drive: { ru: "Тест-драйв", uz: "Test-drive", en: "Test Drive" },
+  reservation: { ru: "Бронь", uz: "Band qilish", en: "Reservation" },
+  trade_in: { ru: "Trade-in", uz: "Trade-in", en: "Trade-in" },
+  newsletter: { ru: "Подписка", uz: "Obuna", en: "Newsletter" },
+  price_drop: { ru: "Снижение цены", uz: "Narx tushishi", en: "Price Drop" },
+  general: { ru: "Заявка", uz: "Ariza", en: "Inquiry" },
+  service: { ru: "Сервис", uz: "Servis", en: "Service" },
+  part_inquiry: { ru: "Запчасть", uz: "Ehtiyot qism", en: "Part inquiry" },
 };
 
 interface Inquiry {
@@ -83,6 +91,7 @@ export default function TrackOrderPage() {
 
   const title = t.title;
   const subtitle = t.subtitle;
+  const dateLocale = locale === "ru" ? "ru-RU" : locale === "uz" ? "uz-UZ" : "en-US";
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,9 +195,7 @@ export default function TrackOrderPage() {
                           )}
                         </div>
                         <p className="text-xs text-white/40 shrink-0">
-                          {new Date(inquiry.created_at).toLocaleDateString(
-                            locale === "ru" ? "ru-RU" : locale === "uz" ? "uz-UZ" : "en-US"
-                          )}
+                          {new Date(inquiry.created_at).toLocaleDateString(dateLocale)}
                         </p>
                       </div>
                     </div>

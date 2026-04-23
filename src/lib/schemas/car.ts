@@ -5,12 +5,13 @@ export const carWriteSchema = z.object({
   model: z.string().min(1).max(100),
   year: z.number().int().min(2000).max(2030),
   price_usd: z.number().int().positive(),
+  original_price_usd: z.number().int().positive().optional().nullable(),
   price_uzs: z.number().int().positive().optional().nullable(),
   body_type: z.enum(["sedan", "suv", "hatchback", "coupe", "wagon", "van", "truck", "crossover", "minivan", "pickup"]).default("suv"),
   fuel_type: z.enum(["petrol", "diesel", "hybrid", "electric", "phev", "gas"]).default("petrol"),
   engine_volume: z.number().min(0).max(10).optional().nullable(),
   engine_power: z.number().int().min(0).max(2000).optional().nullable(),
-  transmission: z.enum(["automatic", "manual", "cvt", "dct"]).default("automatic"),
+  transmission: z.enum(["automatic", "manual", "cvt", "dct", "robot"]).default("automatic"),
   drivetrain: z.enum(["fwd", "rwd", "awd", "4wd"]).optional().nullable(),
   mileage: z.number().int().min(0).default(0),
   color: z.string().max(100).optional().nullable(),
@@ -19,8 +20,10 @@ export const carWriteSchema = z.object({
   description_en: z.string().max(5000).optional().nullable(),
   images: z.array(z.string().url()).default([]),
   thumbnail: z.string().url().optional().nullable(),
+  video_url: z.string().url().optional().nullable(),
   is_hot_offer: z.boolean().default(false),
   is_available: z.boolean().default(true),
+  inventory_status: z.enum(["available", "reserved", "sold"]).default("available"),
   order_position: z.number().int().min(0).default(0),
   specs: z.record(z.string(), z.unknown()).default({}),
 });
@@ -52,4 +55,7 @@ export const faqWriteSchema = z.object({
 
 export const inquiryUpdateSchema = z.object({
   status: z.enum(["new", "contacted", "in_progress", "closed"]),
+  notes: z.string().max(5000).optional().nullable(),
+  follow_up_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  assigned_to: z.string().uuid().optional().nullable(),
 });

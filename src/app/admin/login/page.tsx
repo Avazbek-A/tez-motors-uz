@@ -11,6 +11,7 @@ export default function AdminLoginPage() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/admin";
 
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (res.ok) {
@@ -55,6 +56,17 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleLogin} className="glass rounded-2xl p-8 space-y-5">
           <div>
+            <label className="text-sm font-medium text-white/70 mb-2 block">
+              Email
+            </label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@tezmotors.uz"
+              autoComplete="username"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime mb-4"
+            />
             <label className="text-sm font-medium text-white/70 mb-2 block">
               Password
             </label>

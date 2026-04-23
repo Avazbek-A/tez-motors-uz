@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { cn } from "@/lib/utils";
 import type { FAQ } from "@/types/car";
@@ -71,7 +72,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
 
         <div className="text-center mt-10">
           <Button variant="outline" className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 hover:border-neon-blue/50" asChild>
-            <Link href="/faq">
+            <Link href={localizedPath(locale, "/faq")}>
               {dictionary.faqSection.viewAll}
               <ArrowRight className="w-4 h-4" />
             </Link>

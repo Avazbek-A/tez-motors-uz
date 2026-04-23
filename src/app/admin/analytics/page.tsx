@@ -77,9 +77,67 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
   );
 }
 
+interface TimeseriesPoint { date: string; total: number; closed: number; }
+
+function InquiriesTimeseriesChart({ points }: { points: TimeseriesPoint[] }) {
+  if (points.length === 0) return null;
+  const width = 640;
+  const height = 180;
+  const padding = { top: 10, right: 12, bottom: 22, left: 28 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+  const maxY = Math.max(1, ...points.map((p) => p.total));
+  const stepX = points.length > 1 ? innerW / (points.length - 1) : 0;
+  const scaleY = (v: number) => padding.top + innerH - (v / maxY) * innerH;
+  const buildPath = (key: "total" | "closed") =>
+    points
+      .map((p, i) => {
+        const x = padding.left + i * stepX;
+        const y = scaleY(p[key]);
+        return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  const firstLabel = points[0]?.date.slice(5);
+  const lastLabel = points[points.length - 1]?.date.slice(5);
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-auto"
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="Daily inquiries"
+    >
+      {/* gridlines */}
+      {[0, 0.5, 1].map((t) => (
+        <line
+          key={t}
+          x1={padding.left}
+          x2={width - padding.right}
+          y1={padding.top + innerH * t}
+          y2={padding.top + innerH * t}
+          stroke="currentColor"
+          strokeOpacity="0.08"
+          strokeWidth="1"
+        />
+      ))}
+      {/* y labels */}
+      <text x={8} y={padding.top + 4} fontSize="10" fill="currentColor" fillOpacity="0.5">{maxY}</text>
+      <text x={8} y={padding.top + innerH + 4} fontSize="10" fill="currentColor" fillOpacity="0.5">0</text>
+      {/* x labels */}
+      <text x={padding.left} y={height - 6} fontSize="10" fill="currentColor" fillOpacity="0.5">{firstLabel}</text>
+      <text x={width - padding.right} y={height - 6} fontSize="10" fill="currentColor" fillOpacity="0.5" textAnchor="end">{lastLabel}</text>
+      {/* total line */}
+      <path d={buildPath("total")} fill="none" stroke="#22d3ee" strokeWidth="2" />
+      {/* closed line */}
+      <path d={buildPath("closed")} fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="3 3" />
+    </svg>
+  );
+}
+
 export default function AdminAnalyticsPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([]);
 
   const fetchStats = () => {
     setLoading(true);
@@ -87,6 +145,10 @@ export default function AdminAnalyticsPage() {
       .then((r) => r.json())
       .then((data) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
+    fetch("/api/admin/stats/timeseries?days=30")
+      .then((r) => r.json())
+      .then((data) => setTimeseries(data.points || []))
+      .catch(() => {});
   };
 
   useEffect(() => { fetchStats(); }, []);
@@ -150,6 +212,25 @@ export default function AdminAnalyticsPage() {
         <StatCard icon={Star} label="Reviews" value={stats.reviews.total} sub={stats.reviews.pending > 0 ? `${stats.reviews.pending} pending` : undefined} color="bg-yellow-500/20 text-yellow-400" />
         <StatCard icon={HelpCircle} label="FAQs" value={stats.faqs.total} color="bg-teal-500/20 text-teal-400" />
       </div>
+
+      {/* 30-day inquiry timeseries */}
+      {timeseries.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <TrendingUp className="w-4 h-4" />
+              Inquiries — last 30 days
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InquiriesTimeseriesChart points={timeseries} />
+            <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" /> Total</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Closed (converted)</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Price range */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

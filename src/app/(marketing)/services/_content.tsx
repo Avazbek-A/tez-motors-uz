@@ -1,15 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Search, ShoppingCart, Ship, FileCheck, Wrench, Shield,
-  Calculator, Truck, ClipboardCheck, Headphones, ArrowRight
+  Calculator, Truck, ClipboardCheck, Headphones, ArrowRight, CheckCircle, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { cn } from "@/lib/utils";
+import { Turnstile } from "@/components/shared/turnstile";
 
 const services = {
   ru: [
@@ -54,12 +58,94 @@ export default function ServicesContent() {
   const { locale } = useLocale();
   const { ref, isVisible } = useScrollReveal();
   const items = services[locale as keyof typeof services] || services.ru;
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [serviceType, setServiceType] = useState("Inspection");
+  const [makeModel, setMakeModel] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const title = locale === "ru" ? "Наши услуги" : locale === "uz" ? "Bizning xizmatlarimiz" : "Our Services";
   const subtitle = locale === "ru"
     ? "Полный спектр услуг по импорту автомобилей из Китая"
     : locale === "uz" ? "Xitoydan avtomobil importi bo'yicha xizmatlarning to'liq spektri"
     : "Full range of car import services from China";
+
+  const bookingLabels = {
+    ru: {
+      title: "Заявка на сервис",
+      subtitle: "Оставьте заявку, и менеджер свяжется с вами для согласования даты.",
+      serviceType: "Тип услуги",
+      makeModel: "Марка и модель",
+      preferredDate: "Желаемая дата",
+      notes: "Комментарий",
+      submit: "Записаться",
+      success: "Заявка отправлена",
+    },
+    uz: {
+      title: "Servis uchun ariza",
+      subtitle: "Ariza qoldiring, menejer sana bo'yicha siz bilan bog'lanadi.",
+      serviceType: "Xizmat turi",
+      makeModel: "Marka va model",
+      preferredDate: "Istalgan sana",
+      notes: "Izoh",
+      submit: "Yozilish",
+      success: "Ariza yuborildi",
+    },
+    en: {
+      title: "Service Booking",
+      subtitle: "Submit a request and a manager will contact you to confirm the date.",
+      serviceType: "Service type",
+      makeModel: "Make and model",
+      preferredDate: "Preferred date",
+      notes: "Notes",
+      submit: "Book service",
+      success: "Request sent",
+    },
+  } as const;
+  const b = bookingLabels[locale as keyof typeof bookingLabels] || bookingLabels.ru;
+
+  const handleBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          phone,
+          type: "service",
+          message: notes || `${serviceType}${preferredDate ? ` | ${preferredDate}` : ""}`,
+          metadata: { service_type: serviceType, make_model: makeModel, preferred_date: preferredDate },
+          source_page: "/services",
+          turnstile_token: turnstileToken ?? undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSubmitError(data.error || "Failed to submit");
+        return;
+      }
+      setSubmitSuccess(true);
+      setServiceType("Inspection");
+      setName("");
+      setPhone("");
+      setMakeModel("");
+      setPreferredDate("");
+      setNotes("");
+      setTimeout(() => setSubmitSuccess(false), 4000);
+    } catch {
+      setSubmitError("Network error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="pt-24 pb-16">
@@ -99,18 +185,47 @@ export default function ServicesContent() {
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button size="xl" variant="secondary" asChild>
-              <Link href="/contacts">
+              <Link href={localizedPath(locale, "/contacts")}>
                 {locale === "ru" ? "Оставить заявку" : "Get Started"}
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
             <Button size="xl" variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white" asChild>
-              <Link href="/calculator">
+              <Link href={localizedPath(locale, "/calculator")}>
                 <Calculator className="w-5 h-5" />
                 {locale === "ru" ? "Рассчитать стоимость" : "Calculate Cost"}
               </Link>
             </Button>
           </div>
+        </div>
+
+        <div className="mt-16 max-w-3xl mx-auto bg-[#0d0d15] border border-white/10 rounded-3xl p-8">
+          {submitSuccess ? (
+            <div className="text-center py-8">
+              <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
+              <p className="font-semibold text-white">{b.success}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleBooking} className="space-y-4">
+              <div>
+                <h3 className="text-2xl font-bold text-white">{b.title}</h3>
+                <p className="text-white/60 mt-1">{b.subtitle}</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={locale === "ru" ? "Ваше имя" : locale === "uz" ? "Ismingiz" : "Your name"} />
+                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={locale === "ru" ? "Телефон" : locale === "uz" ? "Telefon" : "Phone"} />
+                <Input value={serviceType} onChange={(e) => setServiceType(e.target.value)} placeholder={b.serviceType} />
+                <Input value={makeModel} onChange={(e) => setMakeModel(e.target.value)} placeholder={b.makeModel} />
+                <Input type="date" value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)} placeholder={b.preferredDate} />
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={b.notes} />
+              </div>
+              <Turnstile onToken={setTurnstileToken} />
+              {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+              <Button type="submit" disabled={submitting} className="w-full">
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : b.submit}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </div>

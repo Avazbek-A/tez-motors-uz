@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice, cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import type { Car as CarType } from "@/types/car";
 
 export default function AdminCarsPage() {
@@ -206,12 +206,17 @@ export default function AdminCarsPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-1">
-                          {car.is_available ? (
+                          {car.inventory_status === "available" ? (
                             <Badge variant="success">Available</Badge>
+                          ) : car.inventory_status === "reserved" ? (
+                            <Badge variant="secondary">Reserved</Badge>
                           ) : (
                             <Badge variant="destructive">Sold</Badge>
                           )}
                           {car.is_hot_offer && <Badge variant="default">Hot</Badge>}
+                          {car.original_price_usd && car.original_price_usd > car.price_usd && (
+                            <Badge variant="outline">-{Math.round((1 - car.price_usd / car.original_price_usd) * 100)}%</Badge>
+                          )}
                         </div>
                       </td>
                       <td className="p-4">
@@ -219,6 +224,11 @@ export default function AdminCarsPage() {
                           <Button size="icon" variant="ghost" asChild>
                             <a href={`/catalog/${car.slug}`} target="_blank">
                               <Eye className="w-4 h-4" />
+                            </a>
+                          </Button>
+                          <Button size="icon" variant="ghost" asChild>
+                            <a href={`/api/cars/${car.id}/pdf`} download>
+                              <Download className="w-4 h-4" />
                             </a>
                           </Button>
                           <Button size="icon" variant="ghost" onClick={() => setEditingCar(car)}>
@@ -271,21 +281,31 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [model, setModel] = useState(car?.model || "");
   const [year, setYear] = useState(car?.year?.toString() || "2024");
   const [priceUsd, setPriceUsd] = useState(car?.price_usd?.toString() || "");
+  const [originalPriceUsd, setOriginalPriceUsd] = useState(car?.original_price_usd?.toString() || "");
   const [bodyType, setBodyType] = useState<string>(car?.body_type || "suv");
   const [fuelType, setFuelType] = useState<string>(car?.fuel_type || "petrol");
   const [engineVolume, setEngineVolume] = useState(car?.engine_volume?.toString() || "1.5");
   const [enginePower, setEnginePower] = useState(car?.engine_power?.toString() || "");
   const [transmission, setTransmission] = useState<string>(car?.transmission || "automatic");
-  const [drivetrain, setDrivetrain] = useState<string>(car?.drivetrain || "fwd");
+  const [drivetrain] = useState<string>(car?.drivetrain || "fwd");
   const [color, setColor] = useState(car?.color || "");
   const [descriptionRu, setDescriptionRu] = useState(car?.description_ru || "");
+  const [videoUrl, setVideoUrl] = useState(car?.video_url || "");
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
   const [isAvailable, setIsAvailable] = useState(car?.is_available ?? true);
+  const [inventoryStatus, setInventoryStatus] = useState<string>(car?.inventory_status || "available");
   const [images, setImages] = useState<string[]>(car?.images || []);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (inventoryStatus !== "available") {
+      setIsAvailable(false);
+    }
+  }, [inventoryStatus]);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -327,6 +347,17 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
     });
   };
 
+  const handleImageDrop = (targetIndex: number) => {
+    setImages((prev) => {
+      if (draggedImageIndex === null || draggedImageIndex === targetIndex) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(draggedImageIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+    setDraggedImageIndex(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -341,6 +372,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       slug,
       year: parseInt(year),
       price_usd: parseInt(priceUsd),
+      original_price_usd: originalPriceUsd ? parseInt(originalPriceUsd) : null,
       body_type: bodyType,
       fuel_type: fuelType,
       engine_volume: engineVolume ? parseFloat(engineVolume) : null,
@@ -349,8 +381,10 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       drivetrain,
       color,
       description_ru: descriptionRu,
+      video_url: videoUrl || null,
       is_hot_offer: isHotOffer,
-      is_available: isAvailable,
+      is_available: inventoryStatus === "available" ? isAvailable : false,
+      inventory_status: inventoryStatus,
       mileage: 0,
       images,
       specs: car?.specs || {},
@@ -429,6 +463,17 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Original Price (USD)</label>
+              <Input type="number" value={originalPriceUsd} onChange={(e) => setOriginalPriceUsd(e.target.value)} placeholder="Optional" />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Video URL</label>
+              <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/embed/..." />
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium mb-1 block">Body Type</label>
@@ -496,7 +541,17 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
 
           <div>
             <label className="text-sm font-medium mb-2 block">Images</label>
-            <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-6 cursor-pointer hover:border-lime/50 transition-colors text-sm text-muted-foreground">
+            <label
+              className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-6 cursor-pointer hover:border-lime/50 transition-colors text-sm text-muted-foreground"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleFiles(e.dataTransfer.files);
+              }}
+            >
               <Upload className="w-4 h-4" />
               {uploadingCount > 0
                 ? `Uploading ${uploadingCount}…`
@@ -518,7 +573,15 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             {images.length > 0 && (
               <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3">
                 {images.map((url, idx) => (
-                  <div key={`${url}-${idx}`} className="relative group rounded-lg overflow-hidden border border-white/10">
+                  <div
+                    key={`${url}-${idx}`}
+                    className="relative group rounded-lg overflow-hidden border border-white/10 cursor-grab"
+                    draggable
+                    onDragStart={() => setDraggedImageIndex(idx)}
+                    onDragEnd={() => setDraggedImageIndex(null)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleImageDrop(idx)}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="" className="w-full h-24 object-cover" />
                     {idx === 0 && (
@@ -577,6 +640,19 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               />
               <span className="text-sm">Available</span>
             </label>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium mb-1 block">Inventory Status</label>
+            <select
+              value={inventoryStatus}
+              onChange={(e) => setInventoryStatus(e.target.value)}
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+            >
+              <option value="available">Available</option>
+              <option value="reserved">Reserved</option>
+              <option value="sold">Sold</option>
+            </select>
           </div>
 
           {formError && (

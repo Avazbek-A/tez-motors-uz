@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
 import { SocialLinks } from "@/components/shared/social-links";
 import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
+import { localizedPath } from "@/lib/locale-path";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -54,7 +55,7 @@ export function Header() {
         <div className="container-custom">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 shrink-0 group">
+            <Link href={localizedPath(locale, "/")} className="flex items-center gap-2 shrink-0 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center group-hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] transition-shadow">
                 <span className="text-[#0a0a0f] font-black text-lg">TM</span>
               </div>
@@ -68,9 +69,9 @@ export function Header() {
             {/* Desktop Nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
+                  <Link
+                    key={link.href}
+                  href={localizedPath(locale, link.href)}
                   className={cn(
                     "relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
                     pathname === link.href
@@ -113,7 +114,7 @@ export function Header() {
                 className="hidden md:inline-flex"
                 asChild
               >
-                <Link href="/contacts">
+                <Link href={localizedPath(locale, "/contacts")}>
                   {dictionary.common.getConsultation}
                 </Link>
               </Button>
@@ -142,7 +143,7 @@ export function Header() {
               {NAV_LINKS.map((link) => (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={localizedPath(locale, link.href)}
                   className={cn(
                     "px-4 py-3 rounded-xl text-base font-medium transition-all",
                     pathname === link.href
@@ -166,7 +167,7 @@ export function Header() {
                 </div>
                 <div className="px-4">
                   <Button variant="default" size="lg" className="w-full" asChild>
-                    <Link href="/contacts">{dictionary.common.getConsultation}</Link>
+                    <Link href={localizedPath(locale, "/contacts")}>{dictionary.common.getConsultation}</Link>
                   </Button>
                 </div>
               </div>

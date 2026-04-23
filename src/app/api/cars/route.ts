@@ -18,6 +18,25 @@ function parseIntSafe(raw: string | null, min: number, max: number): number | nu
   return Math.min(Math.max(n, min), max);
 }
 
+function applySort<T extends { price_usd: number; year: number; brand: string; model: string }>(
+  items: T[],
+  sort: string | null,
+) {
+  const next = [...items];
+  switch (sort) {
+    case "price_asc":
+      return next.sort((a, b) => a.price_usd - b.price_usd);
+    case "price_desc":
+      return next.sort((a, b) => b.price_usd - a.price_usd);
+    case "year_desc":
+      return next.sort((a, b) => b.year - a.year);
+    case "name_asc":
+      return next.sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
+    default:
+      return next.sort((a, b) => b.year - a.year);
+  }
+}
+
 // GET all cars with optional filters
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -27,8 +46,9 @@ export async function GET(request: NextRequest) {
   const priceMin = parseIntSafe(searchParams.get("price_min"), 0, 100_000_000);
   const priceMax = parseIntSafe(searchParams.get("price_max"), 0, 100_000_000);
   const hotOnly = searchParams.get("hot_only");
-  const rawSearch = searchParams.get("search");
+  const rawSearch = searchParams.get("search") ?? searchParams.get("q");
   const search = rawSearch ? sanitizeSearch(rawSearch) : null;
+  const sort = searchParams.get("sort");
   const all = searchParams.get("all") && (await isAdminRequest(request));
   const limit = parseIntSafe(searchParams.get("limit"), 1, 100);
   const ids = searchParams.get("ids"); // comma-separated IDs
@@ -48,14 +68,14 @@ export async function GET(request: NextRequest) {
         .from("cars")
         .select("*", { count: "exact" });
 
-      if (!all) query = query.eq("is_available", true);
+      if (!all) query = query.neq("inventory_status", "sold");
       if (brand) query = query.eq("brand", brand);
       if (bodyType) query = query.eq("body_type", bodyType);
       if (fuelType) query = query.eq("fuel_type", fuelType);
       if (priceMin !== null) query = query.gte("price_usd", priceMin);
       if (priceMax !== null) query = query.lte("price_usd", priceMax);
       if (hotOnly === "true") query = query.eq("is_hot_offer", true);
-      if (search) query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%`);
+      if (search) query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
       if (ids) {
         const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
         if (idList.length > 0) query = query.in("id", idList);
@@ -74,7 +94,7 @@ export async function GET(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { cars: cars || [], total: count || 0, page: pageNum, page_size: size },
+        { cars: applySort(cars || [], sort), total: count || 0, page: pageNum, page_size: size },
         { headers: all ? {} : publicCacheHeaders },
       );
     }
@@ -83,7 +103,7 @@ export async function GET(request: NextRequest) {
     let query = supabase.from("cars").select("*");
 
     if (!all) {
-      query = query.eq("is_available", true);
+      query = query.neq("inventory_status", "sold");
     }
     if (brand) query = query.eq("brand", brand);
     if (bodyType) query = query.eq("body_type", bodyType);
@@ -92,7 +112,7 @@ export async function GET(request: NextRequest) {
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
     if (hotOnly === "true") query = query.eq("is_hot_offer", true);
     if (search) {
-      query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%`);
+      query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
     }
     if (ids) {
       const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
@@ -112,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        cars: cars || [],
+        cars: applySort(cars || [], sort),
         total: cars?.length || 0,
         filters: { brand, bodyType, fuelType, priceMin, priceMax },
       },

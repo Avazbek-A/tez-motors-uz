@@ -17,7 +17,7 @@ const inquirySchema = z.object({
     .max(2000)
     .refine((s) => (s.match(/https?:\/\//gi) || []).length <= 2, "too many links")
     .optional(),
-  type: z.enum(["general", "car_inquiry", "callback", "calculator"]).default("general"),
+  type: z.enum(["general", "car_inquiry", "callback", "calculator", "reservation", "test_drive", "trade_in", "newsletter", "price_drop", "service", "part_inquiry"]).default("general"),
   car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i).optional(),
   source_page: z.string().max(200).optional(),
   metadata: z.record(z.string(), z.unknown()).refine(
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
       message: data.message,
       type: data.type,
       source_page: data.source_page,
+      metadata: data.metadata,
     }).catch(() => {});
 
     return NextResponse.json({ success: true, id: inquiry.id }, { status: 201 });

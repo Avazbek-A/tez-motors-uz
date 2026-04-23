@@ -56,7 +56,8 @@
       "automatic": "Avtomat",
       "manual": "Mexanika",
       "cvt": "Variator",
-      "robot": "Robot"
+      "robot": "Robot",
+      "dct": "DCT"
     },
     "order": "Buyurtma berish",
     "details": "Batafsil"

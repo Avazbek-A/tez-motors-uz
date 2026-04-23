@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { formatPrice, cn } from "@/lib/utils";
 import type { Car } from "@/types/car";
 
@@ -24,8 +25,8 @@ export default function CompareContent() {
 
   const syncToUrl = useCallback((ids: string[]) => {
     const params = ids.length > 0 ? `?ids=${ids.join(",")}` : "";
-    router.replace(`/compare${params}`, { scroll: false });
-  }, [router]);
+    router.replace(localizedPath(locale, `/compare${params}`), { scroll: false });
+  }, [locale, router]);
 
   useEffect(() => {
     fetch("/api/cars")
@@ -48,7 +49,7 @@ export default function CompareContent() {
   }, []);
 
   const shareComparison = async () => {
-    const url = `${window.location.origin}/compare?ids=${selectedIds.join(",")}`;
+    const url = `${window.location.origin}${localizedPath(locale, `/compare?ids=${selectedIds.join(",")}`)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -157,7 +158,7 @@ export default function CompareContent() {
                           </div>
                         )}
                       </div>
-                      <Link href={`/catalog/${car.slug}`} className="font-bold text-white hover:text-neon-blue transition-colors">
+                      <Link href={localizedPath(locale, `/catalog/${car.slug}`)} className="font-bold text-white hover:text-neon-blue transition-colors">
                         {car.brand} {car.model}
                       </Link>
                       <div className="flex justify-center gap-1 mt-1">
@@ -212,7 +213,7 @@ export default function CompareContent() {
         <div className="flex justify-center gap-4 mt-8">
           {selectedCars.map((car) => (
             <Button key={car.id} variant="outline" size="sm" asChild>
-              <Link href={`/catalog/${car.slug}`}>
+              <Link href={localizedPath(locale, `/catalog/${car.slug}`)}>
                 {car.brand} {car.model}
                 <ArrowRight className="w-4 h-4" />
               </Link>

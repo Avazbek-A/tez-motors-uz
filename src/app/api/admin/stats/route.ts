@@ -22,7 +22,9 @@ export async function GET(request: Request) {
     const inquiries = inquiriesResult.data || [];
 
     const totalCars = cars.length;
-    const availableCars = cars.filter((c) => c.is_available).length;
+    const availableCars = cars.filter((c) => c.inventory_status === "available").length;
+    const reservedCars = cars.filter((c) => c.inventory_status === "reserved").length;
+    const soldCars = cars.filter((c) => c.inventory_status === "sold").length;
     const hotOffers = cars.filter((c) => c.is_hot_offer).length;
 
     const brandCounts: Record<string, number> = {};
@@ -49,6 +51,8 @@ export async function GET(request: Request) {
       cars: {
         total: totalCars,
         available: availableCars,
+        reserved: reservedCars,
+        sold: soldCars,
         hotOffers,
         avgPrice,
         minPrice,

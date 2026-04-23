@@ -8,6 +8,7 @@ export async function sendTelegramNotification(data: {
   message?: string;
   type: string;
   source_page?: string;
+  metadata?: Record<string, unknown>;
 }) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -19,7 +20,22 @@ export async function sendTelegramNotification(data: {
     car_inquiry: "🚗",
     callback: "📞",
     calculator: "🧮",
+    part_inquiry: "🔧",
+    reservation: "📝",
+    test_drive: "🛣️",
+    trade_in: "🔄",
+    service: "🛠️",
   }[data.type] || "📩";
+
+  const partLine =
+    data.type === "part_inquiry" && data.metadata
+      ? [
+          data.metadata.part_name ? `🔧 *Запчасть:* ${escapeMarkdown(String(data.metadata.part_name))}` : "",
+          data.metadata.oem_number ? `🔖 *OEM:* ${escapeMarkdown(String(data.metadata.oem_number))}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
 
   const text = [
     `${emoji} *Новая заявка — Tez Motors*`,
@@ -27,6 +43,7 @@ export async function sendTelegramNotification(data: {
     `👤 *Имя:* ${escapeMarkdown(data.name)}`,
     `📱 *Телефон:* ${escapeMarkdown(data.phone)}`,
     `📋 *Тип:* ${data.type}`,
+    partLine,
     data.source_page ? `🔗 *Страница:* ${escapeMarkdown(data.source_page)}` : "",
     data.message ? `\n💬 *Сообщение:*\n${escapeMarkdown(data.message)}` : "",
   ]

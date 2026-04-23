@@ -23,7 +23,7 @@ export const carSchema = z.object({
   fuel_type: z.enum(["petrol", "electric", "hybrid", "phev"]),
   engine_volume: z.number().nullable().optional(),
   engine_power: z.number().int().nullable().optional(),
-  transmission: z.enum(["automatic", "manual", "cvt", "robot"]),
+  transmission: z.enum(["automatic", "manual", "cvt", "robot", "dct"]),
   drivetrain: z.enum(["fwd", "rwd", "awd"]).nullable().optional(),
   mileage: z.number().int().default(0),
   color: z.string().nullable().optional(),

@@ -4,6 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Search, CarFront, X, Loader2 } from "lucide-react";
 import { formatPrice, cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import type { Car } from "@/types/car";
 
 interface SearchAutocompleteProps {
@@ -13,6 +15,7 @@ interface SearchAutocompleteProps {
 }
 
 export function SearchAutocomplete({ placeholder = "Search cars...", className, onSelect }: SearchAutocompleteProps) {
+  const { locale } = useLocale();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [results, setResults] = useState<Car[]>([]);
@@ -80,7 +83,7 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
           {results.map((car) => (
             <Link
               key={car.id}
-              href={`/catalog/${car.slug}`}
+              href={localizedPath(locale, `/catalog/${car.slug}`)}
               onClick={() => {
                 setQuery("");
                 setIsOpen(false);
@@ -100,7 +103,7 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
             </Link>
           ))}
           <Link
-            href={`/catalog?search=${encodeURIComponent(query)}`}
+            href={localizedPath(locale, `/catalog?search=${encodeURIComponent(query)}`)}
             onClick={() => { setQuery(""); setIsOpen(false); setResults([]); onSelect?.(); }}
             className="block p-3 text-center text-sm text-neon-blue hover:bg-white/5 transition-colors font-medium"
           >
