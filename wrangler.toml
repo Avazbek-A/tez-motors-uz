@@ -8,3 +8,11 @@ directory = ".open-next/assets"
 
 [observability]
 enabled = true
+
+[[routes]]
+pattern = "tezmotors.uz"
+custom_domain = true
+
+[[routes]]
+pattern = "www.tezmotors.uz"
+custom_domain = true
