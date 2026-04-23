@@ -7,6 +7,9 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const window = 5 * 60 * 1000;
+  if (rateLimitMap.size > 1000) {
+    for (const [k, v] of rateLimitMap) if (now > v.resetAt) rateLimitMap.delete(k);
+  }
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
     rateLimitMap.set(ip, { count: 1, resetAt: now + window });
@@ -16,12 +19,6 @@ function checkRateLimit(ip: string): boolean {
   entry.count++;
   return true;
 }
-
-// Clean up expired entries every 15 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of rateLimitMap) if (now > v.resetAt) rateLimitMap.delete(k);
-}, 15 * 60 * 1000);
 
 const schema = z.object({
   email: z.string().email().max(200),

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, Package
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, Package, ExternalLink
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,19 @@ const adminNav = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
+    router.replace("/admin/login");
+    router.refresh();
+  };
 
   return (
     <div className="min-h-screen bg-muted/30 flex">
@@ -76,15 +87,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Back to site */}
-        <div className="p-3 border-t border-white/10">
+        {/* Back to site + Logout */}
+        <div className="p-3 border-t border-white/10 space-y-1">
           <Link
             href="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
           >
-            <LogOut className="w-5 h-5 shrink-0" />
+            <ExternalLink className="w-5 h-5 shrink-0" />
             {!collapsed && <span>Back to Site</span>}
           </Link>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-red-300 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {!collapsed && <span>Log out</span>}
+          </button>
         </div>
       </aside>
 
