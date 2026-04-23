@@ -16,8 +16,10 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const callbackSchema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
   phone: z.string().min(5).max(20),
+  // Honeypot: must be empty/absent
+  website: z.string().max(0).optional(),
 });
 
 export async function POST(request: NextRequest) {

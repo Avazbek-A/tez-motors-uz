@@ -23,10 +23,14 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const inquirySchema = z.object({
-  name: z.string().min(2).max(100),
+  name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
   phone: z.string().min(5).max(20),
   email: z.string().email().max(200).optional().or(z.literal("")),
-  message: z.string().max(2000).optional(),
+  message: z
+    .string()
+    .max(2000)
+    .refine((s) => (s.match(/https?:\/\//gi) || []).length <= 2, "too many links")
+    .optional(),
   type: z.enum(["general", "car_inquiry", "callback", "calculator"]).default("general"),
   car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i).optional(),
   source_page: z.string().max(200).optional(),
@@ -34,6 +38,8 @@ const inquirySchema = z.object({
     (v) => JSON.stringify(v).length <= 4000,
     "metadata too large",
   ).optional(),
+  // Honeypot: real clients don't render or fill this. Must be empty/absent.
+  website: z.string().max(0).optional(),
 });
 
 export async function POST(request: NextRequest) {

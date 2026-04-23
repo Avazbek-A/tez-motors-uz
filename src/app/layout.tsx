@@ -78,6 +78,11 @@ export default async function RootLayout({
   return (
     <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
       <head>
+        <link
+          rel="preconnect"
+          href={process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://wyivyvoljvplkdrjmpox.supabase.co"}
+          crossOrigin="anonymous"
+        />
         <OrganizationSchema />
         <WebsiteSchema />
       </head>
