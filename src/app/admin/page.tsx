@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
-import { Car, MessageSquare, Star, HelpCircle, ArrowUpRight, Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { Car, MessageSquare, Star, HelpCircle, ArrowUpRight, Clock, ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,10 +28,20 @@ interface Inquiry {
 
 const PAGE_SIZE = 10;
 
+interface LowStockPart {
+  id: string;
+  slug: string;
+  name_ru: string;
+  oem_number: string | null;
+  category: string;
+  stock_qty: number;
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [page, setPage] = useState(0);
+  const [lowStock, setLowStock] = useState<LowStockPart[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/stats")
@@ -42,6 +52,11 @@ export default function AdminDashboard() {
     fetch("/api/inquiry")
       .then((r) => r.json())
       .then((data) => setInquiries(data.inquiries || []))
+      .catch(() => {});
+
+    fetch("/api/admin/parts/low-stock?threshold=5&limit=10")
+      .then((r) => r.json())
+      .then((d) => setLowStock(d.parts || []))
       .catch(() => {});
   }, []);
 
@@ -123,6 +138,41 @@ export default function AdminDashboard() {
                 </div>
                 <Badge variant={inq.status === "new" ? "warning" : "secondary"}>
                   {inq.follow_up_date}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {lowStock.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <CardTitle className="flex items-center gap-2">
+              <PackageOpen className="w-5 h-5 text-amber-500" /> Low stock (≤ 5)
+            </CardTitle>
+            <Link
+              href="/admin/parts"
+              className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              Manage parts <ArrowUpRight className="w-4 h-4" />
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {lowStock.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-muted/50"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{p.name_ru}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {p.oem_number ? `OEM ${p.oem_number} · ` : ""}
+                    {p.category}
+                  </p>
+                </div>
+                <Badge variant={p.stock_qty === 0 ? "destructive" : "warning"}>
+                  {p.stock_qty === 0 ? "Out of stock" : `${p.stock_qty} left`}
                 </Badge>
               </div>
             ))}

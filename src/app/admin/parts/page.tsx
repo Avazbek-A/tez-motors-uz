@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload, FileDown, FileUp } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload, FileDown, FileUp, CloudDownload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -64,16 +64,45 @@ export default function AdminPartsPage() {
     fetchParts();
   }, [fetchParts]);
 
-  const handleImport = async (file: File) => {
+  const handleMirror = async () => {
+    if (!confirm("Download all external image URLs and rehost on this site? This may take a minute.")) {
+      return;
+    }
+    setImporting(true);
+    try {
+      const res = await fetch("/api/admin/parts/mirror-images", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback("error", data.error || "Mirror failed");
+        return;
+      }
+      const { scanned = 0, mirrored = 0, unchanged = 0, errors = [] } = data;
+      showFeedback(
+        errors.length > 0 ? "error" : "success",
+        `Scanned ${scanned} images — mirrored ${mirrored}, already hosted ${unchanged}, failed ${errors.length}`,
+      );
+      fetchParts();
+    } catch (e) {
+      showFeedback("error", e instanceof Error ? e.message : "Mirror failed");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImport = async (file: File, dry = false) => {
     setImporting(true);
     setImportReport(null);
     try {
       const form = new FormData();
       form.append("file", file);
-      const res = await fetch("/api/admin/parts/import", {
-        method: "POST",
-        body: form,
-      });
+      const res = await fetch(
+        `/api/admin/parts/import${dry ? "?dry=true" : ""}`,
+        { method: "POST", body: form },
+      );
       const data = await res.json();
       if (!res.ok) {
         showFeedback("error", data.error || "Import failed");
@@ -81,11 +110,12 @@ export default function AdminPartsPage() {
       }
       setImportReport(data);
       const { inserted = 0, updated = 0, skipped = 0 } = data;
+      const prefix = dry ? "Preview: would" : "Imported";
       showFeedback(
         skipped > 0 ? "error" : "success",
-        `Imported ${inserted} new, updated ${updated}, skipped ${skipped}`,
+        `${prefix} insert ${inserted}, update ${updated}, skip ${skipped}`,
       );
-      fetchParts();
+      if (!dry) fetchParts();
     } catch (e) {
       showFeedback("error", e instanceof Error ? e.message : "Import failed");
     } finally {
@@ -173,6 +203,15 @@ export default function AdminPartsPage() {
           >
             <FileDown className="w-4 h-4 mr-1" /> Template
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleMirror}
+            disabled={importing}
+            title="Download external image URLs and rehost on this site"
+          >
+            <CloudDownload className="w-4 h-4 mr-1" /> Mirror Images
+          </Button>
           <label className="inline-flex">
             <input
               type="file"
@@ -181,13 +220,35 @@ export default function AdminPartsPage() {
               disabled={importing}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleImport(file);
+                if (file) handleImport(file, true);
                 e.target.value = "";
               }}
             />
             <span
               className={cn(
                 "inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium cursor-pointer hover:bg-accent",
+                importing && "opacity-60 cursor-not-allowed",
+              )}
+              title="Validate CSV without writing to DB"
+            >
+              <FileUp className="w-4 h-4" /> Preview CSV
+            </span>
+          </label>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file, false);
+                e.target.value = "";
+              }}
+            />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md bg-primary text-primary-foreground px-3 h-8 text-sm font-medium cursor-pointer hover:opacity-90",
                 importing && "opacity-60 cursor-not-allowed",
               )}
             >

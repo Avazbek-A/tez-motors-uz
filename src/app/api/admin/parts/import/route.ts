@@ -47,6 +47,7 @@ interface ImportResult {
   inserted: number;
   updated: number;
   skipped: number;
+  dry_run?: boolean;
   errors: Array<{ row: number; slug?: string; message: string }>;
 }
 
@@ -54,6 +55,8 @@ export async function POST(request: NextRequest) {
   const guard = await requireAdmin(request);
   if (guard) return guard;
 
+  const dryRun =
+    new URL(request.url).searchParams.get("dry") === "true";
   let csvText: string;
   const contentType = request.headers.get("content-type") ?? "";
 
@@ -149,6 +152,12 @@ export async function POST(request: NextRequest) {
       .eq("slug", slug)
       .maybeSingle();
 
+    if (dryRun) {
+      if (existing?.id) result.updated += 1;
+      else result.inserted += 1;
+      continue;
+    }
+
     if (existing?.id) {
       const { error } = await supabase
         .from("parts")
@@ -171,5 +180,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (dryRun) result.dry_run = true;
   return NextResponse.json(result);
 }
