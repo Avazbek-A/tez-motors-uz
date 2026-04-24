@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Wrench, Package, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Wrench, Package, CheckCircle, Clock, Loader2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,11 @@ const LABELS = {
     submit: "Отправить",
     sent: "Заявка отправлена! Мы свяжемся с вами.",
     error: "Ошибка отправки. Попробуйте позже.",
+    wholesalePrice: "Оптовая цена",
+    minOrder: "от",
+    pcs: "шт.",
+    wholesaleCtaIn: "Я оптовый покупатель",
+    wholesaleCtaOut: "Скрыть оптовые цены",
     categories: {
       engine: "Двигатель", body: "Кузов", electrical: "Электрика",
       suspension: "Подвеска", brakes: "Тормоза", interior: "Салон", other: "Прочее",
@@ -47,6 +52,11 @@ const LABELS = {
     submit: "Yuborish",
     sent: "Ariza yuborildi! Biz siz bilan bog'lanamiz.",
     error: "Yuborishda xatolik. Keyinroq qayta urinib ko'ring.",
+    wholesalePrice: "Ulgurji narx",
+    minOrder: "kamida",
+    pcs: "dona",
+    wholesaleCtaIn: "Men ulgurji xaridorman",
+    wholesaleCtaOut: "Ulgurji narxlarni yashirish",
     categories: {
       engine: "Dvigatel", body: "Kuzov", electrical: "Elektrika",
       suspension: "Podveska", brakes: "Tormoz", interior: "Salon", other: "Boshqa",
@@ -68,6 +78,11 @@ const LABELS = {
     submit: "Send",
     sent: "Inquiry sent! We will contact you.",
     error: "Failed to send. Try again later.",
+    wholesalePrice: "Wholesale price",
+    minOrder: "from",
+    pcs: "pcs",
+    wholesaleCtaIn: "I'm a wholesale buyer",
+    wholesaleCtaOut: "Hide wholesale prices",
     categories: {
       engine: "Engine", body: "Body", electrical: "Electrical",
       suspension: "Suspension", brakes: "Brakes", interior: "Interior", other: "Other",
@@ -90,6 +105,20 @@ export default function PartDetailClient({ part }: { part: Part }) {
   const [activeImage, setActiveImage] = useState(part.images[0] || "");
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [wholesale, setWholesale] = useState(false);
+
+  useEffect(() => {
+    // Cookie gate — persists across pages for the session.
+    setWholesale(document.cookie.split("; ").some((c) => c.startsWith("tm_wholesale=1")));
+  }, []);
+
+  const toggleWholesale = () => {
+    const next = !wholesale;
+    document.cookie = next
+      ? "tm_wholesale=1; path=/; max-age=2592000; samesite=lax"
+      : "tm_wholesale=; path=/; max-age=0; samesite=lax";
+    setWholesale(next);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +220,43 @@ export default function PartDetailClient({ part }: { part: Part }) {
                 <span className="text-lg text-white/40 line-through">${part.original_price_usd}</span>
               )}
             </div>
+
+            {part.wholesale_price_usd != null && (
+              <div>
+                {wholesale ? (
+                  <div className="rounded-xl border border-cyan-400/40 bg-cyan-400/5 p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-cyan-400" />
+                      <div>
+                        <p className="text-xs text-white/50">{t.wholesalePrice}</p>
+                        <p className="text-xl font-bold text-cyan-300">
+                          ${part.wholesale_price_usd}{" "}
+                          <span className="text-xs text-white/50 font-normal">
+                            · {t.minOrder} {part.min_order_qty} {t.pcs}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={toggleWholesale}
+                      className="text-xs text-white/50 hover:text-white underline"
+                    >
+                      {t.wholesaleCtaOut}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={toggleWholesale}
+                    className="inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200 underline"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                    {t.wholesaleCtaIn}
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               {part.brand && (

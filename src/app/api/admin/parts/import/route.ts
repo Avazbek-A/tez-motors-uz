@@ -125,6 +125,8 @@ export async function POST(request: NextRequest) {
       brand: r.brand || null,
       price_usd: parseNumber(r.price_usd),
       original_price_usd: parseNumber(r.original_price_usd),
+      wholesale_price_usd: parseNumber(r.wholesale_price_usd),
+      min_order_qty: Math.max(1, parseInt10(r.min_order_qty) ?? 1),
       stock_qty: parseInt10(r.stock_qty) ?? 0,
       images: parseList(r.images || r.image_urls || ""),
       is_published: parseBool(r.is_published || r.published || "false"),

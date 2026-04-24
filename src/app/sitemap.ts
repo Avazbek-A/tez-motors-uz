@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { locales } from "@/i18n/config";
+import { PART_CATEGORIES } from "@/lib/schemas/part";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://tezmotors.uz";
@@ -82,7 +83,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
-    return [...staticPages, ...carPages, ...blogPages, ...partPages];
+    const categoryPages = PART_CATEGORIES.flatMap((category) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/parts/category/${category}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+        alternates: alternatesFor(`/parts/category/${category}`),
+      })),
+    );
+
+    return [...staticPages, ...carPages, ...blogPages, ...partPages, ...categoryPages];
   } catch {
     return staticPages;
   }

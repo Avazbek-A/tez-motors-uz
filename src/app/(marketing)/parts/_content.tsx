@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Search, Wrench, Loader2, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -83,15 +84,20 @@ function partName(p: Part, locale: "ru" | "uz" | "en"): string {
   return p.name_ru;
 }
 
-export default function PartsCatalogContent() {
+export default function PartsCatalogContent({
+  initialCategory,
+}: { initialCategory?: string } = {}) {
   const { locale } = useLocale();
   const t = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
+  const qp = useSearchParams();
 
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [fitsBrand, setFitsBrand] = useState("");
+  const [category, setCategory] = useState(initialCategory ?? (qp?.get("category") ?? ""));
+  const [fitsBrand, setFitsBrand] = useState(qp?.get("fits_brand") ?? "");
+  const [fitsModel, setFitsModel] = useState(qp?.get("fits_model") ?? "");
+  const [year, setYear] = useState(qp?.get("year") ?? "");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 12;
@@ -103,6 +109,8 @@ export default function PartsCatalogContent() {
       if (search) params.set("q", search);
       if (category) params.set("category", category);
       if (fitsBrand) params.set("fits_brand", fitsBrand);
+      if (fitsModel) params.set("fits_model", fitsModel);
+      if (year) params.set("year", year);
       params.set("page", String(page));
       params.set("page_size", String(pageSize));
 
@@ -113,7 +121,7 @@ export default function PartsCatalogContent() {
     } finally {
       setLoading(false);
     }
-  }, [search, category, fitsBrand, page]);
+  }, [search, category, fitsBrand, fitsModel, year, page]);
 
   useEffect(() => {
     const h = setTimeout(fetchParts, search ? 300 : 0);
@@ -122,7 +130,7 @@ export default function PartsCatalogContent() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, category, fitsBrand]);
+  }, [search, category, fitsBrand, fitsModel, year]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -130,6 +138,31 @@ export default function PartsCatalogContent() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading title={t.title} subtitle={t.subtitle} />
+
+        {(fitsModel || year) && (
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-cyan-400/10 border border-cyan-400/30 px-4 py-2 text-sm text-cyan-200">
+            <Package className="w-4 h-4" />
+            <span>
+              {locale === "uz"
+                ? "Filtrlangan: "
+                : locale === "en"
+                ? "Filtered for: "
+                : "Фильтр: "}
+              <b>{[fitsBrand, fitsModel, year].filter(Boolean).join(" · ")}</b>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setFitsBrand("");
+                setFitsModel("");
+                setYear("");
+              }}
+              className="ml-2 text-cyan-300/70 hover:text-white underline"
+            >
+              {locale === "uz" ? "tozalash" : locale === "en" ? "clear" : "сбросить"}
+            </button>
+          </div>
+        )}
 
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-3 mb-8">

@@ -29,6 +29,8 @@ export const partWriteSchema = z.object({
   brand: z.string().max(100).optional().nullable(),
   price_usd: z.number().nonnegative().optional().nullable(),
   original_price_usd: z.number().nonnegative().optional().nullable(),
+  wholesale_price_usd: z.number().nonnegative().optional().nullable(),
+  min_order_qty: z.number().int().min(1).default(1),
   stock_qty: z.number().int().min(0).default(0),
   images: z.array(z.string().url()).default([]),
   is_published: z.boolean().default(false),

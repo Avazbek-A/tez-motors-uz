@@ -19,6 +19,8 @@ const emptyPart = (): Partial<Part> => ({
   category: "other",
   brand: "",
   price_usd: 0,
+  wholesale_price_usd: null,
+  min_order_qty: 1,
   stock_qty: 0,
   images: [],
   is_published: false,
@@ -202,6 +204,16 @@ export default function AdminPartsPage() {
             title="Download CSV template"
           >
             <FileDown className="w-4 h-4 mr-1" /> Template
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              window.location.href = "/api/admin/parts/export";
+            }}
+            title="Download the full catalog as CSV (round-trip for editing)"
+          >
+            <FileDown className="w-4 h-4 mr-1" /> Export CSV
           </Button>
           <Button
             variant="outline"
@@ -548,6 +560,26 @@ function PartFormModal({
                 step="0.01"
                 value={part.original_price_usd ?? ""}
                 onChange={(e) => setField("original_price_usd", e.target.value ? parseFloat(e.target.value) : null)}
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium block mb-1">Wholesale Price (USD)</span>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={part.wholesale_price_usd ?? ""}
+                onChange={(e) => setField("wholesale_price_usd", e.target.value ? parseFloat(e.target.value) : null)}
+                placeholder="Shown to bulk buyers"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-medium block mb-1">Min Order Qty (wholesale)</span>
+              <Input
+                type="number"
+                min={1}
+                value={part.min_order_qty ?? 1}
+                onChange={(e) => setField("min_order_qty", Math.max(1, parseInt(e.target.value) || 1))}
               />
             </label>
           </div>

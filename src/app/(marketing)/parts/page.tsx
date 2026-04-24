@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { cookies, headers } from "next/headers";
 import { SITE_CONFIG } from "@/lib/constants";
 import { getLocaleFromCookie } from "@/i18n/config";
@@ -40,5 +41,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function PartsPage() {
-  return <PartsCatalogContent />;
+  return (
+    <Suspense fallback={null}>
+      <PartsCatalogContent />
+    </Suspense>
+  );
 }

@@ -21,6 +21,8 @@ export interface Part {
   brand: string | null;
   price_usd: number | null;
   original_price_usd: number | null;
+  wholesale_price_usd: number | null;
+  min_order_qty: number;
   stock_qty: number;
   images: string[];
   is_published: boolean;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
-  Zap, Send, Loader2, CheckCircle, Info, AlertCircle
+  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -263,6 +263,21 @@ export default function CarDetailPage() {
                 <a href={`/api/cars/${car.id}/pdf`} download>
                   Download PDF spec sheet
                 </a>
+              </Button>
+              <Button type="button" variant="outline" asChild className="w-full mb-4">
+                <Link
+                  href={localizedPath(
+                    locale,
+                    `/parts?fits_brand=${encodeURIComponent(car.brand)}&fits_model=${encodeURIComponent(car.model)}&year=${car.year}`,
+                  )}
+                >
+                  <Wrench className="w-4 h-4 mr-2" />
+                  {locale === "uz"
+                    ? "Ushbu avtomobil uchun ehtiyot qismlar"
+                    : locale === "en"
+                    ? "Shop parts for this car"
+                    : "Запчасти для этого авто"}
+                </Link>
               </Button>
 
               {isSuccess ? (
