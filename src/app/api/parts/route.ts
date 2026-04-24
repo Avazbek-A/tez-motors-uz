@@ -35,6 +35,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = all ? createServiceClient() : await createClient();
+
+    // Trigram-backed search with typo tolerance; falls back to ILIKE
+    // if the RPC returns nothing (zero threshold misses).
+    let searchIds: string[] | null = null;
+    if (search) {
+      const { data: rpc } = await supabase.rpc("search_parts_ids", {
+        q: search,
+        max_results: 200,
+      });
+      if (Array.isArray(rpc) && rpc.length > 0) {
+        searchIds = rpc.map((r: { id: string }) => r.id);
+      }
+    }
+
     let query = supabase.from("parts").select("*", { count: "exact" });
 
     if (!all) query = query.eq("is_published", true);
@@ -52,15 +66,19 @@ export async function GET(request: NextRequest) {
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
 
     if (search) {
-      const isOem = /^[A-Za-z0-9-]{4,}$/.test(search);
-      if (isOem) {
-        query = query.or(
-          `oem_number.eq.${search},name_ru.ilike.%${search}%,name_en.ilike.%${search}%,brand.ilike.%${search}%`,
-        );
+      if (searchIds && searchIds.length > 0) {
+        query = query.in("id", searchIds);
       } else {
-        query = query.or(
-          `name_ru.ilike.%${search}%,name_en.ilike.%${search}%,brand.ilike.%${search}%`,
-        );
+        const isOem = /^[A-Za-z0-9-]{4,}$/.test(search);
+        if (isOem) {
+          query = query.or(
+            `oem_number.eq.${search},name_ru.ilike.%${search}%,name_en.ilike.%${search}%,brand.ilike.%${search}%`,
+          );
+        } else {
+          query = query.or(
+            `name_ru.ilike.%${search}%,name_en.ilike.%${search}%,brand.ilike.%${search}%`,
+          );
+        }
       }
     }
 

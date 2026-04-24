@@ -58,6 +58,20 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = all ? createServiceClient() : await createClient();
 
+    // If a search query is present, resolve matching IDs via the trigram
+    // RPC and fall back to ILIKE on miss. This gives typo tolerance
+    // ("biyd" → "BYD") without losing literal substring matches.
+    let searchIds: string[] | null = null;
+    if (search) {
+      const { data: rpc } = await supabase.rpc("search_cars_ids", {
+        q: search,
+        max_results: 200,
+      });
+      if (Array.isArray(rpc) && rpc.length > 0) {
+        searchIds = rpc.map((r: { id: string }) => r.id);
+      }
+    }
+
     // Pagination mode: use count + range
     if (page !== null) {
       const size = Math.min(parseInt(pageSize || "12") || 12, 50);
@@ -75,7 +89,13 @@ export async function GET(request: NextRequest) {
       if (priceMin !== null) query = query.gte("price_usd", priceMin);
       if (priceMax !== null) query = query.lte("price_usd", priceMax);
       if (hotOnly === "true") query = query.eq("is_hot_offer", true);
-      if (search) query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
+      if (search) {
+        if (searchIds && searchIds.length > 0) {
+          query = query.in("id", searchIds);
+        } else {
+          query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
+        }
+      }
       if (ids) {
         const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
         if (idList.length > 0) query = query.in("id", idList);
@@ -112,7 +132,11 @@ export async function GET(request: NextRequest) {
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
     if (hotOnly === "true") query = query.eq("is_hot_offer", true);
     if (search) {
-      query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
+      if (searchIds && searchIds.length > 0) {
+        query = query.in("id", searchIds);
+      } else {
+        query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
+      }
     }
     if (ids) {
       const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
