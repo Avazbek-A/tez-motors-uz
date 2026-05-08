@@ -24,6 +24,13 @@ export async function GET() {
       "content-type": "text/html; charset=UTF-8",
       "cache-control": "no-store, no-cache, must-revalidate",
       "x-robots-tag": "noindex",
+      // Override Next.js's default Vary on RSC fields — Yandex's
+      // verification bot apparently caches per-Vary and the RSC vary
+      // values on first hit are not what subsequent fetches send.
+      vary: "Accept",
+      // Force a non-RSC content shape so OpenNext doesn't tack on
+      // server-component metadata.
+      "x-no-rsc": "1",
     },
   });
 }
