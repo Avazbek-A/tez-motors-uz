@@ -63,7 +63,7 @@ export default function SellYourCarPage() {
   return (
     <div className="pt-24 pb-16">
       <div className="container-custom max-w-3xl">
-        <SectionHeading title="Sell your car" subtitle="Send us your car details and photos for a trade-in estimate." />
+        <SectionHeading as="h1" title="Sell your car" subtitle="Send us your car details and photos for a trade-in estimate." />
         {success ? (
           <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-10 text-center">
             <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />

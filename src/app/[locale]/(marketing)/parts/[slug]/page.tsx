@@ -6,6 +6,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
 import { getLocaleFromCookie } from "@/i18n/config";
 import PartDetailClient from "./part-detail-client";
+import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
 import type { Part } from "@/types/part";
 
 async function fetchPart(slug: string): Promise<Part | null> {
@@ -68,9 +69,19 @@ export async function generateMetadata(
 export default async function PartDetailPage(
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const locale =
+    (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
+    getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
   const { slug } = await params;
   const part = await fetchPart(slug);
   if (!part) notFound();
+
+  const partName =
+    (locale === "uz" && part.name_uz) ||
+    (locale === "en" && part.name_en) ||
+    part.name_ru;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -100,6 +111,26 @@ export default async function PartDetailPage(
         id={`jsonld-part-${part.id}`}
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <BreadcrumbSchema
+        items={[
+          {
+            name: locale === "ru" ? "Главная" : locale === "uz" ? "Bosh sahifa" : "Home",
+            url: `${SITE_CONFIG.url}/${locale}`,
+          },
+          {
+            name: locale === "ru" ? "Запчасти" : locale === "uz" ? "Ehtiyot qismlar" : "Parts",
+            url: `${SITE_CONFIG.url}/${locale}/parts`,
+          },
+          {
+            name: part.category,
+            url: `${SITE_CONFIG.url}/${locale}/parts/category/${part.category}`,
+          },
+          {
+            name: partName,
+            url: `${SITE_CONFIG.url}/${locale}/parts/${part.slug}`,
+          },
+        ]}
       />
       <PartDetailClient part={part} />
     </>

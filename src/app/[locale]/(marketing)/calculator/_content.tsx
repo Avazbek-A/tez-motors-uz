@@ -133,6 +133,7 @@ export default function CalculatorContent() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={dictionary.calculator.title}
           subtitle={dictionary.calculator.subtitle}
         />

@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { locales } from "@/i18n/config";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
+import { CAR_BRANDS } from "@/lib/constants";
+
+const CAR_FILTER_SLUGS = ["electric", "hybrid", "phev", "suv", "sedan", "crossover"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://tezmotors.uz";
@@ -17,6 +20,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/blog", changeFrequency: "weekly" as const, priority: 0.7 },
     { path: "/parts", changeFrequency: "weekly" as const, priority: 0.7 },
     { path: "/favorites", changeFrequency: "monthly" as const, priority: 0.3 },
+    { path: "/tashkent", changeFrequency: "monthly" as const, priority: 0.7 },
+    { path: "/services", changeFrequency: "monthly" as const, priority: 0.6 },
+    { path: "/reviews", changeFrequency: "weekly" as const, priority: 0.5 },
+    { path: "/compare", changeFrequency: "monthly" as const, priority: 0.4 },
+    { path: "/track", changeFrequency: "monthly" as const, priority: 0.3 },
+    { path: "/privacy", changeFrequency: "yearly" as const, priority: 0.2 },
+    { path: "/terms", changeFrequency: "yearly" as const, priority: 0.2 },
   ];
 
   const alternatesFor = (path: string) => {
@@ -93,7 +103,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
-    return [...staticPages, ...carPages, ...blogPages, ...partPages, ...categoryPages];
+    const brandPages = CAR_BRANDS.flatMap((brand) => {
+      const slug = brand.toLowerCase().replace(/\s+/g, "-");
+      return locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/catalog/brand/${slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+        alternates: alternatesFor(`/catalog/brand/${slug}`),
+      }));
+    });
+
+    const filterPages = CAR_FILTER_SLUGS.flatMap((slug) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/catalog/type/${slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+        alternates: alternatesFor(`/catalog/type/${slug}`),
+      })),
+    );
+
+    return [
+      ...staticPages,
+      ...brandPages,
+      ...filterPages,
+      ...carPages,
+      ...blogPages,
+      ...partPages,
+      ...categoryPages,
+    ];
   } catch {
     return staticPages;
   }

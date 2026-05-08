@@ -19,7 +19,23 @@ import type { Car, CarFilters } from "@/types/car";
 type SortOption = "default" | "price_asc" | "price_desc" | "year_desc" | "name_asc";
 const PAGE_SIZE = 12;
 
-function CatalogContent() {
+interface CatalogContentInnerProps {
+  /**
+   * Filters to seed when no URL query string is present. Used by brand /
+   * filter landing pages (e.g. /catalog/brand/byd). URL params still
+   * override, so a user navigating from the brand page can layer extra
+   * filters without losing the route context.
+   */
+  initialFilters?: CarFilters;
+  /**
+   * Base path for `syncToUrl` to write back to. Defaults to "/catalog".
+   * Brand/filter wrappers pass their own (e.g. "/catalog/brand/byd") so
+   * pinned filters stay in the route, layered filters in the query.
+   */
+  basePath?: string;
+}
+
+function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogContentInnerProps) {
   const { locale, dictionary } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,13 +48,14 @@ function CatalogContent() {
   const [searchText, setSearchText] = useState(searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
 
-  // Initialize filters from URL params
+  // Initialize filters from URL params, falling back to initialFilters from
+  // the wrapper page (brand / filter landing pages).
   const [filters, setFilters] = useState<CarFilters>(() => ({
-    brand: searchParams.get("brand") || undefined,
-    body_type: searchParams.get("body_type") || undefined,
-    fuel_type: searchParams.get("fuel_type") || undefined,
-    price_min: searchParams.get("price_min") ? parseInt(searchParams.get("price_min")!) : undefined,
-    price_max: searchParams.get("price_max") ? parseInt(searchParams.get("price_max")!) : undefined,
+    brand: searchParams.get("brand") || initialFilters?.brand || undefined,
+    body_type: searchParams.get("body_type") || initialFilters?.body_type || undefined,
+    fuel_type: searchParams.get("fuel_type") || initialFilters?.fuel_type || undefined,
+    price_min: searchParams.get("price_min") ? parseInt(searchParams.get("price_min")!) : initialFilters?.price_min,
+    price_max: searchParams.get("price_max") ? parseInt(searchParams.get("price_max")!) : initialFilters?.price_max,
     search: searchParams.get("q") || undefined,
   }));
 
@@ -58,8 +75,8 @@ function CatalogContent() {
     if (newSort !== "default") params.set("sort", newSort);
     if (newPage > 1) params.set("page", String(newPage));
     const query = params.toString();
-    router.replace(localizedPath(locale, query ? `/catalog?${query}` : "/catalog"), { scroll: false });
-  }, [locale, router]);
+    router.replace(localizedPath(locale, query ? `${basePath}?${query}` : basePath), { scroll: false });
+  }, [locale, router, basePath]);
 
   const updateFilters = (newFilters: CarFilters) => {
     setFilters(newFilters);
@@ -113,6 +130,7 @@ function CatalogContent() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={dictionary.catalog.title}
           subtitle={dictionary.catalog.subtitle}
         />
@@ -370,10 +388,10 @@ function CatalogContent() {
   );
 }
 
-export default function CatalogContentWrapper() {
+export default function CatalogContentWrapper(props: CatalogContentInnerProps = {}) {
   return (
     <Suspense fallback={<CarGridSkeleton count={9} />}>
-      <CatalogContent />
+      <CatalogContent {...props} />
     </Suspense>
   );
 }

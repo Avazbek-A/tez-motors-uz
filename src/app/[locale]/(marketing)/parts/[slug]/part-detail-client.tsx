@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Wrench, Package, CheckCircle, Clock, Loader2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -167,10 +168,16 @@ export default function PartDetailClient({ part }: { part: Part }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Gallery */}
           <div>
-            <div className="aspect-video rounded-2xl overflow-hidden bg-[#0a0a0f] border border-white/10 mb-3">
+            <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#0a0a0f] border border-white/10 mb-3">
               {activeImage ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={activeImage} alt={name} className="w-full h-full object-contain" />
+                <Image
+                  src={activeImage}
+                  alt={name}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-contain"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/20">
                   <Wrench className="w-16 h-16" />
@@ -184,12 +191,17 @@ export default function PartDetailClient({ part }: { part: Part }) {
                     key={url}
                     onClick={() => setActiveImage(url)}
                     className={cn(
-                      "aspect-square rounded-lg overflow-hidden border-2 transition",
+                      "relative aspect-square rounded-lg overflow-hidden border-2 transition",
                       activeImage === url ? "border-cyan-400" : "border-white/10",
                     )}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      sizes="(min-width: 1024px) 80px, 20vw"
+                      className="object-cover"
+                    />
                   </button>
                 ))}
               </div>

@@ -1,13 +1,25 @@
 import type { Metadata } from "next";
+import { makePageMetadata } from "@/lib/seo/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Сравнение автомобилей",
-  description: "Сравните характеристики и цены китайских автомобилей. Выберите лучший вариант для себя.",
-  openGraph: {
-    title: "Сравнение авто — Tez Motors",
-    description: "Сравните характеристики и цены китайских автомобилей.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return makePageMetadata("/compare", {
+    ru: {
+      title: "Сравнение автомобилей — Tez Motors",
+      description:
+        "Сравните характеристики и цены китайских авто: BYD, Haval, Chery, Geely и другие бренды. Выберите лучший вариант.",
+    },
+    uz: {
+      title: "Avtomobillarni taqqoslash — Tez Motors",
+      description:
+        "Xitoy avtomobillarining xususiyatlari va narxlarini taqqoslang: BYD, Haval, Chery, Geely va boshqa brendlar.",
+    },
+    en: {
+      title: "Compare cars — Tez Motors",
+      description:
+        "Compare specs and prices for Chinese cars: BYD, Haval, Chery, Geely and more. Pick the right one.",
+    },
+  });
+}
 
 export default function CompareLayout({ children }: { children: React.ReactNode }) {
   return children;

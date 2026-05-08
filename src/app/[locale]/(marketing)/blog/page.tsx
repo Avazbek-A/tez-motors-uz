@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -62,6 +63,7 @@ export default async function BlogPage() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={locale === "ru" ? "Блог" : locale === "uz" ? "Blog" : "Blog"}
           subtitle={locale === "ru" ? "Новости, советы и практичные заметки для клиентов." : "News, tips, and practical buying notes."}
         />
@@ -70,7 +72,15 @@ export default async function BlogPage() {
           {items.map((post) => (
             <article key={post.id} className="rounded-2xl border border-white/10 bg-[#0d0d15] overflow-hidden">
               {post.cover_image && (
-                <img src={post.cover_image} alt={getTitle(post)} className="h-52 w-full object-cover" />
+                <div className="relative h-52 w-full">
+                  <Image
+                    src={post.cover_image}
+                    alt={getTitle(post)}
+                    fill
+                    sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
               )}
               <div className="p-6 space-y-3">
                 <p className="text-xs uppercase tracking-wider text-neon-blue">

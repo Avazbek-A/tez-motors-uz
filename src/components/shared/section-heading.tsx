@@ -8,6 +8,11 @@ interface SectionHeadingProps {
   centered?: boolean;
   light?: boolean;
   className?: string;
+  /**
+   * Heading level. Default is `h2`. Pass `h1` on the top heading of a
+   * page so each page has exactly one `<h1>` (helps SEO).
+   */
+  as?: "h1" | "h2" | "h3";
 }
 
 export function SectionHeading({
@@ -16,17 +21,18 @@ export function SectionHeading({
   centered = true,
   light = false,
   className,
+  as: Heading = "h2",
 }: SectionHeadingProps) {
   return (
     <div className={cn("mb-12", centered && "text-center", className)}>
-      <h2
+      <Heading
         className={cn(
           "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-gradient",
           light && "text-white"
         )}
       >
         {title}
-      </h2>
+      </Heading>
       {subtitle && (
         <p
           className={cn(

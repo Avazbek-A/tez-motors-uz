@@ -86,6 +86,7 @@ export default function FavoritesPage() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={locale === "ru" ? "Избранное" : locale === "uz" ? "Sevimlilar" : "Favorites"}
           subtitle={locale === "ru" ? "Сохраняйте интересные автомобили и отслеживайте цены." : "Save interesting cars and track prices."}
         />

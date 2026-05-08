@@ -126,7 +126,7 @@ export default function TrackOrderPage() {
   return (
     <div className="pt-24 pb-16">
       <div className="container-custom">
-        <SectionHeading title={title} subtitle={subtitle} />
+        <SectionHeading as="h1" title={title} subtitle={subtitle} />
 
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSearch} className="flex gap-3 mb-12">

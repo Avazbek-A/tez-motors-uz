@@ -139,7 +139,7 @@ export default function ReviewsPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateSchema) }} />
       )}
       <div className="container-custom">
-        <SectionHeading title={title} subtitle={subtitle} />
+        <SectionHeading as="h1" title={title} subtitle={subtitle} />
 
         {/* Summary stats */}
         <div className="flex items-center justify-center gap-8 mb-12">

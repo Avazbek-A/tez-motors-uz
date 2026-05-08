@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
+import { BlogPostingSchema } from "@/components/shared/structured-data";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { renderMarkdown } from "@/lib/markdown";
 import { SITE_CONFIG } from "@/lib/constants";
@@ -84,7 +87,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </p>
           <h1 className="text-3xl md:text-5xl font-bold text-white">{title}</h1>
           {post.cover_image && (
-            <img src={post.cover_image} alt={title} className="w-full rounded-2xl border border-white/10 object-cover" />
+            <div className="relative w-full aspect-[16/9] rounded-2xl border border-white/10 overflow-hidden">
+              <Image
+                src={post.cover_image}
+                alt={title}
+                fill
+                priority
+                sizes="(min-width: 1024px) 896px, 100vw"
+                className="object-cover"
+              />
+            </div>
           )}
         </header>
 
@@ -93,6 +105,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
         />
       </div>
+
+      <BreadcrumbSchema
+        items={[
+          { name: locale === "ru" ? "Главная" : locale === "uz" ? "Bosh sahifa" : "Home", url: `${SITE_CONFIG.url}/${locale}` },
+          { name: locale === "ru" ? "Блог" : "Blog", url: `${SITE_CONFIG.url}/${locale}/blog` },
+          { name: title, url: `${SITE_CONFIG.url}/${locale}/blog/${slug}` },
+        ]}
+      />
+      <BlogPostingSchema
+        headline={title}
+        image={post.cover_image || undefined}
+        datePublished={post.published_at || post.created_at}
+        dateModified={post.updated_at || post.published_at || post.created_at}
+        url={`${SITE_CONFIG.url}/${locale}/blog/${slug}`}
+        description={body.slice(0, 160)}
+      />
     </article>
   );
 }

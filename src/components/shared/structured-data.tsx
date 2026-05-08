@@ -101,6 +101,53 @@ export function CarSchema({ car }: { car: Car }) {
   );
 }
 
+export function BlogPostingSchema({
+  headline,
+  description,
+  image,
+  datePublished,
+  dateModified,
+  url,
+}: {
+  headline: string;
+  description?: string;
+  image?: string;
+  datePublished: string;
+  dateModified?: string;
+  url: string;
+}) {
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline,
+    description,
+    image: image ? [image] : undefined,
+    datePublished,
+    dateModified: dateModified ?? datePublished,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    author: {
+      "@type": "Organization",
+      name: SITE_CONFIG.name,
+      url: SITE_CONFIG.url,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_CONFIG.name,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_CONFIG.url}/images/logo.svg`,
+      },
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+    />
+  );
+}
+
 export function WebsiteSchema() {
   const schema = {
     "@context": "https://schema.org",

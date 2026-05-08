@@ -6,6 +6,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
 import PartsCatalogContent from "../../_content";
+import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
 
 /**
  * Per-category landing page. Exists separately from `/parts?category=X`
@@ -212,9 +213,35 @@ export default async function PartsCategoryPage(
   const { category } = await params;
   if (!isCategory(category)) notFound();
 
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const locale =
+    (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
+    getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
+
+  const c = COPY[category][locale] ?? COPY[category].ru;
+
   return (
-    <Suspense fallback={null}>
-      <PartsCatalogContent initialCategory={category} />
-    </Suspense>
+    <>
+      <BreadcrumbSchema
+        items={[
+          {
+            name: locale === "ru" ? "Главная" : locale === "uz" ? "Bosh sahifa" : "Home",
+            url: `${SITE_CONFIG.url}/${locale}`,
+          },
+          {
+            name: locale === "ru" ? "Запчасти" : locale === "uz" ? "Ehtiyot qismlar" : "Parts",
+            url: `${SITE_CONFIG.url}/${locale}/parts`,
+          },
+          {
+            name: c.heading,
+            url: `${SITE_CONFIG.url}/${locale}/parts/category/${category}`,
+          },
+        ]}
+      />
+      <Suspense fallback={null}>
+        <PartsCatalogContent initialCategory={category} />
+      </Suspense>
+    </>
   );
 }

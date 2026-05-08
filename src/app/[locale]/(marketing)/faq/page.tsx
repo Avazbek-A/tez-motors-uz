@@ -66,6 +66,7 @@ export default function FAQPage() {
       {faqSchemaItems.length > 0 && <FAQSchema faqs={faqSchemaItems} />}
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={dictionary.faqSection.title}
           subtitle={dictionary.faqSection.subtitle}
         />

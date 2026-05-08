@@ -58,6 +58,7 @@ export default function ContactsPage() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
+          as="h1"
           title={dictionary.footer.contacts}
           subtitle={dictionary.contact.subtitle}
         />

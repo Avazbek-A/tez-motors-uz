@@ -80,6 +80,10 @@ export default async function RootLayout({
           href={process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://wyivyvoljvplkdrjmpox.supabase.co"}
           crossOrigin="anonymous"
         />
+        {/* dns-prefetch is cheap; only used if/when these are loaded. */}
+        <link rel="dns-prefetch" href="https://plausible.io" />
+        <link rel="dns-prefetch" href="https://embed.tawk.to" />
+        <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
         <OrganizationSchema />
         <WebsiteSchema />
       </head>

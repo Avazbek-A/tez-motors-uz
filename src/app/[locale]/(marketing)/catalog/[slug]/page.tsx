@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SITE_CONFIG } from "@/lib/constants";
 import CarDetailClient from "./car-detail-client";
 import { getLocaleFromCookie } from "@/i18n/config";
+import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
 
 async function fetchCar(slug: string) {
   try {
@@ -65,6 +66,42 @@ export async function generateMetadata(
     };
   }
 
-export default function Page() {
-  return <CarDetailClient />;
+export default async function Page(
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const locale =
+    (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
+    getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
+  const { slug } = await params;
+  const car = await fetchCar(slug);
+
+  return (
+    <>
+      <CarDetailClient />
+      {car && (
+        <BreadcrumbSchema
+          items={[
+            {
+              name: locale === "ru" ? "Главная" : locale === "uz" ? "Bosh sahifa" : "Home",
+              url: `${SITE_CONFIG.url}/${locale}`,
+            },
+            {
+              name: locale === "ru" ? "Каталог" : locale === "uz" ? "Katalog" : "Catalog",
+              url: `${SITE_CONFIG.url}/${locale}/catalog`,
+            },
+            {
+              name: car.brand,
+              url: `${SITE_CONFIG.url}/${locale}/catalog/brand/${car.brand.toLowerCase()}`,
+            },
+            {
+              name: `${car.brand} ${car.model} ${car.year}`,
+              url: `${SITE_CONFIG.url}/${locale}/catalog/${slug}`,
+            },
+          ]}
+        />
+      )}
+    </>
+  );
 }
