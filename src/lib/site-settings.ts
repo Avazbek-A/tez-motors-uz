@@ -33,11 +33,10 @@ export type ResolvedSiteSettings = {
   mapLng: number;
 };
 
-// Default pin: ул. Катартал, 25 in Chilanzar district, Tashkent.
-// Resolved via OpenStreetMap Nominatim. The exact buildings differ by
-// "mavze"/lane, so the dealer should verify and override via admin.
-const DEFAULT_LAT = 41.2935;
-const DEFAULT_LNG = 69.2027;
+// Default pin: Tez Motors showroom, Chilanzar district, Tashkent.
+// Confirmed by the dealer on 2026-05-08. Override via /admin/settings.
+const DEFAULT_LAT = 41.29532;
+const DEFAULT_LNG = 69.216001;
 
 export function mergeWithDefaults(
   overrides: Partial<SiteSettings> | null | undefined,

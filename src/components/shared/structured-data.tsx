@@ -64,10 +64,10 @@ export function OrganizationSchema() {
     },
     geo: {
       "@type": "GeoCoordinates",
-      // ул. Катартал, 25, Чиланзарский район, Tashkent — resolved via
-      // OpenStreetMap Nominatim. Match the contacts-page map pin.
-      latitude: 41.2935,
-      longitude: 69.2027,
+      // Tez Motors showroom in Chilanzar, Tashkent — confirmed by the
+      // dealer 2026-05-08. Matches the visible /contacts map pin.
+      latitude: 41.29532,
+      longitude: 69.216001,
     },
     areaServed: [
       { "@type": "City", name: "Ташкент" },

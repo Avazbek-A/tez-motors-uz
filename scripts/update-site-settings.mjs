@@ -40,8 +40,8 @@ const VALUES = {
   // Showroom pin — ул. Катартал, 25, Чиланзарский район, Tashkent.
   // Resolved via OpenStreetMap Nominatim. Refine via /admin/settings
   // once the dealer confirms the exact spot on the lot.
-  mapLat: 41.2935,
-  mapLng: 69.2027,
+  mapLat: 41.29532,
+  mapLng: 69.216001,
 };
 
 async function main() {
