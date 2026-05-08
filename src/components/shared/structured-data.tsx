@@ -63,8 +63,19 @@ export function OrganizationSchema() {
   );
 }
 
-export function CarSchema({ car }: { car: Car }) {
-  const schema = {
+export function CarSchema({
+  car,
+  aggregate,
+}: {
+  car: Car;
+  /**
+   * Optional aggregate review data for this specific car. When passed and
+   * `count >= 1`, an AggregateRating block is added to the Product
+   * schema — this enables ★ ratings in Google search results.
+   */
+  aggregate?: { ratingValue: number; count: number } | null;
+}) {
+  const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${car.brand} ${car.model} ${car.year}`,
@@ -92,6 +103,16 @@ export function CarSchema({ car }: { car: Car }) {
       : undefined,
     modelDate: car.year.toString(),
   };
+
+  if (aggregate && aggregate.count > 0) {
+    schema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: aggregate.ratingValue.toFixed(1),
+      reviewCount: aggregate.count,
+      bestRating: "5",
+      worstRating: "1",
+    };
+  }
 
   return (
     <script

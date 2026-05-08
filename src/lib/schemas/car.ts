@@ -39,6 +39,7 @@ export const reviewWriteSchema = z.object({
   video_url: z.string().url().optional().nullable(),
   is_published: z.boolean().default(false),
   order_position: z.number().int().min(0).default(0),
+  car_id: z.string().uuid().optional().nullable(),
 });
 
 export const faqWriteSchema = z.object({

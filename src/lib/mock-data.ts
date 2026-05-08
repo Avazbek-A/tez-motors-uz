@@ -352,6 +352,7 @@ export const MOCK_REVIEWS: Review[] = [
     rating: 5,
     is_published: true,
     order_position: 1,
+    car_id: null,
     created_at: "2024-06-15T00:00:00Z",
   },
   {
@@ -366,6 +367,7 @@ export const MOCK_REVIEWS: Review[] = [
     rating: 5,
     is_published: true,
     order_position: 2,
+    car_id: null,
     created_at: "2024-07-20T00:00:00Z",
   },
   {
@@ -380,6 +382,7 @@ export const MOCK_REVIEWS: Review[] = [
     rating: 5,
     is_published: true,
     order_position: 3,
+    car_id: null,
     created_at: "2024-08-10T00:00:00Z",
   },
   {
@@ -394,6 +397,7 @@ export const MOCK_REVIEWS: Review[] = [
     rating: 5,
     is_published: true,
     order_position: 4,
+    car_id: null,
     created_at: "2024-09-05T00:00:00Z",
   },
 ];

@@ -251,6 +251,19 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
   const [reviewTextRu, setReviewTextRu] = useState(review?.review_text_ru || "");
   const [rating, setRating] = useState(review?.rating || 5);
   const [isPublished, setIsPublished] = useState(review?.is_published ?? false);
+  const [carId, setCarId] = useState<string | null>(review?.car_id ?? null);
+  const [carOptions, setCarOptions] = useState<Array<{ id: string; brand: string; model: string; year: number }>>([]);
+
+  useEffect(() => {
+    // Pull a flat car list once so the admin can link a review to a car —
+    // car_id powers per-car AggregateRating in the Product schema.
+    fetch("/api/cars?limit=200")
+      .then((r) => r.json())
+      .then((d) => setCarOptions((d.cars || []).map((c: { id: string; brand: string; model: string; year: number }) => ({
+        id: c.id, brand: c.brand, model: c.model, year: c.year,
+      }))))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,6 +275,7 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
       review_text_ru: reviewTextRu,
       rating,
       is_published: isPublished,
+      car_id: carId,
     };
 
     try {
@@ -296,6 +310,26 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
           <div>
             <label className="text-sm font-medium mb-1 block">Car Description</label>
             <Input value={carDescription} onChange={(e) => setCarDescription(e.target.value)} placeholder="e.g., BYD Song Plus 2024" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">
+              Linked car (for AggregateRating)
+            </label>
+            <select
+              className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background"
+              value={carId ?? ""}
+              onChange={(e) => setCarId(e.target.value || null)}
+            >
+              <option value="">— not linked —</option>
+              {carOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.brand} {c.model} {c.year}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Linking a review to a car shows star ratings on that car&apos;s search snippet.
+            </p>
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">Review Text (RU)</label>

@@ -71,6 +71,7 @@ export interface Review {
   is_published: boolean;
   order_position: number;
   created_at: string;
+  car_id: string | null;
 }
 
 export interface FAQ {

@@ -13,7 +13,7 @@ import { localizedPath } from "@/lib/locale-path";
 import { formatPrice, cn } from "@/lib/utils";
 import type { Car } from "@/types/car";
 
-export default function CompareContent() {
+export default function CompareContent({ initialIds }: { initialIds?: string[] } = {}) {
   const { locale, dictionary } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,18 +34,20 @@ export default function CompareContent() {
       .then((data) => {
         const cars = data.cars || [];
         setAllCars(cars);
-        // Initialize from URL params
-        const urlIds = searchParams.get("ids")?.split(",").filter(Boolean) || [];
-        const validIds = urlIds.filter((id) => cars.some((c: Car) => c.id === id));
+        // Priority: initialIds prop (canonical compare URL) > URL ?ids= > first 3.
+        const seedIds = initialIds && initialIds.length > 0
+          ? initialIds
+          : searchParams.get("ids")?.split(",").filter(Boolean) || [];
+        const validIds = seedIds.filter((id) => cars.some((c: Car) => c.id === id));
         if (validIds.length > 0) {
           setSelectedIds(validIds);
         } else {
-          // Pre-select first 3 cars
           setSelectedIds(cars.slice(0, 3).map((c: Car) => c.id));
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const shareComparison = async () => {

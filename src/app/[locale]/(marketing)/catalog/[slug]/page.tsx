@@ -5,16 +5,38 @@ import { SITE_CONFIG } from "@/lib/constants";
 import CarDetailClient from "./car-detail-client";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
+import { CarSchema } from "@/components/shared/structured-data";
 
 async function fetchCar(slug: string) {
   try {
     const supabase = await createClient();
     const { data } = await supabase
       .from("cars")
-      .select("brand, model, year, price_usd, description_ru, description_en, slug, images")
+      .select("*")
       .eq("slug", slug)
       .maybeSingle();
     return data;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAggregate(carId: string | null) {
+  if (!carId) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("car_id", carId)
+      .eq("is_published", true);
+    if (!data || data.length === 0) return null;
+    const ratings = data
+      .map((r: { rating: number | null }) => r.rating)
+      .filter((n): n is number => typeof n === "number");
+    if (ratings.length === 0) return null;
+    const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+    return { ratingValue: avg, count: ratings.length };
   } catch {
     return null;
   }
@@ -76,10 +98,12 @@ export default async function Page(
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
   const { slug } = await params;
   const car = await fetchCar(slug);
+  const aggregate = await fetchAggregate(car?.id ?? null);
 
   return (
     <>
       <CarDetailClient />
+      {car && <CarSchema car={car} aggregate={aggregate} />}
       {car && (
         <BreadcrumbSchema
           items={[
