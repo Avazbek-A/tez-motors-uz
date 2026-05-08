@@ -115,6 +115,29 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://plausible.io" />
         <link rel="dns-prefetch" href="https://embed.tawk.to" />
         <link rel="dns-prefetch" href="https://challenges.cloudflare.com" />
+
+        {/* Search-engine + AI-platform verification.
+            Codes are env-gated so the dealer can paste new ones without
+            a code change. Each platform requires registering the
+            property at its console (Google Search Console, Yandex
+            Webmaster, Bing Webmaster Tools) and pasting the code into
+            the matching env var. */}
+        {process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && (
+          <meta name="google-site-verification" content={process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION} />
+        )}
+        {process.env.NEXT_PUBLIC_YANDEX_VERIFICATION && (
+          <meta name="yandex-verification" content={process.env.NEXT_PUBLIC_YANDEX_VERIFICATION} />
+        )}
+        {process.env.NEXT_PUBLIC_BING_VERIFICATION && (
+          <meta name="msvalidate.01" content={process.env.NEXT_PUBLIC_BING_VERIFICATION} />
+        )}
+
+        {/* Apple Spotlight / Siri pick up these tags when ranking results. */}
+        <meta name="application-name" content="Tez Motors" />
+        <meta name="apple-mobile-web-app-title" content="Tez Motors" />
+        <meta name="theme-color" content="#0a0a0f" />
+        <meta name="msapplication-TileColor" content="#0a0a0f" />
+
         <OrganizationSchema />
         <WebsiteSchema />
       </head>

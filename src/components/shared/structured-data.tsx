@@ -31,27 +31,100 @@ export function FAQSchema({ faqs }: { faqs: FAQItem[] }) {
 }
 
 export function OrganizationSchema() {
+  // We declare ourselves as both AutoDealer and LocalBusiness — these
+  // are the schemas Yandex, Google, Apple Maps, and Bing actively
+  // consume when answering "best <thing> near me" / "<thing> in <city>"
+  // queries. AutoDealer is the most specific applicable type and is
+  // recommended by Google for car dealerships.
   const schema = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": ["AutoDealer", "LocalBusiness"],
+    "@id": `${SITE_CONFIG.url}/#organization`,
     name: SITE_CONFIG.name,
+    legalName: "Tez Motors",
     url: SITE_CONFIG.url,
-    logo: `${SITE_CONFIG.url}/images/logo.svg`,
-    contactPoint: {
-      "@type": "ContactPoint",
-      telephone: SITE_CONFIG.phone,
-      contactType: "sales",
-      availableLanguage: ["Russian", "Uzbek", "English"],
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_CONFIG.url}/images/logo.svg`,
     },
+    image: `${SITE_CONFIG.url}/opengraph-image`,
+    description:
+      "Импортёр автомобилей из Китая в Узбекистан. BYD, Chery, Haval, Geely, Changan, Tank, Omoda, Jaecoo и другие бренды. Подбор, доставка, таможня, гарантия — под ключ.",
+    telephone: SITE_CONFIG.phone,
+    email: SITE_CONFIG.email,
+    priceRange: "$$",
+    foundingDate: "2024",
     address: {
       "@type": "PostalAddress",
-      streetAddress: SITE_CONFIG.address,
-      addressLocality: "Tashkent",
+      streetAddress: "ул. Катартал, 25",
+      addressLocality: "Ташкент",
+      addressRegion: "Чиланзарский район",
       addressCountry: "UZ",
+      postalCode: "100185",
+    },
+    geo: {
+      "@type": "GeoCoordinates",
+      // Approximate Chilanzar district coordinates; refine when the
+      // dealer confirms the exact lat/lng of the showroom.
+      latitude: 41.2754,
+      longitude: 69.2046,
+    },
+    areaServed: [
+      { "@type": "City", name: "Ташкент" },
+      { "@type": "City", name: "Самарканд" },
+      { "@type": "City", name: "Бухара" },
+      { "@type": "City", name: "Андижан" },
+      { "@type": "City", name: "Фергана" },
+      { "@type": "City", name: "Наманган" },
+      { "@type": "Country", name: "Uzbekistan" },
+    ],
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        opens: "09:00",
+        closes: "19:00",
+      },
+    ],
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        telephone: SITE_CONFIG.phone,
+        contactType: "sales",
+        areaServed: "UZ",
+        availableLanguage: ["Russian", "Uzbek", "English"],
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        url: SITE_CONFIG.whatsapp,
+        availableLanguage: ["Russian", "Uzbek"],
+      },
+    ],
+    brand: [
+      { "@type": "Brand", name: "BYD" },
+      { "@type": "Brand", name: "Chery" },
+      { "@type": "Brand", name: "Haval" },
+      { "@type": "Brand", name: "Geely" },
+      { "@type": "Brand", name: "Changan" },
+      { "@type": "Brand", name: "Tank" },
+      { "@type": "Brand", name: "Omoda" },
+      { "@type": "Brand", name: "Jaecoo" },
+      { "@type": "Brand", name: "MG" },
+      { "@type": "Brand", name: "Great Wall" },
+    ],
+    makesOffer: {
+      "@type": "Service",
+      name: "Импорт автомобилей из Китая",
+      serviceType: "Car import",
+      provider: { "@id": `${SITE_CONFIG.url}/#organization` },
+      areaServed: { "@type": "Country", name: "Uzbekistan" },
     },
     sameAs: [
       SITE_CONFIG.telegram,
       SITE_CONFIG.instagram,
+      "https://www.instagram.com/tezmotors_uz",
+      "https://t.me/tezmotors",
     ],
   };
 

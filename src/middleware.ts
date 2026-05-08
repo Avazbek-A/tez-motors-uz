@@ -63,5 +63,11 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   runtime: "experimental-edge",
-  matcher: ["/((?!api|_next|favicon.ico|images).*)"],
+  // Bypass middleware for root-level files that must NOT be redirected
+  // to a locale-prefixed path: API, Next assets, favicons, images,
+  // robots/sitemap/llms (search-engine + AI-crawler files), the PWA
+  // manifest, and the OG image.
+  matcher: [
+    "/((?!api|_next|favicon\\.ico|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image).*)",
+  ],
 };
