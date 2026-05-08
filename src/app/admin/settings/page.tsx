@@ -16,11 +16,14 @@ type Settings = {
   telegram: string;
   instagram: string;
   whatsapp: string;
+  mapLat: string; // stored as number; UI uses string for empty-state friendliness
+  mapLng: string;
 };
 
 const EMPTY: Settings = {
   siteName: "", phone: "", phoneRaw: "", email: "", address: "",
   workingHours: "", telegram: "", instagram: "", whatsapp: "",
+  mapLat: "", mapLng: "",
 };
 
 export default function AdminSettingsPage() {
@@ -34,7 +37,15 @@ export default function AdminSettingsPage() {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((data) => {
-        if (data?.values) setSettings({ ...EMPTY, ...data.values });
+        if (data?.values) {
+          const v = data.values;
+          setSettings({
+            ...EMPTY,
+            ...v,
+            mapLat: typeof v.mapLat === "number" ? String(v.mapLat) : "",
+            mapLng: typeof v.mapLng === "number" ? String(v.mapLng) : "",
+          });
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -45,10 +56,19 @@ export default function AdminSettingsPage() {
     setStatus("idle");
     setErrorMsg(null);
     try {
+      // Coerce lat/lng strings → numbers (or omit if blank). The PUT
+      // schema rejects strings on the numeric coords.
+      const { mapLat, mapLng, ...rest } = settings;
+      const payload: Record<string, unknown> = { ...rest };
+      const latNum = parseFloat(mapLat);
+      const lngNum = parseFloat(mapLng);
+      if (Number.isFinite(latNum)) payload.mapLat = latNum;
+      if (Number.isFinite(lngNum)) payload.mapLng = lngNum;
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -104,6 +124,23 @@ export default function AdminSettingsPage() {
           <Field label="Phone (raw, for tel: links)" value={settings.phoneRaw} onChange={(v) => update({ phoneRaw: v })} placeholder="+998901234567" />
           <Field label="Email" value={settings.email} onChange={(v) => update({ email: v })} />
           <Field label="Address" value={settings.address} onChange={(v) => update({ address: v })} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Map latitude"
+              value={settings.mapLat}
+              onChange={(v) => update({ mapLat: v })}
+              placeholder="41.2935"
+            />
+            <Field
+              label="Map longitude"
+              value={settings.mapLng}
+              onChange={(v) => update({ mapLng: v })}
+              placeholder="69.2027"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Tip: open <a href="https://yandex.com/maps" target="_blank" rel="noreferrer" className="underline">yandex.com/maps</a>, find the showroom, right-click the pin → &ldquo;What&rsquo;s here?&rdquo; → copy coordinates (lat, lng).
+          </p>
         </CardContent>
       </Card>
 

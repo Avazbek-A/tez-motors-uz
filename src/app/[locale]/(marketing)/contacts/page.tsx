@@ -12,7 +12,7 @@ import { useSiteSettings } from "@/lib/site-settings-context";
 import { Turnstile } from "@/components/shared/turnstile";
 
 export default function ContactsPage() {
-  const { dictionary } = useLocale();
+  const { dictionary, locale } = useLocale();
   const settings = useSiteSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -52,7 +52,12 @@ export default function ContactsPage() {
     { icon: Clock, label: dictionary.footer.workingHours, href: undefined },
   ];
 
-  const mapQuery = encodeURIComponent(settings.address);
+  // Yandex Maps embed: explicit lat/lng with a pin marker so the
+  // map always centers on the right spot, regardless of how Yandex
+  // interprets the address text. `pt` syntax is `lng,lat,style`.
+  const { mapLat, mapLng } = settings;
+  const mapEmbed = `https://yandex.com/map-widget/v1/?ll=${mapLng}%2C${mapLat}&z=17&pt=${mapLng}%2C${mapLat}%2Cpm2rdm&l=map`;
+  const mapLink = `https://yandex.com/maps/?ll=${mapLng}%2C${mapLat}&z=17&pt=${mapLng}%2C${mapLat}%2Cpm2rdm`;
 
   return (
     <div className="pt-24 pb-16">
@@ -107,16 +112,25 @@ export default function ContactsPage() {
               </a>
             </div>
 
-            <div className="bg-[#0a0a0f] rounded-2xl h-64 overflow-hidden border border-white/10">
+            <div className="bg-[#0a0a0f] rounded-2xl h-64 overflow-hidden border border-white/10 relative group">
               <iframe
-                title="Map"
-                src={`https://yandex.com/map-widget/v1/?text=${mapQuery}&z=15`}
+                title={`Tez Motors — ${settings.address}`}
+                src={mapEmbed}
                 width="100%"
                 height="100%"
                 frameBorder="0"
                 loading="lazy"
+                allow="geolocation"
                 className="block"
               />
+              <a
+                href={mapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-[#0a0a0f]/80 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                {locale === "ru" ? "Открыть в Яндекс.Картах" : locale === "uz" ? "Yandex Xaritalarda ochish" : "Open in Yandex Maps"}
+              </a>
             </div>
           </div>
 

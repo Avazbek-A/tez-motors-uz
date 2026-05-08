@@ -11,6 +11,10 @@ export const SiteSettingsSchema = z.object({
   telegram: z.string().url().max(500).optional().or(z.literal("")),
   instagram: z.string().url().max(500).optional().or(z.literal("")),
   whatsapp: z.string().url().max(500).optional().or(z.literal("")),
+  // Showroom pin in WGS84 decimal degrees. The dealer can refine via
+  // /admin/settings once they confirm the exact spot on the lot.
+  mapLat: z.number().min(-90).max(90).optional(),
+  mapLng: z.number().min(-180).max(180).optional(),
 });
 
 export type SiteSettings = z.infer<typeof SiteSettingsSchema>;
@@ -25,7 +29,15 @@ export type ResolvedSiteSettings = {
   telegram: string;
   instagram: string;
   whatsapp: string;
+  mapLat: number;
+  mapLng: number;
 };
+
+// Default pin: ул. Катартал, 25 in Chilanzar district, Tashkent.
+// Resolved via OpenStreetMap Nominatim. The exact buildings differ by
+// "mavze"/lane, so the dealer should verify and override via admin.
+const DEFAULT_LAT = 41.2935;
+const DEFAULT_LNG = 69.2027;
 
 export function mergeWithDefaults(
   overrides: Partial<SiteSettings> | null | undefined,
@@ -41,6 +53,7 @@ export function mergeWithDefaults(
     telegram: o.telegram || SITE_CONFIG.telegram,
     instagram: o.instagram || SITE_CONFIG.instagram,
     whatsapp: o.whatsapp || SITE_CONFIG.whatsapp,
+    mapLat: typeof o.mapLat === "number" ? o.mapLat : DEFAULT_LAT,
+    mapLng: typeof o.mapLng === "number" ? o.mapLng : DEFAULT_LNG,
   };
 }
-

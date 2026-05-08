@@ -64,10 +64,10 @@ export function OrganizationSchema() {
     },
     geo: {
       "@type": "GeoCoordinates",
-      // Approximate Chilanzar district coordinates; refine when the
-      // dealer confirms the exact lat/lng of the showroom.
-      latitude: 41.2754,
-      longitude: 69.2046,
+      // ул. Катартал, 25, Чиланзарский район, Tashkent — resolved via
+      // OpenStreetMap Nominatim. Match the contacts-page map pin.
+      latitude: 41.2935,
+      longitude: 69.2027,
     },
     areaServed: [
       { "@type": "City", name: "Ташкент" },

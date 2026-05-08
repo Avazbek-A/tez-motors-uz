@@ -37,6 +37,11 @@ const VALUES = {
   telegram: "https://t.me/tezmotors",
   instagram: "https://instagram.com/tezmotors_uz",
   whatsapp: "https://wa.me/998909087013",
+  // Showroom pin — ул. Катартал, 25, Чиланзарский район, Tashkent.
+  // Resolved via OpenStreetMap Nominatim. Refine via /admin/settings
+  // once the dealer confirms the exact spot on the lot.
+  mapLat: 41.2935,
+  mapLng: 69.2027,
 };
 
 async function main() {
