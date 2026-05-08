@@ -61,6 +61,16 @@ const SLUG_TO_ARTICLE = {
   "omoda-5-gt-2024": "Omoda_5",
   "jaecoo-j7-2024": "Jaecoo_J7",
   "jaecoo-j8-2024": "Jaecoo_J8",
+  // Older mock-data leftovers — same article reuse where applicable.
+  "changan-uni-v-2024": "Changan_UNI-V",
+  "jetour-dashing-2024": "Jetour_Dashing",
+  "zeekr-001-2024": "Zeekr_001",
+  "li-auto-l7-2024": "Li_Auto_L7",
+  "exeed-vx-2024": "Exeed_VX",
+  "byd-seal-2024": "BYD_Seal",
+  "hongqi-h5-2024": "Hongqi_H5",
+  "gac-aion-y-plus-2024": "Aion_Y",
+  "xpeng-g6-2024": "XPeng_G6",
 };
 
 async function loadEnv() {

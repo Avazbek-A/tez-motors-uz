@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const MAX_BYTES = 12 * 1024 * 1024; // 12 MB
+const MAX_BYTES = 30 * 1024 * 1024; // 30 MB — Wikimedia full-res can be hefty
 const FETCH_TIMEOUT_MS = 30000;
 const BUCKET = "car-images";
 

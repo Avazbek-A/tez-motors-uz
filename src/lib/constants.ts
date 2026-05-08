@@ -6,7 +6,7 @@ export const SITE_CONFIG = {
   // Email + working hours still need to come from the dealer.
   phone: "+998 78 133 44 22",
   phoneRaw: "+998781334422",
-  email: "info@tezmotors.uz",
+  email: "tezglobalmotors@gmail.com",
   telegram: "https://t.me/tezmotors",
   instagram: "https://instagram.com/tezmotors_uz",
   whatsapp: "https://wa.me/998781334422",
