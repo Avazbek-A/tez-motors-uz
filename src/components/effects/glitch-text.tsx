@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { useReducedEffects } from "@/hooks/use-reduced-effects";
 
 interface GlitchTextProps {
   text: string;
@@ -15,6 +16,20 @@ export function GlitchText({
   className = "",
   glitchOnHover = false,
 }: GlitchTextProps) {
+  const reduced = useReducedEffects();
+
+  // On mobile / reduced-motion, drop the two animated overlay layers.
+  // The base text is fully readable on its own; the glitch effect is
+  // pure decoration. Saves two `animation: glitch` paint cycles per
+  // frame plus the layered DOM cost.
+  if (reduced) {
+    return (
+      <Tag className={cn("relative inline-block", className)} data-text={text}>
+        <span className="relative z-10">{text}</span>
+      </Tag>
+    );
+  }
+
   return (
     <Tag
       className={cn("relative inline-block", className)}

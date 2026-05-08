@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useReducedEffects } from "@/hooks/use-reduced-effects";
 
 interface TypedTextProps {
   texts: string[];
@@ -24,10 +25,12 @@ export function TypedText({
   const [isDeleting, setIsDeleting] = useState(false);
   const textIndexRef = useRef(0);
   const charIndexRef = useRef(0);
+  const reduced = useReducedEffects();
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
+    // Mobile / reduced-motion: render the first tagline static. Saves
+    // ~30 setTimeout/setState cycles per minute.
+    if (reduced) {
       setDisplayText(texts[0] || "");
       return;
     }
@@ -68,7 +71,7 @@ export function TypedText({
     tick();
 
     return () => clearTimeout(timeout);
-  }, [texts, speed, deleteSpeed, pauseTime, isDeleting]);
+  }, [texts, speed, deleteSpeed, pauseTime, isDeleting, reduced]);
 
   return (
     <span className={cn("font-mono", className)}>

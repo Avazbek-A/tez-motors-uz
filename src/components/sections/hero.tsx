@@ -35,10 +35,15 @@ export function Hero() {
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-neon-blue/5 to-transparent" />
       <div className="absolute bottom-0 left-0 w-1/3 h-1/2 bg-gradient-to-tr from-neon-purple/5 to-transparent" />
 
-      {/* Neon glow orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-neon-blue/10 rounded-full blur-[120px] animate-glow-breathe" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-neon-purple/8 rounded-full blur-[140px] animate-glow-breathe" style={{ animationDelay: "1.5s" }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-pink/3 rounded-full blur-[200px]" />
+      {/* Neon glow orbs — heavy `blur-[200px]` is desktop-only; on
+          mobile the GPU cost of a 600px blurred radial isn't worth the
+          decoration. The `animate-glow-breathe` orbs are also gated so
+          phones don't repaint a quarter-screen blur every frame. */}
+      <div className="hidden md:block absolute top-20 left-10 w-72 h-72 bg-neon-blue/10 rounded-full blur-[120px] animate-glow-breathe" />
+      <div className="hidden md:block absolute bottom-20 right-10 w-96 h-96 bg-neon-purple/8 rounded-full blur-[140px] animate-glow-breathe" style={{ animationDelay: "1.5s" }} />
+      <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-pink/3 rounded-full blur-[200px]" />
+      {/* Lighter mobile-only orb so the section still has a glow accent. */}
+      <div className="md:hidden absolute top-32 right-0 w-48 h-48 bg-neon-blue/8 rounded-full blur-[60px]" />
 
       <div className="container-custom relative z-10 pt-24 pb-16">
         <div className="max-w-4xl">

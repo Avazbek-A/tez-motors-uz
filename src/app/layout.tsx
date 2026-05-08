@@ -124,11 +124,9 @@ export default async function RootLayout({
             strategy="afterInteractive"
           />
         )}
-        {process.env.NEXT_PUBLIC_TAWK_ID && (
-          <Script id="tawk-loader" strategy="afterInteractive">
-            {`var Tawk_API=Tawk_API||{},Tawk_LoadStart=new Date();(function(){var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];s1.async=true;s1.src="https://embed.tawk.to/${process.env.NEXT_PUBLIC_TAWK_ID}/1";s1.charset="UTF-8";s1.setAttribute("crossorigin","*");s0.parentNode.insertBefore(s1,s0);})();`}
-          </Script>
-        )}
+        {/* Tawk widget is mounted once via the marketing-layout
+            <TawkChat /> component, with deferred loading. Don't double-load
+            here — that was costing every visitor a 100kB+ duplicate fetch. */}
         <LocaleProvider initialLocale={locale} initialDictionary={dictionary}>
           {children}
         </LocaleProvider>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { useReducedEffects } from "@/hooks/use-reduced-effects";
 
 interface Particle {
   x: number;
@@ -28,6 +29,7 @@ export function ParticleBackground({
   const particlesRef = useRef<Particle[]>([]);
   const animFrameRef = useRef<number>(0);
   const mouseRef = useRef({ x: -1000, y: -1000 });
+  const reduced = useReducedEffects();
 
   const initParticles = useCallback((width: number, height: number, count: number) => {
     const particles: Particle[] = [];
@@ -45,8 +47,7 @@ export function ParticleBackground({
   }, []);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
+    if (reduced) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -145,7 +146,13 @@ export function ParticleBackground({
       window.removeEventListener("resize", resize);
       canvas.removeEventListener("mousemove", handleMouse);
     };
-  }, [particleCount, color, connectionDistance, initParticles]);
+  }, [particleCount, color, connectionDistance, initParticles, reduced]);
+
+  // Mobile / reduced-motion: skip the canvas entirely. The parent
+  // section already has gradient/orb backgrounds that look fine without
+  // particles, and the canvas + 60fps animation is the biggest mobile
+  // perf hit on the site.
+  if (reduced) return null;
 
   return (
     <canvas
