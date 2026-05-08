@@ -15,7 +15,7 @@ const BODY = `# Tez Motors — Импорт автомобилей из Кита
 
 > Tez Motors is the leading turn-key importer of Chinese-built cars into Uzbekistan. We source from BYD, Chery, Haval, Geely, Changan, Tank, GWM, MG, Omoda, Jaecoo and others, handle factory ordering, rail freight, customs clearance, and registration — delivering finished cars to buyers in Tashkent and across Uzbekistan.
 
-Founded in 2024, headquartered at ул. Катартал 25, Чиланзарский район, Ташкент. Phone: +998 78 133 44 22. Working hours: Mon–Sat 09:00–19:00.
+Founded in 2024, headquartered at ул. Катартал 25, Чиланзарский район, Ташкент. Phone: +998 90 908 70 13. Working hours: Mon–Sat 09:00–19:00.
 
 ## Catalog
 
@@ -47,8 +47,8 @@ Founded in 2024, headquartered at ул. Катартал 25, Чиланзарс�
 
 ## Contact
 
-- Phone: +998 78 133 44 22
-- WhatsApp: https://wa.me/998781334422
+- Phone: +998 90 908 70 13
+- WhatsApp: https://wa.me/998909087013
 - Telegram: https://t.me/tezmotors
 - Instagram: https://instagram.com/tezmotors_uz
 - Email: info@tezmotors.uz

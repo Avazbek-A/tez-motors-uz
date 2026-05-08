@@ -29,14 +29,14 @@ async function loadEnv() {
 
 const VALUES = {
   siteName: "Tez Motors",
-  phone: "+998 78 133 44 22",
-  phoneRaw: "+998781334422",
+  phone: "+998 90 908 70 13",
+  phoneRaw: "+998909087013",
   email: "tezglobalmotors@gmail.com",
   address: "г. Ташкент, Чиланзарский район, ул. Катартал, 25",
   workingHours: "Пн-Сб: 09:00 – 19:00",
   telegram: "https://t.me/tezmotors",
   instagram: "https://instagram.com/tezmotors_uz",
-  whatsapp: "https://wa.me/998781334422",
+  whatsapp: "https://wa.me/998909087013",
 };
 
 async function main() {
