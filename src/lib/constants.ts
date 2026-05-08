@@ -13,16 +13,31 @@ export const SITE_CONFIG = {
   foundedYear: 2024,
 };
 
+// Compact list shown in the header — keep ≤ 8 entries so the desktop
+// nav doesn't wrap on a 1366px screen.
 export const NAV_LINKS = [
   { href: "/", label: { ru: "Главная", uz: "Bosh sahifa", en: "Home" } },
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
+  { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
+  { href: "/about", label: { ru: "О нас", uz: "Biz haqimizda", en: "About" } },
+  { href: "/blog", label: { ru: "Блог", uz: "Blog", en: "Blog" } },
+  { href: "/contacts", label: { ru: "Контакты", uz: "Kontaktlar", en: "Contacts" } },
+] as const;
+
+// Larger list shown in the footer — covers everything indexable + boosts
+// internal link density to brand / type / city pages.
+export const FOOTER_LINKS = [
+  { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
+  { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
+  { href: "/services", label: { ru: "Услуги", uz: "Xizmatlar", en: "Services" } },
   { href: "/compare", label: { ru: "Сравнение", uz: "Solishtirish", en: "Compare" } },
   { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
+  { href: "/tashkent", label: { ru: "Доставка по Ташкенту", uz: "Toshkent bo'ylab", en: "Tashkent" } },
   { href: "/about", label: { ru: "О нас", uz: "Biz haqimizda", en: "About" } },
   { href: "/sell-your-car", label: { ru: "Продать авто", uz: "Mashina sotish", en: "Sell Your Car" } },
   { href: "/blog", label: { ru: "Блог", uz: "Blog", en: "Blog" } },
-  { href: "/favorites", label: { ru: "Избранное", uz: "Sevimlilar", en: "Favorites" } },
+  { href: "/reviews", label: { ru: "Отзывы", uz: "Sharhlar", en: "Reviews" } },
   { href: "/faq", label: { ru: "FAQ", uz: "FAQ", en: "FAQ" } },
   { href: "/contacts", label: { ru: "Контакты", uz: "Kontaktlar", en: "Contacts" } },
 ] as const;

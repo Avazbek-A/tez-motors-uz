@@ -19,7 +19,36 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
-export const metadata: Metadata = {
+// OG locale codes per Open Graph spec.
+const OG_LOCALES: Record<"ru" | "uz" | "en", string> = {
+  ru: "ru_RU",
+  uz: "uz_UZ",
+  en: "en_US",
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const locale =
+    (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
+    getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
+
+  const ogLocale = OG_LOCALES[locale];
+  const ogAlternates = (Object.keys(OG_LOCALES) as (keyof typeof OG_LOCALES)[])
+    .filter((l) => l !== locale)
+    .map((l) => OG_LOCALES[l]);
+
+  return {
+    ...rootMetadata,
+    openGraph: {
+      ...rootMetadata.openGraph,
+      locale: ogLocale,
+      alternateLocale: ogAlternates,
+    },
+  };
+}
+
+const rootMetadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz"),
   title: {
     default: "Tez Motors — Импорт авто из Китая в Узбекистан",
@@ -45,7 +74,6 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    locale: "ru_RU",
     siteName: "Tez Motors",
     title: "Tez Motors — Импорт авто из Китая в Узбекистан",
     description:

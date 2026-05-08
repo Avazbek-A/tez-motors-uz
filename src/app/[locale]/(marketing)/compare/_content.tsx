@@ -24,9 +24,20 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
   const [copied, setCopied] = useState(false);
 
   const syncToUrl = useCallback((ids: string[]) => {
+    // When exactly two cars are selected, prefer the canonical pair URL
+    // (`/compare/[a-vs-b]`) so shares + bookmarks are stable + indexable.
+    // Other counts (0, 1, 3, 4) fall back to the query-string form.
+    if (ids.length === 2) {
+      const a = allCars.find((c) => c.id === ids[0]);
+      const b = allCars.find((c) => c.id === ids[1]);
+      if (a?.slug && b?.slug) {
+        router.replace(localizedPath(locale, `/compare/${a.slug}-vs-${b.slug}`), { scroll: false });
+        return;
+      }
+    }
     const params = ids.length > 0 ? `?ids=${ids.join(",")}` : "";
     router.replace(localizedPath(locale, `/compare${params}`), { scroll: false });
-  }, [locale, router]);
+  }, [locale, router, allCars]);
 
   useEffect(() => {
     fetch("/api/cars")
@@ -51,7 +62,19 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
   }, []);
 
   const shareComparison = async () => {
-    const url = `${window.location.origin}${localizedPath(locale, `/compare?ids=${selectedIds.join(",")}`)}`;
+    // Match the canonical-URL logic in syncToUrl: 2 cars → /compare/[slug],
+    // anything else → /compare?ids=…
+    let path: string;
+    if (selectedIds.length === 2) {
+      const a = allCars.find((c) => c.id === selectedIds[0]);
+      const b = allCars.find((c) => c.id === selectedIds[1]);
+      path = a?.slug && b?.slug
+        ? `/compare/${a.slug}-vs-${b.slug}`
+        : `/compare?ids=${selectedIds.join(",")}`;
+    } else {
+      path = `/compare?ids=${selectedIds.join(",")}`;
+    }
+    const url = `${window.location.origin}${localizedPath(locale, path)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

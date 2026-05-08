@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { makePageMetadata } from "@/lib/seo/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return makePageMetadata("/track", {
+  const meta = await makePageMetadata("/track", {
     ru: {
       title: "Отслеживание заказа — Tez Motors",
       description:
@@ -19,6 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
         "Track the delivery status of your car from China. Enter your order number for live updates.",
     },
   });
+  // Per-order page — only useful to a customer with an order number.
+  return { ...meta, robots: { index: false, follow: true } };
 }
 
 export default function TrackLayout({ children }: { children: React.ReactNode }) {

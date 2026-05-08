@@ -4,6 +4,51 @@ import { Home, Search, Car } from "lucide-react";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedPath } from "@/lib/locale-path";
 
+const COPY = {
+  ru: {
+    heading: "Страница не найдена",
+    body: "Возможно, автомобиль уже продан или ссылка устарела. Посмотрите актуальный каталог — там много интересного.",
+    home: "На главную",
+    catalog: "Смотреть каталог",
+    nav: [
+      { href: "/catalog", label: "Каталог" },
+      { href: "/parts", label: "Запчасти" },
+      { href: "/reviews", label: "Отзывы" },
+      { href: "/contacts", label: "Контакты" },
+    ],
+  },
+  uz: {
+    heading: "Sahifa topilmadi",
+    body: "Avtomobil sotilgan yoki havola eskirgan bo'lishi mumkin. Joriy katalogni ko'ring — qiziqarli takliflar bor.",
+    home: "Bosh sahifa",
+    catalog: "Katalogga o'tish",
+    nav: [
+      { href: "/catalog", label: "Katalog" },
+      { href: "/parts", label: "Ehtiyot qismlar" },
+      { href: "/reviews", label: "Sharhlar" },
+      { href: "/contacts", label: "Aloqa" },
+    ],
+  },
+  en: {
+    heading: "Page not found",
+    body: "The car may have been sold or the link is outdated. Browse our current catalog — there's a lot to see.",
+    home: "Home",
+    catalog: "Browse catalog",
+    nav: [
+      { href: "/catalog", label: "Catalog" },
+      { href: "/parts", label: "Parts" },
+      { href: "/reviews", label: "Reviews" },
+      { href: "/contacts", label: "Contacts" },
+    ],
+  },
+} as const;
+
+// 404s should not be indexed; Next handles the status code, but we add
+// the meta as belt + suspenders for crawlers that ignore status.
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default async function NotFound() {
   const requestHeaders = await headers();
   const cookieStore = await cookies();
@@ -11,10 +56,11 @@ export default async function NotFound() {
     (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
 
+  const t = COPY[locale] ?? COPY.ru;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="text-center max-w-lg mx-auto">
-        {/* Big 404 */}
         <div className="relative mb-8">
           <p className="text-[120px] font-black leading-none text-white/[0.04] select-none">
             404
@@ -26,41 +72,28 @@ export default async function NotFound() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-white mb-3">
-          Страница не найдена
-        </h1>
-        <p className="text-white/50 text-sm mb-10 leading-relaxed">
-          Возможно, автомобиль уже продан или ссылка устарела.
-          <br />
-          Посмотрите актуальный каталог — там много интересного.
-        </p>
+        <h1 className="text-2xl font-bold text-white mb-3">{t.heading}</h1>
+        <p className="text-white/50 text-sm mb-10 leading-relaxed">{t.body}</p>
 
-        {/* Quick links */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-10">
           <Link
             href={localizedPath(locale, "/")}
             className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-white text-sm font-medium transition-colors border border-white/[0.08]"
           >
             <Home className="w-4 h-4" />
-            На главную
+            {t.home}
           </Link>
           <Link
             href={localizedPath(locale, "/catalog")}
             className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-sm font-medium transition-colors border border-cyan-500/20"
           >
             <Search className="w-4 h-4" />
-            Смотреть каталог
+            {t.catalog}
           </Link>
         </div>
 
-        {/* Quick nav */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-white/40">
-          {[
-            { href: "/catalog", label: "Каталог" },
-            { href: "/compare", label: "Сравнение" },
-            { href: "/reviews", label: "Отзывы" },
-            { href: "/contacts", label: "Контакты" },
-          ].map((link) => (
+          {t.nav.map((link) => (
             <Link
               key={link.href}
               href={localizedPath(locale, link.href)}

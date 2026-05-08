@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
-import { NAV_LINKS } from "@/lib/constants";
+import { FOOTER_LINKS } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
@@ -49,7 +49,7 @@ export function Footer() {
               {dictionary.footer.navigation}
             </h3>
             <ul className="space-y-2">
-              {NAV_LINKS.map((link) => (
+              {FOOTER_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={localizedPath(locale, link.href)}
