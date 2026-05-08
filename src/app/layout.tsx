@@ -51,21 +51,21 @@ export async function generateMetadata(): Promise<Metadata> {
 const rootMetadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz"),
   title: {
-    default: "Tez Motors — Электромобили и гибриды из Китая в Узбекистан",
+    default: "Tez Motors — Импорт авто из Китая в Узбекистан",
     template: "%s | Tez Motors",
   },
   description:
-    "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан. BYD, Chery, Haval, Geely. Подбор, доставка, таможня, гарантия — под ключ.",
+    "Импорт автомобилей из Китая в Узбекистан. BYD, Chery, Haval, Geely, Changan. Подбор, доставка, таможня, гарантия — под ключ.",
   keywords: [
-    "электромобили Узбекистан",
-    "гибриды Ташкент",
-    "BYD в Ташкенте",
-    "импорт электромобилей из Китая",
+    "импорт авто из Китая",
+    "купить авто из Китая в Узбекистан",
     "Tez Motors",
+    "китайские автомобили Ташкент",
+    "BYD в Ташкенте",
     "Chery Узбекистан",
     "Haval Узбекистан",
     "Geely Узбекистан",
-    "купить электромобиль Ташкент",
+    "Changan Ташкент",
   ],
   authors: [{ name: "Tez Motors" }],
   manifest: "/manifest.webmanifest",
@@ -77,16 +77,16 @@ const rootMetadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Tez Motors",
-    title: "Tez Motors — Электромобили и гибриды из Китая",
+    title: "Tez Motors — Импорт авто из Китая в Узбекистан",
     description:
-      "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан. Подбор, доставка, таможня — под ключ.",
+      "Импорт автомобилей из Китая под ключ: BYD, Chery, Haval, Geely. Подбор, доставка, таможня, гарантия.",
     images: [{ url: "/opengraph-image" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tez Motors — Электромобили и гибриды",
+    title: "Tez Motors — Импорт авто из Китая",
     description:
-      "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан.",
+      "Импорт автомобилей из Китая в Узбекистан под ключ. BYD, Chery, Haval, Geely.",
     images: ["/opengraph-image"],
   },
 };

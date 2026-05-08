@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
-import { FOOTER_LINKS } from "@/lib/constants";
+import { FOOTER_LINKS, CAR_BRANDS } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
@@ -126,6 +126,28 @@ export function Footer() {
                 Telegram
               </a>
             </div>
+          </div>
+        </div>
+
+        {/* Popular brands — internal link density to /catalog/brand/[brand]
+            for SEO + a one-click path to any brand page from the footer. */}
+        <div className="mt-14 pt-10 border-t border-white/5">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-neon-blue/60 mb-4">
+            {locale === "ru" ? "Популярные бренды" : locale === "uz" ? "Mashhur brendlar" : "Popular brands"}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {CAR_BRANDS.map((brand) => {
+              const slug = brand.toLowerCase().replace(/\s+/g, "-");
+              return (
+                <Link
+                  key={brand}
+                  href={localizedPath(locale, `/catalog/brand/${slug}`)}
+                  className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white text-xs font-medium border border-white/[0.06] hover:border-neon-blue/30 transition-all"
+                >
+                  {brand}
+                </Link>
+              );
+            })}
           </div>
         </div>
 

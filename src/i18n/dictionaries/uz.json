@@ -9,9 +9,9 @@
     "admin": "Admin"
   },
   "hero": {
-    "title": "Elektromobil va gibridlar",
-    "titleAccent": "Xitoydan",
-    "subtitle": "Tez Motors — Xitoydan O'zbekistonga elektromobil va gibridlarning rasmiy importeri. BYD, Chery, Haval, Geely. Shaffof narxlar, to'liq yetkazib berish, kafolat.",
+    "title": "Xitoydan avtomobil import",
+    "titleAccent": "O'zbekistonga",
+    "subtitle": "Tez Motors — Xitoydan O'zbekistonga avtomobillarni import qiluvchi kompaniya. BYD, Chery, Haval, Geely, Changan va boshqalar. Shaffof narxlar, to'liq yetkazib berish, kafolat.",
     "cta": "Avtomobil tanlash",
     "ctaSecondary": "Narxni hisoblash",
     "stats": {

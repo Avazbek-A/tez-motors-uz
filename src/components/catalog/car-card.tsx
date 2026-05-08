@@ -74,11 +74,26 @@ export function CarCard({ car }: CarCardProps) {
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
         ) : (
-          /* Brand watermark placeholder */
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <CarFront className="w-16 h-16 text-neon-blue/10 group-hover:text-neon-blue/20 transition-colors duration-500 group-hover:scale-110" />
-            <span className="text-neon-blue/15 text-xs font-bold mt-2 tracking-wider uppercase font-mono">
+          /* Photo-less placeholder — keeps the card looking intentional
+             until the dealer uploads real images. Larger brand wordmark
+             + model + diagonal stripes for visual texture. */
+          <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 18px)",
+              }}
+            />
+            <CarFront className="w-12 h-12 text-white/15 mb-2" aria-hidden />
+            <span className="text-white/85 text-xl font-bold tracking-tight">
               {car.brand}
+            </span>
+            <span className="text-white/55 text-sm mt-0.5 max-w-[80%] text-center truncate">
+              {car.model}
+            </span>
+            <span className="absolute bottom-3 right-3 text-white/25 text-[10px] font-mono uppercase tracking-wider">
+              {car.year}
             </span>
           </div>
         )}

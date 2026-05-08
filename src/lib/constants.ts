@@ -1,7 +1,6 @@
 export const SITE_CONFIG = {
   name: "Tez Motors",
-  description:
-    "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан",
+  description: "Импорт автомобилей из Китая в Узбекистан — надёжно, быстро, выгодно",
   url: "https://tezmotors.uz",
   // Verified from public Tez Motors socials (DuckDuckGo + Telegram bio).
   // Email + working hours still need to come from the dealer.
