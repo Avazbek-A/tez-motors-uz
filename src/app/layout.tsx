@@ -51,19 +51,21 @@ export async function generateMetadata(): Promise<Metadata> {
 const rootMetadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz"),
   title: {
-    default: "Tez Motors — Импорт авто из Китая в Узбекистан",
+    default: "Tez Motors — Электромобили и гибриды из Китая в Узбекистан",
     template: "%s | Tez Motors",
   },
   description:
-    "Импорт автомобилей из Китая в Узбекистан. Подбор, покупка и доставка авто под ключ. Прозрачные цены, гарантия, полное сопровождение.",
+    "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан. BYD, Chery, Haval, Geely. Подбор, доставка, таможня, гарантия — под ключ.",
   keywords: [
-    "импорт авто из Китая",
-    "купить авто из Китая в Узбекистан",
+    "электромобили Узбекистан",
+    "гибриды Ташкент",
+    "BYD в Ташкенте",
+    "импорт электромобилей из Китая",
     "Tez Motors",
-    "китайские автомобили Ташкент",
-    "BYD Узбекистан",
     "Chery Узбекистан",
     "Haval Узбекистан",
+    "Geely Узбекистан",
+    "купить электромобиль Ташкент",
   ],
   authors: [{ name: "Tez Motors" }],
   manifest: "/manifest.webmanifest",
@@ -75,15 +77,16 @@ const rootMetadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Tez Motors",
-    title: "Tez Motors — Импорт авто из Китая в Узбекистан",
+    title: "Tez Motors — Электромобили и гибриды из Китая",
     description:
-      "Подбор, покупка и доставка автомобилей из Китая. Прозрачные цены и полное сопровождение сделки.",
+      "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан. Подбор, доставка, таможня — под ключ.",
     images: [{ url: "/opengraph-image" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tez Motors — Импорт авто из Китая",
-    description: "Подбор, покупка и доставка автомобилей из Китая в Узбекистан.",
+    title: "Tez Motors — Электромобили и гибриды",
+    description:
+      "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан.",
     images: ["/opengraph-image"],
   },
 };

@@ -1,15 +1,18 @@
 export const SITE_CONFIG = {
   name: "Tez Motors",
-  description: "Импорт автомобилей из Китая в Узбекистан — надежно, быстро, выгодно",
+  description:
+    "Официальный импортёр электромобилей и гибридов из Китая в Узбекистан",
   url: "https://tezmotors.uz",
-  phone: "+998 90 123 45 67",
-  phoneRaw: "+998901234567",
+  // Verified from public Tez Motors socials (DuckDuckGo + Telegram bio).
+  // Email + working hours still need to come from the dealer.
+  phone: "+998 78 133 44 22",
+  phoneRaw: "+998781334422",
   email: "info@tezmotors.uz",
   telegram: "https://t.me/tezmotors",
-  instagram: "https://instagram.com/tezmotors",
-  whatsapp: "https://wa.me/998901234567",
-  address: "г. Ташкент, ул. Амира Темура, 100",
-  workingHours: "Пн-Сб: 09:00 - 19:00",
+  instagram: "https://instagram.com/tezmotors_uz",
+  whatsapp: "https://wa.me/998781334422",
+  address: "г. Ташкент, Чиланзарский район, ул. Катартал, 25",
+  workingHours: "Пн-Сб: 09:00 – 19:00",
   foundedYear: 2024,
 };
 
