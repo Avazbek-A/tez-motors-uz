@@ -24,6 +24,12 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "**.cloudinary.com",
       },
+      {
+        // Wikimedia Commons — used for seeded car photos until the
+        // dealer uploads their own. CC0 / CC-BY licensed.
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+      },
     ],
   },
   output: "standalone",
