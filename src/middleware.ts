@@ -67,7 +67,12 @@ export const config = {
   // to a locale-prefixed path: API, Next assets, favicons, images,
   // robots/sitemap/llms (search-engine + AI-crawler files), the PWA
   // manifest, and the OG image.
+  // Bypass middleware for root-level files that must NOT be redirected
+  // to a locale-prefixed path: API, Next assets, favicons, images,
+  // robots/sitemap/llms (search-engine + AI-crawler files), the PWA
+  // manifest, the OG image, and the search-engine verification files
+  // (Yandex / Google / Bing all want a static file at the bare root).
   matcher: [
-    "/((?!api|_next|favicon\\.ico|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image).*)",
+    "/((?!api|_next|favicon\\.ico|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image|yandex_|google[a-f0-9]+\\.html|BingSiteAuth\\.xml|pinterest-).*)",
   ],
 };
