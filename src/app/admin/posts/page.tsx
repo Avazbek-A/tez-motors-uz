@@ -180,11 +180,21 @@ export default function AdminPostsPage() {
             <div className="space-y-3">
               {posts.map((post) => (
                 <div key={post.id} className="flex items-center justify-between rounded-xl border border-border p-4">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">{post.title_ru}</p>
                     <p className="text-sm text-muted-foreground">/{post.slug}</p>
+                    <button
+                      type="button"
+                      className="mt-1 text-xs font-mono text-muted-foreground/60 hover:text-foreground transition-colors truncate block max-w-full"
+                      title="Click to copy UUID"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(post.id);
+                      }}
+                    >
+                      id: {post.id}
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <Badge variant={post.is_published ? "success" : "secondary"}>{post.is_published ? "Published" : "Draft"}</Badge>
                     <Button size="sm" variant="outline" onClick={() => setEditing(post)}>Edit</Button>
                     <Button size="sm" variant="destructive" onClick={() => deletePost(post.id)}>
