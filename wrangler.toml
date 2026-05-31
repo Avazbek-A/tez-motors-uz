@@ -15,7 +15,7 @@ enabled = true
 # in-memory fallback, so the site still runs without this.
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "5073cfd006be4151b665d032d665e885"
 
 [[routes]]
 pattern = "tezmotors.uz"
