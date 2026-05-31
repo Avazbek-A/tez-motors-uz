@@ -86,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
                   isActive
-                    ? "bg-lime/20 text-lime"
+                    ? "bg-[var(--accent-tint)] text-[var(--accent)] shadow-[inset_2px_0_0_0_var(--accent)]"
                     : "text-white/60 hover:text-white hover:bg-white/10"
                 )}
               >

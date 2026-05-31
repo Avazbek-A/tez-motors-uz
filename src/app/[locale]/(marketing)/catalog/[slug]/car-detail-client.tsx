@@ -205,8 +205,8 @@ export default function CarDetailPage() {
                   <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
                     <spec.icon className="w-5 h-5 text-neon-blue shrink-0" />
                     <div>
-                      <p className="text-xs text-white/60">{spec.label}</p>
-                      <p className="text-sm font-semibold">{spec.value}</p>
+                      <p className="text-xs text-white/60 uppercase tracking-wider">{spec.label}</p>
+                      <p className="text-sm font-mono font-semibold">{spec.value}</p>
                     </div>
                   </div>
                 ))}
@@ -217,7 +217,7 @@ export default function CarDetailPage() {
                   {Object.entries(car.specs).map(([key, value]) => (
                     <div key={key} className="p-3 rounded-xl bg-white/5">
                       <p className="text-xs text-white/60 capitalize">{key.replace(/_/g, " ")}</p>
-                      <p className="text-sm font-semibold">{String(value)}</p>
+                      <p className="text-sm font-mono font-semibold">{String(value)}</p>
                     </div>
                   ))}
                 </div>
@@ -244,12 +244,12 @@ export default function CarDetailPage() {
                 {discount > 0 ? (
                   <>
                     <p className="text-sm text-white/45 line-through">{formatPrice(car.original_price_usd!)}</p>
-                    <p className="text-3xl font-bold text-neon-blue">
+                    <p className="text-3xl font-mono font-bold text-neon-blue">
                       {formatPrice(car.price_usd)} <span className="text-sm text-amber-300">-{discount}%</span>
                     </p>
                   </>
                 ) : (
-                  <p className="text-3xl font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
+                  <p className="text-3xl font-mono font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
                 )}
                 {car.price_uzs && (
                   <p className="text-sm text-white/60 mt-1">

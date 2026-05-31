@@ -167,19 +167,19 @@ export function FinancingCalculator() {
                   <span className="text-sm text-white/60">{row.label}</span>
                 </div>
                 <span className={cn(
-                  "text-sm font-semibold text-white",
+                  "text-sm font-mono font-semibold text-white",
                   row.highlight && "text-lg text-neon-blue",
-                  row.destructive && "text-red-500"
+                  row.destructive && "text-[var(--danger)]"
                 )}>
                   {row.value}
                 </span>
               </div>
             ))}
           </div>
-          <div className="bg-neon-blue/10 p-6 border-t-2 border-neon-blue">
+          <div className="bg-neon-blue/10 p-6 border-t border-[var(--accent-line)]">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-lg text-white">{t.monthly}</span>
-              <span className="text-2xl font-bold text-neon-blue">{formatPrice(result.monthlyPayment)}</span>
+              <span className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--accent)]">{t.monthly}</span>
+              <span className="text-3xl font-mono font-bold text-neon-blue">{formatPrice(result.monthlyPayment)}</span>
             </div>
             <p className="text-xs text-white/60 mt-2">{locale === "ru" ? `на ${result.months} месяцев` : `for ${result.months} months`}</p>
           </div>

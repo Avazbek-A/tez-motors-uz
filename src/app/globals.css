@@ -139,7 +139,7 @@
   /* ===== Type families */
   --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
-  --font-display: var(--font-cormorant), "Times New Roman", Georgia, serif;
+  --font-display: var(--font-playfair), "Times New Roman", Georgia, serif;
 
   /* ===== Radii — sharp / architectural. Circles (rounded-full) kept intact. */
   --radius-sm: 2px;

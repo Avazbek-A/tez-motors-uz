@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Manrope, Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
+import { Manrope, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
@@ -17,10 +17,14 @@ const manrope = Manrope({
   weight: ["200", "300", "400", "500", "600", "700", "800"],
 });
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+// Editorial display serif. Playfair Display replaces Cormorant Garamond because
+// it ships a Cyrillic subset — essential since the site is Russian-primary and
+// the hero accent word is often Cyrillic. High-contrast didone italic reads
+// premium for oversized brand moments.
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
 });
 
@@ -115,7 +119,7 @@ export default async function RootLayout({
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale} className={`${manrope.variable} ${cormorant.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang={locale} className={`${manrope.variable} ${playfair.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <link
           rel="preconnect"

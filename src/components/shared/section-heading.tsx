@@ -27,12 +27,14 @@ export function SectionHeading({
     <div className={cn("mb-12", centered && "text-center", className)}>
       <Heading
         className={cn(
-          "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-gradient",
+          "text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground",
           light && "text-white"
         )}
       >
         {title}
       </Heading>
+      {/* Recurring brushed-platinum rule — the system's signature motif. */}
+      <div className={cn("mt-5 h-px w-12 bg-[var(--metallic)] opacity-80", centered && "mx-auto")} />
       {subtitle && (
         <p
           className={cn(

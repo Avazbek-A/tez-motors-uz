@@ -22,11 +22,12 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
   const next = () => setActiveIndex((i) => (i + 1) % placeholderCount);
   const prev = () => setActiveIndex((i) => (i - 1 + placeholderCount) % placeholderCount);
 
+  // Cinematic near-black studio gradients (monochrome — no neon).
   const gradients = [
-    "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-card",
-    "from-[#8b5cf6]/10 via-[#00d4ff]/5 to-card",
-    "from-[#22ff88]/8 via-card to-[#00d4ff]/5",
-    "from-card via-[#8b5cf6]/5 to-[#00d4ff]/8",
+    "from-[#1d1e24] via-card to-[#0b0b0e]",
+    "from-[#15161b] via-card to-[#08080a]",
+    "from-[#1c1c20] via-card to-[#0d0d10]",
+    "from-[#0b0b0e] via-card to-[#1d1e24]",
   ];
 
   return (
@@ -103,12 +104,22 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
                 activeIndex === i ? "border-neon-blue" : "border-white/[0.06] opacity-60 hover:opacity-100"
               )}
             >
-              <div className={cn(
-                "w-full h-full flex items-center justify-center",
-                `bg-gradient-to-br ${gradients[i % gradients.length]}`
-              )}>
-                <CarFront className="w-6 h-6 text-neon-blue/15" />
-              </div>
+              {hasImages && images[i] ? (
+                <Image
+                  src={images[i]}
+                  alt={`${brand} ${model} ${i + 1}`}
+                  width={80}
+                  height={56}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className={cn(
+                  "w-full h-full flex items-center justify-center",
+                  `bg-gradient-to-br ${gradients[i % gradients.length]}`
+                )}>
+                  <CarFront className="w-6 h-6 text-neon-blue/15" />
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -123,14 +134,26 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
           >
             <X className="w-5 h-5" />
           </button>
-          <div className="w-full max-w-5xl aspect-[16/10] mx-4">
-            <div className={cn(
-              "w-full h-full rounded-2xl flex flex-col items-center justify-center",
-              `bg-gradient-to-br ${gradients[activeIndex % gradients.length]}`
-            )}>
-              <CarFront className="w-32 h-32 text-white/15" />
-              <span className="text-white/20 text-lg font-bold mt-4">{brand} {model}</span>
-            </div>
+          <div className="w-full max-w-5xl aspect-[16/10] mx-4" onClick={(e) => e.stopPropagation()}>
+            {hasImages ? (
+              <div className="relative w-full h-full rounded-sm overflow-hidden bg-[var(--bg-0)]">
+                <Image
+                  src={images[activeIndex]}
+                  alt={`${brand} ${model} - ${activeIndex + 1}`}
+                  fill
+                  sizes="100vw"
+                  className="object-contain"
+                />
+              </div>
+            ) : (
+              <div className={cn(
+                "w-full h-full rounded-sm flex flex-col items-center justify-center",
+                `bg-gradient-to-br ${gradients[activeIndex % gradients.length]}`
+              )}>
+                <CarFront className="w-32 h-32 text-white/15" />
+                <span className="text-white/20 text-lg font-bold mt-4">{brand} {model}</span>
+              </div>
+            )}
           </div>
           {placeholderCount > 1 && (
             <>
