@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
-import { useScrollReveal } from "@/hooks/use-scroll-reveal";
-import { GridBackground } from "@/components/effects";
+import { FadeInScroll } from "@/components/animations/fade-in";
 import { cn } from "@/lib/utils";
 
 export type HotPart = {
@@ -63,85 +62,84 @@ function partName(p: HotPart, locale: "ru" | "uz" | "en"): string {
 
 export function HotParts({ parts }: HotPartsProps) {
   const { locale } = useLocale();
-  const { ref, isVisible } = useScrollReveal();
   const t = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
 
   if (parts.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-[#0b0b12] relative overflow-hidden">
-      <GridBackground />
-      <div className="absolute top-0 right-1/4 w-72 h-72 bg-neon-cyan/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-neon-purple/5 rounded-full blur-3xl" />
-
+    <section className="py-24 md:py-32 bg-background relative">
       <div className="container-custom relative z-10">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-12">
-          <SectionHeading
-            title={t.title}
-            subtitle={t.subtitle}
-            centered={false}
-            className="mb-0"
-            light
-          />
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href={localizedPath(locale, "/parts")} className="gap-2">
-              {t.viewAll} <ArrowRight className="w-4 h-4" />
-            </Link>
-          </Button>
-        </div>
+        <FadeInScroll direction="up">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-6 mb-16">
+            <SectionHeading
+              title={t.title}
+              subtitle={t.subtitle}
+              centered={false}
+              className="mb-0 max-w-2xl"
+            />
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="shrink-0 tracking-wide uppercase text-xs rounded-none border-foreground hover:bg-foreground hover:text-background transition-all"
+            >
+              <Link href={localizedPath(locale, "/parts")}>
+                {t.viewAll} <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </FadeInScroll>
 
-        <div
-          ref={ref}
-          className={cn(
-            "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 transition-all duration-700",
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
-          )}
-        >
-          {parts.map((p) => {
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {parts.map((p, index) => {
             const inStock = (p.stock_qty ?? 0) > 0;
             const img = p.images?.[0];
             return (
-              <Link
-                key={p.id}
-                href={localizedPath(locale, `/parts/${p.slug}`)}
-                className="group rounded-2xl border border-white/10 bg-[#0d0d15] overflow-hidden hover:border-white/20 transition-colors"
-              >
-                <div className="aspect-square bg-white/[0.03] relative flex items-center justify-center">
-                  {img ? (
-                    <Image
-                      src={img}
-                      alt={partName(p, locale)}
-                      fill
-                      sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <Wrench className="w-10 h-10 text-white/20" />
-                  )}
-                  <Badge
-                    variant={inStock ? "success" : "secondary"}
-                    className="absolute top-2 left-2 text-[10px]"
-                  >
-                    <Package className="w-3 h-3 mr-1" />
-                    {inStock ? t.inStock : t.outOfStock}
-                  </Badge>
-                </div>
-                <div className="p-4">
-                  <p className="font-medium text-sm text-white line-clamp-2 mb-1">
-                    {partName(p, locale)}
-                  </p>
-                  {p.oem_number && (
-                    <p className="text-xs text-white/40 font-mono truncate">
-                      OEM {p.oem_number}
+              <FadeInScroll key={p.id} direction="up" delay={index * 0.1}>
+                <Link
+                  href={localizedPath(locale, `/parts/${p.slug}`)}
+                  className="group block bg-card rounded-sm overflow-hidden border border-border transition-all duration-500 hover:shadow-lg hover:border-foreground/20"
+                >
+                  <div className="aspect-square bg-muted relative flex items-center justify-center overflow-hidden">
+                    {img ? (
+                      <Image
+                        src={img}
+                        alt={partName(p, locale)}
+                        fill
+                        sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                        className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                      />
+                    ) : (
+                      <Wrench className="w-12 h-12 text-muted-foreground/30" />
+                    )}
+                    <Badge
+                      variant={inStock ? "default" : "secondary"}
+                      className={cn(
+                        "absolute top-3 left-3 text-[10px] tracking-wider uppercase rounded-none font-medium px-2 py-0.5",
+                        inStock ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
+                      )}
+                    >
+                      <Package className="w-3 h-3 mr-1" />
+                      {inStock ? t.inStock : t.outOfStock}
+                    </Badge>
+                  </div>
+                  <div className="p-5">
+                    <p className="font-medium text-base text-foreground line-clamp-2 mb-2 group-hover:text-foreground/80 transition-colors">
+                      {partName(p, locale)}
                     </p>
-                  )}
-                  {p.price_usd != null && (
-                    <p className="text-sm text-white/80 mt-2 font-semibold">
-                      ${p.price_usd}
-                    </p>
-                  )}
-                </div>
-              </Link>
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest truncate max-w-[50%]">
+                        {p.oem_number ? `OEM ${p.oem_number}` : ""}
+                      </p>
+                      {p.price_usd != null && (
+                        <p className="text-sm font-semibold text-foreground tracking-tight">
+                          ${p.price_usd}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              </FadeInScroll>
             );
           })}
         </div>

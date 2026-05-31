@@ -1,0 +1,35 @@
+# Tiny standalone Worker that fires the tez-motors scheduled jobs.
+#
+# Why this exists: the OpenNext-generated worker (.open-next/worker.js) exports
+# only `fetch` — it has NO `scheduled()` handler — so Cloudflare Cron Triggers
+# can't call into the Next app directly. This separate Worker owns the triggers
+# and simply fetches the app's guarded /api/cron/* routes with a bearer secret.
+#
+# Deploy (one-time):
+#   1. cd cron-worker
+#   2. wrangler secret put CRON_SECRET   # same value the app has as CRON_SECRET
+#   3. wrangler deploy
+#
+# The app and this worker must share the SAME CRON_SECRET. The app verifies it
+# in src/lib/cron/guard.ts (constant-time compare). If the secret is unset on
+# the app side, the routes allow manual runs (dev only).
+name = "tez-motors-cron"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# Cloudflare passes the matched expression back as event.cron; src/index.js maps
+# each one to a route. Times are UTC. Tashkent is UTC+5, so 01:00 UTC ≈ 06:00.
+[triggers]
+crons = [
+  "0 1 * * *",   # 06:00 Tashkent — refresh USD/UZS rate
+  "30 3 * * *",  # 08:30 Tashkent — daily lead digest to the dealer
+  "0 4 * * *",   # 09:00 Tashkent — follow-up reminders due today
+  "0 */6 * * *", # every 6h — price-watch safety-net sweep
+  "0 5 * * *",   # 10:00 Tashkent — prune expired/consumed OTP rows
+  "30 6 * * *",  # 11:30 Tashkent — saved-search match alerts (new arrivals)
+  "0 7 * * *",   # 12:00 Tashkent — post-delivery review requests
+]
+
+# Base URL of the deployed Next app. Override per-environment if needed.
+[vars]
+APP_BASE_URL = "https://tezmotors.uz"

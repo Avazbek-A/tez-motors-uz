@@ -70,7 +70,7 @@ export default async function BlogPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {items.map((post) => (
-            <article key={post.id} className="rounded-2xl border border-white/10 bg-[#0d0d15] overflow-hidden">
+            <article key={post.id} className="rounded-2xl border border-white/10 bg-card overflow-hidden">
               {post.cover_image && (
                 <div className="relative h-52 w-full">
                   <Image
@@ -104,7 +104,7 @@ export default async function BlogPage() {
         </div>
 
         {items.length === 0 && (
-          <div className="rounded-2xl border border-white/10 bg-[#0d0d15] p-8 text-center text-white/60">
+          <div className="rounded-2xl border border-white/10 bg-card p-8 text-center text-white/60">
             {locale === "ru" ? "Пока нет опубликованных постов." : "No published posts yet."}
           </div>
         )}

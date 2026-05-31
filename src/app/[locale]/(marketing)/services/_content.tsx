@@ -158,7 +158,7 @@ export default function ServicesContent() {
             return (
               <div
                 key={index}
-                className={`bg-[#0d0d15] rounded-2xl border border-white/10 p-6 hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 hover:-translate-y-0.5 ${
+                className={`bg-card rounded-2xl border border-white/10 p-6 hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 hover:-translate-y-0.5 ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 60}ms` }}
@@ -199,7 +199,7 @@ export default function ServicesContent() {
           </div>
         </div>
 
-        <div className="mt-16 max-w-3xl mx-auto bg-[#0d0d15] border border-white/10 rounded-3xl p-8">
+        <div className="mt-16 max-w-3xl mx-auto bg-card border border-white/10 rounded-3xl p-8">
           {submitSuccess ? (
             <div className="text-center py-8">
               <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />

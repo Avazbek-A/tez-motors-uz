@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BarChart3, PieChart, TrendingUp, DollarSign, MessageSquare, Star, HelpCircle, RefreshCw, Loader2 } from "lucide-react";
+import { BarChart3, PieChart, TrendingUp, DollarSign, MessageSquare, Star, HelpCircle, RefreshCw, Loader2, Filter, Users, Wallet } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
@@ -79,6 +79,80 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 
 interface TimeseriesPoint { date: string; total: number; closed: number; }
 
+interface FunnelData {
+  days: number;
+  funnel: { inquiries: number; reservations: number; depositsPaid: number; delivered: number };
+  bySource: Array<{ source: string; count: number }>;
+  deposits: Array<{ date: string; count: number; uzs: number }>;
+  depositsTotalUzs: number;
+  bySalesperson: Array<{ id: string; label: string; total: number; closed: number; closeRate: number }>;
+}
+
+function formatUzs(n: number): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " сум";
+}
+
+/** Revenue + conversion funnel: inquiries → reservations → deposits → delivered. */
+function FunnelBars({ funnel }: { funnel: FunnelData["funnel"] }) {
+  const stages = [
+    { key: "inquiries", label: "Inquiries", value: funnel.inquiries, color: "from-cyan-600 to-cyan-400" },
+    { key: "reservations", label: "Reservations", value: funnel.reservations, color: "from-blue-600 to-blue-400" },
+    { key: "depositsPaid", label: "Deposits Paid", value: funnel.depositsPaid, color: "from-purple-600 to-purple-400" },
+    { key: "delivered", label: "Delivered", value: funnel.delivered, color: "from-green-600 to-green-400" },
+  ];
+  const top = Math.max(1, funnel.inquiries);
+  return (
+    <div className="space-y-3">
+      {stages.map((s, i) => {
+        const pctOfTop = Math.round((s.value / top) * 100);
+        const prev = i > 0 ? stages[i - 1].value : s.value;
+        const stepPct = prev > 0 ? Math.round((s.value / prev) * 100) : 0;
+        return (
+          <div key={s.key}>
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="font-medium">{s.label}</span>
+              <span className="font-bold">
+                {s.value}
+                {i > 0 && <span className="text-muted-foreground font-normal text-xs ml-2">{stepPct}% of prev</span>}
+              </span>
+            </div>
+            <div className="h-3 bg-white/[0.04] rounded-full overflow-hidden">
+              <div
+                className={cn("h-full bg-gradient-to-r rounded-full transition-all duration-700", s.color)}
+                style={{ width: `${Math.max(pctOfTop, s.value > 0 ? 4 : 0)}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Daily deposit volume (UZS) over the window — simple bar chart. */
+function DepositsChart({ points }: { points: FunnelData["deposits"] }) {
+  if (points.length === 0) return null;
+  const maxUzs = Math.max(1, ...points.map((p) => p.uzs));
+  return (
+    <div>
+      <div className="flex items-end gap-0.5 h-32">
+        {points.map((p) => (
+          <div key={p.date} className="flex-1 flex flex-col justify-end group relative" title={`${p.date}: ${formatUzs(p.uzs)} (${p.count})`}>
+            <div
+              className="w-full bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t transition-all"
+              style={{ height: `${(p.uzs / maxUzs) * 100}%`, minHeight: p.uzs > 0 ? "2px" : "0" }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+        <span>{points[0]?.date.slice(5)}</span>
+        <span>{points[points.length - 1]?.date.slice(5)}</span>
+      </div>
+    </div>
+  );
+}
+
 function InquiriesTimeseriesChart({ points }: { points: TimeseriesPoint[] }) {
   if (points.length === 0) return null;
   const width = 640;
@@ -138,6 +212,7 @@ export default function AdminAnalyticsPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([]);
+  const [funnel, setFunnel] = useState<FunnelData | null>(null);
 
   const fetchStats = () => {
     setLoading(true);
@@ -148,6 +223,10 @@ export default function AdminAnalyticsPage() {
     fetch("/api/admin/stats/timeseries?days=30")
       .then((r) => r.json())
       .then((data) => setTimeseries(data.points || []))
+      .catch(() => {});
+    fetch("/api/admin/stats/funnel?days=30")
+      .then((r) => r.json())
+      .then((data) => setFunnel(data && !data.error ? data : null))
       .catch(() => {});
   };
 
@@ -230,6 +309,114 @@ export default function AdminAnalyticsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Revenue + conversion intelligence */}
+      {funnel && (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Revenue funnel */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <TrendingUp className="w-4 h-4" />
+                  Revenue Funnel — last {funnel.days} days
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FunnelBars funnel={funnel.funnel} />
+              </CardContent>
+            </Card>
+
+            {/* Deposits over time */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Wallet className="w-4 h-4" />
+                  Deposits Collected
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DepositsChart points={funnel.deposits} />
+                <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total ({funnel.days}d)</span>
+                  <span className="font-bold text-emerald-400">{formatUzs(funnel.depositsTotalUzs)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Leads by source */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Filter className="w-4 h-4" />
+                  Leads by Source
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {funnel.bySource.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No lead data yet.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {(() => {
+                      const max = Math.max(...funnel.bySource.map((s) => s.count), 1);
+                      return funnel.bySource.map((s) => (
+                        <div key={s.source} className="flex items-center gap-3">
+                          <span className="text-xs font-medium w-28 shrink-0 truncate" title={s.source}>{s.source}</span>
+                          <div className="flex-1 h-6 bg-white/[0.04] rounded-lg overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-lg flex items-center justify-end px-2 transition-all duration-700"
+                              style={{ width: `${(s.count / max) * 100}%`, minWidth: "1.75rem" }}
+                            >
+                              <span className="text-xs font-bold text-white">{s.count}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Per-salesperson close rate */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Users className="w-4 h-4" />
+                  Salesperson Close Rate
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {funnel.bySalesperson.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No assigned inquiries yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center text-xs text-muted-foreground px-1">
+                      <span className="flex-1">Rep</span>
+                      <span className="w-16 text-right">Total</span>
+                      <span className="w-16 text-right">Closed</span>
+                      <span className="w-16 text-right">Rate</span>
+                    </div>
+                    {funnel.bySalesperson.map((rep) => (
+                      <div key={rep.id} className="flex items-center text-sm py-1.5 border-t border-white/5">
+                        <span className="flex-1 truncate" title={rep.label}>{rep.label}</span>
+                        <span className="w-16 text-right font-medium">{rep.total}</span>
+                        <span className="w-16 text-right font-medium">{rep.closed}</span>
+                        <span className={cn(
+                          "w-16 text-right font-bold",
+                          rep.closeRate >= 50 ? "text-green-400" : rep.closeRate >= 20 ? "text-yellow-400" : "text-muted-foreground",
+                        )}>{rep.closeRate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
       )}
 
       {/* Price range */}

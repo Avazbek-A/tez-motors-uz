@@ -67,7 +67,7 @@ export function TestDriveModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-[#0d0d15] p-6">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Book test drive</h3>

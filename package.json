@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build:cf": "npx opennextjs-cloudflare build",
     "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy"
   },
@@ -36,9 +38,11 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "next": "16.2.2",
+    "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.5.0",
+    "tailwindcss-animate": "^1.0.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -51,6 +55,7 @@
     "supabase": "^2.88.1",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^4.1.7",
     "wrangler": "^4.81.0"
   }
 }

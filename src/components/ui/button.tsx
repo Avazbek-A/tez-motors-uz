@@ -5,25 +5,32 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+// "Cinematic Showroom" buttons: sharp corners, uppercase mono-tracked labels,
+// platinum-accent fills, hairline outlines, soft ambient lift (no neon glow).
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-blue focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0f] disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
+  "inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-none font-semibold uppercase tracking-[0.12em] transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-1)] disabled:pointer-events-none disabled:opacity-50 cursor-pointer",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-neon-blue to-neon-cyan text-[#0a0a0f] font-bold hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] hover:-translate-y-0.5",
-        secondary: "bg-gradient-to-r from-neon-purple to-[#a78bfa] text-white hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:-translate-y-0.5",
-        outline: "border border-neon-blue/50 text-neon-blue bg-transparent hover:bg-neon-blue/10 hover:shadow-[0_0_15px_rgba(0,212,255,0.2)]",
-        outlineLight: "border border-white/20 text-white hover:bg-white/5 hover:border-neon-blue/50",
-        ghost: "text-white/70 hover:bg-white/5 hover:text-white",
-        link: "text-neon-blue underline-offset-4 hover:underline",
-        destructive: "bg-gradient-to-r from-destructive to-neon-pink text-white hover:shadow-[0_0_20px_rgba(255,45,135,0.4)]",
-        cyber: "bg-[#0a0a0f] border border-neon-green/50 text-neon-green font-mono uppercase tracking-wider hover:bg-neon-green/10 hover:shadow-[0_0_20px_rgba(34,255,136,0.3)] hover:border-neon-green",
+        default:
+          "bg-primary text-primary-foreground hover:bg-[var(--accent-bright)] hover:-translate-y-px hover:shadow-[0_14px_40px_rgba(150,165,188,0.20)]",
+        secondary:
+          "bg-[var(--bg-3)] text-[var(--fg-1)] border border-[var(--line-2)] hover:border-[var(--line-3)]",
+        outline:
+          "border border-[var(--line-3)] text-[var(--fg-1)] bg-transparent hover:border-[var(--fg-1)]",
+        outlineLight:
+          "border border-white/25 text-white bg-transparent hover:bg-white/5 hover:border-white/60",
+        ghost: "text-[var(--fg-2)] bg-transparent hover:text-[var(--accent)]",
+        link: "text-[var(--accent)] normal-case tracking-normal underline-offset-4 hover:underline",
+        destructive: "bg-[var(--danger)] text-white hover:opacity-90",
+        cyber:
+          "bg-transparent border border-[var(--accent-line)] text-[var(--accent)] font-mono hover:bg-[var(--accent-tint)] hover:border-[var(--accent)]",
       },
       size: {
-        default: "h-11 px-6 py-2",
-        sm: "h-9 px-4 text-xs",
-        lg: "h-14 px-8 text-base",
-        xl: "h-16 px-10 text-lg",
+        default: "h-11 px-6 py-2 text-[13px]",
+        sm: "h-9 px-4 text-[11px]",
+        lg: "h-13 px-8 text-[13px]",
+        xl: "h-14 px-10 text-sm",
         icon: "h-10 w-10",
       },
     },

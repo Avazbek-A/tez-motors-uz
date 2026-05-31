@@ -3,11 +3,13 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { sendEmail, newsletterWelcomeEmail } from "@/lib/email";
 
 const checkRateLimit = createRateLimiter({ max: 3, windowMs: 5 * 60 * 1000 });
 
 const schema = z.object({
   email: z.string().email().max(200),
+  locale: z.enum(["ru", "uz", "en"]).optional(),
   source_page: z.string().optional(),
   turnstile_token: z.string().max(4096).optional(),
 });
@@ -33,18 +35,28 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServiceClient();
+    const locale = data.locale ?? "ru";
 
-    const { error } = await supabase.from("inquiries").insert({
-      name: "Newsletter Subscriber",
-      phone: "-",
-      email: data.email,
-      type: "newsletter",
-      status: "new",
-      source_page: data.source_page || "newsletter-widget",
-      message: `Email subscription: ${data.email}`,
-    });
+    // Upsert; ignoreDuplicates means a re-subscribe is a no-op and returns no
+    // row, so we only send the welcome email on a genuinely new subscription.
+    const { data: inserted, error } = await supabase
+      .from("newsletter_subscribers")
+      .upsert(
+        {
+          email: data.email,
+          locale,
+          source_page: data.source_page || "newsletter-widget",
+        },
+        { onConflict: "email", ignoreDuplicates: true },
+      )
+      .select("id");
 
     if (error) throw error;
+
+    if (inserted && inserted.length > 0) {
+      const tpl = newsletterWelcomeEmail(locale);
+      sendEmail({ to: data.email, subject: tpl.subject, html: tpl.html }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {

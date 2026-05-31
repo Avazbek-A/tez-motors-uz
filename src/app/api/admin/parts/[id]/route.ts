@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { partWriteSchema } from "@/lib/schemas/part";
+import { logAdminAction, compactDiff } from "@/lib/audit";
 
 function isUuid(id: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -40,6 +41,14 @@ export async function PUT(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logAdminAction(request, {
+    action: "update",
+    entity: "part",
+    entity_id: id,
+    diff: compactDiff(parsed.data as Record<string, unknown>),
+  }).catch(() => {});
+
   return NextResponse.json({ part: data });
 }
 
@@ -58,5 +67,8 @@ export async function DELETE(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logAdminAction(request, { action: "delete", entity: "part", entity_id: id }).catch(() => {});
+
   return NextResponse.json({ success: true });
 }

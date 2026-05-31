@@ -1,59 +1,153 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0a0a0f;
-  --foreground: #e2e8f0;
-  --navy: #0a0a0f;
-  --navy-light: #12121a;
-  --navy-dark: #050508;
-  --lime: #00d4ff;
-  --lime-dark: #0099cc;
-  --lime-light: #33ddff;
-  --accent: #00d4ff;
-  --muted: #12121a;
-  --muted-foreground: #94a3b8;
-  --border: rgba(255, 255, 255, 0.08);
-  --card: #0d0d15;
-  --card-foreground: #e2e8f0;
-  --destructive: #ff2d55;
-  --ring: #00d4ff;
-  --radius: 0.75rem;
+@plugin "tailwindcss-animate";
 
-  /* Neon colors */
-  --neon-blue: #00d4ff;
-  --neon-purple: #8b5cf6;
-  --neon-green: #22ff88;
-  --neon-pink: #ff2d87;
-  --neon-cyan: #06b6d4;
-  --cyber-black: #0a0a0f;
-  --cyber-dark: #0d0d15;
-  --cyber-darker: #050508;
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   TEZ MOTORS — "Cinematic Showroom" design system
+   Premium, monochrome near-black canvas + a single cool-platinum metallic accent.
+   Sharp architectural corners, hairline borders, soft ambient shadows (no glow),
+   cinematic cool-toned imagery, slow expensive easing. Replaces the neon-cyber era.
+   ========================================================================== */
+
+:root {
+  /* ===== Canvas — layered near-blacks. Elevation = lighter + hairline, never glow. */
+  --bg-0: #08080a;
+  --bg-1: #0d0d10;
+  --bg-2: #141417;
+  --bg-3: #1c1c20;
+  --bg-4: #26262b;
+
+  /* ===== Foreground — warm near-whites, stepped down by opacity. */
+  --fg-1: #f6f5f2;
+  --fg-2: rgba(246, 245, 242, 0.66);
+  --fg-3: rgba(246, 245, 242, 0.42);
+  --fg-4: rgba(246, 245, 242, 0.22);
+
+  /* ===== Hairlines & borders. */
+  --line-1: rgba(246, 245, 242, 0.08);
+  --line-2: rgba(246, 245, 242, 0.14);
+  --line-3: rgba(246, 245, 242, 0.24);
+
+  /* ===== Accent — cool platinum metallic. The ONE color, used sparingly. */
+  --accent: #bfc9d6;
+  --accent-bright: #e6ecf2;
+  --accent-deep: #8995a6;
+  --accent-foreground: #0d0d10;
+  --accent-tint: rgba(191, 201, 214, 0.12);
+  --accent-line: rgba(191, 201, 214, 0.42);
+  --metallic: linear-gradient(135deg, #eff3f7 0%, #bfc9d6 42%, #8995a6 72%, #dae0e7 100%);
+
+  /* ===== Semantic — muted, never neon. */
+  --success: #6fa987;
+  --warning: #d2a45c;
+  --danger: #c06a5c;
+  --info: #7e96b8;
+
+  /* ===== Motion — slow & expensive. */
+  --ease-lux: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ===== shadcn token bridge — remapped onto the Cinematic palette. ==========
+     Components consume these via bg-background / text-foreground / bg-card /
+     border-border / bg-primary / text-muted-foreground etc. Dark-first. */
+  --background: var(--bg-1);
+  --foreground: var(--fg-1);
+  --card: var(--bg-2);
+  --card-foreground: var(--fg-1);
+  --popover: var(--bg-3);
+  --popover-foreground: var(--fg-1);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--bg-3);
+  --secondary-foreground: var(--fg-1);
+  --muted: var(--bg-3);
+  --muted-foreground: var(--fg-3);
+  --accent-color: var(--bg-3);
+  --accent-foreground-color: var(--fg-1);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: var(--accent);
+  --radius: 2px;
+}
+
+/* The app is dark-first (defaultTheme="dark"). Keep .dark identical so a
+   system-light preference can never fall back to a broken light palette. */
+.dark {
+  --background: var(--bg-1);
+  --foreground: var(--fg-1);
+  --card: var(--bg-2);
+  --card-foreground: var(--fg-1);
+  --popover: var(--bg-3);
+  --popover-foreground: var(--fg-1);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--bg-3);
+  --secondary-foreground: var(--fg-1);
+  --muted: var(--bg-3);
+  --muted-foreground: var(--fg-3);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: var(--accent);
 }
 
 @theme inline {
+  /* shadcn semantic colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-navy: var(--navy);
-  --color-navy-light: var(--navy-light);
-  --color-navy-dark: var(--navy-dark);
-  --color-lime: var(--lime);
-  --color-lime-dark: var(--lime-dark);
-  --color-lime-light: var(--lime-light);
-  --color-accent: var(--accent);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-color);
+  --color-accent-foreground: var(--accent-foreground-color);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-neon-blue: var(--neon-blue);
-  --color-neon-purple: var(--neon-purple);
-  --color-neon-green: var(--neon-green);
-  --color-neon-pink: var(--neon-pink);
-  --color-neon-cyan: var(--neon-cyan);
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  /* ===== Brand color names used across the app (previously undefined / neon).
+     Re-pointed at the monochrome platinum palette + muted semantics so the
+     ~100 legacy usages render on-brand instead of dead/cyan. */
+  --color-accent-platinum: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-deep: var(--accent-deep);
+  --color-neon-blue: var(--accent);
+  --color-neon-cyan: var(--accent-bright);
+  --color-neon-purple: var(--accent-deep);
+  --color-neon-green: var(--success);
+  --color-neon-pink: var(--danger);
+  --color-navy: var(--bg-2);
+  --color-lime: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  /* ===== Type families */
+  --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-display: var(--font-cormorant), "Times New Roman", Georgia, serif;
+
+  /* ===== Radii — sharp / architectural. Circles (rounded-full) kept intact. */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
 }
 
 * {
@@ -61,391 +155,112 @@
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Smooth scroll */
-html {
-  scroll-behavior: smooth;
+::selection {
+  background: var(--accent-tint);
+  color: var(--fg-1);
 }
 
-/* Custom scrollbar */
+/* Hide scrollbar for cleaner look */
 ::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
-::-webkit-scrollbar-track {
-  background: #050508;
-}
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--neon-cyan), var(--neon-pink));
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Glass effect utility - cyberpunk dark glass */
-.glass {
-  background: rgba(10, 10, 15, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 212, 255, 0.1);
-}
-
-.glass-dark {
-  background: rgba(5, 5, 8, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 212, 255, 0.08);
-}
-
-/* Gradient text utility - neon */
-.text-gradient {
-  background: linear-gradient(135deg, var(--neon-blue) 0%, var(--neon-purple) 50%, var(--neon-pink) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-green {
-  background: linear-gradient(135deg, var(--neon-green) 0%, var(--neon-cyan) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Neon glow utilities */
-.neon-glow {
-  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3), 0 0 30px rgba(0, 212, 255, 0.15), 0 0 60px rgba(0, 212, 255, 0.05);
-}
-
-.neon-glow-purple {
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.3), 0 0 30px rgba(139, 92, 246, 0.15), 0 0 60px rgba(139, 92, 246, 0.05);
-}
-
-.neon-glow-green {
-  box-shadow: 0 0 10px rgba(34, 255, 136, 0.3), 0 0 30px rgba(34, 255, 136, 0.15);
-}
-
-.neon-glow-pink {
-  box-shadow: 0 0 10px rgba(255, 45, 135, 0.3), 0 0 30px rgba(255, 45, 135, 0.15);
-}
-
-.neon-text {
-  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5), 0 0 30px rgba(0, 212, 255, 0.3), 0 0 60px rgba(0, 212, 255, 0.1);
-}
-
-.neon-text-purple {
-  text-shadow: 0 0 10px rgba(139, 92, 246, 0.5), 0 0 30px rgba(139, 92, 246, 0.3);
-}
-
-/* Cyber grid background */
-.cyber-grid {
-  background-image:
-    linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-  background-size: 60px 60px;
-}
-
-/* Scanline effect */
-.scanline::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 212, 255, 0.015) 2px,
-    rgba(0, 212, 255, 0.015) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Holographic shimmer */
-.holographic {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 212, 255, 0.1) 0%,
-    rgba(139, 92, 246, 0.1) 25%,
-    rgba(255, 45, 135, 0.1) 50%,
-    rgba(34, 255, 136, 0.1) 75%,
-    rgba(0, 212, 255, 0.1) 100%
-  );
-  background-size: 200% 200%;
-  animation: holographic-shift 6s ease-in-out infinite;
-}
-
-/* Neon border animated */
-.neon-border {
-  position: relative;
-  overflow: hidden;
-}
-.neon-border::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  background: conic-gradient(from 0deg, var(--neon-blue), var(--neon-purple), var(--neon-pink), var(--neon-green), var(--neon-blue));
-  border-radius: inherit;
-  z-index: -1;
-  animation: neon-spin 4s linear infinite;
-}
-
-/* =================== KEYFRAMES =================== */
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(0, 212, 255, 0.6), 0 0 80px rgba(0, 212, 255, 0.2);
-  }
-}
-
-@keyframes neon-pulse {
-  0%, 100% {
-    opacity: 1;
-    filter: brightness(1);
-  }
-  50% {
-    opacity: 0.8;
-    filter: brightness(1.3);
-  }
-}
-
-@keyframes glitch {
-  0% { clip-path: inset(40% 0 61% 0); transform: translate(-2px, 2px); }
-  20% { clip-path: inset(92% 0 1% 0); transform: translate(1px, -1px); }
-  40% { clip-path: inset(43% 0 1% 0); transform: translate(-1px, 3px); }
-  60% { clip-path: inset(25% 0 58% 0); transform: translate(3px, 1px); }
-  80% { clip-path: inset(54% 0 7% 0); transform: translate(-3px, -2px); }
-  100% { clip-path: inset(58% 0 43% 0); transform: translate(2px, -3px); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  25% { transform: translateY(-10px) rotate(1deg); }
-  50% { transform: translateY(-20px) rotate(0deg); }
-  75% { transform: translateY(-10px) rotate(-1deg); }
-}
-
-@keyframes scanline-move {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
-
-@keyframes holographic-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-@keyframes cyber-flicker {
-  0%, 100% { opacity: 1; }
-  92% { opacity: 1; }
-  93% { opacity: 0.3; }
-  94% { opacity: 1; }
-  96% { opacity: 0.7; }
-  97% { opacity: 1; }
-}
-
-@keyframes glow-breathe {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(0, 212, 255, 0.2), 0 0 15px rgba(0, 212, 255, 0.1);
-  }
-  50% {
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), 0 0 40px rgba(0, 212, 255, 0.2);
-  }
-}
-
-@keyframes neon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-@keyframes blink-cursor {
-  0%, 50% { border-right-color: var(--neon-blue); }
-  51%, 100% { border-right-color: transparent; }
-}
-
-@keyframes border-flow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
-}
-
-/* Animation classes */
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out forwards;
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.5s ease-out forwards;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-.animate-neon-pulse {
-  animation: neon-pulse 2s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-cyber-flicker {
-  animation: cyber-flicker 5s linear infinite;
-}
-
-.animate-glow-breathe {
-  animation: glow-breathe 3s ease-in-out infinite;
-}
-
-.animate-holographic {
-  animation: holographic-shift 6s ease-in-out infinite;
-}
-
-.animate-border-flow {
-  background-size: 300% 300%;
-  animation: border-flow 4s linear infinite;
-}
-
-/* Container */
+/* ============================================================================
+   LAYOUT HELPERS
+   ========================================================================== */
 .container-custom {
   width: 100%;
   max-width: 1280px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+@media (min-width: 768px) {
+  .container-custom { padding-inline: 40px; }
 }
 
-@media (min-width: 640px) {
-  .container-custom {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-  }
+/* Premium glass — header / fixed overlays. Cool blur over near-black, hairline. */
+.glass {
+  background: rgba(13, 13, 16, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-1);
+}
+.dark .glass {
+  background: rgba(13, 13, 16, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-1);
 }
 
-@media (min-width: 1024px) {
-  .container-custom {
-    padding-left: 2rem;
-    padding-right: 2rem;
-  }
+/* Thin metallic rule — recurring brand motif. */
+.metallic-rule {
+  height: 1px;
+  border: 0;
+  background: var(--metallic);
+  opacity: 0.85;
 }
 
-/* Print styles */
-@media print {
-  header, footer, .fixed, .sticky,
-  [aria-label="WhatsApp"],
-  [aria-label="Scroll to top"],
-  [aria-label="Request callback"] {
-    display: none !important;
-  }
+/* ============================================================================
+   TYPOGRAPHY — semantic helper classes (Cinematic Showroom)
+   ========================================================================== */
+.t-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.t-eyebrow--accent { color: var(--accent); }
 
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 12pt;
-  }
-
-  .container-custom {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
-
-  .glass, .glass-dark {
-    background: white !important;
-    backdrop-filter: none !important;
-    border: 1px solid #ddd !important;
-  }
-
-  .text-gradient {
-    -webkit-text-fill-color: initial !important;
-    background: none !important;
-    color: #1a1f36 !important;
-  }
-
-  .animate-fade-in-up,
-  .animate-fade-in,
-  .animate-slide-in-right {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .rounded-2xl { border-radius: 8px !important; }
-  .shadow-sm, .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: none !important; }
-
-  .lg\:col-span-3 { width: 60% !important; float: left !important; }
-  .lg\:col-span-2 { width: 38% !important; float: right !important; }
+.t-editorial {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-style: italic;
+  line-height: 1.04;
+  letter-spacing: 0;
 }
 
-/* Selection color */
-::selection {
-  background: var(--neon-blue);
-  color: var(--cyber-black);
+.t-data {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Focus visible for accessibility */
-:focus-visible {
-  outline: 2px solid var(--neon-blue);
-  outline-offset: 2px;
-  border-radius: 4px;
+.t-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
+.t-label--caps { text-transform: uppercase; letter-spacing: 0.14em; font-size: 12px; }
 
-/* Reduced motion preference */
+.font-display { font-family: var(--font-display); }
+
+/* ============================================================================
+   MOTION — entrance reveals (slow, expensive easing; no bounce/glow).
+   Visible by default so a stalled animation can never trap content hidden.
+   ========================================================================== */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s var(--ease-lux) both;
+}
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-  .scanline::after,
-  .holographic,
-  .neon-border::before,
-  .cyber-grid {
-    display: none !important;
-  }
+  .animate-fade-in-up { animation: none; }
 }

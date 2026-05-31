@@ -19,7 +19,7 @@ export function TypedText({
   deleteSpeed = 40,
   pauseTime = 2000,
   className = "",
-  cursorColor = "var(--neon-blue)",
+  cursorColor = "var(--accent)",
 }: TypedTextProps) {
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);

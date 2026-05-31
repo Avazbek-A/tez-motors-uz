@@ -79,7 +79,7 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
       </div>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full mt-2 left-0 right-0 bg-[#0d0d15] rounded-xl border border-neon-blue/20 shadow-[0_0_20px_rgba(0,212,255,0.1)] z-50 overflow-hidden animate-fade-in">
+        <div className="absolute top-full mt-2 left-0 right-0 bg-card rounded-xl border border-neon-blue/20 z-50 overflow-hidden animate-fade-in">
           {results.map((car) => (
             <Link
               key={car.id}
@@ -113,7 +113,7 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
       )}
 
       {isOpen && query.length >= 2 && results.length === 0 && !searching && (
-        <div className="absolute top-full mt-2 left-0 right-0 bg-[#0d0d15] rounded-xl border border-neon-blue/20 shadow-[0_0_20px_rgba(0,212,255,0.1)] z-50 p-6 text-center animate-fade-in">
+        <div className="absolute top-full mt-2 left-0 right-0 bg-card rounded-xl border border-neon-blue/20 z-50 p-6 text-center animate-fade-in">
           <p className="text-sm text-white/60">No cars found for &ldquo;{query}&rdquo;</p>
         </div>
       )}

@@ -28,7 +28,7 @@ export function Newsletter() {
       const res = await fetch("/api/newsletter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source_page: window.location.pathname, turnstile_token: turnstileToken ?? undefined }),
+        body: JSON.stringify({ email, locale, source_page: window.location.pathname, turnstile_token: turnstileToken ?? undefined }),
       });
       if (res.ok) {
         setSuccess(true);
@@ -41,7 +41,7 @@ export function Newsletter() {
   };
 
   return (
-    <div className="bg-[#0d0d15] border border-neon-blue/20 rounded-2xl p-8 text-white">
+    <div className="bg-card border border-neon-blue/20 rounded-2xl p-8 text-white">
       <div className="flex items-start gap-4 mb-4">
         <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center shrink-0">
           <Mail className="w-6 h-6 text-neon-blue" />
@@ -68,7 +68,7 @@ export function Newsletter() {
             required
             className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue flex-1"
           />
-          <Button type="submit" size="default" disabled={loading} className="shrink-0 bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)]">
+          <Button type="submit" size="default" disabled={loading} className="shrink-0 bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.button}
           </Button>
         </form>

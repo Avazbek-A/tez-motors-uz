@@ -78,7 +78,7 @@ async function main() {
       images: c.images ?? [],
       thumbnail: (c.images && c.images[0]) || null,
       is_hot_offer: !!c.is_hot_offer,
-      is_available: true,
+      // is_available is GENERATED from inventory_status (migration 022) — do not write it.
       inventory_status: "available",
       order_position: i,
       specs: c.specs || {},

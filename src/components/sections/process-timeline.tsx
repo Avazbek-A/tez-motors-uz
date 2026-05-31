@@ -16,7 +16,7 @@ export function ProcessTimeline() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <ScanlineOverlay intensity="light" />
 
       {/* Neon ambient glows */}
@@ -39,7 +39,7 @@ export function ProcessTimeline() {
                 className={`relative glass rounded-2xl p-6 group
                   border border-neon-blue/10 hover:border-neon-blue/30
                   hover:bg-white/[0.04] transition-all duration-300
-                  hover:shadow-[0_0_20px_rgba(0,212,255,0.08)]
+                 
                   ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >

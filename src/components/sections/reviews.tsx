@@ -21,7 +21,7 @@ export function Reviews({ reviews }: ReviewsProps) {
   };
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f]">
+    <section className="py-20 md:py-28 bg-background">
       <div className="container-custom">
         <SectionHeading
           title={dictionary.reviews.title}
@@ -33,7 +33,7 @@ export function Reviews({ reviews }: ReviewsProps) {
           {reviews.map((review, index) => (
             <div
               key={review.id}
-              className={`bg-[#0d0d15] rounded-2xl border border-neon-blue/10 p-6 hover:border-neon-blue/30 hover:shadow-[0_0_30px_rgba(0,212,255,0.08)] transition-all duration-300 ${
+              className={`bg-card rounded-2xl border border-neon-blue/10 p-6 hover:border-neon-blue/30 transition-all duration-300 ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 100}ms` }}

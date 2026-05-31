@@ -13,6 +13,7 @@ import { LanguageSwitcher } from "./language-switcher";
 import { SocialLinks } from "@/components/shared/social-links";
 import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
 import { localizedPath } from "@/lib/locale-path";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -35,83 +36,67 @@ export function Header() {
     <>
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           isScrolled
-            ? "bg-[#0a0a0f]/90 backdrop-blur-xl shadow-[0_1px_20px_rgba(0,212,255,0.08)] border-b border-neon-blue/10"
+            ? "bg-background/80 backdrop-blur-lg border-b border-border shadow-sm"
             : "bg-transparent"
         )}
       >
-        {/* Neon bottom line */}
-        <div
-          className={cn(
-            "absolute bottom-0 left-0 right-0 h-[1px] transition-opacity duration-300",
-            isScrolled ? "opacity-100" : "opacity-0"
-          )}
-          style={{
-            background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.5), rgba(139,92,246,0.5), transparent)",
-          }}
-        />
-
         <div className="container-custom">
-          <div className="flex items-center justify-between h-16 lg:h-20">
+          <div className="flex items-center justify-between h-16 lg:h-24">
             {/* Logo */}
-            <Link href={localizedPath(locale, "/")} className="flex items-center gap-2 shrink-0 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center group-hover:shadow-[0_0_20px_rgba(0,212,255,0.4)] transition-shadow">
-                <span className="text-[#0a0a0f] font-black text-lg">TM</span>
+            <Link href={localizedPath(locale, "/")} className="flex items-center gap-3 shrink-0 group">
+              <div className="w-10 h-10 border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center rounded-none transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
+                <span className="font-bold text-base tracking-tight">TM</span>
               </div>
               <div className="hidden sm:block">
-                <span className="font-bold text-xl tracking-tight text-white group-hover:text-neon-blue transition-colors">
+                <span className="font-semibold text-xl tracking-[0.16em] uppercase transition-colors">
                   Tez Motors
                 </span>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-8">
               {NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
+                <Link
+                  key={link.href}
                   href={localizedPath(locale, link.href)}
                   className={cn(
-                    "relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                    "relative py-1 text-xs font-semibold tracking-[0.12em] uppercase transition-colors duration-300 after:absolute after:left-0 after:-bottom-0.5 after:h-px after:bg-[var(--accent)] after:transition-all after:duration-300",
                     pathname === link.href
-                      ? "text-neon-blue bg-neon-blue/10"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
+                      ? "text-foreground after:w-4"
+                      : "text-muted-foreground hover:text-foreground after:w-0 hover:after:w-4"
                   )}
                 >
                   {link.label[locale]}
-                  {pathname === link.href && (
-                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-neon-blue rounded-full" />
-                  )}
                 </Link>
               ))}
             </nav>
 
             {/* Right side */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <div className="hidden md:block w-48 xl:w-56">
                 <SearchAutocomplete
-                  placeholder={locale === "ru" ? "Поиск авто..." : "Search..."}
+                  placeholder={locale === "ru" ? "Поиск..." : "Search..."}
                 />
               </div>
+              
               <LanguageSwitcher isScrolled={isScrolled} />
+              <ThemeToggle />
 
               <a
                 href={`tel:${settings.phoneRaw}`}
-                className="hidden md:flex items-center gap-2 text-sm font-semibold text-white/80 hover:text-neon-blue transition-colors"
+                className="hidden md:flex items-center gap-2 text-sm font-medium tracking-wide hover:opacity-70 transition-opacity"
               >
                 <Phone className="w-4 h-4" />
                 {settings.phone}
               </a>
 
-              <div className="hidden xl:flex">
-                <SocialLinks isScrolled={isScrolled} />
-              </div>
-
               <Button
                 variant="default"
                 size="sm"
-                className="hidden md:inline-flex"
+                className="hidden md:inline-flex tracking-wide uppercase text-xs"
                 asChild
               >
                 <Link href={localizedPath(locale, "/contacts")}>
@@ -122,7 +107,7 @@ export function Header() {
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
+                className="lg:hidden p-2 -mr-2"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -133,46 +118,39 @@ export function Header() {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <div className="absolute top-16 left-0 right-0 bg-[#0d0d15] border-b border-neon-blue/10 shadow-[0_10px_40px_rgba(0,212,255,0.05)] animate-fade-in">
-            <nav className="container-custom py-4 flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={localizedPath(locale, link.href)}
-                  className={cn(
-                    "px-4 py-3 rounded-xl text-base font-medium transition-all",
-                    pathname === link.href
-                      ? "bg-neon-blue/10 text-neon-blue"
-                      : "text-white/60 hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  {link.label[locale]}
-                </Link>
-              ))}
-              <div className="border-t border-white/10 mt-2 pt-3 flex flex-col gap-3">
-                <a
-                  href={`tel:${settings.phoneRaw}`}
-                  className="flex items-center gap-2 px-4 py-2 text-white font-semibold"
-                >
-                  <Phone className="w-5 h-5 text-neon-blue" />
-                  {settings.phone}
-                </a>
-                <div className="px-4">
-                  <SocialLinks isScrolled={false} />
-                </div>
-                <div className="px-4">
-                  <Button variant="default" size="lg" className="w-full" asChild>
-                    <Link href={localizedPath(locale, "/contacts")}>{dictionary.common.getConsultation}</Link>
-                  </Button>
-                </div>
-              </div>
-            </nav>
-          </div>
+        <div className="fixed inset-0 z-40 lg:hidden pt-20 bg-background/95 backdrop-blur-xl animate-in fade-in duration-300">
+          <nav className="container-custom py-8 flex flex-col gap-6">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={localizedPath(locale, link.href)}
+                className={cn(
+                  "text-2xl font-medium tracking-wide uppercase",
+                  pathname === link.href
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {link.label[locale]}
+              </Link>
+            ))}
+            
+            <div className="h-px bg-border my-4" />
+            
+            <a
+              href={`tel:${settings.phoneRaw}`}
+              className="flex items-center gap-3 text-xl font-medium"
+            >
+              <Phone className="w-5 h-5" />
+              {settings.phone}
+            </a>
+            
+            <div className="pt-4">
+              <Button variant="default" size="lg" className="w-full tracking-wide uppercase" asChild>
+                <Link href={localizedPath(locale, "/contacts")}>{dictionary.common.getConsultation}</Link>
+              </Button>
+            </div>
+          </nav>
         </div>
       )}
     </>

@@ -45,7 +45,7 @@ export function WhyChina() {
     : "Chinese automotive industry has become a world market leader";
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f]">
+    <section className="py-20 md:py-28 bg-background">
       <div className="container-custom">
         <SectionHeading title={title} subtitle={subtitle} light />
 
@@ -55,7 +55,7 @@ export function WhyChina() {
             return (
               <div
                 key={index}
-                className={`bg-[#0d0d15] rounded-2xl p-6 border border-neon-blue/10 hover:border-neon-blue/30 hover:shadow-[0_0_30px_rgba(0,212,255,0.08)] transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
+                className={`bg-card rounded-2xl p-6 border border-neon-blue/10 hover:border-neon-blue/30 transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 80}ms` }}

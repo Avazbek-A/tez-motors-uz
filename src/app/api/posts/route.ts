@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getAdminSessionContext, requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { logAdminAction } from "@/lib/audit";
 
 const schema = z.object({
   slug: z.string().max(200).optional().or(z.literal("")),
@@ -63,6 +64,13 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logAdminAction(request, {
+    action: "create",
+    entity: "post",
+    entity_id: data?.id,
+    diff: { slug, title_ru: parsed.data.title_ru, is_published: parsed.data.is_published },
+  }).catch(() => {});
 
   return NextResponse.json({ success: true, post: data }, { status: 201 });
 }

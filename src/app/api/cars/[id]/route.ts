@@ -3,6 +3,9 @@ import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin } from "@/lib/auth";
+import { notifyPriceWatchers } from "@/lib/price-watch";
+import { logEvent } from "@/lib/error-report";
+import { logAdminAction, compactDiff } from "@/lib/audit";
 
 // GET single car by ID or slug
 export async function GET(
@@ -70,6 +73,13 @@ export async function PUT(
 
     const supabase = createServiceClient();
 
+    // Capture the pre-update price so we can detect a drop after the write.
+    const { data: prev } = await supabase
+      .from("cars")
+      .select("price_usd")
+      .eq("id", id)
+      .single();
+
     const { data, error } = await supabase
       .from("cars")
       .update({ ...result.data, updated_at: new Date().toISOString() })
@@ -81,6 +91,41 @@ export async function PUT(
       console.error("Update error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    // Price dropped → email anyone watching this car who hit their target.
+    // Fire-and-forget; never blocks or fails the save.
+    if (
+      data &&
+      typeof data.price_usd === "number" &&
+      prev &&
+      typeof prev.price_usd === "number" &&
+      data.price_usd < prev.price_usd
+    ) {
+      notifyPriceWatchers(supabase, {
+        id: data.id,
+        slug: data.slug,
+        brand: data.brand,
+        model: data.model,
+        year: data.year ?? null,
+        price_usd: data.price_usd,
+      })
+        .then((sent) =>
+          logEvent("price_watch.notified", {
+            car_id: data.id,
+            old_price: prev.price_usd,
+            new_price: data.price_usd,
+            sent,
+          }),
+        )
+        .catch(() => {});
+    }
+
+    logAdminAction(request, {
+      action: "update",
+      entity: "car",
+      entity_id: id,
+      diff: compactDiff(result.data as Record<string, unknown>),
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, car: data });
   } catch {
@@ -105,6 +150,8 @@ export async function DELETE(
       console.error("Delete error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    logAdminAction(request, { action: "delete", entity: "car", entity_id: id }).catch(() => {});
 
     return NextResponse.json({ success: true, deleted: id });
   } catch {

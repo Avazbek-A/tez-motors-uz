@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <SectionHeading title={title} />
 
         <div className="max-w-3xl mx-auto prose prose-sm">
-          <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 md:p-12 space-y-6 text-white/60 leading-relaxed">
+          <div className="bg-card rounded-2xl border border-white/10 p-8 md:p-12 space-y-6 text-white/60 leading-relaxed">
             <section>
               <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "1. Общие положения" : "1. General Provisions"}

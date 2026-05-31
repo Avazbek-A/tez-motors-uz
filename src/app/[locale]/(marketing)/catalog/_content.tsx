@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CarCard } from "@/components/catalog/car-card";
 import { CarGridSkeleton } from "@/components/catalog/car-card-skeleton";
 import { RecentlyViewed } from "@/components/catalog/recently-viewed";
+import { FindMyCar } from "@/components/assistant/find-my-car";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { CAR_BRANDS, BODY_TYPES, FUEL_TYPES } from "@/lib/constants";
@@ -56,6 +57,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
     fuel_type: searchParams.get("fuel_type") || initialFilters?.fuel_type || undefined,
     price_min: searchParams.get("price_min") ? parseInt(searchParams.get("price_min")!) : initialFilters?.price_min,
     price_max: searchParams.get("price_max") ? parseInt(searchParams.get("price_max")!) : initialFilters?.price_max,
+    monthly_max: searchParams.get("monthly_max") ? parseInt(searchParams.get("monthly_max")!) : initialFilters?.monthly_max,
     search: searchParams.get("q") || undefined,
   }));
 
@@ -71,6 +73,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
     if (newFilters.fuel_type) params.set("fuel_type", newFilters.fuel_type);
     if (newFilters.price_min) params.set("price_min", String(newFilters.price_min));
     if (newFilters.price_max) params.set("price_max", String(newFilters.price_max));
+    if (newFilters.monthly_max) params.set("monthly_max", String(newFilters.monthly_max));
     if (newFilters.search) params.set("q", newFilters.search);
     if (newSort !== "default") params.set("sort", newSort);
     if (newPage > 1) params.set("page", String(newPage));
@@ -106,6 +109,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
     if (filters.fuel_type) params.set("fuel_type", filters.fuel_type);
     if (filters.price_min) params.set("price_min", String(filters.price_min));
     if (filters.price_max) params.set("price_max", String(filters.price_max));
+    if (filters.monthly_max) params.set("monthly_max", String(filters.monthly_max));
     if (sortBy !== "default") params.set("sort", sortBy);
 
     fetch(`/api/cars?${params.toString()}`)
@@ -134,6 +138,11 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
           title={dictionary.catalog.title}
           subtitle={dictionary.catalog.subtitle}
         />
+
+        {/* AI car finder */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <FindMyCar />
+        </div>
 
         {/* Search bar */}
         <div className="max-w-2xl mx-auto mb-8">
@@ -172,7 +181,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
             <select
               value={sortBy}
               onChange={(e) => updateSort(e.target.value as SortOption)}
-              className="h-9 rounded-lg border border-white/10 px-3 text-xs bg-[#0d0d15] text-white focus:outline-none focus:ring-2 focus:ring-neon-blue"
+              className="h-9 rounded-lg border border-white/10 px-3 text-xs bg-card text-white focus:outline-none focus:ring-2 focus:ring-neon-blue"
             >
               <option value="default">{locale === "ru" ? "По умолчанию" : "Default"}</option>
               <option value="price_asc">{locale === "ru" ? "Цена ↑" : "Price ↑"}</option>
@@ -187,7 +196,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
           {/* Filters sidebar */}
           <aside className={cn(
             "shrink-0 w-64 space-y-6",
-            showFilters ? "block fixed inset-0 z-50 bg-[#0d0d15] p-6 overflow-y-auto lg:relative lg:inset-auto lg:z-auto lg:bg-transparent lg:p-0" : "hidden lg:block"
+            showFilters ? "block fixed inset-0 z-50 bg-card p-6 overflow-y-auto lg:relative lg:inset-auto lg:z-auto lg:bg-transparent lg:p-0" : "hidden lg:block"
           )}>
             {showFilters && (
               <div className="flex items-center justify-between lg:hidden mb-4">
@@ -278,7 +287,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
                     placeholder="Min"
                     value={filters.price_min || ""}
                     onChange={(e) => updateFilters({ ...filters, price_min: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full h-9 rounded-lg border border-white/10 bg-[#0d0d15] text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                   />
                   <span className="text-white/60 self-center">—</span>
                   <input
@@ -286,7 +295,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
                     placeholder="Max"
                     value={filters.price_max || ""}
                     onChange={(e) => updateFilters({ ...filters, price_max: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full h-9 rounded-lg border border-white/10 bg-[#0d0d15] text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                   />
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -307,6 +316,40 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
                       )}
                     >
                       {range.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly budget filter (installments) */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">
+                {locale === "ru" ? "Платёж в месяц" : locale === "uz" ? "Oylik to'lov" : "Monthly budget"}
+              </h4>
+              <div className="space-y-3">
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder={locale === "ru" ? "До $/мес" : locale === "uz" ? "$/oygacha" : "Up to $/mo"}
+                    value={filters.monthly_max || ""}
+                    onChange={(e) => updateFilters({ ...filters, monthly_max: e.target.value ? parseInt(e.target.value) : undefined })}
+                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[300, 500, 800, 1200].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => updateFilters({ ...filters, monthly_max: filters.monthly_max === m ? undefined : m })}
+                      className={cn(
+                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors",
+                        filters.monthly_max === m
+                          ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
+                          : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      ${m}/{locale === "ru" ? "мес" : locale === "uz" ? "oy" : "mo"}
                     </button>
                   ))}
                 </div>

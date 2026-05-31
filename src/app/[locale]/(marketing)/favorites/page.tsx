@@ -98,7 +98,7 @@ export default function FavoritesPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto" />
               </div>
             ) : cars.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#0d0d15] p-8 text-center text-white/60">
+              <div className="rounded-2xl border border-white/10 bg-card p-8 text-center text-white/60">
                 <Heart className="mx-auto mb-3 h-10 w-10 text-rose-300/60" />
                 <p>{locale === "ru" ? "Пока нет избранных авто." : "No saved cars yet."}</p>
                 <Button asChild className="mt-4">
@@ -107,7 +107,7 @@ export default function FavoritesPage() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0d0d15] p-4 text-sm text-white/60">
+                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-card p-4 text-sm text-white/60">
                   <span>{cars.length} {locale === "ru" ? "авто в списке" : "cars saved"}</span>
                   <Button
                     variant="outline"
@@ -128,7 +128,7 @@ export default function FavoritesPage() {
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0d0d15] p-6 h-fit">
+          <div className="space-y-4 rounded-2xl border border-white/10 bg-card p-6 h-fit">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-neon-blue" />
               <h2 className="text-lg font-semibold">{locale === "ru" ? "Оповещение о снижении цены" : "Price-drop alert"}</h2>

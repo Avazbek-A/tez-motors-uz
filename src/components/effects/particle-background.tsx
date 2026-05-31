@@ -22,7 +22,7 @@ interface ParticleBackgroundProps {
 export function ParticleBackground({
   className = "",
   particleCount = 80,
-  color = "0, 212, 255",
+  color = "191, 201, 214",
   connectionDistance = 120,
 }: ParticleBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

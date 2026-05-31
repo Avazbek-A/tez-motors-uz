@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useSiteSettings } from "@/lib/site-settings-context";
-import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import { cn, whatsappLink } from "@/lib/utils";
 
 export function WhatsAppButton() {
   const settings = useSiteSettings();
+  const { locale } = useLocale();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -15,14 +17,21 @@ export function WhatsAppButton() {
 
   if (!isVisible) return null;
 
+  const greeting =
+    locale === "ru"
+      ? "Здравствуйте! У меня вопрос по автомобилям Tez Motors."
+      : locale === "uz"
+      ? "Assalomu alaykum! Tez Motors avtomobillari bo'yicha savolim bor."
+      : "Hello! I have a question about Tez Motors cars.";
+
   return (
     <a
-      href={settings.whatsapp}
+      href={whatsappLink(settings.whatsapp, greeting)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="WhatsApp"
       className={cn(
-        "fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#0d0d15] border-2 border-neon-green hover:bg-neon-green/10 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(34,255,136,0.3)] hover:shadow-[0_0_30px_rgba(34,255,136,0.5)] transition-all duration-300 hover:scale-110 animate-neon-pulse"
+        "fixed bottom-6 right-6 z-40 w-14 h-14 bg-card border-2 border-neon-green hover:bg-neon-green/10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 animate-neon-pulse"
       )}
     >
       <svg className="w-7 h-7 text-neon-green" viewBox="0 0 24 24" fill="currentColor">

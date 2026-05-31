@@ -9,6 +9,14 @@ directory = ".open-next/assets"
 [observability]
 enabled = true
 
+# Durable rate limiting shared across Worker isolates (src/lib/rate-limit-kv.ts).
+# Create once:  wrangler kv namespace create RATE_LIMIT_KV
+# then paste the returned id below. Until bound, the limiter fails open to the
+# in-memory fallback, so the site still runs without this.
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
 [[routes]]
 pattern = "tezmotors.uz"
 custom_domain = true

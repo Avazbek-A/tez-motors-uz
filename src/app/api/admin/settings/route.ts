@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { SiteSettingsSchema, mergeWithDefaults } from "@/lib/site-settings";
+import { logAdminAction } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const unauth = await requireAdmin(request);
@@ -46,6 +47,13 @@ export async function PUT(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: "Failed to save settings" }, { status: 500 });
   }
+
+  logAdminAction(request, {
+    action: "settings",
+    entity: "settings",
+    entity_id: "singleton",
+    diff: { keys: Object.keys(parsed.data) },
+  }).catch(() => {});
 
   return NextResponse.json({ success: true, values: mergeWithDefaults(parsed.data) });
 }

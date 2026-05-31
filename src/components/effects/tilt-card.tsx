@@ -58,7 +58,7 @@ export function TiltCard({
         const glareX = (x / rect.width) * 100;
         const glareY = (y / rect.height) * 100;
         setGlareStyle({
-          background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(0, 212, 255, 0.15) 0%, transparent 60%)`,
+          background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(230, 236, 242, 0.12) 0%, transparent 60%)`,
         });
       }
     },

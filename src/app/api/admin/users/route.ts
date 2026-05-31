@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getAdminSessionContext, hashPassword } from "@/lib/auth";
+import { logAdminAction } from "@/lib/audit";
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -67,6 +68,13 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logAdminAction(request, {
+    action: "create",
+    entity: "user",
+    entity_id: data?.id,
+    diff: { email: data?.email, role: data?.role },
+  }).catch(() => {});
 
   return NextResponse.json({ success: true, user: data }, { status: 201 });
 }

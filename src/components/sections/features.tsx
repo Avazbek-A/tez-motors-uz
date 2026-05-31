@@ -20,7 +20,7 @@ export function Features() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       {/* Subtle background glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-neon-purple/3 rounded-full blur-[180px] pointer-events-none" />
 
@@ -43,7 +43,7 @@ export function Features() {
                 maxTilt={8}
               >
                 <div
-                  className="group h-full bg-[#0d0d15]/80 backdrop-blur-sm rounded-2xl p-8 border border-white/[0.08] hover:border-neon-blue/20 transition-all duration-500"
+                  className="group h-full bg-card/80 backdrop-blur-sm rounded-2xl p-8 border border-white/[0.08] hover:border-neon-blue/20 transition-all duration-500"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                   {/* Icon with neon glow */}

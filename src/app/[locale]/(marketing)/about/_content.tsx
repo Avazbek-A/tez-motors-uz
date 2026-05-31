@@ -35,7 +35,7 @@ export default function AboutContent() {
         />
 
         <div ref={storyRef} className={`max-w-3xl mx-auto mb-16 ${storyVisible ? "animate-fade-in-up" : "opacity-0"}`}>
-          <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 md:p-12">
+          <div className="bg-card rounded-2xl border border-white/10 p-8 md:p-12">
             <p className="text-lg text-white/60 leading-relaxed mb-6">{dictionary.about.story}</p>
             <p className="text-lg text-white/60 leading-relaxed">{dictionary.about.mission}</p>
           </div>
@@ -45,7 +45,7 @@ export default function AboutContent() {
           {stats.map((stat, index) => (
             <div
               key={index}
-              className={`bg-gradient-to-br from-[#0a0a0f] to-[#12121f] rounded-2xl p-6 text-center text-white border border-white/10 ${
+              className={`bg-gradient-to-br from-background to-[#12121f] rounded-2xl p-6 text-center text-white border border-white/10 ${
                 statsVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 100}ms` }}
@@ -62,7 +62,7 @@ export default function AboutContent() {
           {values.map((value, index) => (
             <div
               key={index}
-              className={`bg-[#0d0d15] rounded-2xl border border-white/10 p-8 text-center hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 hover:-translate-y-1 ${
+              className={`bg-card rounded-2xl border border-white/10 p-8 text-center hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 hover:-translate-y-1 ${
                 valuesVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 100}ms` }}

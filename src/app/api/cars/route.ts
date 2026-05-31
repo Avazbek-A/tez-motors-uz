@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
+import { priceFromMonthly } from "@/lib/finance";
+import { logAdminAction } from "@/lib/audit";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -44,7 +46,16 @@ export async function GET(request: NextRequest) {
   const bodyType = searchParams.get("body_type")?.slice(0, 32) || null;
   const fuelType = searchParams.get("fuel_type")?.slice(0, 32) || null;
   const priceMin = parseIntSafe(searchParams.get("price_min"), 0, 100_000_000);
-  const priceMax = parseIntSafe(searchParams.get("price_max"), 0, 100_000_000);
+  const priceMaxRaw = parseIntSafe(searchParams.get("price_max"), 0, 100_000_000);
+  // Monthly-budget filter: translate "I can pay $X/mo" into a price ceiling via
+  // the shared PMT inversion (default down %, APR, term). Combined with any
+  // explicit price_max by taking the tighter of the two.
+  const monthlyMax = parseIntSafe(searchParams.get("monthly_max"), 1, 1_000_000);
+  const priceCeilingFromMonthly = monthlyMax !== null ? Math.floor(priceFromMonthly(monthlyMax)) : null;
+  const priceMax =
+    priceMaxRaw !== null && priceCeilingFromMonthly !== null
+      ? Math.min(priceMaxRaw, priceCeilingFromMonthly)
+      : priceMaxRaw ?? priceCeilingFromMonthly;
   const hotOnly = searchParams.get("hot_only");
   const rawSearch = searchParams.get("search") ?? searchParams.get("q");
   const search = rawSearch ? sanitizeSearch(rawSearch) : null;
@@ -201,6 +212,13 @@ export async function POST(request: NextRequest) {
       console.error("Insert error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    logAdminAction(request, {
+      action: "create",
+      entity: "car",
+      entity_id: car?.id,
+      diff: { brand: data.brand, model: data.model, year: data.year, price_usd: data.price_usd, slug },
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, car }, { status: 201 });
   } catch (err) {

@@ -73,7 +73,7 @@ export default function ContactsPage() {
           <div
             className="animate-fade-in-up space-y-6"
           >
-            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-6">
+            <div className="bg-card rounded-2xl border border-white/10 p-8 space-y-6">
               {contactInfo.map((item, i) => (
                 <div key={i} className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-xl bg-neon-blue/15 flex items-center justify-center shrink-0">
@@ -112,7 +112,7 @@ export default function ContactsPage() {
               </a>
             </div>
 
-            <div className="bg-[#0a0a0f] rounded-2xl h-64 overflow-hidden border border-white/10 relative group">
+            <div className="bg-background rounded-2xl h-64 overflow-hidden border border-white/10 relative group">
               <iframe
                 title={`Tez Motors — ${settings.address}`}
                 src={mapEmbed}
@@ -127,7 +127,7 @@ export default function ContactsPage() {
                 href={mapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-[#0a0a0f]/80 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 {locale === "ru" ? "Открыть в Яндекс.Картах" : locale === "uz" ? "Yandex Xaritalarda ochish" : "Open in Yandex Maps"}
               </a>
@@ -140,12 +140,12 @@ export default function ContactsPage() {
             style={{ animationDelay: "100ms" }}
           >
             {isSuccess ? (
-              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-12 text-center">
+              <div className="bg-card rounded-2xl border border-white/10 p-12 text-center">
                 <CheckCircle className="w-16 h-16 text-neon-blue mx-auto mb-4" />
                 <p className="text-lg font-semibold">{dictionary.contact.success}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-5">
+              <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-white/10 p-8 space-y-5">
                 <h3 className="text-xl font-bold">{dictionary.contact.title}</h3>
                 <Input
                   placeholder={dictionary.contact.name}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   ArrowLeft, Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
-  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench
+  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,10 @@ import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
 import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, whatsappLink } from "@/lib/utils";
+import { estimatedMonthlyFrom, FINANCE_DEFAULTS } from "@/lib/finance";
 import { localizedPath } from "@/lib/locale-path";
+import { useSiteSettings } from "@/lib/site-settings-context";
 import type { Car } from "@/types/car";
 import { Turnstile } from "@/components/shared/turnstile";
 import { ReservationModal } from "@/components/car/reservation-modal";
@@ -29,6 +31,7 @@ export default function CarDetailPage() {
   const params = useParams();
   const { locale, dictionary } = useLocale();
   const { addViewed } = useRecentlyViewed();
+  const settings = useSiteSettings();
 
   const [car, setCar] = useState<Car | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,7 @@ export default function CarDetailPage() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [showReserve, setShowReserve] = useState(false);
   const [showTestDrive, setShowTestDrive] = useState(false);
+  const [financing, setFinancing] = useState(false);
 
   useEffect(() => {
     fetch(`/api/cars/${params.slug}`)
@@ -86,6 +90,14 @@ export default function CarDetailPage() {
     ? Math.round((1 - car.price_usd / car.original_price_usd) * 100)
     : 0;
 
+  const waMessage =
+    locale === "ru"
+      ? `Здравствуйте! Интересует ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}). Подскажите по наличию и условиям.`
+      : locale === "uz"
+      ? `Assalomu alaykum! ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}) qiziqtiryapti. Mavjudligi va shartlari bo'yicha ma'lumot bering.`
+      : `Hello! I'm interested in the ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}). Could you share availability and terms?`;
+  const waHref = whatsappLink(settings.whatsapp, waMessage);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -96,9 +108,24 @@ export default function CarDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          type: "car_inquiry",
+          // Financing requests reuse the "calculator" inquiry type (no new DB
+          // CHECK migration) and carry the assumed terms in metadata so the
+          // dealer sees the estimate the customer was shown.
+          type: financing ? "calculator" : "car_inquiry",
           car_id: car.id,
           source_page: `/catalog/${car.slug}`,
+          locale,
+          ...(financing
+            ? {
+                metadata: {
+                  financing: true,
+                  estimated_monthly_usd: estimatedMonthlyFrom(car.price_usd),
+                  down_payment_pct: FINANCE_DEFAULTS.downPaymentPct,
+                  term_months: FINANCE_DEFAULTS.termMonths,
+                  annual_rate_pct: FINANCE_DEFAULTS.annualRatePct,
+                },
+              }
+            : {}),
           turnstile_token: turnstileToken ?? undefined,
         }),
       });
@@ -146,7 +173,7 @@ export default function CarDetailPage() {
             </div>
 
             {car.video_url && (
-              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "120ms" }}>
                 <div className="aspect-video">
                   <iframe
                     title={`${car.brand} ${car.model} video`}
@@ -160,7 +187,7 @@ export default function CarDetailPage() {
             )}
 
             {description && (
-              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+              <div className="bg-card rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
                 <h2 className="font-bold text-lg mb-3 flex items-center gap-2 text-white">
                   <Info className="w-5 h-5 text-neon-blue" />
                   {locale === "ru" ? "Описание" : locale === "uz" ? "Tavsif" : "Description"}
@@ -169,7 +196,7 @@ export default function CarDetailPage() {
               </div>
             )}
 
-            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+            <div className="bg-card rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
               <h2 className="font-bold text-lg mb-4 text-white">
                 {locale === "ru" ? "Характеристики" : locale === "uz" ? "Xususiyatlar" : "Specifications"}
               </h2>
@@ -199,7 +226,7 @@ export default function CarDetailPage() {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 sticky top-24 animate-slide-in-right">
+            <div className="bg-card rounded-2xl border border-white/10 p-6 sticky top-24 animate-slide-in-right">
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   {car.mileage === 0 && <Badge>New</Badge>}
@@ -229,7 +256,48 @@ export default function CarDetailPage() {
                     ~ {formatPrice(car.price_uzs, "UZS")}
                   </p>
                 )}
+                {car.price_usd > 0 && (
+                  <p className="text-xs text-white/70 mt-2">
+                    {dictionary.common.from}{" "}
+                    <span className="font-semibold text-white">
+                      {formatPrice(estimatedMonthlyFrom(car.price_usd))}{dictionary.common.perMonth}
+                    </span>
+                  </p>
+                )}
               </div>
+
+              {car.price_usd > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full mb-4"
+                  onClick={() => {
+                    setFinancing(true);
+                    const monthly = formatPrice(estimatedMonthlyFrom(car.price_usd));
+                    const msg =
+                      locale === "ru"
+                        ? `Интересует рассрочка на ${car.brand} ${car.model} ${car.year} (примерно ${monthly}${dictionary.common.perMonth}).`
+                        : locale === "uz"
+                        ? `${car.brand} ${car.model} ${car.year} uchun bo'lib to'lash qiziqtiryapti (taxminan ${monthly}${dictionary.common.perMonth}).`
+                        : `I'm interested in financing the ${car.brand} ${car.model} ${car.year} (about ${monthly}${dictionary.common.perMonth}).`;
+                    setForm((f) => ({ ...f, message: msg }));
+                  }}
+                >
+                  {dictionary.common.requestFinancing}
+                </Button>
+              )}
+
+              {waHref && (
+                <a
+                  href={waHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full h-12 mb-4 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-semibold transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {locale === "ru" ? "Написать в WhatsApp" : locale === "uz" ? "WhatsAppda yozish" : "Chat on WhatsApp"}
+                </a>
+              )}
 
               <ShareButtons
                 title={`${car.brand} ${car.model} ${car.year} — ${formatPrice(car.price_usd)} | Tez Motors`}

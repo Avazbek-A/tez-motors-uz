@@ -5,14 +5,30 @@ import { useState, useEffect } from "react";
 import {
   Plus, Search, Edit, Trash2, Eye,
   Car, Loader2, RefreshCw, CheckCircle, AlertCircle, Download,
-  Upload, X, ArrowLeft, ArrowRight
+  Upload, X, ArrowLeft, ArrowRight, FileUp, FileDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import type { Car as CarType } from "@/types/car";
+
+const CAR_CSV_HEADERS = [
+  "slug", "brand", "model", "year", "price_usd", "original_price_usd", "price_uzs",
+  "body_type", "fuel_type", "engine_volume", "engine_power", "transmission",
+  "drivetrain", "mileage", "color", "description_ru", "description_uz", "description_en",
+  "images", "thumbnail", "video_url", "is_hot_offer",
+  "inventory_status", "order_position",
+];
+
+const CAR_CSV_EXAMPLE = [
+  "", "BYD", "Song Plus", "2024", "32000", "35000", "",
+  "suv", "hybrid", "1.5", "197", "automatic",
+  "fwd", "0", "White", "Кроссовер с гибридной установкой DM-i", "", "",
+  "https://example.com/photo1.jpg;https://example.com/photo2.jpg", "", "",
+  "true", "available", "0",
+];
 
 export default function AdminCarsPage() {
   const [cars, setCars] = useState<CarType[]>([]);
@@ -22,6 +38,13 @@ export default function AdminCarsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCar, setEditingCar] = useState<CarType | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importReport, setImportReport] = useState<{
+    inserted: number;
+    updated: number;
+    skipped: number;
+    errors: Array<{ row: number; slug?: string; message: string }>;
+  } | null>(null);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -42,6 +65,49 @@ export default function AdminCarsPage() {
   useEffect(() => {
     fetchCars();
   }, []);
+
+  const downloadTemplate = () => {
+    const esc = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const csv =
+      CAR_CSV_HEADERS.join(",") + "\r\n" + CAR_CSV_EXAMPLE.map(esc).join(",") + "\r\n";
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "cars-import-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (file: File, dry = false) => {
+    setImporting(true);
+    setImportReport(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`/api/admin/cars/import${dry ? "?dry=true" : ""}`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showFeedback("error", data.error || "Import failed");
+        return;
+      }
+      setImportReport(data);
+      const { inserted = 0, updated = 0, skipped = 0 } = data;
+      const prefix = dry ? "Preview: would" : "Imported";
+      showFeedback(
+        skipped > 0 ? "error" : "success",
+        `${prefix} insert ${inserted}, update ${updated}, skip ${skipped}`,
+      );
+      if (!dry) fetchCars();
+    } catch (e) {
+      showFeedback("error", e instanceof Error ? e.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const filteredCars = cars.filter((car) => {
     if (!search) return true;
@@ -80,9 +146,13 @@ export default function AdminCarsPage() {
           <h1 className="text-2xl font-bold">Cars Management</h1>
           <p className="text-muted-foreground">{cars.length} cars in inventory</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={fetchCars}>
             <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" onClick={downloadTemplate} title="Download an importable CSV template">
+            <FileDown className="w-4 h-4" />
+            Template
           </Button>
           <Button variant="outline" asChild>
             <a href="/api/admin/export?type=cars" download>
@@ -90,6 +160,50 @@ export default function AdminCarsPage() {
               Export CSV
             </a>
           </Button>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file, true);
+                e.target.value = "";
+              }}
+            />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium cursor-pointer hover:bg-accent",
+                importing && "opacity-60 cursor-not-allowed",
+              )}
+              title="Validate CSV without writing to the database"
+            >
+              <FileUp className="w-4 h-4" /> Preview CSV
+            </span>
+          </label>
+          <label className="inline-flex">
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              disabled={importing}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImport(file, false);
+                e.target.value = "";
+              }}
+            />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-md bg-primary text-primary-foreground px-3 h-9 text-sm font-medium cursor-pointer hover:opacity-90",
+                importing && "opacity-60 cursor-not-allowed",
+              )}
+            >
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+              Import CSV
+            </span>
+          </label>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="w-4 h-4" />
             Add Car
@@ -105,6 +219,35 @@ export default function AdminCarsPage() {
         }`}>
           {feedback.type === "success" ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           {feedback.message}
+        </div>
+      )}
+
+      {importReport && importReport.errors.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-medium text-amber-500">
+              {importReport.errors.length} row{importReport.errors.length === 1 ? "" : "s"} skipped
+            </p>
+            <button
+              type="button"
+              onClick={() => setImportReport(null)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <ul className="max-h-48 overflow-auto space-y-1 text-xs text-muted-foreground">
+            {importReport.errors.slice(0, 50).map((err, idx) => (
+              <li key={idx}>
+                <span className="font-mono text-amber-500/80">row {err.row}</span>
+                {err.slug ? <span className="text-muted-foreground"> ({err.slug})</span> : null}
+                : {err.message}
+              </li>
+            ))}
+            {importReport.errors.length > 50 && (
+              <li className="italic">…and {importReport.errors.length - 50} more</li>
+            )}
+          </ul>
         </div>
       )}
 
@@ -292,7 +435,6 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [descriptionRu, setDescriptionRu] = useState(car?.description_ru || "");
   const [videoUrl, setVideoUrl] = useState(car?.video_url || "");
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
-  const [isAvailable, setIsAvailable] = useState(car?.is_available ?? true);
   const [inventoryStatus, setInventoryStatus] = useState<string>(car?.inventory_status || "available");
   const [images, setImages] = useState<string[]>(car?.images || []);
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -300,12 +442,6 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (inventoryStatus !== "available") {
-      setIsAvailable(false);
-    }
-  }, [inventoryStatus]);
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -383,7 +519,6 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       description_ru: descriptionRu,
       video_url: videoUrl || null,
       is_hot_offer: isHotOffer,
-      is_available: inventoryStatus === "available" ? isAvailable : false,
       inventory_status: inventoryStatus,
       mileage: 0,
       images,
@@ -428,7 +563,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="animate-fade-in relative bg-[#0d0d15] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl"
+        className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl"
       >
         <h2 className="text-xl font-bold mb-6">
           {isEditing ? `Edit ${car.brand} ${car.model}` : "Add New Car"}
@@ -630,15 +765,6 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                 className="rounded"
               />
               <span className="text-sm">Hot Offer</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAvailable}
-                onChange={(e) => setIsAvailable(e.target.checked)}
-                className="rounded"
-              />
-              <span className="text-sm">Available</span>
             </label>
           </div>
 

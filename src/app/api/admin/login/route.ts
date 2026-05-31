@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { logEvent } from "@/lib/error-report";
 
 const schema = z.object({
   email: z.string().email().max(200).optional().or(z.literal("")),
@@ -17,7 +18,9 @@ const schema = z.object({
 const checkAttempts = createRateLimiter({ max: 10, windowMs: 10 * 60 * 1000 });
 
 export async function POST(request: Request) {
-  if (!checkAttempts(getClientIp(request))) {
+  const ip = getClientIp(request);
+  if (!checkAttempts(ip)) {
+    logEvent("auth.login.rate_limited", { ip }, "warn");
     return NextResponse.json(
       { error: "Too many attempts. Try again later." },
       { status: 429 },
@@ -44,6 +47,8 @@ export async function POST(request: Request) {
     const supabase = createServiceClient();
     let userId: string | null = null;
 
+    let via: "admin_user" | "service_password" | null = null;
+
     if (email) {
       const { data: user } = await supabase
         .from("admin_users")
@@ -53,13 +58,16 @@ export async function POST(request: Request) {
 
       if (user && !user.disabled && await verifyPassword(parsed.data.password, user.password_hash)) {
         userId = user.id;
+        via = "admin_user";
       }
     }
 
     if (!userId) {
       if (!servicePassword || parsed.data.password !== servicePassword) {
+        logEvent("auth.login.fail", { ip, email, reason: "bad_credentials" }, "warn");
         return NextResponse.json({ error: "Incorrect credentials" }, { status: 401 });
       }
+      via = "service_password";
     }
 
     const { error } = await supabase.from("admin_sessions").insert({
@@ -72,6 +80,7 @@ export async function POST(request: Request) {
     if (error) {
       return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
     }
+    logEvent("auth.login.ok", { ip, via, userId });
   } catch {
     return NextResponse.json({ error: "Failed to create session" }, { status: 500 });
   }

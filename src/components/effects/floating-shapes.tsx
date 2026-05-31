@@ -7,13 +7,15 @@ interface FloatingShapesProps {
   count?: number;
 }
 
+// Faint platinum/foreground hairline geometry — quiet architectural texture,
+// no neon. (Was a multi-hue neon palette referencing undefined --neon-* vars.)
 const shapes = [
-  { type: "circle", size: 60, color: "var(--neon-blue)", delay: "0s", duration: "8s", left: "10%", top: "20%" },
-  { type: "hexagon", size: 40, color: "var(--neon-purple)", delay: "1s", duration: "10s", left: "80%", top: "15%" },
-  { type: "triangle", size: 50, color: "var(--neon-pink)", delay: "2s", duration: "12s", left: "60%", top: "70%" },
-  { type: "circle", size: 30, color: "var(--neon-green)", delay: "3s", duration: "9s", left: "25%", top: "80%" },
-  { type: "hexagon", size: 70, color: "var(--neon-cyan)", delay: "0.5s", duration: "11s", left: "90%", top: "50%" },
-  { type: "triangle", size: 35, color: "var(--neon-blue)", delay: "4s", duration: "7s", left: "5%", top: "55%" },
+  { type: "circle", size: 60, color: "var(--accent)", delay: "0s", duration: "8s", left: "10%", top: "20%" },
+  { type: "hexagon", size: 40, color: "var(--accent-deep)", delay: "1s", duration: "10s", left: "80%", top: "15%" },
+  { type: "triangle", size: 50, color: "var(--fg-3)", delay: "2s", duration: "12s", left: "60%", top: "70%" },
+  { type: "circle", size: 30, color: "var(--accent)", delay: "3s", duration: "9s", left: "25%", top: "80%" },
+  { type: "hexagon", size: 70, color: "var(--accent-deep)", delay: "0.5s", duration: "11s", left: "90%", top: "50%" },
+  { type: "triangle", size: 35, color: "var(--fg-3)", delay: "4s", duration: "7s", left: "5%", top: "55%" },
 ];
 
 function ShapeElement({ type, size, color }: { type: string; size: number; color: string }) {

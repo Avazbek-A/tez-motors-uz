@@ -83,7 +83,7 @@ export default function FAQPage() {
                 setOpenIndex(null);
               }}
               placeholder={searchPlaceholder}
-              className="w-full h-14 rounded-2xl border border-white/10 bg-[#0d0d15] text-white placeholder:text-white/30 px-12 text-base focus:outline-none focus:ring-2 focus:ring-neon-blue focus:border-transparent"
+              className="w-full h-14 rounded-2xl border border-white/10 bg-card text-white placeholder:text-white/30 px-12 text-base focus:outline-none focus:ring-2 focus:ring-neon-blue focus:border-transparent"
             />
             {searchQuery && (
               <button
@@ -123,7 +123,7 @@ export default function FAQPage() {
             {filteredFaqs.map((faq, index) => (
               <div
                 key={faq.id}
-                className="animate-fade-in-up bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden shadow-sm"
+                className="animate-fade-in-up bg-card rounded-2xl border border-white/10 overflow-hidden shadow-sm"
                 style={{ animationDelay: `${index * 40}ms` }}
               >
                 <button

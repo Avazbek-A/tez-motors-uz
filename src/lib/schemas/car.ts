@@ -22,7 +22,8 @@ export const carWriteSchema = z.object({
   thumbnail: z.string().url().optional().nullable(),
   video_url: z.string().url().optional().nullable(),
   is_hot_offer: z.boolean().default(false),
-  is_available: z.boolean().default(true),
+  // is_available is a GENERATED column derived from inventory_status (migration 022);
+  // it is never written directly. inventory_status is the single source of truth.
   inventory_status: z.enum(["available", "reserved", "sold"]).default("available"),
   order_position: z.number().int().min(0).default(0),
   specs: z.record(z.string(), z.unknown()).default({}),

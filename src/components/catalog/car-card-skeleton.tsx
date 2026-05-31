@@ -1,6 +1,6 @@
 export function CarCardSkeleton() {
   return (
-    <div className="block bg-[#0d0d15] rounded-2xl border border-white/[0.06] overflow-hidden animate-pulse">
+    <div className="block bg-card rounded-2xl border border-white/[0.06] overflow-hidden animate-pulse">
       {/* Image area */}
       <div className="relative aspect-[4/3] bg-white/[0.04]">
         {/* Price badge skeleton */}

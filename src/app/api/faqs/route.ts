@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { faqWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
+import { logAdminAction } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
       console.error("FAQ insert error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    logAdminAction(request, { action: "create", entity: "faq", entity_id: faq?.id }).catch(() => {});
 
     return NextResponse.json({ success: true, faq }, { status: 201 });
   } catch (error) {

@@ -19,9 +19,9 @@ export default function CompareLoading() {
         <div className="bg-white/[0.02] rounded-2xl border border-white/[0.06] overflow-hidden animate-pulse">
           {/* Image row */}
           <div className="grid grid-cols-4 gap-px bg-white/[0.04]">
-            <div className="bg-[#0d0d15] p-4" />
+            <div className="bg-card p-4" />
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-[#0d0d15] p-4">
+              <div key={i} className="bg-card p-4">
                 <div className="aspect-[4/3] rounded-xl bg-white/[0.04]" />
               </div>
             ))}
@@ -29,11 +29,11 @@ export default function CompareLoading() {
           {/* Spec rows */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="grid grid-cols-4 gap-px bg-white/[0.04]">
-              <div className="bg-[#0a0a0f] p-4">
+              <div className="bg-background p-4">
                 <div className="h-4 w-20 rounded bg-white/[0.06]" />
               </div>
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="bg-[#0d0d15] p-4">
+                <div key={j} className="bg-card p-4">
                   <div className="h-4 w-16 rounded bg-white/[0.04]" />
                 </div>
               ))}

@@ -24,7 +24,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
   const getAnswer = (faq: FAQ) => locale === "uz" ? faq.answer_uz : locale === "en" ? faq.answer_en : faq.answer_ru;
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f]">
+    <section className="py-20 md:py-28 bg-background">
       <div className="container-custom">
         <SectionHeading
           title={dictionary.faqSection.title}
@@ -39,9 +39,9 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
               <div
                 key={faq.id}
                 className={cn(
-                  "bg-[#0d0d15] rounded-2xl border overflow-hidden transition-all duration-300",
+                  "bg-card rounded-2xl border overflow-hidden transition-all duration-300",
                   isOpen
-                    ? "border-neon-blue/30 shadow-[0_0_20px_rgba(0,212,255,0.08)]"
+                    ? "border-neon-blue/30"
                     : "border-neon-blue/10 hover:border-neon-blue/20"
                 )}
               >

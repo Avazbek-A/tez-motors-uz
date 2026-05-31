@@ -44,3 +44,22 @@ export function formatDate(value: string | Date, locale = "ru-RU"): string {
     day: "numeric",
   }).format(date);
 }
+
+/**
+ * Build a WhatsApp deep link with an optional pre-filled message.
+ * Accepts either a full wa.me/api.whatsapp.com URL or a raw phone number,
+ * so it works whether site-settings stores a URL or just digits.
+ */
+export function whatsappLink(whatsapp: string | undefined, message?: string): string {
+  const raw = (whatsapp || "").trim();
+  if (!raw) return "";
+  let base = raw;
+  if (!/^https?:\/\//i.test(base)) {
+    const digits = base.replace(/[^0-9]/g, "");
+    if (!digits) return "";
+    base = `https://wa.me/${digits}`;
+  }
+  if (!message) return base;
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}text=${encodeURIComponent(message)}`;
+}

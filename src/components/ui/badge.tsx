@@ -2,18 +2,20 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+// Mono, uppercase, wide-tracked, near-square tags with muted-semantic tints —
+// the "engineered" label language. No neon.
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+  "inline-flex items-center rounded-[2px] px-2.5 py-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] transition-colors",
   {
     variants: {
       variant: {
-        default: "bg-neon-blue/15 text-neon-blue border border-neon-blue/20",
-        secondary: "bg-neon-purple/15 text-neon-purple border border-neon-purple/20",
-        outline: "border border-white/20 text-white/70",
-        destructive: "bg-neon-pink/15 text-neon-pink border border-neon-pink/20",
-        success: "bg-neon-green/15 text-neon-green border border-neon-green/20",
-        warning: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/20",
-        info: "bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/20",
+        default: "bg-[var(--accent-tint)] text-[var(--accent)] border border-[var(--accent-line)]",
+        secondary: "bg-[var(--bg-3)] text-[var(--fg-2)] border border-[var(--line-2)]",
+        outline: "border border-[var(--line-3)] text-[var(--fg-2)]",
+        destructive: "bg-[rgba(192,106,92,0.14)] text-[var(--danger)] border border-[var(--danger)]",
+        success: "bg-[rgba(111,169,135,0.14)] text-[var(--success)] border border-[var(--success)]",
+        warning: "bg-[rgba(210,164,92,0.14)] text-[var(--warning)] border border-[var(--warning)]",
+        info: "bg-[rgba(126,150,184,0.14)] text-[var(--info)] border border-[var(--info)]",
       },
     },
     defaultVariants: {

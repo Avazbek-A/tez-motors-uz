@@ -23,10 +23,10 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
   const prev = () => setActiveIndex((i) => (i - 1 + placeholderCount) % placeholderCount);
 
   const gradients = [
-    "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-[#0d0d15]",
-    "from-[#8b5cf6]/10 via-[#00d4ff]/5 to-[#0d0d15]",
-    "from-[#22ff88]/8 via-[#0d0d15] to-[#00d4ff]/5",
-    "from-[#0d0d15] via-[#8b5cf6]/5 to-[#00d4ff]/8",
+    "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-card",
+    "from-[#8b5cf6]/10 via-[#00d4ff]/5 to-card",
+    "from-[#22ff88]/8 via-card to-[#00d4ff]/5",
+    "from-card via-[#8b5cf6]/5 to-[#00d4ff]/8",
   ];
 
   return (
@@ -63,13 +63,13 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
             <>
               <button
                 onClick={prev}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#0a0a0f]/70 hover:bg-[#0a0a0f]/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/70 hover:bg-background/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <button
                 onClick={next}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#0a0a0f]/70 hover:bg-[#0a0a0f]/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/70 hover:bg-background/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -79,13 +79,13 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
           {/* Fullscreen button */}
           <button
             onClick={() => setIsFullscreen(true)}
-            className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-[#0a0a0f]/70 hover:bg-[#0a0a0f]/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+            className="absolute top-3 right-3 w-9 h-9 rounded-lg bg-background/70 hover:bg-background/90 border border-white/10 hover:border-neon-blue/40 text-white flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
 
           {/* Image counter */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-[#0a0a0f]/70 text-neon-blue text-xs px-3 py-1 rounded-full backdrop-blur-sm border border-neon-blue/20 font-mono">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/70 text-neon-blue text-xs px-3 py-1 rounded-full backdrop-blur-sm border border-neon-blue/20 font-mono">
             {activeIndex + 1} / {placeholderCount}
           </div>
         </div>
@@ -100,7 +100,7 @@ export function CarGallery({ images, brand, model }: CarGalleryProps) {
               onClick={() => setActiveIndex(i)}
               className={cn(
                 "shrink-0 w-20 h-14 rounded-xl overflow-hidden border-2 transition-all",
-                activeIndex === i ? "border-neon-blue shadow-[0_0_8px_rgba(0,212,255,0.3)]" : "border-white/[0.06] opacity-60 hover:opacity-100"
+                activeIndex === i ? "border-neon-blue" : "border-white/[0.06] opacity-60 hover:opacity-100"
               )}
             >
               <div className={cn(

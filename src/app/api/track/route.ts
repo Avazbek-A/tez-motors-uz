@@ -1,70 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { normalizeReferenceCode } from "@/lib/order-code";
+
+// Order lookup is service-role (orders/order_events are RLS-locked, no anon
+// read) and gated on reference_code + phone so an unauthenticated caller can
+// never enumerate orders by code alone. Rate-limited to blunt brute-forcing
+// the phone for a known code.
+const checkRateLimit = createRateLimiter({ max: 10, windowMs: 5 * 60 * 1000 });
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s\-()]/g, "");
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const phone = request.nextUrl.searchParams.get("phone");
-
-    if (!phone || phone.trim().length < 5) {
+    if (!checkRateLimit(getClientIp(request))) {
       return NextResponse.json(
-        { success: false, error: "Phone number required" },
-        { status: 400 }
+        { success: false, error: "Too many requests. Please try again later." },
+        { status: 429 },
       );
     }
 
-    const supabase = await createClient();
+    const codeRaw = request.nextUrl.searchParams.get("code");
+    const phoneRaw = request.nextUrl.searchParams.get("phone");
 
-    // Normalize phone: remove spaces, dashes, parentheses
-    const normalized = phone.replace(/[\s\-()]/g, "");
-
-    // Search by phone (partial match to handle different formats)
-    const { data: inquiries, error } = await supabase
-      .from("inquiries")
-      .select("id, name, phone, type, status, message, car_id, created_at, source_page")
-      .ilike("phone", `%${normalized}%`)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (error) throw error;
-
-    if (!inquiries || inquiries.length === 0) {
-      return NextResponse.json({ success: true, inquiries: [] });
+    if (!codeRaw || !phoneRaw || phoneRaw.trim().length < 5) {
+      return NextResponse.json(
+        { success: false, error: "Reference code and phone number are required" },
+        { status: 400 },
+      );
     }
 
-    // Fetch car details for inquiries that have car_id
-    const carIds = inquiries
-      .map((i) => i.car_id)
-      .filter((id): id is string => Boolean(id));
+    const code = normalizeReferenceCode(codeRaw);
+    const phone = normalizePhone(phoneRaw);
 
-    let carsMap: Record<string, { brand: string; model: string; year: number }> = {};
-    if (carIds.length > 0) {
-      const { data: cars } = await supabase
+    const supabase = createServiceClient();
+
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select(
+        "id, reference_code, status, customer_name, customer_phone, amount_usd, notes, created_at, updated_at, car_id",
+      )
+      .eq("reference_code", code)
+      .single();
+
+    // Constant-ish response: never reveal whether the code exists vs the phone
+    // mismatched — both return the same "not found" shape.
+    if (error || !order || normalizePhone(order.customer_phone) !== phone) {
+      return NextResponse.json({ success: true, order: null });
+    }
+
+    let car: { brand: string; model: string; year: number; slug: string } | null = null;
+    if (order.car_id) {
+      const { data: carRow } = await supabase
         .from("cars")
-        .select("id, brand, model, year")
-        .in("id", carIds);
-
-      if (cars) {
-        carsMap = Object.fromEntries(cars.map((c) => [c.id, c]));
-      }
+        .select("brand, model, year, slug")
+        .eq("id", order.car_id)
+        .single();
+      car = carRow ?? null;
     }
 
-    const result = inquiries.map((inquiry) => ({
-      id: inquiry.id,
-      name: inquiry.name,
-      phone: inquiry.phone,
-      type: inquiry.type,
-      status: inquiry.status,
-      message: inquiry.message,
-      created_at: inquiry.created_at,
-      car: inquiry.car_id ? carsMap[inquiry.car_id] : null,
-    }));
+    const { data: events } = await supabase
+      .from("order_events")
+      .select("status, note, created_at")
+      .eq("order_id", order.id)
+      .order("created_at", { ascending: true });
 
-    return NextResponse.json({ success: true, inquiries: result });
+    return NextResponse.json({
+      success: true,
+      order: {
+        reference_code: order.reference_code,
+        status: order.status,
+        customer_name: order.customer_name,
+        amount_usd: order.amount_usd,
+        notes: order.notes,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        car,
+        events: events ?? [],
+      },
+    });
   } catch (error) {
     console.error("Track API error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

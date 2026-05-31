@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Подбор, покупка и доставка автомобилей из Китая в Узбекистан",
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0a0f",
-    theme_color: "#00d4ff",
+    background_color: "#0d0d10",
+    theme_color: "#0d0d10",
     orientation: "portrait-primary",
     icons: [
       {

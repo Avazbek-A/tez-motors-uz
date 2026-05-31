@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-context";
 import { formatPrice, cn } from "@/lib/utils";
+import { monthlyPayment } from "@/lib/finance";
 
 export function FinancingCalculator() {
   const { locale } = useLocale();
@@ -24,22 +25,22 @@ export function FinancingCalculator() {
 
     const downPayment = price * (dpPct / 100);
     const loanAmount = price - downPayment;
-    const monthlyRate = rate / 100 / 12;
 
-    let monthlyPayment: number;
-    if (monthlyRate === 0) {
-      monthlyPayment = loanAmount / months;
-    } else {
-      monthlyPayment = loanAmount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
-    }
+    // Shared PMT math (src/lib/finance.ts) keeps this in sync with the per-car
+    // "from $X/mo" badges and the catalog monthly-budget filter.
+    const monthly = monthlyPayment(price, {
+      downPaymentPct: dpPct,
+      annualRatePct: rate,
+      termMonths: months,
+    });
 
-    const totalPayment = monthlyPayment * months + downPayment;
+    const totalPayment = monthly * months + downPayment;
     const totalInterest = totalPayment - price;
 
     return {
       downPayment,
       loanAmount,
-      monthlyPayment,
+      monthlyPayment: monthly,
       totalPayment,
       totalInterest,
       months,
@@ -97,7 +98,7 @@ export function FinancingCalculator() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-6">
+      <div className="bg-card rounded-2xl border border-white/10 p-8 space-y-6">
         <div>
           <label className="text-sm font-semibold mb-2 block">{t.carPrice}</label>
           <Input type="number" value={carPrice} onChange={(e) => setCarPrice(e.target.value)} min="1000" className="h-14 text-lg" />
@@ -148,8 +149,8 @@ export function FinancingCalculator() {
 
       {/* Result */}
       {result && (
-        <div className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up">
-          <div className="bg-[#0a0a0f] text-white p-6">
+        <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+          <div className="bg-background text-white p-6">
             <h3 className="text-lg font-bold">{t.result}</h3>
           </div>
           <div className="p-6 space-y-3">

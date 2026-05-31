@@ -55,7 +55,7 @@ export function AnimatedCounter({
   }, [end, duration]);
 
   return (
-    <span ref={ref} className={cn("font-mono text-neon-green drop-shadow-[0_0_8px_rgba(34,255,136,0.6)]", className)}>
+    <span ref={ref} className={cn("font-mono text-[var(--accent)]", className)}>
       {prefix}{count.toLocaleString()}{suffix}
     </span>
   );

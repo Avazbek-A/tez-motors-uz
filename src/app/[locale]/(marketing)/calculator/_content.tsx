@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 
-import { Calculator, CreditCard, ChevronDown } from "lucide-react";
+import { Calculator, CreditCard, ChevronDown, Loader2, CheckCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { FinancingCalculator } from "@/components/calculator/financing-calculator";
+import { Turnstile } from "@/components/shared/turnstile";
 import { useLocale } from "@/i18n/locale-context";
 import { FUEL_TYPES } from "@/lib/constants";
 import { formatPrice, cn } from "@/lib/utils";
@@ -84,6 +85,36 @@ export default function CalculatorContent() {
   const [catalogCars, setCatalogCars] = useState<CarOption[]>([]);
   const [selectedCarId, setSelectedCarId] = useState<string>("");
 
+  // Lead capture on the computed estimate
+  const [lead, setLead] = useState({ name: "", phone: "" });
+  const [leadToken, setLeadToken] = useState<string | null>(null);
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [leadSuccess, setLeadSuccess] = useState(false);
+  const [leadError, setLeadError] = useState<string | null>(null);
+
+  const t = {
+    leadTitle:
+      locale === "ru" ? "Получить точный расчёт"
+      : locale === "uz" ? "Aniq hisobni olish"
+      : "Get an exact quote",
+    leadSubtitle:
+      locale === "ru" ? "Оставьте контакты — менеджер пришлёт официальный расчёт и поможет с импортом под ключ."
+      : locale === "uz" ? "Kontakt qoldiring — menejer rasmiy hisobni yuboradi va importda yordam beradi."
+      : "Leave your contact and a manager will send the official quote and handle the import for you.",
+    leadCta:
+      locale === "ru" ? "Получить расчёт"
+      : locale === "uz" ? "Hisobni olish"
+      : "Get my quote",
+    leadSuccess:
+      locale === "ru" ? "Заявка отправлена! Менеджер свяжется с вами."
+      : locale === "uz" ? "Ariza yuborildi! Menejer siz bilan bog'lanadi."
+      : "Request sent! A manager will contact you shortly.",
+    leadErr:
+      locale === "ru" ? "Не удалось отправить. Попробуйте ещё раз."
+      : locale === "uz" ? "Yuborilmadi. Qayta urinib ko'ring."
+      : "Could not send. Please try again.",
+  };
+
   useEffect(() => {
     fetch("/api/cars")
       .then((r) => r.json())
@@ -101,6 +132,7 @@ export default function CalculatorContent() {
       setFuelType(car.fuel_type || "petrol");
       setYear(String(car.year));
       setResult(null);
+      setLeadSuccess(false);
     }
   };
 
@@ -116,6 +148,63 @@ export default function CalculatorContent() {
       parseInt(year) || 2024
     );
     setResult(res);
+    setLeadSuccess(false);
+    setLeadError(null);
+  };
+
+  const handleLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!result) return;
+    setLeadSubmitting(true);
+    setLeadError(null);
+
+    const selectedCar = catalogCars.find((c) => c.id === selectedCarId);
+    const carLabel = selectedCar
+      ? `${selectedCar.brand} ${selectedCar.model} ${selectedCar.year}`
+      : `${year}, ${formatPrice(result.carPrice)}`;
+    const message =
+      `${dictionary.calculator.title}: ${carLabel}. ` +
+      `${dictionary.calculator.result.total}: ${formatPrice(result.total)} ` +
+      `(${dictionary.calculator.result.carPrice} ${formatPrice(result.carPrice)}).`;
+
+    try {
+      const res = await fetch("/api/inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: lead.name,
+          phone: lead.phone,
+          type: "calculator",
+          source_page: "calculator",
+          car_id: selectedCar?.id || undefined,
+          message,
+          metadata: {
+            car: carLabel,
+            fuel_type: fuelType,
+            engine_volume: engineVolume,
+            year,
+            car_price_usd: result.carPrice,
+            customs_duty_usd: result.customsDuty,
+            excise_tax_usd: result.exciseTax,
+            vat_usd: result.vat,
+            delivery_usd: result.delivery,
+            service_fee_usd: result.serviceFee,
+            total_usd: result.total,
+          },
+          turnstile_token: leadToken ?? undefined,
+        }),
+      });
+      if (res.ok) {
+        setLeadSuccess(true);
+        setLead({ name: "", phone: "" });
+      } else {
+        setLeadError(t.leadErr);
+      }
+    } catch {
+      setLeadError(t.leadErr);
+    } finally {
+      setLeadSubmitting(false);
+    }
   };
 
   const resultRows = result
@@ -144,7 +233,7 @@ export default function CalculatorContent() {
             onClick={() => setActiveTab("import")}
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-              activeTab === "import" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-[#0a0a0f] text-white/60 hover:bg-white/5"
+              activeTab === "import" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-white/60 hover:bg-white/5"
             )}
           >
             <Calculator className="w-4 h-4" />
@@ -154,7 +243,7 @@ export default function CalculatorContent() {
             onClick={() => setActiveTab("financing")}
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-              activeTab === "financing" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-[#0a0a0f] text-white/60 hover:bg-white/5"
+              activeTab === "financing" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-white/60 hover:bg-white/5"
             )}
           >
             <CreditCard className="w-4 h-4" />
@@ -172,7 +261,7 @@ export default function CalculatorContent() {
           <div
             className="animate-fade-in-up"
           >
-            <form onSubmit={handleCalculate} className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 space-y-6">
+            <form onSubmit={handleCalculate} className="bg-card rounded-2xl border border-white/10 p-8 space-y-6">
               {/* Car picker from catalog */}
               {catalogCars.length > 0 && (
                 <div>
@@ -183,7 +272,7 @@ export default function CalculatorContent() {
                     <select
                       value={selectedCarId}
                       onChange={(e) => handleCarSelect(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-white/10 bg-[#0a0a0f] text-white px-4 pr-10 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-neon-blue cursor-pointer"
+                      className="w-full h-12 rounded-xl border border-white/10 bg-background text-white px-4 pr-10 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-neon-blue cursor-pointer"
                     >
                       <option value="">
                         {locale === "ru" ? "— Или введите вручную —" : locale === "uz" ? "— Yoki qo'lda kiriting —" : "— Or enter manually —"}
@@ -277,30 +366,76 @@ export default function CalculatorContent() {
             style={{ animationDelay: "100ms" }}
           >
             {result ? (
-              <div className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden">
-                <div className="bg-[#0a0a0f] text-white p-6">
-                  <h3 className="text-lg font-bold">{dictionary.calculator.result.title}</h3>
-                </div>
-                <div className="p-6 space-y-3">
-                  {resultRows.map((row, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-white/10 last:border-0">
-                      <span className="text-sm text-white/60">{row.label}</span>
-                      <span className="text-sm font-semibold text-white">{formatPrice(row.value)}</span>
+              <div className="space-y-4">
+                <div className="bg-card rounded-2xl border border-white/10 overflow-hidden">
+                  <div className="bg-background text-white p-6">
+                    <h3 className="text-lg font-bold">{dictionary.calculator.result.title}</h3>
+                  </div>
+                  <div className="p-6 space-y-3">
+                    {resultRows.map((row, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-white/10 last:border-0">
+                        <span className="text-sm text-white/60">{row.label}</span>
+                        <span className="text-sm font-semibold text-white">{formatPrice(row.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-neon-blue/10 p-6 border-t-2 border-neon-blue">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-lg text-white">{dictionary.calculator.result.total}</span>
+                      <span className="text-2xl font-bold text-neon-blue">{formatPrice(result.total)}</span>
                     </div>
-                  ))}
-                </div>
-                <div className="bg-neon-blue/10 p-6 border-t-2 border-neon-blue">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-lg text-white">{dictionary.calculator.result.total}</span>
-                    <span className="text-2xl font-bold text-neon-blue">{formatPrice(result.total)}</span>
+                  </div>
+                  <div className="p-4 text-xs text-white/60 text-center">
+                    {dictionary.calculator.result.note}
                   </div>
                 </div>
-                <div className="p-4 text-xs text-white/60 text-center">
-                  {dictionary.calculator.result.note}
+
+                {/* Lead capture — turn the estimate into a contact */}
+                <div className="bg-card rounded-2xl border border-neon-blue/30 p-6">
+                  {leadSuccess ? (
+                    <div className="text-center py-4">
+                      <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
+                      <p className="text-white font-semibold">{t.leadSuccess}</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleLeadSubmit} className="space-y-4">
+                      <div>
+                        <h4 className="text-base font-bold text-white">{t.leadTitle}</h4>
+                        <p className="text-xs text-white/50 mt-1">{t.leadSubtitle}</p>
+                      </div>
+                      <Input
+                        placeholder={dictionary.contact.name}
+                        value={lead.name}
+                        onChange={(e) => setLead({ ...lead, name: e.target.value })}
+                        required
+                        minLength={2}
+                        className="h-12"
+                      />
+                      <Input
+                        type="tel"
+                        placeholder={dictionary.contact.phone}
+                        value={lead.phone}
+                        onChange={(e) => setLead({ ...lead, phone: e.target.value })}
+                        required
+                        className="h-12"
+                      />
+                      <Turnstile onToken={setLeadToken} />
+                      {leadError && (
+                        <p className="text-sm text-red-400">{leadError}</p>
+                      )}
+                      <Button type="submit" size="lg" className="w-full" disabled={leadSubmitting}>
+                        {leadSubmitting ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <><Send className="w-4 h-4" />{t.leadCta}</>
+                        )}
+                      </Button>
+                    </form>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="bg-[#0a0a0f] rounded-2xl border border-white/10 border-dashed h-full flex items-center justify-center p-12 text-center">
+              <div className="bg-background rounded-2xl border border-white/10 border-dashed h-full flex items-center justify-center p-12 text-center">
                 <div>
                   <Calculator className="w-16 h-16 text-white/20 mx-auto mb-4" />
                   <p className="text-white/60">{dictionary.calculator.subtitle}</p>

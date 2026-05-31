@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
-import { sendTelegramNotification } from "@/lib/telegram";
+import { notifyNewInquiry, confirmToCustomer } from "@/lib/notify";
+import { reportServerError } from "@/lib/error-report";
 import { requireAdmin } from "@/lib/auth";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 
-const checkRateLimit = createRateLimiter({ max: 5, windowMs: 10 * 60 * 1000 });
+const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
 const inquirySchema = z.object({
   name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
@@ -20,6 +22,7 @@ const inquirySchema = z.object({
   type: z.enum(["general", "car_inquiry", "callback", "calculator", "reservation", "test_drive", "trade_in", "newsletter", "price_drop", "service", "part_inquiry"]).default("general"),
   car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i).optional(),
   source_page: z.string().max(200).optional(),
+  locale: z.enum(["ru", "uz", "en"]).optional(),
   metadata: z.record(z.string(), z.unknown()).refine(
     (v) => JSON.stringify(v).length <= 4000,
     "metadata too large",
@@ -32,7 +35,7 @@ const inquirySchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Rate limiting
-    if (!checkRateLimit(getClientIp(request))) {
+    if (!(await checkRateLimit(getClientIp(request)))) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Please try again later." },
         { status: 429 }
@@ -70,21 +73,26 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("Inquiry insert error:", error);
+      reportServerError("POST /api/inquiry (insert)", error).catch(() => {});
       return NextResponse.json(
         { success: false, error: "Failed to save inquiry" },
         { status: 500 }
       );
     }
 
-    // Send Telegram notification (fire-and-forget)
-    sendTelegramNotification({
+    // Alert the dealer (Telegram + email fallback) and confirm to the customer.
+    // Both fail-open; neither blocks the response.
+    notifyNewInquiry({
       name: data.name,
       phone: data.phone,
+      email: data.email || null,
       message: data.message,
       type: data.type,
       source_page: data.source_page,
       metadata: data.metadata,
+      locale: data.locale,
     }).catch(() => {});
+    confirmToCustomer({ email: data.email || null, name: data.name, locale: data.locale }).catch(() => {});
 
     return NextResponse.json({ success: true, id: inquiry.id }, { status: 201 });
   } catch (error) {
@@ -94,6 +102,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    reportServerError("POST /api/inquiry", error).catch(() => {});
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

@@ -68,6 +68,9 @@ export default function ReviewsPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
+  // Prefill from a post-delivery review-request link (?car_id=&car=).
+  const [prefillCarId, setPrefillCarId] = useState<string | null>(null);
+  const [prefillCar, setPrefillCar] = useState("");
 
   useEffect(() => {
     fetch("/api/reviews")
@@ -77,6 +80,15 @@ export default function ReviewsPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const carId = params.get("car_id");
+    const car = params.get("car");
+    if (carId && /^[0-9a-f-]{1,64}$/i.test(carId)) setPrefillCarId(carId);
+    if (car) setPrefillCar(car);
+    if (carId || car) setShowForm(true);
   }, []);
 
   const title = t.title;
@@ -104,6 +116,7 @@ export default function ReviewsPage() {
           car_description: String(formData.get("car") ?? ""),
           review_text_ru: String(formData.get("review") ?? ""),
           rating,
+          ...(prefillCarId ? { car_id: prefillCarId } : {}),
         }),
       });
       if (!res.ok) {
@@ -166,7 +179,7 @@ export default function ReviewsPage() {
                 <p className="font-semibold">{t.successMsg}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-white/10 p-6 space-y-4">
                 <h3 className="font-bold">{t.leaveReviewHeading}</h3>
 
                 {/* Star rating */}
@@ -191,7 +204,7 @@ export default function ReviewsPage() {
                 </div>
 
                 <Input name="name" placeholder={t.namePlaceholder} required />
-                <Input name="car" placeholder={t.carPlaceholder} />
+                <Input name="car" placeholder={t.carPlaceholder} defaultValue={prefillCar} />
                 <Textarea name="review" placeholder={t.reviewPlaceholder} rows={4} required />
 
                 {submitError && (
@@ -217,7 +230,7 @@ export default function ReviewsPage() {
             {reviews.map((review, index) => (
               <div
                 key={review.id}
-                className="bg-[#0d0d15] rounded-2xl border border-white/10 p-6 shadow-sm hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 animate-fade-in-up"
+                className="bg-card rounded-2xl border border-white/10 p-6 shadow-sm hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
                 <Quote className="w-8 h-8 text-neon-blue/30 mb-4" />

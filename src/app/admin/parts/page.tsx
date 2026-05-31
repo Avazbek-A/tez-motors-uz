@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload, FileDown, FileUp, CloudDownload } from "lucide-react";
+import Link from "next/link";
+import { Plus, Search, Edit, Trash2, Loader2, RefreshCw, Wrench, X, Upload, FileDown, FileUp, CloudDownload, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -194,6 +195,11 @@ export default function AdminPartsPage() {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchParts} disabled={loading}>
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+          </Button>
+          <Button variant="outline" size="sm" asChild title="Low-stock reorder list">
+            <Link href="/admin/parts/reorder">
+              <PackagePlus className="w-4 h-4 mr-1" /> Reorder
+            </Link>
           </Button>
           <Button
             variant="outline"

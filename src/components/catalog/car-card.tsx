@@ -7,42 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
 import { formatPrice } from "@/lib/utils";
+import { estimatedMonthlyFrom } from "@/lib/finance";
 import type { Car } from "@/types/car";
 import { FavoriteButton } from "./favorite-button";
-
-const brandGradients: Record<string, string> = {
-  BYD: "from-[#00d4ff]/15 via-[#00d4ff]/5 to-transparent",
-  Chery: "from-[#ff2d87]/15 via-[#ff2d87]/5 to-transparent",
-  Haval: "from-[#22ff88]/15 via-[#22ff88]/5 to-transparent",
-  Geely: "from-[#8b5cf6]/15 via-[#8b5cf6]/5 to-transparent",
-  Changan: "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-transparent",
-  JETOUR: "from-[#00d4ff]/15 via-[#22ff88]/5 to-transparent",
-  Tank: "from-[#ff2d87]/15 via-[#8b5cf6]/5 to-transparent",
-  Zeekr: "from-[#8b5cf6]/20 via-[#00d4ff]/5 to-transparent",
-  "Li Auto": "from-[#22ff88]/10 via-[#00d4ff]/5 to-transparent",
-  Exeed: "from-[#ff2d87]/15 via-[#8b5cf6]/5 to-transparent",
-  Omoda: "from-[#ff2d87]/10 via-[#22ff88]/5 to-transparent",
-  Hongqi: "from-[#ff2d87]/20 via-[#ff2d87]/5 to-transparent",
-  GAC: "from-[#00d4ff]/15 via-[#8b5cf6]/5 to-transparent",
-  XPeng: "from-[#22ff88]/15 via-[#00d4ff]/5 to-transparent",
-};
-
-const brandBorderColors: Record<string, string> = {
-  BYD: "group-hover:border-[#00d4ff]/60",
-  Chery: "group-hover:border-[#ff2d87]/60",
-  Haval: "group-hover:border-[#22ff88]/60",
-  Geely: "group-hover:border-[#8b5cf6]/60",
-  Changan: "group-hover:border-[#00d4ff]/50",
-  JETOUR: "group-hover:border-[#00d4ff]/60",
-  Tank: "group-hover:border-[#ff2d87]/60",
-  Zeekr: "group-hover:border-[#8b5cf6]/60",
-  "Li Auto": "group-hover:border-[#22ff88]/50",
-  Exeed: "group-hover:border-[#ff2d87]/60",
-  Omoda: "group-hover:border-[#ff2d87]/50",
-  Hongqi: "group-hover:border-[#ff2d87]/60",
-  GAC: "group-hover:border-[#00d4ff]/60",
-  XPeng: "group-hover:border-[#22ff88]/60",
-};
 
 interface CarCardProps {
   car: Car;
@@ -51,8 +18,6 @@ interface CarCardProps {
 export function CarCard({ car }: CarCardProps) {
   const { locale, dictionary } = useLocale();
   const transmissionLabel = dictionary.hotOffers.transmission[car.transmission] || car.transmission;
-  const gradient = brandGradients[car.brand] || "from-[#00d4ff]/10 via-[#8b5cf6]/5 to-transparent";
-  const borderColor = brandBorderColors[car.brand] || "group-hover:border-neon-blue/50";
   const discount = car.original_price_usd && car.original_price_usd > car.price_usd
     ? Math.round((1 - car.price_usd / car.original_price_usd) * 100)
     : 0;
@@ -60,130 +25,109 @@ export function CarCard({ car }: CarCardProps) {
   return (
     <Link
       href={localizedPath(locale, `/catalog/${car.slug}`)}
-      className={`group block bg-[#0d0d15] rounded-2xl border border-white/[0.06] overflow-hidden shadow-sm hover:shadow-[0_0_30px_rgba(0,212,255,0.15)] transition-all duration-300 hover:-translate-y-1 ${borderColor}`}
+      className="group block bg-card rounded-none border border-border overflow-hidden transition-all duration-500 hover:border-[var(--line-3)] hover:shadow-2xl hover:-translate-y-0.5"
     >
-      {/* Image */}
-      <div className={`relative aspect-[4/3] bg-gradient-to-br ${gradient} overflow-hidden`}>
+      {/* Image Container */}
+      <div className="relative aspect-[16/10] bg-muted overflow-hidden">
         {/* Real image if available */}
         {(car.thumbnail || car.images?.[0]) ? (
           <Image
             src={car.thumbnail || car.images![0]}
             alt={`${car.brand} ${car.model}`}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
         ) : (
-          /* Photo-less placeholder — keeps the card looking intentional
-             until the dealer uploads real images. Larger brand wordmark
-             + model + diagonal stripes for visual texture. */
-          <div className="absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-[0.06]"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(135deg, currentColor 0 1px, transparent 1px 18px)",
-              }}
-            />
-            <CarFront className="w-12 h-12 text-white/15 mb-2" aria-hidden />
-            <span className="text-white/85 text-xl font-bold tracking-tight">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/30">
+            <CarFront className="w-12 h-12 mb-2" aria-hidden />
+            <span className="text-xl font-medium tracking-tight">
               {car.brand}
-            </span>
-            <span className="text-white/55 text-sm mt-0.5 max-w-[80%] text-center truncate">
-              {car.model}
-            </span>
-            <span className="absolute bottom-3 right-3 text-white/25 text-[10px] font-mono uppercase tracking-wider">
-              {car.year}
             </span>
           </div>
         )}
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-neon-blue/0 group-hover:bg-neon-blue/5 transition-colors duration-300" />
+        {/* Hover overlay gradient */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500" />
 
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex gap-2">
+        {/* Top Badges */}
+        <div className="absolute top-4 left-4 flex gap-2">
           {car.mileage === 0 && (
-            <Badge variant="default" className="bg-neon-green/90 text-[#0a0a0f] shadow-[0_0_10px_rgba(34,255,136,0.3)]">
+            <Badge variant="default" className="bg-primary text-primary-foreground font-medium rounded-none px-2 py-0.5 shadow-sm text-[10px] tracking-wider uppercase">
               {dictionary.hotOffers.new}
             </Badge>
           )}
           {car.inventory_status === "reserved" && (
-            <Badge variant="secondary">Reserved</Badge>
+            <Badge variant="secondary" className="font-medium rounded-none px-2 py-0.5 text-[10px] tracking-wider uppercase">Reserved</Badge>
           )}
           {car.inventory_status === "sold" && (
-            <Badge variant="destructive">Sold</Badge>
+            <Badge variant="destructive" className="font-medium rounded-none px-2 py-0.5 text-[10px] tracking-wider uppercase">Sold</Badge>
           )}
           {car.fuel_type === "electric" && (
-            <Badge variant="info" className="shadow-sm">
-              <Zap className="w-3 h-3 mr-1" />
-              EV
+            <Badge variant="outline" className="bg-background/80 backdrop-blur-md text-foreground font-medium rounded-none px-2 py-0.5 text-[10px] tracking-wider uppercase border-none">
+              <Zap className="w-3 h-3 mr-1" /> EV
             </Badge>
           )}
-          {car.fuel_type === "phev" && (
-            <Badge variant="info" className="shadow-sm">PHEV</Badge>
-          )}
-          {car.fuel_type === "hybrid" && (
-            <Badge variant="success" className="shadow-sm">Hybrid</Badge>
-          )}
         </div>
 
+        {/* Favorite */}
         <div className="absolute top-3 right-3">
           <FavoriteButton carId={car.id} />
-        </div>
-
-        {/* Price overlay on image */}
-        <div className="absolute bottom-3 right-3">
-          <div className="bg-[#0a0a0f]/80 backdrop-blur-md rounded-xl px-3 py-1.5 border border-neon-blue/30 shadow-[0_0_15px_rgba(0,212,255,0.15)]">
-            <p className="text-xs text-neon-blue/60 leading-none font-mono">{dictionary.common.from}</p>
-            {discount > 0 ? (
-              <div className="space-y-0.5">
-                <p className="text-xs text-white/45 line-through font-mono">
-                  {formatPrice(car.original_price_usd!)}
-                </p>
-                <p className="text-lg font-bold text-neon-green leading-tight font-mono">
-                  {formatPrice(car.price_usd)} <span className="text-xs text-amber-300 align-middle">-{discount}%</span>
-                </p>
-              </div>
-            ) : (
-              <p className="text-lg font-bold text-neon-green leading-tight font-mono">{formatPrice(car.price_usd)}</p>
-            )}
-          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <div className="mb-3">
-          <h3 className="text-lg font-bold text-white/90 group-hover:text-neon-blue transition-colors">
-            {car.brand} {car.model}
-          </h3>
-          <p className="text-sm text-white/60 font-mono">{car.year} {dictionary.common.year}</p>
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-xl font-medium tracking-tight text-foreground group-hover:text-foreground/80 transition-colors">
+              {car.brand} {car.model}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 tracking-wide">{car.year} {dictionary.common.year}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{dictionary.common.from}</p>
+            {discount > 0 ? (
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground/60 line-through">
+                  {formatPrice(car.original_price_usd!)}
+                </p>
+                <p className="text-lg font-mono font-semibold text-primary tracking-tight">
+                  {formatPrice(car.price_usd)}
+                </p>
+              </div>
+            ) : (
+              <p className="text-lg font-mono font-semibold text-primary tracking-tight">{formatPrice(car.price_usd)}</p>
+            )}
+            {car.price_usd > 0 && (
+              <p className="text-xs text-muted-foreground mt-1 tracking-wide">
+                {dictionary.common.from} {formatPrice(estimatedMonthlyFrom(car.price_usd))}{dictionary.common.perMonth}
+              </p>
+            )}
+          </div>
         </div>
 
+        {/* Divider */}
+        <div className="h-px bg-border my-4" />
+
         {/* Specs */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+        <div className="flex flex-wrap gap-4 mt-4">
           {car.engine_volume && (
-            <div className="flex items-center gap-1.5 text-xs text-white/60">
-              <Fuel className="w-3.5 h-3.5 text-neon-blue/50" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+              <Fuel className="w-4 h-4 text-foreground/40" />
               {car.engine_volume} {dictionary.common.l}
             </div>
           )}
           {car.engine_power && (
-            <div className="flex items-center gap-1.5 text-xs text-white/60">
-              <Gauge className="w-3.5 h-3.5 text-neon-blue/50" />
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+              <Gauge className="w-4 h-4 text-foreground/40" />
               {car.engine_power} {dictionary.common.hp}
             </div>
           )}
-          <div className="flex items-center gap-1.5 text-xs text-white/60">
-            <Settings2 className="w-3.5 h-3.5 text-neon-blue/50" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
+            <Settings2 className="w-4 h-4 text-foreground/40" />
             {transmissionLabel}
           </div>
-          {car.drivetrain && (
-            <div className="text-xs text-white/60 font-medium uppercase">
-              {car.drivetrain}
-            </div>
-          )}
         </div>
       </div>
     </Link>

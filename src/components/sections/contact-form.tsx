@@ -51,7 +51,7 @@ export function ContactForm() {
   };
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <ParticleBackground particleCount={50} color="0, 212, 255" connectionDistance={100} />
       <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-neon-blue/5 to-transparent" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-neon-purple/5 rounded-full blur-3xl" />
@@ -76,7 +76,7 @@ export function ContactForm() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30 focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
               />
               <Input
                 type="tel"
@@ -84,13 +84,13 @@ export function ContactForm() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30 focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
               />
               <Textarea
                 placeholder={dictionary.contact.message}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30 focus:shadow-[0_0_15px_rgba(0,212,255,0.1)]"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
                 rows={4}
               />
               <Turnstile onToken={setTurnstileToken} />

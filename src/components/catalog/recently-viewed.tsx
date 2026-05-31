@@ -33,7 +33,7 @@ export function RecentlyViewed() {
   const title = locale === "ru" ? "Недавно просмотренные" : locale === "uz" ? "Yaqinda ko'rilgan" : "Recently Viewed";
 
   return (
-    <section className="py-12 bg-[#0a0a0f]">
+    <section className="py-12 bg-background">
       <div className="container-custom">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-white">{title}</h2>

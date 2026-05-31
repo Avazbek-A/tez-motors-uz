@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { faqWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin } from "@/lib/auth";
+import { logAdminAction, compactDiff } from "@/lib/audit";
 
 export async function PUT(
   request: NextRequest,
@@ -30,6 +31,13 @@ export async function PUT(
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
+    logAdminAction(request, {
+      action: "update",
+      entity: "faq",
+      entity_id: id,
+      diff: compactDiff(parsed.data as Record<string, unknown>),
+    }).catch(() => {});
+
     return NextResponse.json({ success: true, faq: data });
   } catch {
     return NextResponse.json({ success: false, error: "Failed to update FAQ" }, { status: 500 });
@@ -51,6 +59,8 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    logAdminAction(request, { action: "delete", entity: "faq", entity_id: id }).catch(() => {});
 
     return NextResponse.json({ success: true, deleted: id });
   } catch {

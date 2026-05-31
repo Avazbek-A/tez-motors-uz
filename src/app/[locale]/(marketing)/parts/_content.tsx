@@ -178,7 +178,7 @@ export default function PartsCatalogContent({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-4 h-12 rounded-xl bg-[#0a0a0f] border border-white/10 text-sm text-white"
+            className="px-4 h-12 rounded-xl bg-background border border-white/10 text-sm text-white"
           >
             <option value="">{t.allCategories}</option>
             {PART_CATEGORIES.map((c) => (
@@ -190,7 +190,7 @@ export default function PartsCatalogContent({
           <select
             value={fitsBrand}
             onChange={(e) => setFitsBrand(e.target.value)}
-            className="px-4 h-12 rounded-xl bg-[#0a0a0f] border border-white/10 text-sm text-white"
+            className="px-4 h-12 rounded-xl bg-background border border-white/10 text-sm text-white"
           >
             <option value="">{t.allBrands}</option>
             {CAR_BRANDS.map((b) => (
@@ -205,7 +205,7 @@ export default function PartsCatalogContent({
             <Loader2 className="w-6 h-6 animate-spin mr-2" /> ...
           </div>
         ) : parts.length === 0 ? (
-          <div className="text-center py-20 bg-[#0a0a0f] rounded-2xl border border-white/10">
+          <div className="text-center py-20 bg-background rounded-2xl border border-white/10">
             <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
             <p className="text-white/60">{t.noResults}</p>
           </div>
@@ -215,9 +215,9 @@ export default function PartsCatalogContent({
               <Link
                 key={p.id}
                 href={localizedPath(locale, `/parts/${p.slug}`)}
-                className="group bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden hover:border-cyan-400/40 transition-all"
+                className="group bg-card rounded-2xl border border-white/10 overflow-hidden hover:border-cyan-400/40 transition-all"
               >
-                <div className="aspect-video bg-[#050508] relative overflow-hidden">
+                <div className="aspect-video bg-[var(--bg-0)] relative overflow-hidden">
                   {p.images[0] ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img

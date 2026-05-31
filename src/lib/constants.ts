@@ -31,6 +31,7 @@ export const NAV_LINKS = [
 // internal link density to brand / type / city pages.
 export const FOOTER_LINKS = [
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
+  { href: "/order", label: { ru: "Заказ под импорт", uz: "Buyurtma asosida", en: "Order to import" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
   { href: "/services", label: { ru: "Услуги", uz: "Xizmatlar", en: "Services" } },
   { href: "/compare", label: { ru: "Сравнение", uz: "Solishtirish", en: "Compare" } },

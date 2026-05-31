@@ -34,7 +34,7 @@ export function Brands() {
     : "We import vehicles from leading Chinese manufacturers";
 
   return (
-    <section className="py-16 md:py-24 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-16 md:py-24 bg-background relative overflow-hidden">
       {/* Floating shapes background */}
       <FloatingShapes count={6} />
 
@@ -49,12 +49,12 @@ export function Brands() {
             <Link
               key={brand.name}
               href={localizedPath(locale, `/catalog?brand=${encodeURIComponent(brand.name)}`)}
-              className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-white/[0.06] bg-[#0d0d15]/80 backdrop-blur-sm hover:border-neon-blue/25 hover:shadow-[0_0_20px_rgba(0,212,255,0.08)] ${
+              className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-white/[0.06] bg-card/80 backdrop-blur-sm hover:border-neon-blue/25 ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 40}ms` }}
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(0,212,255,0.3)] transition-all duration-300`}>
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-all duration-300`}>
                 <span className="text-white font-bold text-xs">
                   {brand.name.charAt(0)}
                 </span>

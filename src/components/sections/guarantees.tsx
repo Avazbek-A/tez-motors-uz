@@ -14,7 +14,7 @@ export function Guarantees() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       {/* Ambient glows */}
       <div className="absolute top-1/2 left-0 w-72 h-72 bg-neon-purple/5 rounded-full blur-3xl -translate-y-1/2" />
       <div className="absolute top-1/2 right-0 w-72 h-72 bg-neon-blue/5 rounded-full blur-3xl -translate-y-1/2" />
@@ -33,7 +33,7 @@ export function Guarantees() {
             return (
               <NeonBorder key={index} color={color} animated>
                 <div
-                  className={`bg-[#0d0d15] rounded-2xl p-8 text-white group
+                  className={`bg-card rounded-2xl p-8 text-white group
                     hover:bg-[#12121c] transition-all duration-300 hover:-translate-y-1
                     ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
                   style={{ animationDelay: `${index * 100}ms` }}

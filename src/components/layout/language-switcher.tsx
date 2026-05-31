@@ -31,7 +31,7 @@ export function LanguageSwitcher({ isScrolled }: { isScrolled: boolean }) {
           className={cn(
             "px-2 py-1 text-xs font-semibold transition-all",
             locale === l
-              ? "bg-neon-blue/20 text-neon-blue shadow-[0_0_10px_rgba(0,212,255,0.2)]"
+              ? "bg-neon-blue/20 text-neon-blue"
               : "text-white/50 hover:text-white hover:bg-white/10"
           )}
         >

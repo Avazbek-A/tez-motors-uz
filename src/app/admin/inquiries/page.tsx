@@ -277,7 +277,7 @@ export default function AdminInquiriesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedInquiry(null)} />
           <div
-            className="animate-fade-in relative bg-[#0d0d15] border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl"
+            className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl"
           >
             <h2 className="text-xl font-bold mb-4">Inquiry Details</h2>
             <div className="space-y-4">

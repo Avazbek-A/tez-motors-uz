@@ -14,7 +14,7 @@ export default function TermsPage() {
         <SectionHeading title={title} />
 
         <div className="max-w-3xl mx-auto">
-          <div className="bg-[#0d0d15] rounded-2xl border border-white/10 p-8 md:p-12 space-y-6 text-white/60 leading-relaxed">
+          <div className="bg-card rounded-2xl border border-white/10 p-8 md:p-12 space-y-6 text-white/60 leading-relaxed">
             <section>
               <h2 className="text-lg font-bold text-white mb-3">
                 {locale === "ru" ? "1. Предмет договора" : "1. Subject of Agreement"}

@@ -61,7 +61,7 @@ export function CallbackWidget() {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed bottom-24 right-6 z-40 w-12 h-12 bg-[#0d0d15] border border-neon-purple/50 hover:border-neon-purple text-neon-purple rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)] transition-all duration-300 hover:scale-110",
+          "fixed bottom-24 right-6 z-40 w-12 h-12 bg-card border border-neon-purple/50 hover:border-neon-purple text-neon-purple rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110",
           isOpen && "hidden"
         )}
         aria-label="Request callback"
@@ -72,7 +72,7 @@ export function CallbackWidget() {
       {/* Popup */}
       {isOpen && (
         <div className="fixed bottom-24 right-6 z-50 w-80 animate-fade-in-up">
-          <div className="bg-[#0d0d15] rounded-2xl shadow-[0_0_30px_rgba(0,212,255,0.1)] border border-neon-blue/20 overflow-hidden">
+          <div className="bg-card rounded-2xl border border-neon-blue/20 overflow-hidden">
             {/* Header */}
             <div className="bg-neon-blue/10 border-b border-neon-blue/20 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export function CallbackWidget() {
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />{error}
                     </p>
                   )}
-                  <Button type="submit" size="sm" className="w-full bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30 hover:shadow-[0_0_15px_rgba(0,212,255,0.3)]" disabled={isSubmitting}>
+                  <Button type="submit" size="sm" className="w-full bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30" disabled={isSubmitting}>
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" />{t.submit}</>}
                   </Button>
                 </form>

@@ -15,7 +15,7 @@ export function CtaBanner() {
   const { ref, isVisible } = useScrollReveal();
 
   return (
-    <section className="py-16 md:py-20 bg-[#0a0a0f]">
+    <section className="py-16 md:py-20 bg-background">
       <div className="container-custom">
         <div
           ref={ref}
@@ -24,7 +24,7 @@ export function CtaBanner() {
           }`}
         >
           <ScanlineOverlay intensity="light" />
-          <div className="absolute inset-0 bg-[#0a0a0f]/60" />
+          <div className="absolute inset-0 bg-background/60" />
 
           <div className="relative z-20">
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">

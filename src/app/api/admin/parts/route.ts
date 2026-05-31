@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { partWriteSchema } from "@/lib/schemas/part";
+import { logAdminAction } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const unauth = await requireAdmin(request);
@@ -49,5 +50,13 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  logAdminAction(request, {
+    action: "create",
+    entity: "part",
+    entity_id: data?.id,
+    diff: { name_ru: parsed.data.name_ru, slug: parsed.data.slug, price_usd: parsed.data.price_usd },
+  }).catch(() => {});
+
   return NextResponse.json({ part: data }, { status: 201 });
 }

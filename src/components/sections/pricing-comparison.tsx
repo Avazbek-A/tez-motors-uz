@@ -22,7 +22,7 @@ export function PricingComparison() {
   const savings = theirTotal - ourTotal;
 
   return (
-    <section className="py-20 md:py-28 bg-[#0a0a0f] relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <GridBackground />
 
       {/* Ambient neon glows */}
@@ -40,9 +40,9 @@ export function PricingComparison() {
           ref={ref}
           className={`max-w-3xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
         >
-          <div className="bg-[#0d0d15] rounded-2xl border border-neon-blue/15 overflow-hidden shadow-[0_0_30px_rgba(0,212,255,0.06)]">
+          <div className="bg-card rounded-2xl border border-neon-blue/15 overflow-hidden">
             {/* Header row */}
-            <div className="grid grid-cols-3 bg-[#0d0d15] border-b border-neon-blue/10">
+            <div className="grid grid-cols-3 bg-card border-b border-neon-blue/10">
               <div className="p-4 text-sm font-medium" />
               <div className="p-4 text-center bg-neon-green/[0.04] border-x border-neon-green/10">
                 <div className="text-sm font-bold text-neon-green">{dictionary.pricing.ourPrice}</div>

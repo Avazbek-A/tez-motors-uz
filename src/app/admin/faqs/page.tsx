@@ -274,7 +274,7 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="animate-fade-in relative bg-[#0d0d15] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
+      <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl">
         <h2 className="text-xl font-bold mb-6">
           {isEditing ? "Edit Question" : "Add Question"}
         </h2>

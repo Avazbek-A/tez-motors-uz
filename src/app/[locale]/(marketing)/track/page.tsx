@@ -1,117 +1,142 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Package, Truck, CheckCircle, Clock, Ship, FileCheck, PhoneCall, Loader2, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Search,
+  Package,
+  Truck,
+  CheckCircle,
+  Clock,
+  Ship,
+  FileText,
+  CreditCard,
+  Landmark,
+  PackageCheck,
+  Loader2,
+  MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
+// Mirrors the 7-status CHECK on public.orders (migration 017). Order matters —
+// the index of the order's current status decides how far the timeline fills.
 const statusSteps = [
-  { key: "new", icon: FileCheck, label: { ru: "Заявка получена", uz: "Ariza qabul qilindi", en: "Application Received" } },
-  { key: "contacted", icon: PhoneCall, label: { ru: "Менеджер связался", uz: "Menejer bog'landi", en: "Manager Contacted" } },
-  { key: "in_progress", icon: Ship, label: { ru: "В обработке", uz: "Jarayonda", en: "In Progress" } },
-  { key: "closed", icon: CheckCircle, label: { ru: "Завершено", uz: "Yakunlandi", en: "Completed" } },
-];
+  { key: "ordered", icon: FileText, label: { ru: "Заказ оформлен", uz: "Buyurtma rasmiylashtirildi", en: "Order placed" } },
+  { key: "deposit_paid", icon: CreditCard, label: { ru: "Депозит внесён", uz: "Depozit to'landi", en: "Deposit paid" } },
+  { key: "sourcing", icon: Search, label: { ru: "Поиск автомобиля", uz: "Avtomobil qidirilmoqda", en: "Sourcing" } },
+  { key: "in_transit", icon: Ship, label: { ru: "В пути", uz: "Yo'lda", en: "In transit" } },
+  { key: "at_customs", icon: Landmark, label: { ru: "На таможне", uz: "Bojxonada", en: "At customs" } },
+  { key: "ready_for_pickup", icon: PackageCheck, label: { ru: "Готов к выдаче", uz: "Olishga tayyor", en: "Ready for pickup" } },
+  { key: "delivered", icon: CheckCircle, label: { ru: "Доставлен", uz: "Yetkazildi", en: "Delivered" } },
+] as const;
 
-const statusIndex: Record<string, number> = {
-  new: 0,
-  contacted: 1,
-  in_progress: 2,
-  closed: 3,
-};
+const statusIndex: Record<string, number> = Object.fromEntries(
+  statusSteps.map((s, i) => [s.key, i]),
+);
 
-const typeLabels: Record<string, Record<string, string>> = {
-  inquiry: { ru: "Заявка на авто", uz: "Avto so'rovi", en: "Car Inquiry" },
-  car_inquiry: { ru: "Заявка на авто", uz: "Avto so'rovi", en: "Car Inquiry" },
-  callback: { ru: "Обратный звонок", uz: "Qayta qo'ng'iroq", en: "Callback" },
-  test_drive: { ru: "Тест-драйв", uz: "Test-drive", en: "Test Drive" },
-  reservation: { ru: "Бронь", uz: "Band qilish", en: "Reservation" },
-  trade_in: { ru: "Trade-in", uz: "Trade-in", en: "Trade-in" },
-  newsletter: { ru: "Подписка", uz: "Obuna", en: "Newsletter" },
-  price_drop: { ru: "Снижение цены", uz: "Narx tushishi", en: "Price Drop" },
-  general: { ru: "Заявка", uz: "Ariza", en: "Inquiry" },
-  service: { ru: "Сервис", uz: "Servis", en: "Service" },
-  part_inquiry: { ru: "Запчасть", uz: "Ehtiyot qism", en: "Part inquiry" },
-};
-
-interface Inquiry {
-  id: string;
-  name: string;
-  phone: string;
-  type: string;
+interface OrderEvent {
   status: string;
-  message: string | null;
+  note: string | null;
   created_at: string;
-  car: { brand: string; model: string; year: number } | null;
+}
+
+interface Order {
+  reference_code: string;
+  status: string;
+  customer_name: string;
+  amount_usd: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  car: { brand: string; model: string; year: number; slug: string } | null;
+  events: OrderEvent[];
 }
 
 const LABELS = {
   ru: {
-    title: "Статус заявки",
-    subtitle: "Введите номер телефона, чтобы узнать статус вашей заявки",
-    phonePlaceholder: "Ваш номер телефона (напр. +998901234567)",
+    title: "Отслеживание заказа",
+    subtitle: "Введите номер заказа и телефон, чтобы узнать статус доставки",
+    codePlaceholder: "Номер заказа (напр. TM-7K3F9Q2X)",
+    phonePlaceholder: "Телефон (напр. +998901234567)",
     search: "Найти",
-    notFound: "Заявки по этому номеру не найдены.",
-    notFoundHint: "Убедитесь, что ввели правильный номер телефона",
+    notFound: "Заказ не найден.",
+    notFoundHint: "Проверьте номер заказа и телефон, указанные при бронировании",
     currentStatus: "Текущий статус",
-    helpText: "Отслеживайте статус вашей заявки в реальном времени",
+    deposit: "Депозит",
+    placed: "Оформлен",
+    helpText: "Отслеживайте доставку вашего автомобиля от заказа до выдачи",
   },
   uz: {
-    title: "Ariza holati",
-    subtitle: "Arizangiz holatini bilish uchun telefon raqamingizni kiriting",
-    phonePlaceholder: "Telefon raqamingiz (masalan +998901234567)",
+    title: "Buyurtmani kuzatish",
+    subtitle: "Yetkazib berish holatini bilish uchun buyurtma raqami va telefonni kiriting",
+    codePlaceholder: "Buyurtma raqami (masalan TM-7K3F9Q2X)",
+    phonePlaceholder: "Telefon (masalan +998901234567)",
     search: "Qidirish",
-    notFound: "Bu raqam bo'yicha arizalar topilmadi.",
-    notFoundHint: "Telefon raqamini to'g'ri kiritganingizga ishonch hosil qiling",
+    notFound: "Buyurtma topilmadi.",
+    notFoundHint: "Bron qilishda ko'rsatilgan buyurtma raqami va telefonni tekshiring",
     currentStatus: "Joriy holat",
-    helpText: "Arizangiz holatini real vaqtda kuzating",
+    deposit: "Depozit",
+    placed: "Rasmiylashtirilgan",
+    helpText: "Avtomobilingizni buyurtmadan to'liq yetkazib berilgungacha kuzating",
   },
   en: {
-    title: "Application Status",
-    subtitle: "Enter your phone number to check your application status",
-    phonePlaceholder: "Your phone number (e.g. +998901234567)",
+    title: "Track your order",
+    subtitle: "Enter your order reference and phone to see the delivery status",
+    codePlaceholder: "Order reference (e.g. TM-7K3F9Q2X)",
+    phonePlaceholder: "Phone (e.g. +998901234567)",
     search: "Search",
-    notFound: "No applications found for this number.",
-    notFoundHint: "Make sure you entered the correct phone number",
+    notFound: "Order not found.",
+    notFoundHint: "Check the reference code and the phone number you used to reserve",
     currentStatus: "Current status",
-    helpText: "Track your application status in real time",
+    deposit: "Deposit",
+    placed: "Placed",
+    helpText: "Follow your car from order to handover",
   },
 } as const;
 
 export default function TrackOrderPage() {
   const { locale } = useLocale();
   const t = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
+  const [code, setCode] = useState("");
   const [phone, setPhone] = useState("");
-  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const title = t.title;
-  const subtitle = t.subtitle;
+  // The status-change email links to /track?code=TM-... — pre-fill the field so
+  // the customer only has to add their phone. Read once on mount; avoid
+  // useSearchParams to keep this page out of a Suspense boundary.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const c = params.get("code");
+    if (c) setCode(c);
+  }, []);
+
   const dateLocale = locale === "ru" ? "ru-RU" : locale === "uz" ? "uz-UZ" : "en-US";
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setNotFound(false);
-    setInquiries([]);
+    setOrder(null);
     setSearched(false);
 
     try {
       const res = await fetch(
-        `/api/track?phone=${encodeURIComponent(phone.trim())}`
+        `/api/track?code=${encodeURIComponent(code.trim())}&phone=${encodeURIComponent(phone.trim())}`,
       );
       const data = await res.json();
 
       if (data.success) {
         setSearched(true);
-        if (data.inquiries.length === 0) {
+        if (!data.order) {
           setNotFound(true);
         } else {
-          setInquiries(data.inquiries);
+          setOrder(data.order);
         }
       } else {
         setNotFound(true);
@@ -123,13 +148,33 @@ export default function TrackOrderPage() {
     }
   };
 
+  const stepIdx = order ? statusIndex[order.status] ?? 0 : 0;
+  // Notes attached to a given status, keyed by step index, so we can show the
+  // dealer's free-text update beneath the matching timeline row.
+  const noteByStatus: Record<string, string> = {};
+  if (order) {
+    for (const ev of order.events) {
+      if (ev.note) noteByStatus[ev.status] = ev.note;
+    }
+  }
+
   return (
     <div className="pt-24 pb-16">
       <div className="container-custom">
-        <SectionHeading as="h1" title={title} subtitle={subtitle} />
+        <SectionHeading as="h1" title={t.title} subtitle={t.subtitle} />
 
         <div className="max-w-2xl mx-auto">
-          <form onSubmit={handleSearch} className="flex gap-3 mb-12">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 mb-12">
+            <div className="relative flex-1">
+              <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={t.codePlaceholder}
+                className="pl-12 h-14 text-base rounded-2xl"
+                required
+              />
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
               <Input
@@ -141,124 +186,104 @@ export default function TrackOrderPage() {
                 type="tel"
               />
             </div>
-            <Button
-              type="submit"
-              size="lg"
-              className="rounded-2xl px-8"
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                t.search
-              )}
+            <Button type="submit" size="lg" className="rounded-2xl px-8" disabled={loading}>
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t.search}
             </Button>
           </form>
 
           {notFound && searched && (
-            <div className="text-center py-12 bg-[#0a0a0f] rounded-2xl border border-white/10">
+            <div className="text-center py-12 bg-background rounded-2xl border border-white/10">
               <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
               <p className="text-white/60 text-sm">{t.notFound}</p>
               <p className="text-xs text-white/40 mt-2">{t.notFoundHint}</p>
             </div>
           )}
 
-          {inquiries.length > 0 && (
-            <div className="space-y-6 animate-fade-in-up">
-              {inquiries.map((inquiry) => {
-                const stepIdx = statusIndex[inquiry.status] ?? 0;
-                const typeLabel =
-                  typeLabels[inquiry.type]?.[locale] ?? inquiry.type;
+          {order && (
+            <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="inline-block text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue mb-2">
+                      {order.reference_code}
+                    </span>
+                    <p className="font-semibold text-white">
+                      {order.car
+                        ? `${order.car.brand} ${order.car.model} ${order.car.year}`
+                        : order.customer_name}
+                    </p>
+                    {order.amount_usd != null && (
+                      <p className="text-sm text-white/50 mt-1">
+                        {t.deposit}: ${order.amount_usd.toLocaleString()}
+                      </p>
+                    )}
+                    {order.notes && (
+                      <p className="text-sm text-white/50 mt-1 flex items-start gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        {order.notes}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/40 shrink-0">
+                    {t.placed}: {new Date(order.created_at).toLocaleDateString(dateLocale)}
+                  </p>
+                </div>
+              </div>
 
-                return (
-                  <div
-                    key={inquiry.id}
-                    className="bg-[#0d0d15] rounded-2xl border border-white/10 overflow-hidden"
-                  >
-                    {/* Header */}
-                    <div className="p-5 border-b border-white/10">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-full bg-white/[0.06] text-white/60 mb-2">
-                            {typeLabel}
-                          </span>
-                          <p className="font-semibold text-white">
-                            {inquiry.car
-                              ? `${inquiry.car.brand} ${inquiry.car.model} ${inquiry.car.year}`
-                              : inquiry.name}
-                          </p>
-                          {inquiry.message && (
-                            <p className="text-sm text-white/50 mt-1 flex items-start gap-1.5">
-                              <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                              {inquiry.message}
-                            </p>
+              {/* Status timeline */}
+              <div className="p-5">
+                <div className="space-y-0">
+                  {statusSteps.map((step, index) => {
+                    const isComplete = index < stepIdx;
+                    const isCurrent = index === stepIdx;
+                    const Icon = step.icon;
+                    const note = noteByStatus[step.key];
+                    return (
+                      <div key={step.key} className="flex items-start gap-4">
+                        <div className="flex flex-col items-center">
+                          <div
+                            className={cn(
+                              "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
+                              isComplete
+                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                : isCurrent
+                                ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 animate-pulse"
+                                : "bg-white/[0.04] text-white/30 border border-white/[0.08]",
+                            )}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          {index < statusSteps.length - 1 && (
+                            <div
+                              className={cn(
+                                "w-px h-10",
+                                isComplete ? "bg-cyan-500/30" : "bg-white/[0.06]",
+                              )}
+                            />
                           )}
                         </div>
-                        <p className="text-xs text-white/40 shrink-0">
-                          {new Date(inquiry.created_at).toLocaleDateString(dateLocale)}
-                        </p>
+                        <div className="pt-1.5 pb-2">
+                          <p
+                            className={cn(
+                              "font-medium text-sm",
+                              isComplete || isCurrent ? "text-white" : "text-white/30",
+                            )}
+                          >
+                            {step.label[locale as keyof typeof step.label]}
+                          </p>
+                          {isCurrent && (
+                            <p className="text-xs text-purple-400 mt-0.5">{t.currentStatus}</p>
+                          )}
+                          {note && (
+                            <p className="text-xs text-white/50 mt-1">{note}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Status timeline */}
-                    <div className="p-5">
-                      <div className="space-y-0">
-                        {statusSteps.map((step, index) => {
-                          const isComplete = index < stepIdx;
-                          const isCurrent = index === stepIdx;
-                          const Icon = step.icon;
-                          return (
-                            <div
-                              key={step.key}
-                              className="flex items-start gap-4"
-                            >
-                              <div className="flex flex-col items-center">
-                                <div
-                                  className={cn(
-                                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
-                                    isComplete
-                                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                                      : isCurrent
-                                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 animate-pulse"
-                                      : "bg-white/[0.04] text-white/30 border border-white/[0.08]"
-                                  )}
-                                >
-                                  <Icon className="w-4 h-4" />
-                                </div>
-                                {index < statusSteps.length - 1 && (
-                                  <div
-                                    className={cn(
-                                      "w-px h-10",
-                                      isComplete
-                                        ? "bg-cyan-500/30"
-                                        : "bg-white/[0.06]"
-                                    )}
-                                  />
-                                )}
-                              </div>
-                              <div className="pt-1.5 pb-2">
-                                <p
-                                  className={cn(
-                                    "font-medium text-sm",
-                                    isComplete || isCurrent
-                                      ? "text-white"
-                                      : "text-white/30"
-                                  )}
-                                >
-                                  {step.label[locale as keyof typeof step.label]}
-                                </p>
-                                {isCurrent && (
-                                  <p className="text-xs text-purple-400 mt-0.5">{t.currentStatus}</p>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
 

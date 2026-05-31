@@ -36,6 +36,8 @@ export interface CarFilters {
   fuel_type?: string;
   price_min?: number;
   price_max?: number;
+  /** Max monthly installment budget (USD); inverted to a price ceiling server-side. */
+  monthly_max?: number;
   year_min?: number;
   year_max?: number;
   search?: string;

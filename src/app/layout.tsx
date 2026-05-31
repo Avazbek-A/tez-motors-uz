@@ -1,22 +1,33 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Manrope, Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { LocaleProvider } from "@/i18n/locale-context";
 import { OrganizationSchema, WebsiteSchema } from "@/components/shared/structured-data";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+// "Cinematic Showroom" type system: Manrope (UI + headlines), Cormorant
+// Garamond (editorial italic accents), JetBrains Mono (data / specs / eyebrows).
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin", "cyrillic"],
+  weight: ["200", "300", "400", "500", "600", "700", "800"],
+});
+
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  style: ["normal", "italic"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+  variable: "--font-jetbrains",
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "700"],
+  weight: ["400", "500", "600", "700"],
 });
 
 // OG locale codes per Open Graph spec.
@@ -104,7 +115,7 @@ export default async function RootLayout({
   const dictionary = await getDictionary(locale);
 
   return (
-    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
+    <html lang={locale} className={`${manrope.variable} ${cormorant.variable} ${jetbrainsMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <link
           rel="preconnect"
@@ -135,8 +146,8 @@ export default async function RootLayout({
         {/* Apple Spotlight / Siri pick up these tags when ranking results. */}
         <meta name="application-name" content="Tez Motors" />
         <meta name="apple-mobile-web-app-title" content="Tez Motors" />
-        <meta name="theme-color" content="#0a0a0f" />
-        <meta name="msapplication-TileColor" content="#0a0a0f" />
+        <meta name="theme-color" content="#0d0d10" />
+        <meta name="msapplication-TileColor" content="#0d0d10" />
 
         <OrganizationSchema />
         <WebsiteSchema />
@@ -154,7 +165,9 @@ export default async function RootLayout({
             <TawkChat /> component, with deferred loading. Don't double-load
             here — that was costing every visitor a 100kB+ duplicate fetch. */}
         <LocaleProvider initialLocale={locale} initialDictionary={dictionary}>
-          {children}
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            {children}
+          </ThemeProvider>
         </LocaleProvider>
       </body>
     </html>
