@@ -85,7 +85,7 @@ export default async function NotFound() {
           </Link>
           <Link
             href={localizedPath(locale, "/catalog")}
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-sm font-medium transition-colors border border-cyan-500/20"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-neon-blue/20 hover:bg-neon-blue/30 text-neon-blue text-sm font-medium transition-colors border border-neon-blue/20"
           >
             <Search className="w-4 h-4" />
             {t.catalog}

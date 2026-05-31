@@ -33,7 +33,7 @@ interface StatsData {
 
 const fuelColors: Record<string, string> = {
   petrol: "bg-amber-500",
-  electric: "bg-blue-500",
+  electric: "bg-neon-blue",
   phev: "bg-green-500",
   hybrid: "bg-teal-500",
   diesel: "bg-orange-500",
@@ -48,9 +48,9 @@ const fuelSvgColors: Record<string, string> = {
 };
 
 const inquiryStatusConfig = [
-  { key: "new", label: "New", color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
+  { key: "new", label: "New", color: "bg-neon-blue/20 text-neon-blue border-neon-blue/30" },
   { key: "contacted", label: "Contacted", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  { key: "in_progress", label: "In Progress", color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
+  { key: "in_progress", label: "In Progress", color: "bg-neon-purple/20 text-neon-purple border-neon-purple/30" },
   { key: "closed", label: "Closed", color: "bg-green-500/20 text-green-400 border-green-500/30" },
 ];
 
@@ -95,9 +95,9 @@ function formatUzs(n: number): string {
 /** Revenue + conversion funnel: inquiries → reservations → deposits → delivered. */
 function FunnelBars({ funnel }: { funnel: FunnelData["funnel"] }) {
   const stages = [
-    { key: "inquiries", label: "Inquiries", value: funnel.inquiries, color: "from-cyan-600 to-cyan-400" },
-    { key: "reservations", label: "Reservations", value: funnel.reservations, color: "from-blue-600 to-blue-400" },
-    { key: "depositsPaid", label: "Deposits Paid", value: funnel.depositsPaid, color: "from-purple-600 to-purple-400" },
+    { key: "inquiries", label: "Inquiries", value: funnel.inquiries, color: "from-neon-blue to-neon-blue" },
+    { key: "reservations", label: "Reservations", value: funnel.reservations, color: "from-neon-blue to-neon-blue" },
+    { key: "depositsPaid", label: "Deposits Paid", value: funnel.depositsPaid, color: "from-neon-purple to-neon-purple" },
     { key: "delivered", label: "Delivered", value: funnel.delivered, color: "from-green-600 to-green-400" },
   ];
   const top = Math.max(1, funnel.inquiries);
@@ -284,10 +284,10 @@ export default function AdminAnalyticsPage() {
 
       {/* Top KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard icon={BarChart3} label="Total Cars" value={stats.cars.total} color="bg-blue-500/20 text-blue-400" />
+        <StatCard icon={BarChart3} label="Total Cars" value={stats.cars.total} color="bg-neon-blue/20 text-neon-blue" />
         <StatCard icon={TrendingUp} label="Available" value={stats.cars.available} sub={`${Math.round((stats.cars.available / stats.cars.total) * 100)}%`} color="bg-green-500/20 text-green-400" />
         <StatCard icon={DollarSign} label="Hot Offers" value={stats.cars.hotOffers} color="bg-orange-500/20 text-orange-400" />
-        <StatCard icon={MessageSquare} label="Inquiries" value={inquiryTotal} sub={`${stats.inquiries.new} new`} color="bg-purple-500/20 text-purple-400" />
+        <StatCard icon={MessageSquare} label="Inquiries" value={inquiryTotal} sub={`${stats.inquiries.new} new`} color="bg-neon-purple/20 text-neon-purple" />
         <StatCard icon={Star} label="Reviews" value={stats.reviews.total} sub={stats.reviews.pending > 0 ? `${stats.reviews.pending} pending` : undefined} color="bg-yellow-500/20 text-yellow-400" />
         <StatCard icon={HelpCircle} label="FAQs" value={stats.faqs.total} color="bg-teal-500/20 text-teal-400" />
       </div>
@@ -304,7 +304,7 @@ export default function AdminAnalyticsPage() {
           <CardContent>
             <InquiriesTimeseriesChart points={timeseries} />
             <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" /> Total</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neon-blue inline-block" /> Total</span>
               <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Closed (converted)</span>
             </div>
           </CardContent>
@@ -436,7 +436,7 @@ export default function AdminAnalyticsPage() {
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground mb-1">Highest Price</p>
-            <p className="text-xl font-bold text-purple-400">{formatPrice(stats.cars.maxPrice)}</p>
+            <p className="text-xl font-bold text-neon-purple">{formatPrice(stats.cars.maxPrice)}</p>
           </CardContent>
         </Card>
       </div>
@@ -457,7 +457,7 @@ export default function AdminAnalyticsPage() {
                   <span className="text-sm font-medium w-20 shrink-0 truncate">{brand}</span>
                   <div className="flex-1 h-7 bg-white/[0.04] rounded-lg overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-lg flex items-center justify-end px-2 transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-neon-blue to-neon-blue rounded-lg flex items-center justify-end px-2 transition-all duration-700"
                       style={{ width: `${(count / maxBrandCount) * 100}%`, minWidth: "2rem" }}
                     >
                       <span className="text-xs font-bold text-white">{count}</span>
@@ -484,7 +484,7 @@ export default function AdminAnalyticsPage() {
                   <span className="text-sm font-medium w-24 shrink-0 capitalize">{type}</span>
                   <div className="flex-1 h-7 bg-white/[0.04] rounded-lg overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-lg flex items-center justify-end px-2 transition-all duration-700"
+                      className="h-full bg-gradient-to-r from-neon-purple to-neon-purple rounded-lg flex items-center justify-end px-2 transition-all duration-700"
                       style={{ width: `${(count / maxBodyCount) * 100}%`, minWidth: "2rem" }}
                     >
                       <span className="text-xs font-bold text-white">{count}</span>
@@ -571,7 +571,7 @@ export default function AdminAnalyticsPage() {
                     </div>
                     <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full transition-all duration-700"
+                        className="h-full bg-gradient-to-r from-neon-blue to-neon-blue rounded-full transition-all duration-700"
                         style={{ width: `${pct}%` }}
                       />
                     </div>

@@ -13,10 +13,10 @@ export default function AboutContent() {
   const { ref: valuesRef, isVisible: valuesVisible } = useScrollReveal();
 
   const values = [
-    { icon: Eye, title: dictionary.about.values.transparency, color: "bg-blue-500/10 text-blue-600" },
+    { icon: Eye, title: dictionary.about.values.transparency, color: "bg-neon-blue/10 text-neon-blue" },
     { icon: Shield, title: dictionary.about.values.reliability, color: "bg-green-500/10 text-green-600" },
     { icon: Zap, title: dictionary.about.values.speed, color: "bg-yellow-500/10 text-yellow-600" },
-    { icon: Award, title: dictionary.about.values.quality, color: "bg-purple-500/10 text-purple-600" },
+    { icon: Award, title: dictionary.about.values.quality, color: "bg-neon-purple/10 text-neon-purple" },
   ];
 
   const stats = [

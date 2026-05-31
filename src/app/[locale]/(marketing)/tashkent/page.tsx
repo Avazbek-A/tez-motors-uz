@@ -119,7 +119,7 @@ export default async function TashkentPage() {
                   locale,
                   `/catalog/brand/${brand.toLowerCase().replace(/\s+/g, "-")}`,
                 )}
-                className="rounded-xl border border-white/10 bg-card px-4 py-3 text-sm text-white/80 hover:border-cyan-400/40 hover:text-white transition-colors"
+                className="rounded-xl border border-white/10 bg-card px-4 py-3 text-sm text-white/80 hover:border-neon-blue/40 hover:text-white transition-colors"
               >
                 {brand}
               </Link>

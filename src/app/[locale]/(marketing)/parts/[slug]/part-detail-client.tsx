@@ -206,7 +206,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                     onClick={() => setActiveImage(url)}
                     className={cn(
                       "relative aspect-square rounded-lg overflow-hidden border-2 transition",
-                      activeImage === url ? "border-cyan-400" : "border-white/10",
+                      activeImage === url ? "border-neon-blue" : "border-white/10",
                     )}
                   >
                     <Image
@@ -250,12 +250,12 @@ export default function PartDetailClient({ part }: { part: Part }) {
             {part.wholesale_price_usd != null && (
               <div>
                 {wholesale ? (
-                  <div className="rounded-xl border border-cyan-400/40 bg-cyan-400/5 p-3 flex items-center justify-between gap-3">
+                  <div className="rounded-xl border border-neon-blue/40 bg-neon-blue/5 p-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-cyan-400" />
+                      <Tag className="w-4 h-4 text-neon-blue" />
                       <div>
                         <p className="text-xs text-white/50">{t.wholesalePrice}</p>
-                        <p className="text-xl font-bold text-cyan-300">
+                        <p className="text-xl font-bold text-neon-blue">
                           ${part.wholesale_price_usd}{" "}
                           <span className="text-xs text-white/50 font-normal">
                             · {t.minOrder} {part.min_order_qty} {t.pcs}
@@ -275,7 +275,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                   <button
                     type="button"
                     onClick={toggleWholesale}
-                    className="inline-flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200 underline"
+                    className="inline-flex items-center gap-2 text-xs text-neon-blue hover:text-neon-blue underline"
                   >
                     <Tag className="w-3.5 h-3.5" />
                     {t.wholesaleCtaIn}

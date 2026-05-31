@@ -83,7 +83,7 @@ export function DepositButton({
           </Button>
         )}
       </div>
-      {error && <p className="mt-2 text-sm text-rose-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-neon-pink">{error}</p>}
     </div>
   );
 }

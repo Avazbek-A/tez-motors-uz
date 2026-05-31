@@ -140,7 +140,7 @@ export default function PartsCatalogContent({
         <SectionHeading as="h1" title={t.title} subtitle={t.subtitle} />
 
         {(fitsModel || year) && (
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-cyan-400/10 border border-cyan-400/30 px-4 py-2 text-sm text-cyan-200">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-neon-blue/10 border border-neon-blue/30 px-4 py-2 text-sm text-neon-blue">
             <Package className="w-4 h-4" />
             <span>
               {locale === "uz"
@@ -157,7 +157,7 @@ export default function PartsCatalogContent({
                 setFitsModel("");
                 setYear("");
               }}
-              className="ml-2 text-cyan-300/70 hover:text-white underline"
+              className="ml-2 text-neon-blue/70 hover:text-white underline"
             >
               {locale === "uz" ? "tozalash" : locale === "en" ? "clear" : "сбросить"}
             </button>
@@ -215,7 +215,7 @@ export default function PartsCatalogContent({
               <Link
                 key={p.id}
                 href={localizedPath(locale, `/parts/${p.slug}`)}
-                className="group bg-card rounded-2xl border border-white/10 overflow-hidden hover:border-cyan-400/40 transition-all"
+                className="group bg-card rounded-2xl border border-white/10 overflow-hidden hover:border-neon-blue/40 transition-all"
               >
                 <div className="aspect-video bg-[var(--bg-0)] relative overflow-hidden">
                   {p.images[0] ? (

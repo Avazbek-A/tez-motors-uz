@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       value: stats?.cars.total ?? "...",
       change: `${stats?.cars.available ?? 0} available`,
       icon: Car,
-      color: "text-blue-600 bg-blue-100",
+      color: "text-neon-blue bg-neon-blue",
     },
     {
       title: "Total Inquiries",
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       value: stats?.reviews.total ?? "...",
       change: `${stats?.reviews.pending ?? 0} pending`,
       icon: Star,
-      color: "text-purple-600 bg-purple-100",
+      color: "text-neon-purple bg-neon-purple",
     },
   ];
   const dueInquiries = inquiries.filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(23, 59, 59, 999) >= Date.now()).slice(0, 5);

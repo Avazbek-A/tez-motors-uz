@@ -38,7 +38,7 @@ export function FavoriteButton({
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
         favorite
-          ? "border-rose-400/60 bg-rose-500/20 text-rose-300"
+          ? "border-neon-pink/60 bg-neon-pink/20 text-neon-pink"
           : "border-white/10 bg-black/30 text-white/60 hover:bg-white/10 hover:text-white",
         className,
       )}

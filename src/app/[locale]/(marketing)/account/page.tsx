@@ -189,7 +189,7 @@ export default function AccountPage() {
                 </label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
                 <Turnstile onToken={setTurnstileToken} />
-                {error && <p className="text-sm text-rose-400">{error}</p>}
+                {error && <p className="text-sm text-neon-pink">{error}</p>}
                 <Button onClick={requestOtp} className="w-full" disabled={busy || phone.length < 7}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Получить код", "Kod olish", "Get code")}
                 </Button>
@@ -206,7 +206,7 @@ export default function AccountPage() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 />
-                {error && <p className="text-sm text-rose-400">{error}</p>}
+                {error && <p className="text-sm text-neon-pink">{error}</p>}
                 <Button onClick={verifyOtp} className="w-full" disabled={busy || code.length !== 6}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Войти", "Kirish", "Sign in")}
                 </Button>
@@ -288,7 +288,7 @@ export default function AccountPage() {
         {/* Garage */}
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Heart className="h-5 w-5 text-rose-300" />
+            <Heart className="h-5 w-5 text-neon-pink" />
             {t("Мой гараж", "Mening garajim", "My garage")}
           </h2>
           {cars.length === 0 ? (
@@ -328,7 +328,7 @@ export default function AccountPage() {
                     {s.label || t("Поиск", "Qidiruv", "Search")}
                   </span>
                   <button
-                    className="text-sm text-white/40 hover:text-rose-400"
+                    className="text-sm text-white/40 hover:text-neon-pink"
                     onClick={() => removeSearch(s.id)}
                   >
                     {t("Удалить", "O'chirish", "Remove")}

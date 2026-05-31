@@ -246,9 +246,9 @@ export default function TrackOrderPage() {
                             className={cn(
                               "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
                               isComplete
-                                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+                                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30"
                                 : isCurrent
-                                ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 animate-pulse"
+                                ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/40 animate-pulse"
                                 : "bg-white/[0.04] text-white/30 border border-white/[0.08]",
                             )}
                           >
@@ -258,7 +258,7 @@ export default function TrackOrderPage() {
                             <div
                               className={cn(
                                 "w-px h-10",
-                                isComplete ? "bg-cyan-500/30" : "bg-white/[0.06]",
+                                isComplete ? "bg-neon-blue/30" : "bg-white/[0.06]",
                               )}
                             />
                           )}
@@ -273,7 +273,7 @@ export default function TrackOrderPage() {
                             {step.label[locale as keyof typeof step.label]}
                           </p>
                           {isCurrent && (
-                            <p className="text-xs text-purple-400 mt-0.5">{t.currentStatus}</p>
+                            <p className="text-xs text-neon-purple mt-0.5">{t.currentStatus}</p>
                           )}
                           {note && (
                             <p className="text-xs text-white/50 mt-1">{note}</p>

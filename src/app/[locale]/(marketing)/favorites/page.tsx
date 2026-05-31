@@ -99,7 +99,7 @@ export default function FavoritesPage() {
               </div>
             ) : cars.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-card p-8 text-center text-white/60">
-                <Heart className="mx-auto mb-3 h-10 w-10 text-rose-300/60" />
+                <Heart className="mx-auto mb-3 h-10 w-10 text-neon-pink/60" />
                 <p>{locale === "ru" ? "Пока нет избранных авто." : "No saved cars yet."}</p>
                 <Button asChild className="mt-4">
                   <Link href={localizedPath(locale, "/catalog")}>{dictionary.catalog.title}</Link>

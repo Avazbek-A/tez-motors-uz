@@ -106,7 +106,7 @@ export default function ContactsPage() {
                 href={settings.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl p-4 font-semibold transition-colors"
+                className="flex items-center justify-center gap-3 bg-neon-blue hover:bg-neon-blue text-white rounded-2xl p-4 font-semibold transition-colors"
               >
                 Telegram
               </a>
