@@ -17,40 +17,40 @@ import { Turnstile } from "@/components/shared/turnstile";
 
 const services = {
   ru: [
-    { icon: Search, title: "Подбор автомобиля", desc: "Подберём автомобиль по вашим критериям: бренд, бюджет, комплектация, цвет. Доступ к тысячам авто на аукционах и у дилеров Китая.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: ClipboardCheck, title: "Проверка и диагностика", desc: "Полная проверка истории автомобиля, VIN-кода, техническая диагностика. Фото и видео отчёт перед покупкой.", color: "bg-green-500/10 text-green-600" },
-    { icon: ShoppingCart, title: "Выкуп автомобиля", desc: "Выкупаем автомобиль на аукционе или у дилера по лучшей цене. Гарантируем безопасность сделки.", color: "bg-amber-500/10 text-amber-600" },
-    { icon: Ship, title: "Международная доставка", desc: "Доставка морем, по железной дороге или автовозом. Страхование груза на всё время перевозки.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: FileCheck, title: "Таможенное оформление", desc: "Полное таможенное оформление: расчёт пошлин, подготовка документов, получение сертификата соответствия.", color: "bg-red-500/10 text-red-600" },
-    { icon: Truck, title: "Доставка до двери", desc: "Доставим автомобиль до вашего города в Узбекистане. Работаем с Ташкентом и регионами.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: Wrench, title: "Техобслуживание", desc: "Помощь с первичным ТО, настройка бортового ПО, перевод интерфейса на русский/узбекский язык.", color: "bg-orange-500/10 text-orange-600" },
-    { icon: Shield, title: "Гарантия и поддержка", desc: "Гарантия 1 год / 20 000 км. Консультации после покупки. Помощь с запчастями и сервисом.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: Calculator, title: "Расчёт стоимости", desc: "Бесплатный расчёт полной стоимости импорта: цена авто, пошлины, доставка, наша комиссия.", color: "bg-teal-500/10 text-teal-600" },
-    { icon: Headphones, title: "Персональный менеджер", desc: "Выделенный менеджер на всех этапах сделки. Связь через Telegram, WhatsApp, телефон.", color: "bg-neon-pink/10 text-neon-pink" },
+    { icon: Search, title: "Подбор автомобиля", desc: "Подберём автомобиль по вашим критериям: бренд, бюджет, комплектация, цвет. Доступ к тысячам авто на аукционах и у дилеров Китая.", color: "bg-primary/10 text-primary" },
+    { icon: ClipboardCheck, title: "Проверка и диагностика", desc: "Полная проверка истории автомобиля, VIN-кода, техническая диагностика. Фото и видео отчёт перед покупкой.", color: "bg-white/5 text-foreground" },
+    { icon: ShoppingCart, title: "Выкуп автомобиля", desc: "Выкупаем автомобиль на аукционе или у дилера по лучшей цене. Гарантируем безопасность сделки.", color: "bg-white/5 text-foreground" },
+    { icon: Ship, title: "Международная доставка", desc: "Доставка морем, по железной дороге или автовозом. Страхование груза на всё время перевозки.", color: "bg-white/5 text-foreground" },
+    { icon: FileCheck, title: "Таможенное оформление", desc: "Полное таможенное оформление: расчёт пошлин, подготовка документов, получение сертификата соответствия.", color: "bg-white/5 text-foreground" },
+    { icon: Truck, title: "Доставка до двери", desc: "Доставим автомобиль до вашего города в Узбекистане. Работаем с Ташкентом и регионами.", color: "bg-white/5 text-foreground" },
+    { icon: Wrench, title: "Техобслуживание", desc: "Помощь с первичным ТО, настройка бортового ПО, перевод интерфейса на русский/узбекский язык.", color: "bg-white/5 text-foreground" },
+    { icon: Shield, title: "Гарантия и поддержка", desc: "Гарантия 1 год / 20 000 км. Консультации после покупки. Помощь с запчастями и сервисом.", color: "bg-white/5 text-foreground" },
+    { icon: Calculator, title: "Расчёт стоимости", desc: "Бесплатный расчёт полной стоимости импорта: цена авто, пошлины, доставка, наша комиссия.", color: "bg-white/5 text-foreground" },
+    { icon: Headphones, title: "Персональный менеджер", desc: "Выделенный менеджер на всех этапах сделки. Связь через Telegram, WhatsApp, телефон.", color: "bg-primary/10 text-primary" },
   ],
   en: [
-    { icon: Search, title: "Car Selection", desc: "We'll find a car matching your criteria: brand, budget, trim, color. Access to thousands of vehicles from Chinese auctions and dealers.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: ClipboardCheck, title: "Inspection & Diagnostics", desc: "Complete vehicle history check, VIN verification, technical diagnostics. Photo and video report before purchase.", color: "bg-green-500/10 text-green-600" },
-    { icon: ShoppingCart, title: "Vehicle Purchase", desc: "We purchase the vehicle at auction or from dealer at the best price. Transaction security guaranteed.", color: "bg-amber-500/10 text-amber-600" },
-    { icon: Ship, title: "International Shipping", desc: "Delivery by sea, rail, or car carrier. Cargo insurance throughout the entire transit.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: FileCheck, title: "Customs Clearance", desc: "Full customs processing: duty calculation, document preparation, conformity certification.", color: "bg-red-500/10 text-red-600" },
-    { icon: Truck, title: "Door-to-Door Delivery", desc: "We deliver the car to your city in Uzbekistan. We serve Tashkent and all regions.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: Wrench, title: "Service & Setup", desc: "Help with initial service, software setup, interface translation to Russian/Uzbek.", color: "bg-orange-500/10 text-orange-600" },
-    { icon: Shield, title: "Warranty & Support", desc: "1-year / 20,000 km warranty. Post-purchase consultations. Parts and service assistance.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: Calculator, title: "Cost Calculation", desc: "Free full import cost calculation: car price, duties, delivery, our commission.", color: "bg-teal-500/10 text-teal-600" },
-    { icon: Headphones, title: "Personal Manager", desc: "Dedicated manager at all stages. Contact via Telegram, WhatsApp, phone.", color: "bg-neon-pink/10 text-neon-pink" },
+    { icon: Search, title: "Car Selection", desc: "We'll find a car matching your criteria: brand, budget, trim, color. Access to thousands of vehicles from Chinese auctions and dealers.", color: "bg-primary/10 text-primary" },
+    { icon: ClipboardCheck, title: "Inspection & Diagnostics", desc: "Complete vehicle history check, VIN verification, technical diagnostics. Photo and video report before purchase.", color: "bg-white/5 text-foreground" },
+    { icon: ShoppingCart, title: "Vehicle Purchase", desc: "We purchase the vehicle at auction or from dealer at the best price. Transaction security guaranteed.", color: "bg-white/5 text-foreground" },
+    { icon: Ship, title: "International Shipping", desc: "Delivery by sea, rail, or car carrier. Cargo insurance throughout the entire transit.", color: "bg-white/5 text-foreground" },
+    { icon: FileCheck, title: "Customs Clearance", desc: "Full customs processing: duty calculation, document preparation, conformity certification.", color: "bg-white/5 text-foreground" },
+    { icon: Truck, title: "Door-to-Door Delivery", desc: "We deliver the car to your city in Uzbekistan. We serve Tashkent and all regions.", color: "bg-white/5 text-foreground" },
+    { icon: Wrench, title: "Service & Setup", desc: "Help with initial service, software setup, interface translation to Russian/Uzbek.", color: "bg-white/5 text-foreground" },
+    { icon: Shield, title: "Warranty & Support", desc: "1-year / 20,000 km warranty. Post-purchase consultations. Parts and service assistance.", color: "bg-white/5 text-foreground" },
+    { icon: Calculator, title: "Cost Calculation", desc: "Free full import cost calculation: car price, duties, delivery, our commission.", color: "bg-white/5 text-foreground" },
+    { icon: Headphones, title: "Personal Manager", desc: "Dedicated manager at all stages. Contact via Telegram, WhatsApp, phone.", color: "bg-primary/10 text-primary" },
   ],
   uz: [
-    { icon: Search, title: "Avtomobil tanlash", desc: "Mezonlaringiz bo'yicha avtomobil tanlaymiz: brend, byudjet, jihozlanish, rang. Xitoy auktsionlari va dilerlaridan minglab avtomobillarga kirish.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: ClipboardCheck, title: "Tekshiruv va diagnostika", desc: "Avtomobil tarixini to'liq tekshirish, VIN-kod tekshiruvi, texnik diagnostika. Sotib olishdan oldin foto va video hisobot.", color: "bg-green-500/10 text-green-600" },
-    { icon: ShoppingCart, title: "Avtomobil sotib olish", desc: "Avtomobilni auktsion yoki dilerdan eng yaxshi narxda sotib olamiz. Bitim xavfsizligi kafolatlangan.", color: "bg-amber-500/10 text-amber-600" },
-    { icon: Ship, title: "Xalqaro yetkazib berish", desc: "Dengiz, temir yo'l yoki avtovoz orqali yetkazib berish. Butun tranzit davomida yuk sug'urtasi.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: FileCheck, title: "Bojxona rasmiylashtiruvi", desc: "To'liq bojxona rasmiylashtiruvi: boj hisoblash, hujjatlar tayyorlash, muvofiqlik sertifikati.", color: "bg-red-500/10 text-red-600" },
-    { icon: Truck, title: "Eshikkacha yetkazib berish", desc: "Avtomobilni O'zbekistondagi shahringizga yetkazib beramiz. Toshkent va barcha viloyatlarga xizmat ko'rsatamiz.", color: "bg-neon-blue/10 text-neon-blue" },
-    { icon: Wrench, title: "Xizmat va sozlash", desc: "Dastlabki texnik xizmat, dasturiy ta'minot sozlash, interfeysni rus/o'zbek tiliga tarjima qilishda yordam.", color: "bg-orange-500/10 text-orange-600" },
-    { icon: Shield, title: "Kafolat va qo'llab-quvvatlash", desc: "1 yil / 20 000 km kafolat. Sotib olgandan keyingi maslahatlar. Ehtiyot qismlar va xizmat ko'rsatish yordami.", color: "bg-neon-purple/10 text-neon-purple" },
-    { icon: Calculator, title: "Narx hisoblash", desc: "Import narxini to'liq bepul hisoblash: avtomobil narxi, bojlar, yetkazib berish, bizning komissiya.", color: "bg-teal-500/10 text-teal-600" },
-    { icon: Headphones, title: "Shaxsiy menejer", desc: "Barcha bosqichlarda maxsus menejer. Telegram, WhatsApp, telefon orqali aloqa.", color: "bg-neon-pink/10 text-neon-pink" },
+    { icon: Search, title: "Avtomobil tanlash", desc: "Mezonlaringiz bo'yicha avtomobil tanlaymiz: brend, byudjet, jihozlanish, rang. Xitoy auktsionlari va dilerlaridan minglab avtomobillarga kirish.", color: "bg-primary/10 text-primary" },
+    { icon: ClipboardCheck, title: "Tekshiruv va diagnostika", desc: "Avtomobil tarixini to'liq tekshirish, VIN-kod tekshiruvi, texnik diagnostika. Sotib olishdan oldin foto va video hisobot.", color: "bg-white/5 text-foreground" },
+    { icon: ShoppingCart, title: "Avtomobil sotib olish", desc: "Avtomobilni auktsion yoki dilerdan eng yaxshi narxda sotib olamiz. Bitim xavfsizligi kafolatlangan.", color: "bg-white/5 text-foreground" },
+    { icon: Ship, title: "Xalqaro yetkazib berish", desc: "Dengiz, temir yo'l yoki avtovoz orqali yetkazib berish. Butun tranzit davomida yuk sug'urtasi.", color: "bg-white/5 text-foreground" },
+    { icon: FileCheck, title: "Bojxona rasmiylashtiruvi", desc: "To'liq bojxona rasmiylashtiruvi: boj hisoblash, hujjatlar tayyorlash, muvofiqlik sertifikati.", color: "bg-white/5 text-foreground" },
+    { icon: Truck, title: "Eshikkacha yetkazib berish", desc: "Avtomobilni O'zbekistondagi shahringizga yetkazib beramiz. Toshkent va barcha viloyatlarga xizmat ko'rsatamiz.", color: "bg-white/5 text-foreground" },
+    { icon: Wrench, title: "Xizmat va sozlash", desc: "Dastlabki texnik xizmat, dasturiy ta'minot sozlash, interfeysni rus/o'zbek tiliga tarjima qilishda yordam.", color: "bg-white/5 text-foreground" },
+    { icon: Shield, title: "Kafolat va qo'llab-quvvatlash", desc: "1 yil / 20 000 km kafolat. Sotib olgandan keyingi maslahatlar. Ehtiyot qismlar va xizmat ko'rsatish yordami.", color: "bg-white/5 text-foreground" },
+    { icon: Calculator, title: "Narx hisoblash", desc: "Import narxini to'liq bepul hisoblash: avtomobil narxi, bojlar, yetkazib berish, bizning komissiya.", color: "bg-white/5 text-foreground" },
+    { icon: Headphones, title: "Shaxsiy menejer", desc: "Barcha bosqichlarda maxsus menejer. Telegram, WhatsApp, telefon orqali aloqa.", color: "bg-primary/10 text-primary" },
   ],
 };
 
@@ -158,7 +158,7 @@ export default function ServicesContent() {
             return (
               <div
                 key={index}
-                className={`bg-card rounded-2xl border border-white/10 p-6 hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 hover:-translate-y-0.5 ${
+                className={`bg-card rounded-2xl border border-border p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 60}ms` }}
@@ -166,19 +166,19 @@ export default function ServicesContent() {
                 <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-5", service.color)}>
                   <Icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">{service.title}</h3>
-                <p className="text-sm text-white/60 leading-relaxed">{service.desc}</p>
+                <h3 className="text-lg font-bold text-foreground mb-2">{service.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{service.desc}</p>
               </div>
             );
           })}
         </div>
 
         {/* CTA */}
-        <div className="bg-gradient-to-r from-neon-blue to-neon-purple rounded-3xl p-10 md:p-14 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+        <div className="bg-primary rounded-3xl p-10 md:p-14 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-primary-foreground mb-4">
             {locale === "ru" ? "Готовы начать?" : locale === "uz" ? "Boshlashga tayyormisiz?" : "Ready to Start?"}
           </h2>
-          <p className="text-white/70 mb-8 max-w-lg mx-auto">
+          <p className="text-primary-foreground/70 mb-8 max-w-lg mx-auto">
             {locale === "ru"
               ? "Оставьте заявку и получите бесплатную консультацию по импорту автомобиля из Китая"
               : "Submit a request and get a free consultation on importing a car from China"}
@@ -199,17 +199,17 @@ export default function ServicesContent() {
           </div>
         </div>
 
-        <div className="mt-16 max-w-3xl mx-auto bg-card border border-white/10 rounded-3xl p-8">
+        <div className="mt-16 max-w-3xl mx-auto bg-card border border-border rounded-3xl p-8">
           {submitSuccess ? (
             <div className="text-center py-8">
               <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
-              <p className="font-semibold text-white">{b.success}</p>
+              <p className="font-semibold text-foreground">{b.success}</p>
             </div>
           ) : (
             <form onSubmit={handleBooking} className="space-y-4">
               <div>
-                <h3 className="text-2xl font-bold text-white">{b.title}</h3>
-                <p className="text-white/60 mt-1">{b.subtitle}</p>
+                <h3 className="text-2xl font-bold text-foreground">{b.title}</h3>
+                <p className="text-muted-foreground mt-1">{b.subtitle}</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={locale === "ru" ? "Ваше имя" : locale === "uz" ? "Ismingiz" : "Your name"} />
@@ -220,7 +220,7 @@ export default function ServicesContent() {
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={b.notes} />
               </div>
               <Turnstile onToken={setTurnstileToken} />
-              {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+              {submitError && <p className="text-sm text-neon-pink">{submitError}</p>}
               <Button type="submit" disabled={submitting} className="w-full">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : b.submit}
               </Button>

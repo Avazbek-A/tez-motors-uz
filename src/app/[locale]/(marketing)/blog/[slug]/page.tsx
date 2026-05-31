@@ -78,16 +78,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   return (
     <article className="pt-24 pb-16">
       <div className="container-custom max-w-4xl">
-        <Link href={localizedPath(locale, "/blog")} className="text-sm text-neon-blue mb-6 inline-flex">
+        <Link href={localizedPath(locale, "/blog")} className="text-sm text-primary mb-6 inline-flex hover:underline">
           ← {locale === "ru" ? "К блогу" : "Back to blog"}
         </Link>
         <header className="space-y-4 mb-10">
-          <p className="text-xs uppercase tracking-wider text-neon-blue">
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--fg-3)]">
             {post.published_at ? formatDate(post.published_at, locale === "uz" ? "uz-UZ" : locale === "en" ? "en-US" : "ru-RU") : ""}
           </p>
           <h1 className="text-3xl md:text-5xl font-bold text-white">{title}</h1>
           {post.cover_image && (
-            <div className="relative w-full aspect-[16/9] rounded-2xl border border-white/10 overflow-hidden">
+            <div className="relative w-full aspect-[16/9] border border-border overflow-hidden">
               <Image
                 src={post.cover_image}
                 alt={title}
@@ -101,7 +101,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </header>
 
         <div
-          className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-white/70 prose-li:text-white/70 prose-a:text-neon-blue"
+          className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-white/70 prose-li:text-white/70 prose-a:text-primary"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
         />
       </div>

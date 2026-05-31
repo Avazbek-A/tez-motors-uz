@@ -98,7 +98,7 @@ export default function AdminUsersPage() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
             Add User
           </Button>
-          {error && <p className="md:col-span-4 text-sm text-red-600">{error}</p>}
+          {error && <p className="md:col-span-4 text-sm text-red-400">{error}</p>}
         </CardContent>
       </Card>
 
@@ -120,7 +120,7 @@ export default function AdminUsersPage() {
                 <div key={user.id} className="flex items-center justify-between rounded-xl border border-border p-4">
                   <div>
                     <p className="font-medium">{user.email}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(user.created_at).toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground font-mono">{new Date(user.created_at).toLocaleString()}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{user.role}</Badge>

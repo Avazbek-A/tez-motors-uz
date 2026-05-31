@@ -52,9 +52,9 @@ export function ContactForm() {
 
   return (
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
-      <ParticleBackground particleCount={50} color="0, 212, 255" connectionDistance={100} />
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-neon-blue/5 to-transparent" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-neon-purple/5 rounded-full blur-3xl" />
+      <ParticleBackground particleCount={50} color="191, 201, 214" connectionDistance={100} />
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/[0.025] to-transparent" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/[0.02] rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
         <SectionHeading
@@ -65,18 +65,18 @@ export function ContactForm() {
 
         <div ref={ref} className={`max-w-xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
           {isSuccess ? (
-            <div className="bg-black/60 backdrop-blur-md border border-neon-blue/10 rounded-2xl p-10 text-center">
+            <div className="bg-black/60 backdrop-blur-md border border-border p-10 text-center">
               <CheckCircle className="w-16 h-16 text-neon-green mx-auto mb-4" />
               <p className="text-white text-lg font-semibold">{dictionary.contact.success}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="bg-black/60 backdrop-blur-md border border-neon-blue/10 rounded-2xl p-8 space-y-5">
+            <form onSubmit={handleSubmit} className="bg-black/60 backdrop-blur-md border border-border p-8 space-y-5">
               <Input
                 placeholder={dictionary.contact.name}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-primary/30"
               />
               <Input
                 type="tel"
@@ -84,22 +84,22 @@ export function ContactForm() {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-primary/30"
               />
               <Textarea
                 placeholder={dictionary.contact.message}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue/50 focus:ring-neon-blue/30"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-primary/30"
                 rows={4}
               />
               <Turnstile onToken={setTurnstileToken} />
               {formError && (
-                <p className="text-sm text-red-400 flex items-center gap-1.5">
+                <p className="text-sm text-neon-pink flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4 shrink-0" />{formError}
                 </p>
               )}
-              <Button type="submit" size="lg" className="w-full bg-neon-blue hover:bg-neon-blue/80 text-black font-bold" disabled={isSubmitting}>
+              <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />{dictionary.contact.submit}</>}
               </Button>
             </form>

@@ -65,12 +65,12 @@ export default function SellYourCarPage() {
       <div className="container-custom max-w-3xl">
         <SectionHeading as="h1" title="Sell your car" subtitle="Send us your car details and photos for a trade-in estimate." />
         {success ? (
-          <div className="bg-card rounded-2xl border border-white/10 p-10 text-center">
+          <div className="bg-card rounded-2xl border border-border p-10 text-center">
             <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
             <p className="font-semibold">Request sent successfully</p>
           </div>
         ) : (
-          <form onSubmit={submit} className="bg-card rounded-2xl border border-white/10 p-6 space-y-4">
+          <form onSubmit={submit} className="bg-card rounded-2xl border border-border p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Name" required />
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" required />
@@ -93,7 +93,7 @@ export default function SellYourCarPage() {
             </label>
             <Turnstile onToken={setTurnstileToken} />
             {error && (
-              <p className="text-sm text-red-400 flex items-center gap-1.5">
+              <p className="text-sm text-neon-pink flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4" />{error}
               </p>
             )}

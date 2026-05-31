@@ -102,13 +102,13 @@ export default async function TashkentPage() {
         ]}
       />
       <div className="container-custom max-w-4xl">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gradient">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
           {c.h1}
         </h1>
-        <p className="mt-6 text-base md:text-lg text-white/70 leading-relaxed">{c.intro}</p>
+        <p className="mt-6 text-base md:text-lg text-muted-foreground leading-relaxed">{c.intro}</p>
 
         <section className="mt-14">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
             {c.brandsHeading}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -119,7 +119,7 @@ export default async function TashkentPage() {
                   locale,
                   `/catalog/brand/${brand.toLowerCase().replace(/\s+/g, "-")}`,
                 )}
-                className="rounded-xl border border-white/10 bg-card px-4 py-3 text-sm text-white/80 hover:border-neon-blue/40 hover:text-white transition-colors"
+                className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
               >
                 {brand}
               </Link>
@@ -128,22 +128,22 @@ export default async function TashkentPage() {
         </section>
 
         <section className="mt-14">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3">
             {c.deliveryHeading}
           </h2>
-          <p className="text-white/70 leading-relaxed">{c.deliveryBody}</p>
+          <p className="text-muted-foreground leading-relaxed">{c.deliveryBody}</p>
         </section>
 
         <div className="mt-12 flex flex-col sm:flex-row gap-3">
           <Link
             href={localizedPath(locale, "/contacts")}
-            className="inline-flex items-center justify-center rounded-xl bg-neon-blue px-6 py-3 font-medium text-white"
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 font-medium text-primary-foreground"
           >
             {c.contactsCta}
           </Link>
           <Link
             href={localizedPath(locale, "/catalog")}
-            className="inline-flex items-center justify-center rounded-xl border border-white/15 px-6 py-3 font-medium text-white/90 hover:bg-white/5"
+            className="inline-flex items-center justify-center rounded-xl border border-border px-6 py-3 font-medium text-foreground/90 hover:bg-white/5"
           >
             {c.catalogCta}
           </Link>

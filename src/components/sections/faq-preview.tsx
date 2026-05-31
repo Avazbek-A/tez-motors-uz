@@ -39,10 +39,10 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
               <div
                 key={faq.id}
                 className={cn(
-                  "bg-card rounded-2xl border overflow-hidden transition-all duration-300",
+                  "bg-card border overflow-hidden transition-all duration-300",
                   isOpen
-                    ? "border-neon-blue/30"
-                    : "border-neon-blue/10 hover:border-neon-blue/20"
+                    ? "border-white/25"
+                    : "border-border hover:border-white/20"
                 )}
               >
                 <button
@@ -53,7 +53,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
                   <ChevronDown
                     className={cn(
                       "w-5 h-5 shrink-0 transition-all duration-200",
-                      isOpen ? "rotate-180 text-neon-blue" : "text-white/60"
+                      isOpen ? "rotate-180 text-primary" : "text-muted-foreground"
                     )}
                   />
                 </button>
@@ -61,7 +61,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
                   "overflow-hidden transition-all duration-300",
                   isOpen ? "max-h-96" : "max-h-0"
                 )}>
-                  <div className="px-5 pb-5 text-sm text-white/60 leading-relaxed border-t border-white/10 pt-4">
+                  <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border pt-4">
                     {getAnswer(faq)}
                   </div>
                 </div>
@@ -71,7 +71,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
         </div>
 
         <div className="text-center mt-10">
-          <Button variant="outline" className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 hover:border-neon-blue/50" asChild>
+          <Button variant="outline" className="border-border text-foreground hover:bg-white/5 hover:border-white/20" asChild>
             <Link href={localizedPath(locale, "/faq")}>
               {dictionary.faqSection.viewAll}
               <ArrowRight className="w-4 h-4" />

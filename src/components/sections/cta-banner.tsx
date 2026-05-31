@@ -19,7 +19,7 @@ export function CtaBanner() {
       <div className="container-custom">
         <div
           ref={ref}
-          className={`relative bg-gradient-to-r from-neon-blue/20 via-neon-purple/20 to-neon-blue/20 border border-neon-blue/20 rounded-3xl p-10 md:p-16 text-center overflow-hidden ${
+          className={`relative bg-gradient-to-r from-primary/12 via-primary/[0.06] to-primary/12 border border-border rounded-none p-10 md:p-16 text-center overflow-hidden ${
             isVisible ? "animate-fade-in-up" : "opacity-0"
           }`}
         >
@@ -30,17 +30,17 @@ export function CtaBanner() {
             <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">
               {dictionary.common.getConsultation}
             </h2>
-            <p className="text-white/60 text-lg mb-8 max-w-xl mx-auto">
+            <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
               {dictionary.contact.subtitle}
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="xl" className="bg-neon-blue hover:bg-neon-blue/80 text-black font-bold" asChild>
+              <Button size="xl" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold" asChild>
                 <Link href={localizedPath(locale, "/contacts")}>
                   {dictionary.contact.submit}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               </Button>
-              <Button size="xl" variant="outline" className="border-neon-blue/30 text-neon-blue hover:bg-neon-blue/10 hover:border-neon-blue/50" asChild>
+              <Button size="xl" variant="outline" className="border-border text-foreground hover:bg-white/5 hover:border-white/20" asChild>
                 <a href={`tel:${settings.phoneRaw}`}>
                   <Phone className="w-5 h-5" />
                   {dictionary.common.callUs}

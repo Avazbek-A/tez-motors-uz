@@ -175,13 +175,13 @@ export default function PartsReorderPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Part</th>
-                    <th className="px-4 py-3 font-medium">OEM</th>
-                    <th className="px-4 py-3 font-medium">Category</th>
-                    <th className="px-4 py-3 font-medium text-right">Stock</th>
-                    <th className="px-4 py-3 font-medium text-right">Min Order</th>
-                    <th className="px-4 py-3 font-medium text-right">Restock</th>
+                  <tr className="border-b border-border text-left text-muted-foreground bg-muted/30">
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Part</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">OEM</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Category</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Stock</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Min Order</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Restock</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,17 +190,17 @@ export default function PartsReorderPage() {
                       <td className="px-4 py-3">
                         <Link href={`/admin/parts`} className="font-medium hover:underline">{p.name_ru}</Link>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{p.oem_number || "—"}</td>
+                      <td className="px-4 py-3 text-muted-foreground font-mono">{p.oem_number || "—"}</td>
                       <td className="px-4 py-3">
                         <Badge variant="secondary" className="capitalize">{p.category}</Badge>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className={cn(
-                          "font-bold",
+                          "font-bold font-mono",
                           p.stock_qty === 0 ? "text-red-400" : p.stock_qty <= 2 ? "text-orange-400" : "text-yellow-400",
                         )}>{p.stock_qty}</span>
                       </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">{p.min_order_qty ?? 1}</td>
+                      <td className="px-4 py-3 text-right text-muted-foreground font-mono">{p.min_order_qty ?? 1}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
                           <Input

@@ -8,18 +8,18 @@ import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { FloatingShapes } from "@/components/effects";
 
 const brands = [
-  { name: "BYD", color: "from-neon-blue to-neon-purple" },
-  { name: "Chery", color: "from-neon-pink to-neon-purple" },
-  { name: "Haval", color: "from-neon-green to-neon-blue" },
-  { name: "Geely", color: "from-neon-purple to-neon-blue" },
-  { name: "Changan", color: "from-neon-cyan to-neon-blue" },
-  { name: "JETOUR", color: "from-neon-blue to-neon-green" },
-  { name: "Tank", color: "from-neon-pink to-neon-purple" },
-  { name: "Zeekr", color: "from-neon-purple to-neon-pink" },
-  { name: "Li Auto", color: "from-neon-cyan to-neon-purple" },
-  { name: "Exeed", color: "from-neon-pink to-neon-blue" },
-  { name: "Omoda", color: "from-neon-green to-neon-cyan" },
-  { name: "XPeng", color: "from-neon-blue to-neon-pink" },
+  { name: "BYD" },
+  { name: "Chery" },
+  { name: "Haval" },
+  { name: "Geely" },
+  { name: "Changan" },
+  { name: "JETOUR" },
+  { name: "Tank" },
+  { name: "Zeekr" },
+  { name: "Li Auto" },
+  { name: "Exeed" },
+  { name: "Omoda" },
+  { name: "XPeng" },
 ];
 
 export function Brands() {
@@ -49,17 +49,20 @@ export function Brands() {
             <Link
               key={brand.name}
               href={localizedPath(locale, `/catalog?brand=${encodeURIComponent(brand.name)}`)}
-              className={`group relative rounded-2xl p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-white/[0.06] bg-card/80 backdrop-blur-sm hover:border-neon-blue/25 ${
+              className={`group relative p-6 text-center transition-all duration-300 hover:-translate-y-1 border border-border bg-card hover:border-white/20 ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 40}ms` }}
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${brand.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-all duration-300`}>
-                <span className="text-white font-bold text-xs">
+              <div
+                className="w-12 h-12 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-all duration-300"
+                style={{ background: "var(--metallic)" }}
+              >
+                <span className="text-primary-foreground font-bold font-mono text-xs">
                   {brand.name.charAt(0)}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-white/70 group-hover:text-neon-blue transition-colors duration-300">
+              <p className="text-sm font-semibold text-white/70 group-hover:text-foreground transition-colors duration-300">
                 {brand.name}
               </p>
             </Link>

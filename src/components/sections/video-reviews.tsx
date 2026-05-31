@@ -42,7 +42,7 @@ export function VideoReviews() {
 
   return (
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
 
       <div className="container-custom relative z-10">
         <SectionHeading title={title} subtitle={subtitle} light />
@@ -55,25 +55,25 @@ export function VideoReviews() {
               maxTilt={8}
             >
               <div
-                className="group bg-card border border-neon-blue/10 rounded-2xl overflow-hidden hover:border-neon-blue/30 transition-all duration-300 cursor-pointer"
+                className="group bg-card border border-border overflow-hidden hover:border-white/20 transition-all duration-300 cursor-pointer"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Thumbnail */}
-                <div className="aspect-video bg-gradient-to-br from-neon-blue/5 to-neon-purple/5 flex items-center justify-center relative">
-                  <div className="w-16 h-16 rounded-full bg-neon-blue/10 border border-neon-blue/30 flex items-center justify-center group-hover:bg-neon-blue/20 transition-all duration-300 group-hover:scale-110">
-                    <Play className="w-7 h-7 text-neon-blue ml-1" />
+                <div className="aspect-video bg-gradient-to-br from-white/[0.04] to-white/[0.02] flex items-center justify-center relative">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-white/15 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300 group-hover:scale-110">
+                    <Play className="w-7 h-7 text-primary ml-1" />
                   </div>
-                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white/80 text-xs px-2 py-1 rounded-lg border border-white/10">
+                  <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white/80 text-xs font-mono px-2 py-1 border border-white/10">
                     {video.duration}
                   </div>
                 </div>
 
                 {/* Info */}
                 <div className="p-4">
-                  <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-neon-blue transition-colors">
+                  <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
                     {video.title[locale as keyof typeof video.title]}
                   </h3>
-                  <p className="text-white/60 text-xs">{video.car}</p>
+                  <p className="text-muted-foreground text-xs">{video.car}</p>
                 </div>
               </div>
             </TiltCard>

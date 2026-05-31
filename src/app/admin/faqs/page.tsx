@@ -184,7 +184,7 @@ export default function AdminFAQsPage() {
                             ) : (
                               <Badge variant="secondary">Draft</Badge>
                             )}
-                            <span className="text-xs text-muted-foreground">Order: {faq.order_position}</span>
+                            <span className="text-xs text-muted-foreground">Order: <span className="font-mono">{faq.order_position}</span></span>
                           </div>
                         </div>
                         <div className="flex gap-1 shrink-0">
@@ -322,7 +322,7 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
             />
             <span className="text-sm">Published</span>
           </label>
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Update" : "Add"}

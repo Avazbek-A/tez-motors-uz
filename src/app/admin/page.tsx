@@ -66,28 +66,28 @@ export default function AdminDashboard() {
       value: stats?.cars.total ?? "...",
       change: `${stats?.cars.available ?? 0} available`,
       icon: Car,
-      color: "text-neon-blue bg-neon-blue",
+      color: "text-primary bg-primary/15",
     },
     {
       title: "Total Inquiries",
       value: stats?.inquiries.total ?? "...",
       change: "from all sources",
       icon: MessageSquare,
-      color: "text-green-600 bg-green-100",
+      color: "text-green-400 bg-green-500/15",
     },
     {
       title: "New Inquiries",
       value: stats?.inquiries.new ?? "...",
       change: "awaiting response",
       icon: Clock,
-      color: "text-orange-600 bg-orange-100",
+      color: "text-amber-400 bg-amber-500/15",
     },
     {
       title: "Reviews",
       value: stats?.reviews.total ?? "...",
       change: `${stats?.reviews.pending ?? 0} pending`,
       icon: Star,
-      color: "text-neon-purple bg-neon-purple",
+      color: "text-muted-foreground bg-white/[0.06]",
     },
   ];
   const dueInquiries = inquiries.filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(23, 59, 59, 999) >= Date.now()).slice(0, 5);
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
                   </div>
                   <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
                 </div>
-                <p className="text-3xl font-bold">{stat.value}</p>
+                <p className="text-3xl font-bold font-mono">{stat.value}</p>
                 <p className="text-sm text-muted-foreground mt-1">{stat.title}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{stat.change}</p>
               </CardContent>
@@ -201,8 +201,8 @@ export default function AdminDashboard() {
                   className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-navy">
+                    <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center">
+                      <span className="text-sm font-bold text-foreground">
                         {inquiry.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -215,7 +215,7 @@ export default function AdminDashboard() {
                     <Badge variant={inquiry.status === "new" ? "warning" : "success"}>
                       {inquiry.status}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground font-mono">
                       {new Date(inquiry.created_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
               ))}
               {inquiries.length > PAGE_SIZE && (
                 <div className="flex items-center justify-between pt-3 border-t border-border text-sm">
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground font-mono">
                     {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, inquiries.length)} of {inquiries.length}
                   </span>
                   <div className="flex gap-2">

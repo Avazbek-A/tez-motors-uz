@@ -25,9 +25,9 @@ export function PricingComparison() {
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <GridBackground />
 
-      {/* Ambient neon glows */}
-      <div className="absolute top-0 right-1/4 w-64 h-64 bg-neon-green/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-neon-blue/5 rounded-full blur-3xl" />
+      {/* Ambient washes */}
+      <div className="absolute top-0 right-1/4 w-64 h-64 bg-white/[0.02] rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/[0.025] rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
         <SectionHeading
@@ -40,16 +40,16 @@ export function PricingComparison() {
           ref={ref}
           className={`max-w-3xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
         >
-          <div className="bg-card rounded-2xl border border-neon-blue/15 overflow-hidden">
+          <div className="bg-card border border-border overflow-hidden">
             {/* Header row */}
-            <div className="grid grid-cols-3 bg-card border-b border-neon-blue/10">
+            <div className="grid grid-cols-3 bg-card border-b border-border">
               <div className="p-4 text-sm font-medium" />
-              <div className="p-4 text-center bg-neon-green/[0.04] border-x border-neon-green/10">
+              <div className="p-4 text-center bg-neon-green/[0.05] border-x border-neon-green/15">
                 <div className="text-sm font-bold text-neon-green">{dictionary.pricing.ourPrice}</div>
-                <div className="text-xs text-white/30 font-mono">Tez Motors</div>
+                <div className="text-xs text-[var(--fg-3)] font-mono uppercase tracking-[0.16em]">Tez Motors</div>
               </div>
               <div className="p-4 text-center">
-                <div className="text-sm font-bold text-white/60">{dictionary.pricing.competitorPrice}</div>
+                <div className="text-sm font-bold text-muted-foreground">{dictionary.pricing.competitorPrice}</div>
               </div>
             </div>
 
@@ -57,32 +57,32 @@ export function PricingComparison() {
             {comparison.map((row, i) => (
               <div
                 key={i}
-                className="grid grid-cols-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
+                className="grid grid-cols-3 border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors"
               >
-                <div className="p-4 text-sm font-medium text-white/60">{row.label}</div>
-                <div className="p-4 text-center text-sm font-semibold text-neon-green bg-neon-green/[0.04] border-x border-neon-green/10">
+                <div className="p-4 text-sm font-medium text-muted-foreground">{row.label}</div>
+                <div className="p-4 text-center text-sm font-semibold font-mono text-neon-green bg-neon-green/[0.05] border-x border-neon-green/15">
                   {formatPrice(row.ours)}
                 </div>
-                <div className="p-4 text-center text-sm text-white/30">
+                <div className="p-4 text-center text-sm font-mono text-white/30">
                   {formatPrice(row.theirs)}
                 </div>
               </div>
             ))}
 
             {/* Total row */}
-            <div className="grid grid-cols-3 border-t border-neon-blue/15 bg-[#0a0a12]">
+            <div className="grid grid-cols-3 border-t border-border bg-muted">
               <div className="p-4 text-sm font-bold text-white/70">{dictionary.pricing.total}</div>
-              <div className="p-4 text-center bg-neon-green/[0.06] border-x border-neon-green/10">
-                <span className="text-xl font-bold text-neon-green">{formatPrice(ourTotal)}</span>
+              <div className="p-4 text-center bg-neon-green/[0.08] border-x border-neon-green/15">
+                <span className="text-xl font-bold font-mono text-neon-green">{formatPrice(ourTotal)}</span>
               </div>
               <div className="p-4 text-center">
-                <span className="text-xl font-bold text-white/30 line-through">{formatPrice(theirTotal)}</span>
+                <span className="text-xl font-bold font-mono text-white/30 line-through">{formatPrice(theirTotal)}</span>
               </div>
             </div>
 
             {/* Savings banner */}
-            <div className="bg-neon-green/[0.08] border-t border-neon-green/20 p-4 text-center">
-              <span className="text-lg font-bold text-neon-green neon-glow">
+            <div className="bg-neon-green/[0.10] border-t border-neon-green/25 p-4 text-center">
+              <span className="text-lg font-bold font-mono text-neon-green">
                 {dictionary.pricing.savings}: {formatPrice(savings)}
               </span>
             </div>

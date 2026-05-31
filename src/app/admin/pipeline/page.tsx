@@ -239,7 +239,7 @@ export default function AdminPipelinePage() {
                             {repLabel(inq.assigned_to)}
                           </span>
                           {inq.follow_up_date && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 font-mono">
                               <Clock className="w-3 h-3" />
                               {inq.follow_up_date}
                             </span>

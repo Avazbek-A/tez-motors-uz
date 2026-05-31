@@ -140,15 +140,15 @@ export default function PartsCatalogContent({
         <SectionHeading as="h1" title={t.title} subtitle={t.subtitle} />
 
         {(fitsModel || year) && (
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-neon-blue/10 border border-neon-blue/30 px-4 py-2 text-sm text-neon-blue">
-            <Package className="w-4 h-4" />
+          <div className="mb-6 inline-flex items-center gap-2 border border-border bg-card px-4 py-2 text-sm text-foreground">
+            <Package className="w-4 h-4 text-primary" />
             <span>
               {locale === "uz"
                 ? "Filtrlangan: "
                 : locale === "en"
                 ? "Filtered for: "
                 : "Фильтр: "}
-              <b>{[fitsBrand, fitsModel, year].filter(Boolean).join(" · ")}</b>
+              <b className="font-mono">{[fitsBrand, fitsModel, year].filter(Boolean).join(" · ")}</b>
             </span>
             <button
               type="button"
@@ -157,7 +157,7 @@ export default function PartsCatalogContent({
                 setFitsModel("");
                 setYear("");
               }}
-              className="ml-2 text-neon-blue/70 hover:text-white underline"
+              className="ml-2 text-muted-foreground hover:text-foreground underline"
             >
               {locale === "uz" ? "tozalash" : locale === "en" ? "clear" : "сбросить"}
             </button>
@@ -167,18 +167,18 @@ export default function PartsCatalogContent({
         {/* Filters */}
         <div className="flex flex-col lg:flex-row gap-3 mb-8">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={t.search}
-              className="pl-12 h-12 rounded-xl"
+              className="pl-12 h-12"
             />
           </div>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-4 h-12 rounded-xl bg-background border border-white/10 text-sm text-white"
+            className="px-4 h-12 bg-card border border-border text-sm text-foreground"
           >
             <option value="">{t.allCategories}</option>
             {PART_CATEGORIES.map((c) => (
@@ -190,7 +190,7 @@ export default function PartsCatalogContent({
           <select
             value={fitsBrand}
             onChange={(e) => setFitsBrand(e.target.value)}
-            className="px-4 h-12 rounded-xl bg-background border border-white/10 text-sm text-white"
+            className="px-4 h-12 bg-card border border-border text-sm text-foreground"
           >
             <option value="">{t.allBrands}</option>
             {CAR_BRANDS.map((b) => (
@@ -201,13 +201,13 @@ export default function PartsCatalogContent({
 
         {/* Grid */}
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-white/40">
+          <div className="flex items-center justify-center py-24 text-muted-foreground">
             <Loader2 className="w-6 h-6 animate-spin mr-2" /> ...
           </div>
         ) : parts.length === 0 ? (
-          <div className="text-center py-20 bg-background rounded-2xl border border-white/10">
-            <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
-            <p className="text-white/60">{t.noResults}</p>
+          <div className="text-center py-20 bg-card border border-border">
+            <Package className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">{t.noResults}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -215,7 +215,7 @@ export default function PartsCatalogContent({
               <Link
                 key={p.id}
                 href={localizedPath(locale, `/parts/${p.slug}`)}
-                className="group bg-card rounded-2xl border border-white/10 overflow-hidden hover:border-neon-blue/40 transition-all"
+                className="group bg-card border border-border overflow-hidden hover:border-white/25 transition-all"
               >
                 <div className="aspect-video bg-[var(--bg-0)] relative overflow-hidden">
                   {p.images[0] ? (
@@ -227,7 +227,7 @@ export default function PartsCatalogContent({
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white/20">
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
                       <Wrench className="w-10 h-10" />
                     </div>
                   )}
@@ -239,20 +239,20 @@ export default function PartsCatalogContent({
                   </Badge>
                 </div>
                 <div className="p-4 space-y-2">
-                  <p className="font-semibold text-white truncate">
+                  <p className="font-semibold text-foreground truncate">
                     {partName(p, locale as "ru" | "uz" | "en")}
                   </p>
                   {p.oem_number && (
-                    <p className="text-xs text-white/40 font-mono truncate">OEM: {p.oem_number}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">OEM: {p.oem_number}</p>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                    <span className="text-lg font-bold text-white">
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-lg font-bold font-mono text-foreground">
                       {p.price_usd ? `$${p.price_usd}` : "—"}
                     </span>
                     <span
                       className={cn(
-                        "text-xs",
-                        p.stock_qty > 0 ? "text-green-400" : "text-white/40",
+                        "text-xs font-mono",
+                        p.stock_qty > 0 ? "text-neon-green" : "text-muted-foreground",
                       )}
                     >
                       {p.stock_qty > 0 ? t.inStock : t.outOfStock}
@@ -275,7 +275,7 @@ export default function PartsCatalogContent({
             >
               ←
             </Button>
-            <span className="text-sm text-white/60">
+            <span className="text-sm font-mono text-muted-foreground">
               {page} / {totalPages}
             </span>
             <Button

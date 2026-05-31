@@ -238,8 +238,8 @@ export default function AdminInquiriesPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center shrink-0 mt-1">
-                          <span className="text-sm font-bold text-navy">
+                        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-1">
+                          <span className="text-sm font-bold text-foreground">
                             {inquiry.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -256,7 +256,7 @@ export default function AdminInquiriesPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground font-mono">
                           {new Date(inquiry.created_at).toLocaleString()}
                         </p>
                         {inquiry.source_page && (

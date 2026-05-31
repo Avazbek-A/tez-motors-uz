@@ -342,7 +342,7 @@ export default function AdminCarsPage() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <p className="font-semibold">{formatPrice(car.price_usd)}</p>
+                        <p className="font-semibold font-mono">{formatPrice(car.price_usd)}</p>
                       </td>
                       <td className="p-4">
                         <Badge variant="secondary">{car.body_type}</Badge>
@@ -615,7 +615,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               <select
                 value={bodyType}
                 onChange={(e) => setBodyType(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+                className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
                 <option value="sedan">Sedan</option>
                 <option value="suv">SUV</option>
@@ -630,7 +630,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               <select
                 value={fuelType}
                 onChange={(e) => setFuelType(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+                className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
                 <option value="petrol">Petrol</option>
                 <option value="electric">Electric</option>
@@ -643,7 +643,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               <select
                 value={transmission}
                 onChange={(e) => setTransmission(e.target.value)}
-                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+                className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
                 <option value="automatic">Automatic</option>
                 <option value="manual">Manual</option>
@@ -703,7 +703,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               />
             </label>
             {uploadError && (
-              <p className="text-xs text-red-500 mt-2">{uploadError}</p>
+              <p className="text-xs text-red-400 mt-2">{uploadError}</p>
             )}
             {images.length > 0 && (
               <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-3">

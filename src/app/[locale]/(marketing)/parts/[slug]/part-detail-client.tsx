@@ -182,7 +182,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Gallery */}
           <div>
-            <div className="relative aspect-video rounded-2xl overflow-hidden bg-background border border-white/10 mb-3">
+            <div className="relative aspect-video overflow-hidden bg-card border border-border mb-3">
               {activeImage ? (
                 <Image
                   src={activeImage}
@@ -193,7 +193,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                   className="object-contain"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/20">
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground/40">
                   <Wrench className="w-16 h-16" />
                 </div>
               )}
@@ -205,8 +205,8 @@ export default function PartDetailClient({ part }: { part: Part }) {
                     key={url}
                     onClick={() => setActiveImage(url)}
                     className={cn(
-                      "relative aspect-square rounded-lg overflow-hidden border-2 transition",
-                      activeImage === url ? "border-neon-blue" : "border-white/10",
+                      "relative aspect-square overflow-hidden border-2 transition",
+                      activeImage === url ? "border-primary" : "border-border",
                     )}
                   >
                     <Image
@@ -228,9 +228,9 @@ export default function PartDetailClient({ part }: { part: Part }) {
               <Badge variant="secondary" className="mb-2 capitalize">
                 {t.categories[part.category as keyof typeof t.categories] || part.category}
               </Badge>
-              <h1 className="text-3xl font-bold text-white">{name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{name}</h1>
               {part.oem_number && (
-                <p className="text-sm text-white/50 font-mono mt-1">
+                <p className="text-sm text-muted-foreground font-mono mt-1">
                   {t.oem}: {part.oem_number}
                 </p>
               )}
@@ -238,26 +238,26 @@ export default function PartDetailClient({ part }: { part: Part }) {
 
             <div className="flex items-baseline gap-3">
               {part.price_usd ? (
-                <span className="text-4xl font-bold text-white">${part.price_usd}</span>
+                <span className="text-4xl font-bold font-mono text-foreground">${part.price_usd}</span>
               ) : (
-                <span className="text-xl text-white/60">По запросу</span>
+                <span className="text-xl text-muted-foreground">По запросу</span>
               )}
               {part.original_price_usd && part.original_price_usd > (part.price_usd || 0) && (
-                <span className="text-lg text-white/40 line-through">${part.original_price_usd}</span>
+                <span className="text-lg font-mono text-muted-foreground line-through">${part.original_price_usd}</span>
               )}
             </div>
 
             {part.wholesale_price_usd != null && (
               <div>
                 {wholesale ? (
-                  <div className="rounded-xl border border-neon-blue/40 bg-neon-blue/5 p-3 flex items-center justify-between gap-3">
+                  <div className="border border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Tag className="w-4 h-4 text-neon-blue" />
+                      <Tag className="w-4 h-4 text-primary" />
                       <div>
-                        <p className="text-xs text-white/50">{t.wholesalePrice}</p>
-                        <p className="text-xl font-bold text-neon-blue">
+                        <p className="text-xs text-muted-foreground">{t.wholesalePrice}</p>
+                        <p className="text-xl font-bold font-mono text-primary">
                           ${part.wholesale_price_usd}{" "}
-                          <span className="text-xs text-white/50 font-normal">
+                          <span className="text-xs text-muted-foreground font-normal font-sans">
                             · {t.minOrder} {part.min_order_qty} {t.pcs}
                           </span>
                         </p>
@@ -266,7 +266,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                     <button
                       type="button"
                       onClick={toggleWholesale}
-                      className="text-xs text-white/50 hover:text-white underline"
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
                     >
                       {t.wholesaleCtaOut}
                     </button>
@@ -275,7 +275,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                   <button
                     type="button"
                     onClick={toggleWholesale}
-                    className="inline-flex items-center gap-2 text-xs text-neon-blue hover:text-neon-blue underline"
+                    className="inline-flex items-center gap-2 text-xs text-primary hover:text-primary underline"
                   >
                     <Tag className="w-3.5 h-3.5" />
                     {t.wholesaleCtaIn}
@@ -286,14 +286,14 @@ export default function PartDetailClient({ part }: { part: Part }) {
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               {part.brand && (
-                <div className="bg-card rounded-xl p-3 border border-white/5">
-                  <p className="text-white/40 text-xs mb-0.5">{t.brand}</p>
-                  <p className="text-white font-medium">{part.brand}</p>
+                <div className="bg-card p-3 border border-border">
+                  <p className="text-[var(--fg-3)] text-[11px] font-mono uppercase tracking-[0.16em] mb-0.5">{t.brand}</p>
+                  <p className="text-foreground font-medium">{part.brand}</p>
                 </div>
               )}
-              <div className="bg-card rounded-xl p-3 border border-white/5">
-                <p className="text-white/40 text-xs mb-0.5">{t.stock}</p>
-                <p className={cn("font-medium flex items-center gap-1", part.stock_qty > 0 ? "text-green-400" : "text-white/60")}>
+              <div className="bg-card p-3 border border-border">
+                <p className="text-[var(--fg-3)] text-[11px] font-mono uppercase tracking-[0.16em] mb-0.5">{t.stock}</p>
+                <p className={cn("font-medium flex items-center gap-1", part.stock_qty > 0 ? "text-neon-green" : "text-muted-foreground")}>
                   {part.stock_qty > 0 ? <CheckCircle className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
                   {part.stock_qty > 0 ? t.inStock : t.outOfStock}
                 </p>
@@ -301,8 +301,8 @@ export default function PartDetailClient({ part }: { part: Part }) {
             </div>
 
             {(part.fits_brands.length > 0 || part.fits_models.length > 0 || yearRange) && (
-              <div className="bg-card rounded-xl p-4 border border-white/5 space-y-2">
-                <p className="text-sm font-semibold text-white flex items-center gap-2">
+              <div className="bg-card p-4 border border-border space-y-2">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Package className="w-4 h-4" />
                   {t.fits}
                 </p>
@@ -314,14 +314,14 @@ export default function PartDetailClient({ part }: { part: Part }) {
                   </div>
                 )}
                 {part.fits_models.length > 0 && (
-                  <p className="text-sm text-white/70">{part.fits_models.join(" · ")}</p>
+                  <p className="text-sm text-foreground/70">{part.fits_models.join(" · ")}</p>
                 )}
-                {yearRange && <p className="text-sm text-white/50">{t.yearRange}: {yearRange}</p>}
+                {yearRange && <p className="text-sm text-muted-foreground"><span className="text-[var(--fg-3)] font-mono uppercase tracking-[0.16em] text-[11px]">{t.yearRange}:</span> <span className="font-mono">{yearRange}</span></p>}
               </div>
             )}
 
             {description && (
-              <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">
                 {description}
               </p>
             )}
@@ -331,7 +331,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#25D366] hover:bg-[#1fb955] text-white font-semibold py-3 transition"
+                className="flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1fb955] text-white font-semibold py-3 transition"
               >
                 <MessageCircle className="w-5 h-5" />
                 {t.whatsapp}
@@ -339,8 +339,8 @@ export default function PartDetailClient({ part }: { part: Part }) {
             )}
 
             {/* Inquiry form */}
-            <form onSubmit={submit} className="bg-card rounded-2xl p-5 border border-white/10 space-y-3">
-              <h3 className="font-semibold text-white">{t.inquire}</h3>
+            <form onSubmit={submit} className="bg-card p-5 border border-border space-y-3">
+              <h3 className="font-semibold text-foreground">{t.inquire}</h3>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -355,7 +355,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                 required
               />
               <textarea
-                className="w-full px-3 py-2 rounded-xl bg-[var(--bg-0)] border border-white/10 text-sm text-white min-h-[70px]"
+                className="w-full px-3 py-2 bg-[var(--bg-0)] border border-border text-sm text-foreground min-h-[70px]"
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 placeholder={t.message}
@@ -364,8 +364,8 @@ export default function PartDetailClient({ part }: { part: Part }) {
                 {status === "sending" && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 {t.submit}
               </Button>
-              {status === "sent" && <p className="text-xs text-green-400">{t.sent}</p>}
-              {status === "error" && <p className="text-xs text-red-400">{t.error}</p>}
+              {status === "sent" && <p className="text-xs text-neon-green">{t.sent}</p>}
+              {status === "error" && <p className="text-xs text-neon-pink">{t.error}</p>}
             </form>
           </div>
         </div>

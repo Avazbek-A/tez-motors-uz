@@ -108,7 +108,7 @@ export default function FavoritesPage() {
             ) : (
               <>
                 <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-card p-4 text-sm text-white/60">
-                  <span>{cars.length} {locale === "ru" ? "авто в списке" : "cars saved"}</span>
+                  <span><span className="font-mono">{cars.length}</span> {locale === "ru" ? "авто в списке" : "cars saved"}</span>
                   <Button
                     variant="outline"
                     size="sm"

@@ -79,7 +79,7 @@ export default function AdminAuditPage() {
         <select
           value={entity}
           onChange={(e) => { setPage(1); setEntity(e.target.value); }}
-          className="rounded-xl border border-border bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
         >
           <option value="all">All entities</option>
           {ENTITIES.map((e) => (
@@ -89,7 +89,7 @@ export default function AdminAuditPage() {
         <select
           value={action}
           onChange={(e) => { setPage(1); setAction(e.target.value); }}
-          className="rounded-xl border border-border bg-white px-3 py-2 text-sm"
+          className="rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground"
         >
           <option value="all">All actions</option>
           {ACTIONS.map((a) => (
@@ -114,18 +114,18 @@ export default function AdminAuditPage() {
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">When</th>
-                  <th className="px-4 py-3 font-medium">Actor</th>
-                  <th className="px-4 py-3 font-medium">Action</th>
-                  <th className="px-4 py-3 font-medium">Entity</th>
-                  <th className="px-4 py-3 font-medium">Details</th>
+                <tr className="border-b border-border text-left text-muted-foreground bg-muted/30">
+                  <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">When</th>
+                  <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Actor</th>
+                  <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Action</th>
+                  <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Entity</th>
+                  <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((e) => (
                   <tr key={e.id} className="border-b border-border/60 last:border-0 align-top">
-                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground font-mono text-xs">
                       {new Date(e.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">

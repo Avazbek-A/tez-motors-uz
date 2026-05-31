@@ -90,7 +90,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
     return (
       <div className="pt-24 pb-16">
         <div className="container-custom max-w-3xl">
-          <div className="bg-card rounded-2xl border border-white/10 p-10 text-center space-y-4">
+          <div className="bg-card border border-border p-10 text-center space-y-4 shadow-sm">
             <CheckCircle className="w-12 h-12 text-neon-green mx-auto" />
             <p className="font-semibold text-lg">
               {t("Заказ принят!", "Buyurtma qabul qilindi!", "Order received!")}
@@ -144,11 +144,11 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
                     setTrim("");
                     setColor("");
                   }}
-                  className={`w-full text-left rounded-2xl border p-4 transition flex gap-4 ${
-                    active ? "border-neon-green bg-neon-green/5" : "border-white/10 bg-card hover:border-white/30"
+                  className={`w-full text-left border p-4 transition flex gap-4 ${
+                    active ? "border-primary bg-primary/5" : "border-border bg-card hover:border-white/30"
                   }`}
                 >
-                  <div className="w-24 h-16 rounded-lg bg-muted overflow-hidden shrink-0 flex items-center justify-center">
+                  <div className="w-24 h-16 bg-muted overflow-hidden shrink-0 flex items-center justify-center">
                     {m.thumbnail || m.images[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={m.thumbnail || m.images[0]} alt={`${m.brand} ${m.model}`} className="w-full h-full object-cover" />
@@ -168,8 +168,8 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
                     </p>
                     {m.base_price_usd ? (
                       <p className="text-sm font-semibold mt-1">
-                        {t("от", "dan", "from")} ${m.base_price_usd.toLocaleString()}
-                        <span className="text-xs text-muted-foreground font-normal">
+                        {t("от", "dan", "from")} <span className="font-mono">${m.base_price_usd.toLocaleString()}</span>
+                        <span className="font-mono text-xs text-muted-foreground font-normal">
                           {" · ~$"}
                           {estimatedMonthlyFrom(m.base_price_usd).toLocaleString()}/{t("мес", "oy", "mo")}
                         </span>
@@ -183,7 +183,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
 
           {/* Configurator + form */}
           {selected && (
-            <form onSubmit={submit} className="bg-card rounded-2xl border border-white/10 p-6 space-y-4 h-fit">
+            <form onSubmit={submit} className="bg-card border border-border p-6 space-y-4 h-fit shadow-sm">
               <div>
                 <p className="font-semibold">
                   {selected.brand} {selected.model}
@@ -200,7 +200,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
                   <select
                     value={trim}
                     onChange={(e) => setTrim(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
+                    className="w-full px-3 py-2 bg-background border border-border text-sm"
                   >
                     <option value="">{t("Любая", "Istalgan", "Any")}</option>
                     {selected.trims.map((tr) => (
@@ -216,7 +216,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
                   <select
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm"
+                    className="w-full px-3 py-2 bg-background border border-border text-sm"
                   >
                     <option value="">{t("Любой", "Istalgan", "Any")}</option>
                     {selected.available_colors.map((c) => (
@@ -267,7 +267,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
               <Turnstile onToken={setTurnstileToken} />
 
               {error && (
-                <p className="text-sm text-red-400 flex items-center gap-1.5">
+                <p className="text-sm text-neon-pink flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4" />
                   {error}
                 </p>

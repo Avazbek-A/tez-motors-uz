@@ -289,8 +289,8 @@ export default function AdminPartsPage() {
           className={cn(
             "px-4 py-3 rounded-lg text-sm",
             feedback.type === "success"
-              ? "bg-green-500/10 text-green-500 border border-green-500/30"
-              : "bg-red-500/10 text-red-500 border border-red-500/30",
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20",
           )}
         >
           {feedback.message}
@@ -387,14 +387,14 @@ export default function AdminPartsPage() {
                       <p className="text-xs text-muted-foreground font-mono truncate">OEM: {p.oem_number}</p>
                     )}
                   </div>
-                  <span className="text-sm font-semibold whitespace-nowrap">
+                  <span className="text-sm font-semibold font-mono whitespace-nowrap">
                     {p.price_usd ? `$${p.price_usd}` : "—"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="capitalize">{p.category}</Badge>
                   {p.brand && <span className="truncate">{p.brand}</span>}
-                  <span className="ml-auto">Stock: {p.stock_qty}</span>
+                  <span className="ml-auto">Stock: <span className="font-mono">{p.stock_qty}</span></span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border">
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(p)}>
@@ -404,7 +404,7 @@ export default function AdminPartsPage() {
                     {p.is_published ? "Unpub" : "Publish"}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => remove(p.id)}>
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
                   </Button>
                 </div>
               </CardContent>

@@ -163,8 +163,8 @@ export default function AdminSettingsPage() {
           Telegram notification bot credentials are configured via Cloudflare Worker secrets, not here.
         </p>
         <div className="flex items-center gap-3">
-          {status === "saved" && <span className="text-sm text-green-600">Saved</span>}
-          {status === "error" && <span className="text-sm text-red-600">{errorMsg ?? "Error"}</span>}
+          {status === "saved" && <span className="text-sm text-green-400">Saved</span>}
+          {status === "error" && <span className="text-sm text-red-400">{errorMsg ?? "Error"}</span>}
           <Button size="lg" onClick={handleSave} disabled={saving}>
             <Save className="w-5 h-5" />
             {saving ? "Saving…" : "Save Settings"}

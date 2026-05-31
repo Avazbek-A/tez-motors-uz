@@ -171,7 +171,7 @@ export default function TrackOrderPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={t.codePlaceholder}
-                className="pl-12 h-14 text-base rounded-2xl"
+                className="pl-12 h-14 text-base font-mono"
                 required
               />
             </div>
@@ -181,18 +181,18 @@ export default function TrackOrderPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={t.phonePlaceholder}
-                className="pl-12 h-14 text-base rounded-2xl"
+                className="pl-12 h-14 text-base font-mono"
                 required
                 type="tel"
               />
             </div>
-            <Button type="submit" size="lg" className="rounded-2xl px-8" disabled={loading}>
+            <Button type="submit" size="lg" className="px-8" disabled={loading}>
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t.search}
             </Button>
           </form>
 
           {notFound && searched && (
-            <div className="text-center py-12 bg-background rounded-2xl border border-white/10">
+            <div className="text-center py-12 bg-card border border-border">
               <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
               <p className="text-white/60 text-sm">{t.notFound}</p>
               <p className="text-xs text-white/40 mt-2">{t.notFoundHint}</p>
@@ -200,12 +200,12 @@ export default function TrackOrderPage() {
           )}
 
           {order && (
-            <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up">
+            <div className="bg-card border border-border overflow-hidden animate-fade-in-up shadow-sm">
               {/* Header */}
-              <div className="p-5 border-b border-white/10">
+              <div className="p-5 border-b border-border">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <span className="inline-block text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue mb-2">
+                    <span className="inline-block text-xs font-mono font-medium px-2.5 py-1 border border-primary/30 bg-primary/10 text-primary mb-2 tracking-[0.08em]">
                       {order.reference_code}
                     </span>
                     <p className="font-semibold text-white">
@@ -215,7 +215,7 @@ export default function TrackOrderPage() {
                     </p>
                     {order.amount_usd != null && (
                       <p className="text-sm text-white/50 mt-1">
-                        {t.deposit}: ${order.amount_usd.toLocaleString()}
+                        {t.deposit}: <span className="font-mono text-white/70">${order.amount_usd.toLocaleString()}</span>
                       </p>
                     )}
                     {order.notes && (
@@ -226,7 +226,7 @@ export default function TrackOrderPage() {
                     )}
                   </div>
                   <p className="text-xs text-white/40 shrink-0">
-                    {t.placed}: {new Date(order.created_at).toLocaleDateString(dateLocale)}
+                    {t.placed}: <span className="font-mono">{new Date(order.created_at).toLocaleDateString(dateLocale)}</span>
                   </p>
                 </div>
               </div>
@@ -246,9 +246,9 @@ export default function TrackOrderPage() {
                             className={cn(
                               "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all",
                               isComplete
-                                ? "bg-neon-blue/20 text-neon-blue border border-neon-blue/30"
+                                ? "bg-primary/15 text-primary border border-primary/30"
                                 : isCurrent
-                                ? "bg-neon-purple/20 text-neon-purple border border-neon-purple/40 animate-pulse"
+                                ? "bg-primary text-primary-foreground border border-primary"
                                 : "bg-white/[0.04] text-white/30 border border-white/[0.08]",
                             )}
                           >
@@ -258,7 +258,7 @@ export default function TrackOrderPage() {
                             <div
                               className={cn(
                                 "w-px h-10",
-                                isComplete ? "bg-neon-blue/30" : "bg-white/[0.06]",
+                                isComplete ? "bg-primary/30" : "bg-white/[0.06]",
                               )}
                             />
                           )}
@@ -273,7 +273,7 @@ export default function TrackOrderPage() {
                             {step.label[locale as keyof typeof step.label]}
                           </p>
                           {isCurrent && (
-                            <p className="text-xs text-neon-purple mt-0.5">{t.currentStatus}</p>
+                            <p className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-primary mt-1">{t.currentStatus}</p>
                           )}
                           {note && (
                             <p className="text-xs text-white/50 mt-1">{note}</p>

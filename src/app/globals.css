@@ -261,6 +261,25 @@ body {
 .animate-fade-in-up {
   animation: fade-in-up 0.5s var(--ease-lux) both;
 }
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s var(--ease-lux) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up { animation: none; }
+  .animate-fade-in-up,
+  .animate-slide-in-right { animation: none; }
+}
+
+/* Subtle brushed-platinum sheen for the occasional display heading. Kept legible
+   (near-white → steel) rather than full metallic. */
+.text-gradient {
+  background: linear-gradient(180deg, var(--fg-1) 0%, var(--accent-deep) 140%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

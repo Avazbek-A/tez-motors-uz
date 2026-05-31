@@ -140,8 +140,8 @@ export default function AdminModelsPage() {
           className={cn(
             "px-4 py-3 rounded-lg text-sm",
             feedback.type === "success"
-              ? "bg-green-500/10 text-green-500 border border-green-500/30"
-              : "bg-red-500/10 text-red-500 border border-red-500/30",
+              ? "bg-green-500/10 text-green-400 border border-green-500/20"
+              : "bg-red-500/10 text-red-400 border border-red-500/20",
           )}
         >
           {feedback.message}
@@ -197,7 +197,7 @@ export default function AdminModelsPage() {
                       {m.year ? `${m.year} · ` : ""}ETA {m.lead_time_weeks_min}–{m.lead_time_weeks_max} wks
                     </p>
                   </div>
-                  <span className="text-sm font-semibold whitespace-nowrap">
+                  <span className="text-sm font-semibold font-mono whitespace-nowrap">
                     {m.base_price_usd ? `$${m.base_price_usd.toLocaleString()}` : "—"}
                   </span>
                 </div>
@@ -213,7 +213,7 @@ export default function AdminModelsPage() {
                     {m.is_orderable ? "Hide" : "Publish"}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => remove(m.id)}>
-                    <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                    <Trash2 className="w-3.5 h-3.5 text-destructive" />
                   </Button>
                 </div>
               </CardContent>

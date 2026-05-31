@@ -153,7 +153,7 @@ export default function AdminPostsPage() {
               />
               Published
             </label>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-red-400">{error}</p>}
             <div className="flex gap-2">
               <Button onClick={savePost} disabled={saving || !draft.title_ru || !draft.body_ru}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

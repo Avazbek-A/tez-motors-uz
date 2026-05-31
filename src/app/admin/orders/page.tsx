@@ -235,8 +235,8 @@ export default function AdminOrdersPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-navy/10 flex items-center justify-center shrink-0 mt-1">
-                          <Package className="w-5 h-5 text-navy" />
+                        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-1">
+                          <Package className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -254,11 +254,11 @@ export default function AdminOrdersPage() {
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground font-mono">
                           {new Date(order.created_at).toLocaleDateString()}
                         </p>
                         {order.amount_usd != null && (
-                          <p className="text-xs text-muted-foreground mt-1">Deposit: ${order.amount_usd}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Deposit: <span className="font-mono">${order.amount_usd}</span></p>
                         )}
                       </div>
                     </div>

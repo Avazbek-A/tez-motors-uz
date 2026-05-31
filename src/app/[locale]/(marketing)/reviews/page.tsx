@@ -157,13 +157,13 @@ export default function ReviewsPage() {
         {/* Summary stats */}
         <div className="flex items-center justify-center gap-8 mb-12">
           <div className="text-center">
-            <p className="text-4xl font-bold text-neon-blue">{avgRating}</p>
+            <p className="font-mono text-4xl font-bold text-foreground">{avgRating}</p>
             <div className="flex gap-0.5 justify-center mt-1">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <Star key={i} className="w-4 h-4 fill-primary text-primary" />
               ))}
             </div>
-            <p className="text-xs text-white/60 mt-1">{reviews.length} {t.reviewsCount}</p>
+            <p className="text-xs text-white/60 mt-1"><span className="font-mono">{reviews.length}</span> {t.reviewsCount}</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)}>
             {t.leaveReview}
@@ -174,12 +174,12 @@ export default function ReviewsPage() {
         {showForm && (
           <div className="max-w-xl mx-auto mb-12 animate-fade-in-up">
             {isSuccess ? (
-              <div className="bg-neon-blue/10 rounded-2xl border border-neon-blue/20 p-8 text-center">
-                <CheckCircle className="w-12 h-12 text-neon-blue mx-auto mb-3" />
+              <div className="bg-card border border-border p-8 text-center shadow-sm">
+                <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
                 <p className="font-semibold">{t.successMsg}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-white/10 p-6 space-y-4">
+              <form onSubmit={handleSubmit} className="bg-card border border-border p-6 space-y-4 shadow-sm">
                 <h3 className="font-bold">{t.leaveReviewHeading}</h3>
 
                 {/* Star rating */}
@@ -196,7 +196,7 @@ export default function ReviewsPage() {
                         className="p-0.5"
                       >
                         <Star className={`w-7 h-7 transition-colors ${
-                          i < (hoverRating || rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+                          i < (hoverRating || rating) ? "fill-primary text-primary" : "text-white/20"
                         }`} />
                       </button>
                     ))}
@@ -208,7 +208,7 @@ export default function ReviewsPage() {
                 <Textarea name="review" placeholder={t.reviewPlaceholder} rows={4} required />
 
                 {submitError && (
-                  <p className="text-sm text-red-400 flex items-center gap-1.5">
+                  <p className="text-sm text-neon-pink flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4 shrink-0" />{submitError}
                   </p>
                 )}
@@ -223,21 +223,21 @@ export default function ReviewsPage() {
         {/* Reviews grid */}
         {loading ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {reviews.map((review, index) => (
               <div
                 key={review.id}
-                className="bg-card rounded-2xl border border-white/10 p-6 shadow-sm hover:shadow-lg hover:shadow-neon-blue/5 transition-all duration-300 animate-fade-in-up"
+                className="bg-card border border-border p-6 shadow-sm hover:border-white/20 transition-colors duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <Quote className="w-8 h-8 text-neon-blue/30 mb-4" />
+                <Quote className="w-8 h-8 text-white/15 mb-4" />
                 <p className="text-white/80 text-sm leading-relaxed mb-6">
                   {getReviewText(review)}
                 </p>
-                <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div>
                     <p className="font-semibold text-white">{review.client_name}</p>
                     {review.car_description && (
@@ -246,7 +246,7 @@ export default function ReviewsPage() {
                   </div>
                   <div className="flex gap-0.5">
                     {Array.from({ length: review.rating }).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                     ))}
                   </div>
                 </div>

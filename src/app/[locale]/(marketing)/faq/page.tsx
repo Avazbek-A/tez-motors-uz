@@ -74,7 +74,7 @@ export default function FAQPage() {
         {/* Search */}
         <div className="max-w-xl mx-auto mb-10">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               value={searchQuery}
@@ -83,12 +83,12 @@ export default function FAQPage() {
                 setOpenIndex(null);
               }}
               placeholder={searchPlaceholder}
-              className="w-full h-14 rounded-2xl border border-white/10 bg-card text-white placeholder:text-white/30 px-12 text-base focus:outline-none focus:ring-2 focus:ring-neon-blue focus:border-transparent"
+              className="w-full h-14 rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground/60 px-12 text-base focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -98,10 +98,10 @@ export default function FAQPage() {
 
         {loading ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto" />
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
           </div>
         ) : filteredFaqs.length === 0 ? (
-          <div className="text-center py-16 text-white/40">
+          <div className="text-center py-16 text-muted-foreground">
             <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p>
               {locale === "ru"
@@ -114,28 +114,28 @@ export default function FAQPage() {
         ) : (
           <div className="max-w-3xl mx-auto space-y-3">
             {searchQuery && (
-              <p className="text-sm text-white/40 mb-4 text-center">
+              <p className="text-sm text-muted-foreground mb-4 text-center">
                 {locale === "ru"
-                  ? `Найдено: ${filteredFaqs.length} результат(а)`
-                  : `Found: ${filteredFaqs.length} result(s)`}
+                  ? <>Найдено: <span className="font-mono">{filteredFaqs.length}</span> результат(а)</>
+                  : <>Found: <span className="font-mono">{filteredFaqs.length}</span> result(s)</>}
               </p>
             )}
             {filteredFaqs.map((faq, index) => (
               <div
                 key={faq.id}
-                className="animate-fade-in-up bg-card rounded-2xl border border-white/10 overflow-hidden shadow-sm"
+                className="animate-fade-in-up bg-card rounded-2xl border border-border overflow-hidden shadow-sm"
                 style={{ animationDelay: `${index * 40}ms` }}
               >
                 <button
                   onClick={() => setOpenIndex(openIndex === index ? null : index)}
                   className="w-full flex items-center justify-between p-6 text-left hover:bg-white/5 transition-colors"
                 >
-                  <span className="font-semibold text-white pr-4 text-lg">
+                  <span className="font-semibold text-foreground pr-4 text-lg">
                     {getQuestion(faq)}
                   </span>
                   <ChevronDown
                     className={cn(
-                      "w-5 h-5 text-neon-blue shrink-0 transition-transform duration-200",
+                      "w-5 h-5 text-primary shrink-0 transition-transform duration-200",
                       openIndex === index && "rotate-180"
                     )}
                   />
@@ -146,7 +146,7 @@ export default function FAQPage() {
                     openIndex === index ? "max-h-96" : "max-h-0"
                   )}
                 >
-                  <div className="px-6 pb-6 text-white/60 leading-relaxed border-t border-white/10 pt-4">
+                  <div className="px-6 pb-6 text-muted-foreground leading-relaxed border-t border-border pt-4">
                     {getAnswer(faq)}
                   </div>
                 </div>

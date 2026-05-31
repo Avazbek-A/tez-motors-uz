@@ -152,7 +152,7 @@ export default function AccountPage() {
     return (
       <div className="pt-24 pb-16">
         <div className="container-custom py-20 text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-neon-blue" />
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -172,7 +172,7 @@ export default function AccountPage() {
               "Sign in with your phone to save your garage and track orders.",
             )}
           />
-          <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-white/10 bg-card p-6">
+          <div className="mx-auto max-w-md space-y-4 border border-border bg-card p-6 shadow-sm">
             {step === "phone" ? (
               <>
                 <label className="block text-sm font-medium text-white/70">
@@ -252,7 +252,7 @@ export default function AccountPage() {
         {/* Orders */}
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Package className="h-5 w-5 text-neon-blue" />
+            <Package className="h-5 w-5 text-muted-foreground" />
             {t("Мои заказы", "Buyurtmalarim", "My orders")}
           </h2>
           {orders.length === 0 ? (
@@ -264,17 +264,17 @@ export default function AccountPage() {
                 return (
                   <div
                     key={o.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-card p-4"
+                    className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card p-4"
                   >
                     <div>
                       <p className="font-medium">
                         {car ? `${car.brand} ${car.model} ${car.year}` : t("Заказ", "Buyurtma", "Order")}
                       </p>
-                      <p className="text-sm text-white/50">#{o.reference_code}</p>
+                      <p className="font-mono text-sm text-white/50">#{o.reference_code}</p>
                     </div>
                     <Link
                       href={localizedPath(locale, "/track")}
-                      className="text-sm text-neon-blue hover:underline"
+                      className="text-sm text-primary hover:underline"
                     >
                       {t("Отследить", "Kuzatish", "Track")} →
                     </Link>
@@ -288,13 +288,13 @@ export default function AccountPage() {
         {/* Garage */}
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Heart className="h-5 w-5 text-neon-pink" />
+            <Heart className="h-5 w-5 text-muted-foreground" />
             {t("Мой гараж", "Mening garajim", "My garage")}
           </h2>
           {cars.length === 0 ? (
             <p className="text-sm text-white/50">
               {t("В избранном пока пусто.", "Sevimlilar bo'sh.", "No favorites yet.")}{" "}
-              <Link href={localizedPath(locale, "/catalog")} className="text-neon-blue hover:underline">
+              <Link href={localizedPath(locale, "/catalog")} className="text-primary hover:underline">
                 {t("Перейти в каталог", "Katalogga o'tish", "Browse catalog")}
               </Link>
             </p>
@@ -310,7 +310,7 @@ export default function AccountPage() {
         {/* Saved searches */}
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Search className="h-5 w-5 text-neon-blue" />
+            <Search className="h-5 w-5 text-muted-foreground" />
             {t("Сохранённые поиски", "Saqlangan qidiruvlar", "Saved searches")}
           </h2>
           {searches.length === 0 ? (
@@ -322,7 +322,7 @@ export default function AccountPage() {
               {searches.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-card p-3"
+                  className="flex items-center justify-between gap-3 border border-border bg-card p-3"
                 >
                   <span className="text-sm">
                     {s.label || t("Поиск", "Qidiruv", "Search")}
@@ -339,7 +339,7 @@ export default function AccountPage() {
           )}
         </section>
 
-        <p className="flex items-center gap-2 text-xs text-white/40">
+        <p className="flex items-center gap-2 font-mono text-xs text-white/40">
           <Phone className="h-3 w-3" />
           {me.customer?.phone}
         </p>

@@ -130,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         collapsed ? "lg:ml-16" : "lg:ml-64"
       )}>
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-border flex items-center justify-between px-6 sticky top-0 z-30">
+        <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-30">
           <button
             onClick={() => setMobileOpen(true)}
             className="lg:hidden p-2 rounded-lg hover:bg-muted"

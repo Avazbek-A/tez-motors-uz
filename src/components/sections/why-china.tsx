@@ -55,19 +55,19 @@ export function WhyChina() {
             return (
               <div
                 key={index}
-                className={`bg-card rounded-2xl p-6 border border-neon-blue/10 hover:border-neon-blue/30 transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
+                className={`bg-card p-6 border border-border hover:border-white/20 transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                {/* Neon accent line at top */}
-                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-neon-blue/40 to-transparent" />
+                {/* Accent hairline at top */}
+                <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-                <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-neon-blue" />
+                <div className="w-12 h-12 bg-primary/10 border border-white/10 flex items-center justify-center mb-4">
+                  <Icon className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-base font-bold text-white mb-2">{item.title}</h3>
-                <p className="text-sm text-white/60 leading-relaxed">{item.desc}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
             );
           })}

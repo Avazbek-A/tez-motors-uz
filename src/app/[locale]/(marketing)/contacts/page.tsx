@@ -46,10 +46,10 @@ export default function ContactsPage() {
   };
 
   const contactInfo = [
-    { icon: Phone, label: settings.phone, href: `tel:${settings.phoneRaw}` },
-    { icon: Mail, label: settings.email, href: `mailto:${settings.email}` },
-    { icon: MapPin, label: settings.address, href: undefined },
-    { icon: Clock, label: dictionary.footer.workingHours, href: undefined },
+    { icon: Phone, label: settings.phone, href: `tel:${settings.phoneRaw}`, mono: true },
+    { icon: Mail, label: settings.email, href: `mailto:${settings.email}`, mono: false },
+    { icon: MapPin, label: settings.address, href: undefined, mono: false },
+    { icon: Clock, label: dictionary.footer.workingHours, href: undefined, mono: false },
   ];
 
   // Yandex Maps embed: explicit lat/lng with a pin marker so the
@@ -73,19 +73,19 @@ export default function ContactsPage() {
           <div
             className="animate-fade-in-up space-y-6"
           >
-            <div className="bg-card rounded-2xl border border-white/10 p-8 space-y-6">
+            <div className="bg-card rounded-2xl border border-border p-8 space-y-6">
               {contactInfo.map((item, i) => (
                 <div key={i} className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-neon-blue/15 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-neon-blue" />
+                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     {item.href ? (
-                      <a href={item.href} className="text-white font-medium hover:text-neon-blue transition-colors">
+                      <a href={item.href} className={`text-foreground font-medium hover:text-primary transition-colors ${item.mono ? "font-mono" : ""}`}>
                         {item.label}
                       </a>
                     ) : (
-                      <p className="text-white font-medium">{item.label}</p>
+                      <p className="text-foreground font-medium">{item.label}</p>
                     )}
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export default function ContactsPage() {
                 href={settings.whatsapp}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl p-4 font-semibold transition-colors"
+                className="flex items-center justify-center gap-3 bg-neon-green hover:bg-neon-green/90 text-white rounded-2xl p-4 font-semibold transition-colors"
               >
                 WhatsApp
               </a>
@@ -106,13 +106,13 @@ export default function ContactsPage() {
                 href={settings.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 bg-neon-blue hover:bg-neon-blue text-white rounded-2xl p-4 font-semibold transition-colors"
+                className="flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl p-4 font-semibold transition-colors"
               >
                 Telegram
               </a>
             </div>
 
-            <div className="bg-background rounded-2xl h-64 overflow-hidden border border-white/10 relative group">
+            <div className="bg-background rounded-2xl h-64 overflow-hidden border border-border relative group">
               <iframe
                 title={`Tez Motors — ${settings.address}`}
                 src={mapEmbed}
@@ -127,7 +127,7 @@ export default function ContactsPage() {
                 href={mapLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm text-muted-foreground hover:text-foreground text-xs font-medium border border-border opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 {locale === "ru" ? "Открыть в Яндекс.Картах" : locale === "uz" ? "Yandex Xaritalarda ochish" : "Open in Yandex Maps"}
               </a>
@@ -140,12 +140,12 @@ export default function ContactsPage() {
             style={{ animationDelay: "100ms" }}
           >
             {isSuccess ? (
-              <div className="bg-card rounded-2xl border border-white/10 p-12 text-center">
-                <CheckCircle className="w-16 h-16 text-neon-blue mx-auto mb-4" />
+              <div className="bg-card rounded-2xl border border-border p-12 text-center">
+                <CheckCircle className="w-16 h-16 text-neon-green mx-auto mb-4" />
                 <p className="text-lg font-semibold">{dictionary.contact.success}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-white/10 p-8 space-y-5">
+              <form onSubmit={handleSubmit} className="bg-card rounded-2xl border border-border p-8 space-y-5">
                 <h3 className="text-xl font-bold">{dictionary.contact.title}</h3>
                 <Input
                   placeholder={dictionary.contact.name}
@@ -174,7 +174,7 @@ export default function ContactsPage() {
                 />
                 <Turnstile onToken={setTurnstileToken} />
                 {formError && (
-                  <p className="text-sm text-red-400 flex items-center gap-1.5">
+                  <p className="text-sm text-neon-pink flex items-center gap-1.5">
                     <AlertCircle className="w-4 h-4 shrink-0" />{formError}
                   </p>
                 )}

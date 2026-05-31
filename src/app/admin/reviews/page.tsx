@@ -189,7 +189,7 @@ export default function AdminReviewsPage() {
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"
+                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-white/15"
                         }`}
                       />
                     ))}
@@ -200,7 +200,7 @@ export default function AdminReviewsPage() {
                   </p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground font-mono">
                       {new Date(review.created_at).toLocaleDateString()}
                     </p>
                     <div className="flex gap-1">
@@ -361,7 +361,7 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
             />
             <span className="text-sm">Published</span>
           </label>
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Update" : "Add"}

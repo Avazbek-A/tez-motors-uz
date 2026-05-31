@@ -176,7 +176,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
           </Button>
           <div className="flex items-center gap-3 ml-auto">
             <p className="text-sm text-white/60">
-              {loading ? "..." : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)}`} / {total} {dictionary.catalog.filters.results}
+              <span className="font-mono">{loading ? "..." : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)}`} / {total}</span> {dictionary.catalog.filters.results}
             </p>
             <select
               value={sortBy}
@@ -309,7 +309,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
                       key={i}
                       onClick={() => updateFilters({ ...filters, price_min: range.min, price_max: range.max })}
                       className={cn(
-                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors",
+                        "px-2 py-1 rounded-md text-[11px] font-mono font-medium border transition-colors",
                         filters.price_min === range.min && filters.price_max === range.max
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
                           : "border-white/10 text-white/60 hover:bg-white/5"
@@ -343,7 +343,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
                       key={m}
                       onClick={() => updateFilters({ ...filters, monthly_max: filters.monthly_max === m ? undefined : m })}
                       className={cn(
-                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-colors",
+                        "px-2 py-1 rounded-md text-[11px] font-mono font-medium border transition-colors",
                         filters.monthly_max === m
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
                           : "border-white/10 text-white/60 hover:bg-white/5"
@@ -408,7 +408,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
               Prev
             </Button>
             <span className="text-sm text-white/60">
-              Page {page} of {Math.max(1, Math.ceil(total / PAGE_SIZE))}
+              Page <span className="font-mono">{page}</span> of <span className="font-mono">{Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
             </span>
             <Button
               variant="outline"

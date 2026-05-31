@@ -19,9 +19,9 @@ export function ProcessTimeline() {
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <ScanlineOverlay intensity="light" />
 
-      {/* Neon ambient glows */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-neon-blue/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-neon-purple/5 rounded-full blur-3xl" />
+      {/* Ambient washes */}
+      <div className="absolute top-0 left-0 w-64 h-64 bg-white/[0.025] rounded-full blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
         <SectionHeading
@@ -36,30 +36,29 @@ export function ProcessTimeline() {
             return (
               <div
                 key={step.step}
-                className={`relative glass rounded-2xl p-6 group
-                  border border-neon-blue/10 hover:border-neon-blue/30
+                className={`relative glass p-6 group
+                  border border-border hover:border-white/20
                   hover:bg-white/[0.04] transition-all duration-300
-                 
                   ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                {/* Neon connector line on left */}
-                <div className="absolute left-0 top-4 bottom-4 w-[2px] rounded-full bg-gradient-to-b from-neon-blue/60 via-neon-purple/40 to-transparent" />
+                {/* Accent connector line on left */}
+                <div className="absolute left-0 top-4 bottom-4 w-[2px] bg-gradient-to-b from-primary/60 via-primary/25 to-transparent" />
 
                 <div className="flex items-start gap-4 pl-3">
                   <div className="shrink-0">
-                    <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center group-hover:bg-neon-blue/20 transition-colors animate-glow-breathe">
-                      <Icon className="w-6 h-6 text-neon-blue" />
+                    <div className="w-12 h-12 bg-primary/10 border border-white/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <Icon className="w-6 h-6 text-primary" />
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs font-bold text-neon-purple/70 mb-1 font-mono tracking-wider">
+                    <div className="text-xs font-bold text-[var(--fg-3)] mb-1 font-mono tracking-[0.16em]">
                       {String(step.step).padStart(2, "0")}
                     </div>
                     <h3 className="text-lg font-bold text-white mb-2">
                       {step.title[locale as keyof typeof step.title]}
                     </h3>
-                    <p className="text-sm text-white/60 leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {step.description[locale as keyof typeof step.description]}
                     </p>
                   </div>

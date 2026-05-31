@@ -164,7 +164,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                     <div className="relative group">
                       <button
                         onClick={() => removeCar(index)}
-                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-100 text-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-neon-pink/15 text-neon-pink flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
                       >
                         <XIcon className="w-3 h-3" />
                       </button>
@@ -222,7 +222,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                     const val = row.render(car);
                     const isPrice = row.label.includes("Цена") || row.label.includes("Price");
                     return (
-                      <td key={car.id} className={cn("p-4 text-center text-sm text-white", isPrice && "font-bold text-neon-blue text-lg")}>
+                      <td key={car.id} className={cn("p-4 text-center text-sm text-white", isPrice ? "font-mono font-bold text-neon-blue text-lg" : "font-mono")}>
                         {val}
                       </td>
                     );
@@ -264,7 +264,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm text-white">{car.brand} {car.model}</p>
-                      <p className="text-xs text-white/60">{car.year} &middot; {formatPrice(car.price_usd)}</p>
+                      <p className="text-xs text-white/60 font-mono">{car.year} &middot; {formatPrice(car.price_usd)}</p>
                     </div>
                     <Badge variant="secondary" className="text-[10px]">{car.body_type}</Badge>
                   </button>
