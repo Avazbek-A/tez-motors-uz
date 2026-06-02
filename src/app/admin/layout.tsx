@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ const adminNav = [
   { href: "/admin/demand", label: "Demand", icon: TrendingUp },
   { href: "/admin/money", label: "Money", icon: Banknote },
   { href: "/admin/ledger", label: "Ledger", icon: Wallet },
+  { href: "/admin/customers", label: "Customers", icon: Contact },
+  { href: "/admin/tasks", label: "Tasks", icon: ListChecks },
   { href: "/admin/conversations", label: "AI Sales", icon: Bot },
   { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
   { href: "/admin/pipeline", label: "Pipeline", icon: Columns3 },
@@ -32,6 +34,7 @@ const adminNav = [
   { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
   { href: "/admin/posts", label: "Posts", icon: FileText },
   { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
+  { href: "/admin/segments", label: "Campaigns", icon: Send },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/audit", label: "Audit", icon: ScrollText },
   { href: "/admin/errors", label: "Errors", icon: AlertTriangle },
