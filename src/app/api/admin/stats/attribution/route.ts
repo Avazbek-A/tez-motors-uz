@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     interface Bucket { leads: number; phones: Set<string> }
     const bySource = new Map<string, Bucket>();
     const byCampaign = new Map<string, Bucket>();
+    const byReferral = new Map<string, Bucket>();
     const add = (map: Map<string, Bucket>, key: string, phone: string | null) => {
       const b = map.get(key) || { leads: 0, phones: new Set<string>() };
       b.leads += 1;
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
       const attr = ((i.metadata as { attribution?: Attribution } | null)?.attribution) || null;
       add(bySource, attributionLabel(attr), i.phone as string);
       if (attr?.campaign) add(byCampaign, attr.campaign.toLowerCase(), i.phone as string);
+      if (attr?.ref) add(byReferral, attr.ref.toLowerCase(), i.phone as string);
     }
 
     const toRows = (map: Map<string, Bucket>) =>
@@ -60,6 +62,7 @@ export async function GET(request: NextRequest) {
       totalLeads: (inqRes.data || []).length,
       bySource: toRows(bySource),
       byCampaign: toRows(byCampaign).slice(0, 20),
+      byReferral: toRows(byReferral).slice(0, 50),
     });
   } catch {
     return NextResponse.json({ ok: false, error: "Failed to compute attribution" }, { status: 500 });

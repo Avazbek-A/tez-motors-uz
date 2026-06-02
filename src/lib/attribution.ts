@@ -11,6 +11,8 @@ export interface Attribution {
   medium?: string;
   campaign?: string;
   referrer?: string;
+  /** Referral code from ?ref= (word-of-mouth tracking). */
+  ref?: string;
 }
 
 const clean = (v: string | null | undefined, max = 120): string | undefined => {
@@ -26,9 +28,9 @@ export function attributionFromParams(search: string, referrer?: string | null):
     medium: clean(p.get("utm_medium")),
     campaign: clean(p.get("utm_campaign")),
     referrer: clean(referrer, 200),
+    ref: clean(p.get("ref") || p.get("utm_referral"), 60),
   };
-  if (!a.source && !a.medium && !a.campaign && !a.referrer) return null;
-  // A bare referrer with no UTM is weak signal; keep it only if there's nothing else? Keep it — still useful.
+  if (!a.source && !a.medium && !a.campaign && !a.referrer && !a.ref) return null;
   return a;
 }
 
@@ -43,8 +45,9 @@ export function parseAttributionCookie(raw: string | null | undefined): Attribut
       medium: clean(typeof o.medium === "string" ? o.medium : undefined),
       campaign: clean(typeof o.campaign === "string" ? o.campaign : undefined),
       referrer: clean(typeof o.referrer === "string" ? o.referrer : undefined, 200),
+      ref: clean(typeof o.ref === "string" ? o.ref : undefined, 60),
     };
-    if (!a.source && !a.medium && !a.campaign && !a.referrer) return null;
+    if (!a.source && !a.medium && !a.campaign && !a.referrer && !a.ref) return null;
     return a;
   } catch {
     return null;

@@ -14,6 +14,10 @@ describe("attributionFromParams", () => {
   it("keeps a referrer-only signal", () => {
     expect(attributionFromParams("", "https://google.com")).toEqual({ referrer: "https://google.com" });
   });
+  it("captures a referral code from ?ref=", () => {
+    expect(attributionFromParams("?ref=alisher", null)).toEqual({ ref: "alisher" });
+    expect(attributionFromParams("?utm_referral=bob", null)).toEqual({ ref: "bob" });
+  });
 });
 
 describe("parseAttributionCookie", () => {

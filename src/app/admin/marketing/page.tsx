@@ -28,14 +28,14 @@ export default function AdminMarketingPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [scheduleAt, setScheduleAt] = useState("");
-  const [attr, setAttr] = useState<{ bySource: AttrRow[]; byCampaign: AttrRow[] } | null>(null);
+  const [attr, setAttr] = useState<{ bySource: AttrRow[]; byCampaign: AttrRow[]; byReferral: AttrRow[] } | null>(null);
 
   const loadDrafts = useCallback(() => {
     fetch("/api/admin/marketing/drafts").then((r) => r.json()).then((d) => setDrafts(d.drafts || []));
   }, []);
   useEffect(() => {
     fetch("/api/cars?all=true&limit=200").then((r) => r.json()).then((d) => setCars(d.cars || [])).catch(() => {});
-    fetch("/api/admin/stats/attribution").then((r) => r.json()).then((d) => { if (d?.ok) setAttr({ bySource: d.bySource || [], byCampaign: d.byCampaign || [] }); }).catch(() => {});
+    fetch("/api/admin/stats/attribution").then((r) => r.json()).then((d) => { if (d?.ok) setAttr({ bySource: d.bySource || [], byCampaign: d.byCampaign || [], byReferral: d.byReferral || [] }); }).catch(() => {});
     loadDrafts();
   }, [loadDrafts]);
 
@@ -208,8 +208,17 @@ export default function AdminMarketingPage() {
               Top campaigns: {attr.byCampaign.slice(0, 6).map((c) => `${c.key} (${c.leads})`).join(" · ")}
             </p>
           )}
+          {attr.byReferral.length > 0 && (
+            <div className="mt-3">
+              <h3 className="text-xs font-semibold text-foreground mb-1">Referrals (word-of-mouth)</h3>
+              <p className="text-[11px] text-muted-foreground">
+                {attr.byReferral.map((r) => `${r.key}: ${r.leads} lead${r.leads === 1 ? "" : "s"}${r.conversions ? `, ${r.conversions} sold` : ""}`).join(" · ")}
+              </p>
+            </div>
+          )}
           <p className="text-[11px] text-muted-foreground mt-1">
-            Tag your links with <code className="text-foreground">?utm_source=…&amp;utm_campaign=…</code> so posts and ads are attributed here.
+            Tag links with <code className="text-foreground">?utm_source=…&amp;utm_campaign=…</code> for channels, or{" "}
+            <code className="text-foreground">?ref=NAME</code> to track who referred a customer.
           </p>
         </div>
       )}
