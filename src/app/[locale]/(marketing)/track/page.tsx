@@ -178,6 +178,7 @@ export default function TrackOrderPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder={t.codePlaceholder}
+                aria-label={t.codePlaceholder}
                 className="pl-12 h-14 text-base font-mono"
                 required
               />
@@ -188,6 +189,7 @@ export default function TrackOrderPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={t.phonePlaceholder}
+                aria-label={t.phonePlaceholder}
                 className="pl-12 h-14 text-base font-mono"
                 required
                 type="tel"

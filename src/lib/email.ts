@@ -290,6 +290,43 @@ export function reviewRequestEmail(
   };
 }
 
+/** Win-back: re-engage a past buyer ~a year after delivery (repeat / trade-in / referral). */
+export function winBackEmail(locale: EmailLocale, data: { name?: string }): Template {
+  const name = data.name ? esc(data.name) : "";
+  const base = siteUrl();
+  const copy = {
+    ru: {
+      subject: `${BRAND}: думаете о новом авто?`,
+      hi: name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      body: "Прошёл год с вашей покупки — спасибо, что выбрали нас! Если присматриваете новый автомобиль, поможем с подбором и примем ваш текущий в трейд-ин. И будем благодарны за рекомендацию друзьям.",
+      cta: "Смотреть каталог",
+      url: `${base}/ru/catalog`,
+    },
+    uz: {
+      subject: `${BRAND}: yangi avtomobil haqida o'ylayapsizmi?`,
+      hi: name ? `Assalomu alaykum, ${name}!` : "Assalomu alaykum!",
+      body: "Xaridingizdan bir yil o'tdi — bizni tanlaganingiz uchun rahmat! Yangi avtomobil tanlayotgan bo'lsangiz, yordam beramiz va joriy avtoingizni trade-in qabul qilamiz. Do'stlaringizga tavsiya qilsangiz, minnatdormiz.",
+      cta: "Katalogni ko'rish",
+      url: `${base}/uz/catalog`,
+    },
+    en: {
+      subject: `${BRAND}: thinking about your next car?`,
+      hi: name ? `Hello, ${name}!` : "Hello!",
+      body: "It's been a year since your purchase — thank you for choosing us! If you're considering a new car, we'll help you choose and take your current one in trade-in. And we'd appreciate a referral to friends.",
+      cta: "Browse catalog",
+      url: `${base}/en/catalog`,
+    },
+  }[locale];
+  return {
+    subject: copy.subject,
+    html: layout(
+      `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
+       <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       ${btn(copy.url, copy.cta)}`,
+    ),
+  };
+}
+
 /** Post-purchase service / maintenance reminder with a parts cross-sell. */
 export function serviceReminderEmail(locale: EmailLocale, data: { name?: string; carName?: string }): Template {
   const name = data.name ? esc(data.name) : "";
