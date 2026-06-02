@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { contactKey, pickFirst, tiyinToUzs, uzsToUsd, latest, earliest } from "@/lib/crm";
+import { customerTier, daysSince, tierRank, type CustomerTier } from "@/lib/crm-insights";
 
 /**
  * Customer 360 — list. Stitches scattered records (inquiries, orders, AI
@@ -124,30 +125,53 @@ export async function GET(request: NextRequest) {
     }
 
     const rate = await getUsdUzsRate(supabase);
-    let rows = Array.from(map.values()).map((c) => ({
-      key: c.key,
-      phone: c.phone,
-      name: c.name,
-      email: c.email,
-      sources: Array.from(c.sources),
-      inquiries: c.inquiries,
-      orders: c.orders,
-      conversations: c.conversations,
-      hasAccount: c.hasAccount,
-      leadScore: c.leadScore,
-      depositsUzs: c.depositsUzs,
-      depositsUsd: uzsToUsd(c.depositsUzs, rate),
-      firstSeen: earliest(c.firstSeen),
-      lastSeen: latest(c.lastSeen),
-    }));
+    const now = Date.now();
+    let rows = Array.from(map.values()).map((c) => {
+      const lastSeen = latest(c.lastSeen);
+      const depositsUsd = uzsToUsd(c.depositsUzs, rate);
+      const tier = customerTier({
+        ordersCount: c.orders,
+        depositsUsd,
+        lastSeenDaysAgo: daysSince(lastSeen, now),
+        leadScore: c.leadScore,
+      });
+      return {
+        key: c.key,
+        phone: c.phone,
+        name: c.name,
+        email: c.email,
+        sources: Array.from(c.sources),
+        inquiries: c.inquiries,
+        orders: c.orders,
+        conversations: c.conversations,
+        hasAccount: c.hasAccount,
+        leadScore: c.leadScore,
+        depositsUzs: c.depositsUzs,
+        depositsUsd,
+        tier,
+        firstSeen: earliest(c.firstSeen),
+        lastSeen,
+      };
+    });
+
+    // Tier breakdown over the full (pre-filter) set, for the summary strip.
+    const tierCounts: Record<CustomerTier, number> = { vip: 0, buyer: 0, active: 0, lead: 0, dormant: 0 };
+    for (const r of rows) tierCounts[r.tier] += 1;
 
     if (q) {
       rows = rows.filter((r) => (r.name || "").toLowerCase().includes(q) || r.phone.includes(q) || r.key.includes(q));
     }
+    const tierFilter = new URL(request.url).searchParams.get("tier");
+    if (tierFilter) rows = rows.filter((r) => r.tier === tierFilter);
 
-    rows.sort((a, b) => (b.lastSeen || "").localeCompare(a.lastSeen || ""));
+    const sort = new URL(request.url).searchParams.get("sort");
+    if (sort === "tier") {
+      rows.sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || (b.lastSeen || "").localeCompare(a.lastSeen || ""));
+    } else {
+      rows.sort((a, b) => (b.lastSeen || "").localeCompare(a.lastSeen || ""));
+    }
 
-    return NextResponse.json({ ok: true, total: rows.length, customers: rows.slice(0, 200), rate });
+    return NextResponse.json({ ok: true, total: rows.length, tierCounts, customers: rows.slice(0, 200), rate });
   } catch {
     return NextResponse.json({ ok: false, error: "Failed to build customer list" }, { status: 500 });
   }

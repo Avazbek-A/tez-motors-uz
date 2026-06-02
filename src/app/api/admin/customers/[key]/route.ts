@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { pickFirst, sortEventsDesc, tiyinToUzs, uzsToUsd, latest, earliest, type TimelineEvent } from "@/lib/crm";
+import { customerTier, daysSince } from "@/lib/crm-insights";
 
 /**
  * Customer 360 — one profile. `key` is the 9-digit phone core, used as an ILIKE
@@ -100,6 +101,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const allDates = timeline.map((e) => e.at);
     const maxLeadScore = conversations.reduce((m, c) => Math.max(m, Number(c.lead_score) || 0), 0);
+    const lastSeen = latest(allDates);
+    const depositsUsd = uzsToUsd(depositsUzs, rate);
+    const tier = customerTier({
+      ordersCount: orders.length,
+      depositsUsd,
+      lastSeenDaysAgo: daysSince(lastSeen, Date.now()),
+      leadScore: maxLeadScore,
+    });
 
     return NextResponse.json({
       ok: true,
@@ -111,6 +120,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         hasAccount: !!account,
         locale: account?.locale || null,
         leadScore: maxLeadScore,
+        tier,
         stats: {
           inquiries: inquiries.length,
           orders: orders.length,

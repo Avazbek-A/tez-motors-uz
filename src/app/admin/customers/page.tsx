@@ -17,8 +17,20 @@ interface Row {
   hasAccount: boolean;
   leadScore: number;
   depositsUsd: number;
+  tier: string;
   lastSeen: string | null;
 }
+
+type Tier = "vip" | "buyer" | "active" | "lead" | "dormant";
+
+const TIER_META: Record<Tier, { label: string; tone: string }> = {
+  vip: { label: "VIP", tone: "text-[var(--accent)] border-[var(--accent)]" },
+  buyer: { label: "Buyer", tone: "text-[var(--success)] border-[var(--success)]" },
+  active: { label: "Active", tone: "text-[var(--info)] border-[var(--info)]" },
+  lead: { label: "Lead", tone: "text-muted-foreground border-border" },
+  dormant: { label: "Dormant", tone: "text-[var(--danger)] border-[var(--danger)]" },
+};
+const TIER_ORDER: Tier[] = ["vip", "buyer", "active", "lead", "dormant"];
 
 interface TimelineEvent {
   type: string;
@@ -36,6 +48,7 @@ interface Profile {
     email: string | null;
     hasAccount: boolean;
     leadScore: number;
+    tier?: string;
     stats: {
       inquiries: number;
       orders: number;
@@ -80,33 +93,36 @@ const EV_TONE: Record<string, string> = {
 export default function AdminCustomersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
+  const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
+  const [tier, setTier] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const load = useCallback((query: string) => {
+  const load = useCallback((query: string, tierKey: string | null) => {
     setLoading(true);
-    fetch(`/api/admin/customers${query ? `?q=${encodeURIComponent(query)}` : ""}`)
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (tierKey) params.set("tier", tierKey);
+    params.set("sort", "tier");
+    fetch(`/api/admin/customers?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         if (d?.ok) {
           setRows(d.customers || []);
           setTotal(d.total || 0);
+          if (d.tierCounts) setTierCounts(d.tierCounts);
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
+  // Debounced search + tier filter.
   useEffect(() => {
-    load("");
-  }, [load]);
-
-  // Debounced search.
-  useEffect(() => {
-    const t = setTimeout(() => load(q.trim()), 350);
+    const t = setTimeout(() => load(q.trim(), tier), 350);
     return () => clearTimeout(t);
-  }, [q, load]);
+  }, [q, tier, load]);
 
   const openProfile = async (key: string) => {
     setLoadingProfile(true);
@@ -131,6 +147,25 @@ export default function AdminCustomersPage() {
         together by phone. {total} contacts.
       </p>
 
+      {/* Value-tier summary + filter */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        <button
+          onClick={() => setTier(null)}
+          className={`px-2.5 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${tier === null ? "border-[var(--accent)] text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+        >
+          All
+        </button>
+        {TIER_ORDER.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTier(tier === t ? null : t)}
+            className={`px-2.5 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${tier === t ? TIER_META[t].tone : "border-border text-muted-foreground hover:text-foreground"}`}
+          >
+            {TIER_META[t].label} {tierCounts[t] ? <span className="opacity-70">{tierCounts[t]}</span> : null}
+          </button>
+        ))}
+      </div>
+
       <div className="relative mb-4 max-w-sm">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or phone…" className="pl-9 text-sm" />
@@ -146,6 +181,7 @@ export default function AdminCustomersPage() {
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-2 font-medium">Customer</th>
+                <th className="px-4 py-2 font-medium">Tier</th>
                 <th className="px-4 py-2 font-medium text-right">Inq</th>
                 <th className="px-4 py-2 font-medium text-right">Ord</th>
                 <th className="px-4 py-2 font-medium text-right">AI</th>
@@ -160,6 +196,13 @@ export default function AdminCustomersPage() {
                   <td className="px-4 py-2.5">
                     <div className="text-foreground">{r.name || "—"}{r.hasAccount && <span className="ml-2 text-[10px] font-mono uppercase text-[var(--success)]">account</span>}</div>
                     <div className="text-xs text-muted-foreground font-mono">{r.phone}</div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {TIER_META[r.tier as Tier] && (
+                      <span className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_META[r.tier as Tier].tone}`}>
+                        {TIER_META[r.tier as Tier].label}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{r.inquiries || ""}</td>
                   <td className="px-4 py-2.5 text-right font-mono text-foreground">{r.orders || ""}</td>
@@ -186,7 +229,14 @@ export default function AdminCustomersPage() {
               <>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground">{open.profile.name || "Unknown"}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold text-foreground">{open.profile.name || "Unknown"}</h2>
+                      {open.profile.tier && TIER_META[open.profile.tier as Tier] && (
+                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_META[open.profile.tier as Tier].tone}`}>
+                          {TIER_META[open.profile.tier as Tier].label}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-1">
                       <a href={`tel:${open.profile.phone}`} className="inline-flex items-center gap-1 text-primary hover:underline"><Phone className="w-3.5 h-3.5" />{open.profile.phone}</a>
                       {open.profile.email && <a href={`mailto:${open.profile.email}`} className="inline-flex items-center gap-1 hover:underline"><Mail className="w-3.5 h-3.5" />{open.profile.email}</a>}
