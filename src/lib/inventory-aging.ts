@@ -24,6 +24,24 @@ export function suggestMarkdownPct(daysOnLot: number, demandScore: number): numb
   return Math.min(pct, 20);
 }
 
+/**
+ * Suggested price INCREASE % for fresh stock with strong demand — the other
+ * side of dynamic repricing. 0 = leave it. Only fresh cars (≤30 days) qualify,
+ * so we never raise the price on stuck inventory.
+ */
+export function suggestIncreasePct(daysOnLot: number, demandScore: number): number {
+  if (!Number.isFinite(daysOnLot) || daysOnLot > 30) return 0;
+  if (demandScore >= 20) return 5;
+  if (demandScore >= 12) return 3;
+  return 0;
+}
+
+/** Apply an increase % to a price, rounded up to the nearest $100. */
+export function increasePrice(priceUsd: number, pct: number): number {
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0 || pct <= 0) return Math.round(priceUsd) || 0;
+  return Math.ceil((priceUsd * (1 + pct / 100)) / 100) * 100;
+}
+
 /** Apply a markdown % to a price, rounded down to the nearest $100. */
 export function markdownPrice(priceUsd: number, pct: number): number {
   if (!Number.isFinite(priceUsd) || priceUsd <= 0 || pct <= 0) return Math.round(priceUsd) || 0;

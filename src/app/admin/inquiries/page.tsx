@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { scoreLead, leadTier, type LeadTier } from "@/lib/lead-score";
 
 interface Inquiry {
   id: string;
@@ -167,6 +168,21 @@ export default function AdminInquiriesPage() {
     return true;
   });
 
+  // Heuristic lead score → auto-prioritize: hottest leads float to the top.
+  const inquiryScore = (inq: Inquiry) =>
+    scoreLead({
+      type: inq.type,
+      hasEmail: !!inq.email,
+      hasCarId: !!inq.car_id,
+      messageLength: inq.message?.length ?? 0,
+    });
+  const sorted = [...filtered].sort((a, b) => inquiryScore(b) - inquiryScore(a));
+  const TIER_BADGE: Record<LeadTier, string> = {
+    hot: "bg-[var(--accent-tint)] text-[var(--accent)] border border-[var(--accent-line)]",
+    warm: "bg-[var(--bg-3)] text-[var(--fg-2)] border border-[var(--line-2)]",
+    cold: "bg-transparent text-[var(--fg-4)] border border-[var(--line-1)]",
+  };
+
   const statusCounts = {
     all: inquiries.length,
     new: inquiries.filter((i) => i.status === "new").length,
@@ -254,7 +270,7 @@ export default function AdminInquiriesPage() {
             </CardContent>
           </Card>
         ) : (
-          filtered.map((inquiry, index) => {
+          sorted.map((inquiry, index) => {
             const config = statusConfig[inquiry.status as keyof typeof statusConfig] || statusConfig.new;
             return (
               <div
@@ -279,6 +295,9 @@ export default function AdminInquiriesPage() {
                             <p className="font-semibold">{inquiry.name}</p>
                             <Badge variant={config.variant}>{config.label}</Badge>
                             <Badge variant="secondary">{typeLabels[inquiry.type] || inquiry.type}</Badge>
+                            {(() => { const t = leadTier(inquiryScore(inquiry)); return (
+                              <span className={cn("text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-[2px]", TIER_BADGE[t])}>{t}</span>
+                            ); })()}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">{inquiry.phone}</p>
                           {inquiry.message && (

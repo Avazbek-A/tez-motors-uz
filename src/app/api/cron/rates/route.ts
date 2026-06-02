@@ -28,8 +28,19 @@ async function handle(request: NextRequest) {
 
     const supabase = createServiceClient();
     await setUsdUzsRate(supabase, rate);
-    logEvent("cron.rates", { usd_uzs: rate });
-    return NextResponse.json({ ok: true, usd_uzs: rate });
+
+    // Re-sync stored UZS prices to the fresh rate so they never drift. Fail-open
+    // (rate is already saved; a missing RPC / migration must not fail the cron).
+    let repriced = 0;
+    try {
+      const { data: n } = await supabase.rpc("resync_car_uzs", { p_rate: rate });
+      repriced = typeof n === "number" ? n : 0;
+    } catch {
+      // ignore — prices re-sync next run once the function exists
+    }
+
+    logEvent("cron.rates", { usd_uzs: rate, repriced });
+    return NextResponse.json({ ok: true, usd_uzs: rate, repriced });
   } catch (error) {
     reportServerError("GET /api/cron/rates", error).catch(() => {});
     return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });

@@ -3,6 +3,8 @@ import {
   suggestMarkdownPct,
   markdownPrice,
   agingSuggestion,
+  suggestIncreasePct,
+  increasePrice,
   STALE_AFTER_DAYS,
 } from "../inventory-aging";
 
@@ -40,6 +42,22 @@ describe("markdownPrice", () => {
   });
   it("returns the price unchanged for a 0% markdown", () => {
     expect(markdownPrice(25000, 0)).toBe(25000);
+  });
+});
+
+describe("suggestIncreasePct", () => {
+  it("only raises fresh stock with strong demand", () => {
+    expect(suggestIncreasePct(10, 25)).toBe(5);
+    expect(suggestIncreasePct(10, 14)).toBe(3);
+    expect(suggestIncreasePct(10, 5)).toBe(0); // weak demand
+    expect(suggestIncreasePct(45, 25)).toBe(0); // not fresh
+  });
+});
+
+describe("increasePrice", () => {
+  it("raises the price and ceils to the nearest $100", () => {
+    expect(increasePrice(25000, 5)).toBe(26300); // 26250 ceiled to nearest $100
+    expect(increasePrice(25000, 0)).toBe(25000);
   });
 });
 

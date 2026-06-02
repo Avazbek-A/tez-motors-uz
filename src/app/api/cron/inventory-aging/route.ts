@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { alertDealer, logEvent, reportServerError } from "@/lib/error-report";
-import { agingSuggestion, STALE_AFTER_DAYS } from "@/lib/inventory-aging";
+import { agingSuggestion, suggestIncreasePct, increasePrice } from "@/lib/inventory-aging";
 
 /**
  * Aged-inventory autopilot. Finds available cars that have sat on the lot past
@@ -21,14 +21,13 @@ async function handle(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const now = Date.now();
-    const cutoff = new Date(now - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-    // Only available cars old enough to be candidates.
+    // All available cars — the engine decides per car whether to suggest a
+    // markdown (old + cold) or an increase (fresh + hot), or leave it.
     const { data: cars, error } = await supabase
       .from("cars")
       .select("id, brand, model, year, price_usd, created_at")
       .eq("inventory_status", "available")
-      .lte("created_at", cutoff)
       .limit(MAX_SCAN);
 
     if (error) {
@@ -59,31 +58,40 @@ async function handle(request: NextRequest) {
     const watch = count(watchRes.data);
     const inq = count(inqRes.data);
 
-    const flagged = rows
-      .map((c) => {
-        const id = c.id as string;
-        const demandScore = (inq.get(id) || 0) * 5 + (watch.get(id) || 0) * 3 + (fav.get(id) || 0);
-        const daysOnLot = Math.floor((now - new Date(c.created_at as string).getTime()) / 86_400_000);
-        const price = typeof c.price_usd === "number" ? c.price_usd : Number(c.price_usd) || 0;
-        const s = agingSuggestion({ price_usd: price, daysOnLot, demandScore });
-        return { brand: c.brand, model: c.model, year: c.year, price, daysOnLot, demandScore, ...s };
-      })
-      .filter((c) => c.markdownPct > 0)
-      .sort((a, b) => b.daysOnLot - a.daysOnLot);
+    const scored = rows.map((c) => {
+      const id = c.id as string;
+      const demandScore = (inq.get(id) || 0) * 5 + (watch.get(id) || 0) * 3 + (fav.get(id) || 0);
+      const daysOnLot = Math.floor((now - new Date(c.created_at as string).getTime()) / 86_400_000);
+      const price = typeof c.price_usd === "number" ? c.price_usd : Number(c.price_usd) || 0;
+      const down = agingSuggestion({ price_usd: price, daysOnLot, demandScore });
+      const upPct = suggestIncreasePct(daysOnLot, demandScore);
+      const name = `${c.brand} ${c.model}${c.year ? ` ${c.year}` : ""}`;
+      return { name, price, daysOnLot, demandScore, down, upPct, upPrice: upPct > 0 ? increasePrice(price, upPct) : price };
+    });
 
-    if (flagged.length > 0) {
-      const lines = ["These cars are aging with weak demand — consider a markdown:"];
-      for (const c of flagged.slice(0, 20)) {
-        lines.push(
-          `• ${c.brand} ${c.model}${c.year ? ` ${c.year}` : ""} — ${c.daysOnLot}d, demand ${c.demandScore} → -${c.markdownPct}% ($${c.price.toLocaleString("en-US")} → $${c.suggestedPriceUsd.toLocaleString("en-US")})`,
-        );
+    const markdowns = scored.filter((c) => c.down.markdownPct > 0).sort((a, b) => b.daysOnLot - a.daysOnLot);
+    const increases = scored.filter((c) => c.upPct > 0).sort((a, b) => b.demandScore - a.demandScore);
+
+    if (markdowns.length > 0 || increases.length > 0) {
+      const lines: string[] = [];
+      if (markdowns.length > 0) {
+        lines.push("⬇ Aging + weak demand — consider a markdown:");
+        for (const c of markdowns.slice(0, 15)) {
+          lines.push(`• ${c.name} — ${c.daysOnLot}d, demand ${c.demandScore} → -${c.down.markdownPct}% ($${c.price.toLocaleString("en-US")} → $${c.down.suggestedPriceUsd.toLocaleString("en-US")})`);
+        }
+        if (markdowns.length > 15) lines.push(`…and ${markdowns.length - 15} more.`);
       }
-      if (flagged.length > 20) lines.push(`…and ${flagged.length - 20} more.`);
-      alertDealer("Aged inventory — consider markdowns — Tez Motors", lines, { key: "inventory_aging" }).catch(() => {});
+      if (increases.length > 0) {
+        lines.push("⬆ Fresh + strong demand — you could raise the price:");
+        for (const c of increases.slice(0, 10)) {
+          lines.push(`• ${c.name} — ${c.daysOnLot}d, demand ${c.demandScore} → +${c.upPct}% ($${c.price.toLocaleString("en-US")} → $${c.upPrice.toLocaleString("en-US")})`);
+        }
+      }
+      alertDealer("Dynamic repricing suggestions — Tez Motors", lines, { key: "inventory_aging" }).catch(() => {});
     }
 
-    logEvent("cron.inventory_aging", { scanned: rows.length, flagged: flagged.length });
-    return NextResponse.json({ ok: true, scanned: rows.length, flagged: flagged.length });
+    logEvent("cron.inventory_aging", { scanned: rows.length, markdowns: markdowns.length, increases: increases.length });
+    return NextResponse.json({ ok: true, scanned: rows.length, markdowns: markdowns.length, increases: increases.length });
   } catch (error) {
     reportServerError("GET /api/cron/inventory-aging", error).catch(() => {});
     return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
