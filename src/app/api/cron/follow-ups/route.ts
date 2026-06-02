@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendDealerDigest } from "@/lib/cron/dealer-digest";
-import { reportServerError } from "@/lib/error-report";
+import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
  * Remind the dealer about CRM follow-ups due today or overdue. Reads inquiries
@@ -38,7 +38,7 @@ async function handle(request: NextRequest) {
       await sendDealerDigest(`Follow-ups due (${rows.length}) — Tez Motors`, lines);
     }
 
-    console.error("cron.followups.ok", JSON.stringify({ event: "cron.follow_ups", due: rows.length }));
+    logEvent("cron.follow_ups", { due: rows.length });
     return NextResponse.json({ ok: true, due: rows.length });
   } catch (error) {
     reportServerError("GET /api/cron/follow-ups", error).catch(() => {});

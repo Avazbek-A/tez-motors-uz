@@ -126,14 +126,40 @@ export async function notifyNewInquiry(data: InquiryNotifyData): Promise<void> {
 }
 
 /**
- * Send the customer a localized confirmation. No-ops when no email is present.
+ * Send the customer a confirmation. No-ops when no email is present.
+ *
+ * Auto-responder: when AI_AUTORESPOND is set, the customer gets a personalized,
+ * grounded AI-drafted reply (fail-open to a template, never invents prices) —
+ * end-to-end auto-reply with no dealer action. Otherwise the standard localized
+ * "we received your request" template.
  */
 export async function confirmToCustomer(data: {
   email?: string | null;
   name?: string;
   locale?: string | null;
+  message?: string | null;
+  type?: string | null;
+  carName?: string | null;
 }): Promise<void> {
   if (!data.email) return;
-  const tpl = inquiryReceivedEmail(normalizeLocale(data.locale), { name: data.name });
+  const locale = normalizeLocale(data.locale);
+
+  if (process.env.AI_AUTORESPOND) {
+    const { draftLeadReply } = await import("./sales-ai");
+    const { text } = await draftLeadReply({
+      locale,
+      name: data.name,
+      message: data.message ?? null,
+      type: data.type ?? null,
+      carName: data.carName ?? null,
+    });
+    const subject =
+      locale === "uz" ? "Tez Motors — javob" : locale === "en" ? "Tez Motors — reply" : "Tez Motors — ответ";
+    const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#18181b">${esc(text).replace(/\n/g, "<br>")}</div>`;
+    await sendEmail({ to: data.email, subject, html });
+    return;
+  }
+
+  const tpl = inquiryReceivedEmail(locale, { name: data.name });
   await sendEmail({ to: data.email, subject: tpl.subject, html: tpl.html });
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
-import { reportServerError } from "@/lib/error-report";
+import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
  * Housekeeping sweep for one-time passwords. OTP rows are short-lived (a few
@@ -38,10 +38,7 @@ async function handle(request: NextRequest) {
     }
 
     const deleted = (expiredCount || 0) + (consumedCount || 0);
-    console.error(
-      "cron.otpcleanup.ok",
-      JSON.stringify({ event: "cron.otp_cleanup", deleted }),
-    );
+    logEvent("cron.otp_cleanup", { deleted });
     return NextResponse.json({ ok: true, deleted });
   } catch (error) {
     reportServerError("POST /api/cron/otp-cleanup", error).catch(() => {});

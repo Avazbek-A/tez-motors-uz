@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setUsdUzsRate } from "@/lib/fx-rate";
-import { reportServerError } from "@/lib/error-report";
+import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
  * Refresh the USD/UZS rate from the Central Bank of Uzbekistan (cbu.uz).
@@ -28,7 +28,7 @@ async function handle(request: NextRequest) {
 
     const supabase = createServiceClient();
     await setUsdUzsRate(supabase, rate);
-    console.error("cron.rates.ok", JSON.stringify({ event: "cron.rates", usd_uzs: rate }));
+    logEvent("cron.rates", { usd_uzs: rate });
     return NextResponse.json({ ok: true, usd_uzs: rate });
   } catch (error) {
     reportServerError("GET /api/cron/rates", error).catch(() => {});

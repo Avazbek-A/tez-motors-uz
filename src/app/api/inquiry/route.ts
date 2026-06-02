@@ -92,7 +92,13 @@ export async function POST(request: NextRequest) {
       metadata: data.metadata,
       locale: data.locale,
     }).catch(() => {});
-    confirmToCustomer({ email: data.email || null, name: data.name, locale: data.locale }).catch(() => {});
+    confirmToCustomer({
+      email: data.email || null,
+      name: data.name,
+      locale: data.locale,
+      message: data.message,
+      type: data.type,
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, id: inquiry.id }, { status: 201 });
   } catch (error) {

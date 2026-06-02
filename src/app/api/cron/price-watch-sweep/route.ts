@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyPriceWatchers } from "@/lib/price-watch";
-import { reportServerError } from "@/lib/error-report";
+import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
  * Safety-net re-scan of price_watches. The primary path emails watchers inline
@@ -36,6 +36,7 @@ async function handle(request: NextRequest) {
 
     const carIds = Array.from(new Set((pending || []).map((p) => p.car_id as string))).slice(0, MAX_CARS);
     if (carIds.length === 0) {
+      logEvent("cron.price_watch_sweep", { cars: 0, sent: 0 });
       return NextResponse.json({ ok: true, cars: 0, sent: 0 });
     }
 
@@ -67,6 +68,7 @@ async function handle(request: NextRequest) {
       "cron.pricewatchsweep.ok",
       JSON.stringify({ event: "cron.price_watch_sweep", cars: (cars || []).length, sent }),
     );
+    logEvent("cron.price_watch_sweep", { cars: (cars || []).length, sent });
     return NextResponse.json({ ok: true, cars: (cars || []).length, sent });
   } catch (error) {
     reportServerError("GET /api/cron/price-watch-sweep", error).catch(() => {});

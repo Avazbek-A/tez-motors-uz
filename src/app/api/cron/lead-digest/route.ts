@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendDealerDigest } from "@/lib/cron/dealer-digest";
-import { reportServerError } from "@/lib/error-report";
+import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
  * Daily "yesterday in numbers" summary for the dealer: new leads in the last
@@ -29,15 +29,11 @@ async function handle(request: NextRequest) {
     ];
     await sendDealerDigest("Daily summary — Tez Motors", lines);
 
-    console.error(
-      "cron.leaddigest.ok",
-      JSON.stringify({
-        event: "cron.lead_digest",
-        leads: leadCount ?? 0,
-        orders: orderCount ?? 0,
-        order_events: orderEventCount ?? 0,
-      }),
-    );
+    logEvent("cron.lead_digest", {
+      leads: leadCount ?? 0,
+      orders: orderCount ?? 0,
+      order_events: orderEventCount ?? 0,
+    });
     return NextResponse.json({
       ok: true,
       leads: leadCount ?? 0,

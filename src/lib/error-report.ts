@@ -42,6 +42,24 @@ export function logEvent(
   } catch {
     // ignore serialization failures
   }
+
+  // Record the heartbeat for scheduled jobs so the autopilot command-center can
+  // show which crons ran and with what result. Fire-and-forget, fail-open
+  // (reliable on a long-lived Node host; best-effort on Workers without
+  // waitUntil — acceptable for observability).
+  if (event.startsWith("cron.")) {
+    void recordCronRun(event.slice(5), fields);
+  }
+}
+
+async function recordCronRun(job: string, detail: Record<string, unknown>): Promise<void> {
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
+    await supabase.from("cron_runs").insert({ job, detail });
+  } catch {
+    // observability must never break a cron
+  }
 }
 
 /**
