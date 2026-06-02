@@ -23,6 +23,7 @@ const ROUTES = {
   "0 3 * * *": "/api/cron/ops-digest",
   "30 4 * * *": "/api/cron/order-sla",
   "30 5 * * *": "/api/cron/lead-nurture",
+  "0 6 * * 1": "/api/cron/inventory-aging",
 };
 
 async function fire(path, env) {

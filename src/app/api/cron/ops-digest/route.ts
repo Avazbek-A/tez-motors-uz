@@ -3,6 +3,7 @@ import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendDealerDigest } from "@/lib/cron/dealer-digest";
 import { reportServerError, logEvent } from "@/lib/error-report";
+import { STALE_AFTER_DAYS } from "@/lib/inventory-aging";
 
 /**
  * Daily operations autopilot — the dealer's morning action queue.
@@ -22,8 +23,9 @@ async function handle(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const staleCutoff = new Date(Date.now() - STALE_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-    const [newLeads, openInquiries, unpaidReservations, activeOrders, partsRes] = await Promise.all([
+    const [newLeads, openInquiries, unpaidReservations, activeOrders, partsRes, agedInventory] = await Promise.all([
       supabase.from("inquiries").select("id", { count: "exact", head: true }).gte("created_at", since),
       supabase.from("inquiries").select("id", { count: "exact", head: true }).in("status", OPEN_INQUIRY_STATUSES),
       supabase
@@ -34,6 +36,11 @@ async function handle(request: NextRequest) {
         .lte("created_at", since),
       supabase.from("orders").select("id", { count: "exact", head: true }).in("status", ACTIVE_ORDER_STATUSES),
       supabase.from("parts").select("id, name_ru, stock_qty, min_order_qty").eq("is_published", true).limit(1000),
+      supabase
+        .from("cars")
+        .select("id", { count: "exact", head: true })
+        .eq("inventory_status", "available")
+        .lte("created_at", staleCutoff),
     ]);
 
     // Low stock = at or below the per-part reorder point (col-vs-col, in JS).
@@ -47,6 +54,7 @@ async function handle(request: NextRequest) {
       unpaidReservations: unpaidReservations.count ?? 0,
       activeOrders: activeOrders.count ?? 0,
       lowStock: lowStock.length,
+      agedInventory: agedInventory.count ?? 0,
     };
 
     const lines = [
@@ -55,6 +63,7 @@ async function handle(request: NextRequest) {
       `⏳ Unpaid reservations (>24h, call before auto-release): ${counts.unpaidReservations}`,
       `🚢 Orders in progress to advance: ${counts.activeOrders}`,
       `📦 Parts to reorder (at/below min): ${counts.lowStock}`,
+      `📉 Aged inventory (>${STALE_AFTER_DAYS}d on lot): ${counts.agedInventory}`,
     ];
     if (lowStock.length > 0) {
       const top = lowStock
