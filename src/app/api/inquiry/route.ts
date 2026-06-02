@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -55,6 +56,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    // Attach marketing attribution (first-touch UTM/referrer) captured in a cookie.
+    const attribution = parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value);
+    const metadata = { ...(data.metadata || {}), ...(attribution ? { attribution } : {}) };
+
     const { data: inquiry, error } = await supabase
       .from("inquiries")
       .insert({
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
         type: data.type,
         car_id: data.car_id || null,
         source_page: data.source_page || null,
-        metadata: data.metadata || {},
+        metadata,
         status: "new",
       })
       .select()

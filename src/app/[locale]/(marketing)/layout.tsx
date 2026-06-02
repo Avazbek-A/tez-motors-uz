@@ -6,6 +6,7 @@ import { CallbackWidget } from "@/components/shared/callback-widget";
 import { FavoritesPill } from "@/components/shared/favorites-pill";
 import { CookieConsent } from "@/components/shared/cookie-consent";
 import { TawkChat } from "@/components/shared/tawk-chat";
+import { AttributionCapture } from "@/components/marketing/attribution-capture";
 import { SiteSettingsProvider } from "@/lib/site-settings-context";
 import { getSiteSettings } from "@/lib/site-settings-server";
 
@@ -26,6 +27,7 @@ export default async function LocaleMarketingLayout({
       <ScrollToTop />
       <CookieConsent />
       <TawkChat />
+      <AttributionCapture />
     </SiteSettingsProvider>
   );
 }

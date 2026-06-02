@@ -8,6 +8,7 @@ import { CONTENT_KINDS, contentKindLabel } from "@/lib/marketing-content";
 
 interface Car { id: string; brand: string; model: string; year: number | null }
 interface Draft { id: string; kind: string; locale: string; subject: string | null; body: string; status: string; scheduled_at: string | null; created_at: string }
+interface AttrRow { key: string; leads: number; conversions: number; convRate: number }
 
 const LOCALES = [{ k: "ru", l: "RU" }, { k: "uz", l: "UZ" }, { k: "en", l: "EN" }];
 const SOCIAL = new Set(["telegram", "instagram", "facebook", "promo", "ad"]);
@@ -27,12 +28,14 @@ export default function AdminMarketingPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [scheduleAt, setScheduleAt] = useState("");
+  const [attr, setAttr] = useState<{ bySource: AttrRow[]; byCampaign: AttrRow[] } | null>(null);
 
   const loadDrafts = useCallback(() => {
     fetch("/api/admin/marketing/drafts").then((r) => r.json()).then((d) => setDrafts(d.drafts || []));
   }, []);
   useEffect(() => {
     fetch("/api/cars?all=true&limit=200").then((r) => r.json()).then((d) => setCars(d.cars || [])).catch(() => {});
+    fetch("/api/admin/stats/attribution").then((r) => r.json()).then((d) => { if (d?.ok) setAttr({ bySource: d.bySource || [], byCampaign: d.byCampaign || [] }); }).catch(() => {});
     loadDrafts();
   }, [loadDrafts]);
 
@@ -171,6 +174,43 @@ export default function AdminMarketingPage() {
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">{d.body.slice(0, 200)}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Attribution — which channels drive leads & sales */}
+      {attr && attr.bySource.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-foreground mb-2">Where leads come from</h2>
+          <div className="bg-card border border-border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-4 py-2 font-medium">Source</th>
+                  <th className="px-4 py-2 font-medium text-right">Leads</th>
+                  <th className="px-4 py-2 font-medium text-right">Converted</th>
+                  <th className="px-4 py-2 font-medium text-right">Conv. rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attr.bySource.map((r) => (
+                  <tr key={r.key} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2 text-foreground">{r.key}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">{r.leads}</td>
+                    <td className="px-4 py-2 text-right font-mono text-foreground">{r.conversions}</td>
+                    <td className={`px-4 py-2 text-right font-mono ${r.convRate >= 10 ? "text-[var(--success)]" : "text-muted-foreground"}`}>{r.convRate}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {attr.byCampaign.length > 0 && (
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Top campaigns: {attr.byCampaign.slice(0, 6).map((c) => `${c.key} (${c.leads})`).join(" · ")}
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Tag your links with <code className="text-foreground">?utm_source=…&amp;utm_campaign=…</code> so posts and ads are attributed here.
+          </p>
         </div>
       )}
     </div>
