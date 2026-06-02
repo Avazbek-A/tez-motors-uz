@@ -28,6 +28,7 @@ const ROUTES = {
   "0 5 1 * *": "/api/cron/monthly-report",
   "0 7 * * 2": "/api/cron/win-back",
   "15 4 * * *": "/api/cron/generate-tasks",
+  "45 4 * * *": "/api/cron/shipment-sla",
 };
 
 async function fire(path, env) {

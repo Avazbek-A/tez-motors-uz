@@ -37,6 +37,7 @@ crons = [
   "0 5 1 * *",   # 1st of month, 10:00 Tashkent — monthly owner report
   "0 7 * * 2",   # Tue 12:00 Tashkent — dormant-customer win-back
   "15 4 * * *",  # 09:15 Tashkent — generate CRM sales tasks (stale leads, deposits, handoffs)
+  "45 4 * * *",  # 09:45 Tashkent — overdue-shipment SLA watchdog
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.
