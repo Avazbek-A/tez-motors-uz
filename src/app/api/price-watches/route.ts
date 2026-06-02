@@ -3,6 +3,9 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
+
+const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "price-watch" });
 
 const schema = z.object({
   email: z.string().email().max(200),
@@ -13,6 +16,10 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    if (!(await checkRateLimit(getClientIp(request)))) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const body = await request.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
