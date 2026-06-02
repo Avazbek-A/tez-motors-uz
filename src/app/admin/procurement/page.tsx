@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Loader2, Truck } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, Truck, MessageCircle, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PURCHASE_ORDER_STATUSES } from "@/lib/schemas/purchase-order";
@@ -9,6 +9,7 @@ import { PURCHASE_ORDER_STATUSES } from "@/lib/schemas/purchase-order";
 interface PurchaseOrder {
   id: string;
   supplier: string | null;
+  supplier_phone: string | null;
   brand: string;
   model: string;
   trim: string | null;
@@ -19,6 +20,20 @@ interface PurchaseOrder {
   eta_date: string | null;
   notes: string | null;
   created_at: string;
+}
+
+const MSG_KINDS: { value: string; label: string }[] = [
+  { value: "rfq", label: "Request quote" },
+  { value: "follow_up", label: "Follow up" },
+  { value: "eta", label: "Shipping / ETA" },
+  { value: "price_check", label: "Price check" },
+];
+
+/** Build a one-tap WhatsApp link. With a number → direct chat; without → share sheet. */
+function waLink(phone: string | null | undefined, text: string): string {
+  const digits = (phone || "").replace(/[^\d]/g, "");
+  const q = `?text=${encodeURIComponent(text)}`;
+  return digits ? `https://wa.me/${digits}${q}` : `https://wa.me/${q}`;
 }
 
 const usd = (n: number | null) => (n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"));
@@ -39,6 +54,9 @@ export default function AdminProcurementPage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [msgKind, setMsgKind] = useState("rfq");
+  const [msgText, setMsgText] = useState("");
+  const [drafting, setDrafting] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -67,6 +85,28 @@ export default function AdminProcurementPage() {
     });
   }, []);
 
+  // Reset the WhatsApp draft when switching to a different purchase order.
+  useEffect(() => {
+    setMsgText("");
+    setMsgKind("rfq");
+  }, [editing?.id]);
+
+  const draftMessage = async () => {
+    if (!editing?.id) return;
+    setDrafting(true);
+    try {
+      const res = await fetch(`/api/admin/purchase-orders/${editing.id}/draft-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: msgKind }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.text) setMsgText(data.text);
+    } finally {
+      setDrafting(false);
+    }
+  };
+
   const save = async () => {
     if (!editing || !editing.brand || !editing.model) return;
     setSaving(true);
@@ -74,6 +114,7 @@ export default function AdminProcurementPage() {
       const isEdit = !!editing.id;
       const payload = {
         supplier: editing.supplier || null,
+        supplier_phone: editing.supplier_phone || null,
         brand: editing.brand,
         model: editing.model,
         trim: editing.trim || null,
@@ -181,7 +222,10 @@ export default function AdminProcurementPage() {
               <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
-              <Input placeholder="Supplier" value={editing.supplier || ""} onChange={(e) => set({ supplier: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input placeholder="Supplier" value={editing.supplier || ""} onChange={(e) => set({ supplier: e.target.value })} />
+                <Input placeholder="Supplier WhatsApp (+86…)" value={editing.supplier_phone || ""} onChange={(e) => set({ supplier_phone: e.target.value })} />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input placeholder="Brand *" value={editing.brand || ""} onChange={(e) => set({ brand: e.target.value })} />
                 <Input placeholder="Model *" value={editing.model || ""} onChange={(e) => set({ model: e.target.value })} />
@@ -203,6 +247,53 @@ export default function AdminProcurementPage() {
                 <Input type="date" value={editing.eta_date || ""} onChange={(e) => set({ eta_date: e.target.value })} />
               </div>
               <Input placeholder="Notes" value={editing.notes || ""} onChange={(e) => set({ notes: e.target.value })} />
+
+              {/* Supplier WhatsApp message — AI-drafted, you review & send (ToS-safe). */}
+              <div className="rounded-[2px] border border-border bg-[var(--bg-3)]/50 p-3 space-y-2.5">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                  <MessageCircle className="w-3.5 h-3.5" /> Supplier WhatsApp message
+                </div>
+                {editing.id ? (
+                  <>
+                    <div className="flex gap-2">
+                      <select
+                        value={msgKind}
+                        onChange={(e) => setMsgKind(e.target.value)}
+                        className="h-9 flex-1 rounded-[2px] border border-border bg-[var(--bg-3)] px-2 text-sm text-foreground"
+                      >
+                        {MSG_KINDS.map((k) => (
+                          <option key={k.value} value={k.value}>{k.label}</option>
+                        ))}
+                      </select>
+                      <Button type="button" variant="outline" size="sm" onClick={draftMessage} disabled={drafting}>
+                        {drafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Draft</>}
+                      </Button>
+                    </div>
+                    <textarea
+                      value={msgText}
+                      onChange={(e) => setMsgText(e.target.value)}
+                      placeholder="Draft a message, edit it, then send on WhatsApp…"
+                      rows={5}
+                      className="w-full rounded-[2px] border border-border bg-[var(--bg-3)] px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-[var(--accent)] whitespace-pre-wrap"
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        Bilingual 中文/EN. Review before sending — you send, not the bot.
+                      </p>
+                      <a
+                        href={waLink(editing.supplier_phone, msgText)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 rounded-[2px] bg-[var(--success)] px-3 py-1.5 text-xs font-medium text-black ${msgText.trim() ? "" : "pointer-events-none opacity-50"}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" /> Send on WhatsApp
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">Save this order first to draft a supplier message.</p>
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-border">
               <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>

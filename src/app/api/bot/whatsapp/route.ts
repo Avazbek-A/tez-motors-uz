@@ -26,7 +26,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry } from "@/lib/notify";
-import { recommendCars } from "@/lib/assistant-core";
+import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
 import { normalizePhone } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/error-report";
 import type { Car } from "@/types/car";
@@ -121,26 +121,33 @@ function carLines(cars: Car[], locale: BotLocale): string {
 
 // ---- Lead capture ----------------------------------------------------------
 
-async function captureLead(lead: { name: string; phone: string }, locale: BotLocale): Promise<void> {
+async function captureLead(lead: { name: string; phone: string; waId: string }, locale: BotLocale): Promise<void> {
   const supabase = createServiceClient();
   const phone = normalizePhone(lead.phone) || lead.phone;
   const name = lead.name?.trim() || "WhatsApp";
 
-  await supabase
-    .from("inquiries")
-    .insert({
-      name,
-      phone,
-      type: "car_inquiry",
-      message: "WhatsApp bot lead",
-      source_page: "whatsapp-bot",
-      metadata: { channel: "whatsapp" },
-      status: "new",
-    })
-    .then(
-      () => {},
-      () => {},
-    );
+  let inquiryId: string | null = null;
+  try {
+    const { data } = await supabase
+      .from("inquiries")
+      .insert({
+        name,
+        phone,
+        type: "car_inquiry",
+        message: "WhatsApp bot lead",
+        source_page: "whatsapp-bot",
+        metadata: { channel: "whatsapp" },
+        status: "new",
+      })
+      .select("id")
+      .single();
+    inquiryId = (data?.id as string) || null;
+  } catch {
+    /* fail-open */
+  }
+
+  // Mark the AI conversation as handed off so the dealer sees the hot lead.
+  markConversationHandoff(supabase, "whatsapp", lead.waId, { name, phone, inquiryId }).catch(() => {});
 
   notifyNewInquiry({
     name,
@@ -170,7 +177,7 @@ async function handleUpdate(update: WaUpdate): Promise<void> {
   if (looksLikePhone(text)) {
     const normalized = normalizePhone(text);
     if (normalized) {
-      await captureLead({ name: profileName, phone: normalized }, locale);
+      await captureLead({ name: profileName, phone: normalized, waId: from }, locale);
       await waSend(from, COPY[locale].thanks);
       return;
     }
@@ -178,16 +185,23 @@ async function handleUpdate(update: WaUpdate): Promise<void> {
 
   // 2) Explicit "call me" intent → lead using the WhatsApp sender number.
   if (CONTACT_INTENT.test(text)) {
-    await captureLead({ name: profileName, phone: from }, locale);
+    await captureLead({ name: profileName, phone: from, waId: from }, locale);
     await waSend(from, COPY[locale].thanks);
     return;
   }
 
-  // 3) Free text → grounded recommendation (same engine as the web widget + TG).
+  // 3) Free text → grounded recommendation + qualification (shared closer
+  //    runtime: multi-turn memory, profile, nudges, dealer oversight).
   const supabase = createServiceClient();
-  const { reply, cars } = await recommendCars(supabase, { message: text, locale });
+  const { reply, cars } = await runAssistantTurn(supabase, {
+    channel: "whatsapp",
+    externalKey: from,
+    message: text,
+    locale,
+    knownName: profileName,
+  });
   const lines = carLines(cars, locale);
-  const body = [reply, lines, COPY[locale].nudge].filter(Boolean).join("\n\n");
+  const body = [reply, lines].filter(Boolean).join("\n\n");
   await waSend(from, body);
 }
 

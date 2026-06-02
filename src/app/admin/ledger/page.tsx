@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
-import { Wallet, Loader2, Check } from "lucide-react";
+import { Wallet, Loader2, Check, Ship } from "lucide-react";
 
 interface LedgerRow {
   car_id: string;
@@ -133,6 +134,13 @@ export default function AdminLedgerPage() {
                       <span className={`ml-2 text-xs font-mono uppercase ${STATUS_TONE[r.inventory_status] || "text-muted-foreground"}`}>
                         {r.inventory_status}
                       </span>
+                      <Link
+                        href={`/admin/import-calculator?car_id=${r.car_id}&car_label=${encodeURIComponent(`${r.brand} ${r.model}`)}`}
+                        className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-primary align-middle"
+                        title="Compute landed cost in the import calculator"
+                      >
+                        <Ship className="w-3 h-3" /> calc
+                      </Link>
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-foreground">{usd(r.price_usd)}</td>
                     <td className="px-4 py-2.5 text-right">

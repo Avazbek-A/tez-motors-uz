@@ -11,6 +11,7 @@ export const PURCHASE_ORDER_STATUSES = [
 
 export const purchaseOrderWriteSchema = z.object({
   supplier: z.string().max(200).optional().nullable(),
+  supplier_phone: z.string().max(30).optional().nullable(),
   brand: z.string().min(1).max(100),
   model: z.string().min(1).max(100),
   trim: z.string().max(100).optional().nullable(),

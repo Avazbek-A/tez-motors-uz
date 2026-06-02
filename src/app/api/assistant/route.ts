@@ -7,6 +7,17 @@ import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { recommendCars, historyFromRows } from "@/lib/assistant-core";
+import {
+  extractSlots,
+  detectPhone,
+  detectName,
+  detectIntent,
+  mergeProfile,
+  computeStage,
+  scoreLead,
+  composeNudge,
+  type SalesProfile,
+} from "@/lib/sales-agent";
 
 // Chattier than a form, so a looser bucket than /api/inquiry — but still
 // capped to keep LLM spend (and abuse) bounded per IP.
@@ -49,32 +60,62 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // --- Conversation memory: load prior turns for this thread (if any) so a
-    // follow-up is answered in context. Fail-open — never blocks a reply.
+    // --- Conversation memory: load prior turns + the accumulated qualification
+    // profile/stage for this thread (if any). Fail-open — never blocks a reply.
     const threadId = data.thread_id || crypto.randomUUID();
     let history;
+    let prevProfile: SalesProfile = {};
+    let prevCount = 0;
     if (data.thread_id) {
       try {
-        const { data: msgs } = await supabase
-          .from("assistant_messages")
-          .select("role, content")
-          .eq("thread_id", data.thread_id)
-          .order("created_at", { ascending: true })
-          .limit(12);
+        const [{ data: msgs }, { data: convo }] = await Promise.all([
+          supabase
+            .from("assistant_messages")
+            .select("role, content")
+            .eq("thread_id", data.thread_id)
+            .order("created_at", { ascending: true })
+            .limit(12),
+          supabase
+            .from("assistant_conversations")
+            .select("profile, message_count")
+            .eq("thread_id", data.thread_id)
+            .maybeSingle(),
+        ]);
         history = historyFromRows(msgs || [], 6);
+        if (convo) {
+          prevProfile = (convo.profile as SalesProfile) || {};
+          prevCount = typeof convo.message_count === "number" ? convo.message_count : 0;
+        }
       } catch {
         // no memory available — proceed stateless
       }
     }
 
-    // --- Retrieval + grounded reply (shared with the Telegram bot). The cars and
-    // prices the customer sees always come straight from the DB; the reply falls
-    // back to a deterministic template if the LLM is unconfigured or fails.
-    const { reply, cars: carList, ceiling } = await recommendCars(supabase, {
+    // --- Sales-agent qualification (deterministic, zero LLM cost): accumulate a
+    // buyer profile, detect a phone/intent in free text, score + stage the lead.
+    const slots = extractSlots(data.message);
+    const intent = detectIntent(data.message);
+    const detectedPhone = detectPhone(data.message);
+    const phone = data.phone || detectedPhone || null;
+    const name = data.name || detectName(data.message) || null;
+    const profile = mergeProfile(prevProfile, slots);
+    const messageCount = prevCount + 1;
+    const hasPhone = !!phone;
+    const stage = computeStage({ profile, messageCount, intent, hasPhone });
+    const leadScore = scoreLead({ profile, intent, hasPhone, messageCount });
+
+    // --- Retrieval + grounded reply (shared with the Telegram/WhatsApp bots). The
+    // cars and prices always come straight from the DB; the reply falls back to a
+    // deterministic template if the LLM is unconfigured or fails.
+    const { reply: baseReply, cars: carList, ceiling } = await recommendCars(supabase, {
       message: data.message,
       locale,
       history,
     });
+
+    // Append a proactive nudge (ask for a number / offer installments / confirm).
+    const nudge = composeNudge(locale, { stage, profile, hasPhone });
+    const reply = nudge ? `${baseReply}\n\n${nudge}` : baseReply;
 
     // Persist this turn so the next message has context. Fail-open.
     try {
@@ -86,21 +127,34 @@ export async function POST(request: NextRequest) {
       // memory storage unavailable (e.g. migration not applied) — ignore
     }
 
-    // --- Qualification: if the visitor left a phone, capture a lead and notify.
+    // --- Lead capture: fire whenever a phone is present (typed in the form OR in
+    // free text). Name falls back to a localized placeholder so a hot anonymous
+    // buyer who drops only a number still becomes a lead.
     let leadCaptured = false;
-    if (data.phone && data.name) {
-      const recommended = carList.slice(0, 3).map((c) => ({ id: c.id, slug: c.slug, name: `${c.brand} ${c.model} ${c.year}` }));
+    let inquiryId: string | null = null;
+    const recommended = carList.slice(0, 3).map((c) => ({ id: c.id, slug: c.slug, name: `${c.brand} ${c.model} ${c.year}` }));
+    if (phone) {
+      const leadName = name || (locale === "uz" ? "Assistent lidi" : locale === "en" ? "Assistant lead" : "Лид с ассистента");
+      const metadata = {
+        assistant: true,
+        recommended,
+        budget_ceiling_usd: ceiling ?? undefined,
+        profile,
+        lead_score: leadScore,
+        stage,
+        thread_id: threadId,
+      };
       const { data: inquiry, error } = await supabase
         .from("inquiries")
         .insert({
-          name: data.name,
-          phone: data.phone,
+          name: leadName,
+          phone,
           email: data.email || null,
           message: data.message,
           type: "car_inquiry",
           car_id: carList[0]?.id || null,
           source_page: "ai-assistant",
-          metadata: { assistant: true, recommended, budget_ceiling_usd: ceiling ?? undefined },
+          metadata,
           status: "new",
         })
         .select("id")
@@ -108,18 +162,46 @@ export async function POST(request: NextRequest) {
 
       if (!error && inquiry) {
         leadCaptured = true;
+        inquiryId = inquiry.id as string;
         notifyNewInquiry({
-          name: data.name,
-          phone: data.phone,
+          name: leadName,
+          phone,
           email: data.email || null,
           message: data.message,
           type: "car_inquiry",
           source_page: "ai-assistant",
-          metadata: { assistant: true, recommended },
+          metadata,
           locale,
         }).catch(() => {});
-        confirmToCustomer({ email: data.email || null, name: data.name, locale }).catch(() => {});
+        confirmToCustomer({ email: data.email || null, name: leadName, locale }).catch(() => {});
       }
+    }
+
+    // --- Persist the conversation-level state for dealer oversight + handoff.
+    const handoff = leadCaptured || intent.wantsHuman;
+    const handoffReason = leadCaptured ? "lead-captured" : intent.wantsHuman ? "wants-human" : null;
+    try {
+      await supabase.from("assistant_conversations").upsert(
+        {
+          thread_id: threadId,
+          channel: "web",
+          locale,
+          profile,
+          stage,
+          lead_score: leadScore,
+          name: name || undefined,
+          phone: phone || undefined,
+          email: data.email || undefined,
+          handoff,
+          handoff_reason: handoffReason,
+          inquiry_id: inquiryId || undefined,
+          message_count: messageCount,
+          last_message_at: new Date().toISOString(),
+        },
+        { onConflict: "thread_id" },
+      );
+    } catch {
+      // conversation table unavailable (migration not applied) — ignore
     }
 
     return NextResponse.json({ success: true, reply, cars: carList, lead_captured: leadCaptured, thread_id: threadId });

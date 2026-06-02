@@ -22,7 +22,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry } from "@/lib/notify";
-import { recommendCars } from "@/lib/assistant-core";
+import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
 import { normalizePhone } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/error-report";
 import type { Car } from "@/types/car";
@@ -153,21 +153,28 @@ async function captureLead(
   const phone = normalizePhone(lead.phone) || lead.phone;
   const name = lead.name?.trim() || "Telegram";
 
-  await supabase
-    .from("inquiries")
-    .insert({
-      name,
-      phone,
-      type: "car_inquiry",
-      message: "Telegram bot lead",
-      source_page: "telegram-bot",
-      metadata: { channel: "telegram", chat_id: chatId },
-      status: "new",
-    })
-    .then(
-      () => {},
-      () => {},
-    );
+  let inquiryId: string | null = null;
+  try {
+    const { data } = await supabase
+      .from("inquiries")
+      .insert({
+        name,
+        phone,
+        type: "car_inquiry",
+        message: "Telegram bot lead",
+        source_page: "telegram-bot",
+        metadata: { channel: "telegram", chat_id: chatId },
+        status: "new",
+      })
+      .select("id")
+      .single();
+    inquiryId = (data?.id as string) || null;
+  } catch {
+    /* fail-open */
+  }
+
+  // Mark the AI conversation as handed off so the dealer sees the hot lead.
+  markConversationHandoff(supabase, "telegram", chatId, { name, phone, inquiryId }).catch(() => {});
 
   notifyNewInquiry({
     name,
@@ -218,11 +225,17 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
   }
 
-  // 4) Free text → grounded recommendation (same engine as the web widget).
+  // 4) Free text → grounded recommendation + qualification (shared closer
+  //    runtime: multi-turn memory, profile, nudges, dealer oversight).
   const supabase = createServiceClient();
-  const { reply, cars } = await recommendCars(supabase, { message: text, locale });
-  const body = `${escapeHtml(reply)}\n\n${COPY[locale].nudge}`;
-  await tgSend(chatId, body, carButtons(cars, locale) ?? contactKeyboard(locale));
+  const { reply, cars } = await runAssistantTurn(supabase, {
+    channel: "telegram",
+    externalKey: chatId,
+    message: text,
+    locale,
+    knownName: from.first_name || null,
+  });
+  await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
 }
 
 export async function POST(request: NextRequest) {
