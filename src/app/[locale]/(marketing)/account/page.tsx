@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, LogOut, Heart, Search, Package, Phone } from "lucide-react";
+import { Loader2, LogOut, Heart, Search, Package, Phone, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -12,6 +12,7 @@ import { CarCard } from "@/components/catalog/car-card";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
 import { getFavoriteIds } from "@/lib/favorites";
+import { warrantyStatus } from "@/lib/warranty";
 import type { Car } from "@/types/car";
 
 interface SavedSearch {
@@ -27,12 +28,19 @@ interface OrderRow {
   created_at: string;
   cars: { brand: string; model: string; year: number; slug: string } | { brand: string; model: string; year: number; slug: string }[] | null;
 }
+interface WarrantyRow {
+  car_label: string;
+  warranty_until: string | null;
+  warranty_months: number;
+  services: { date: string; description: string; cost_usd?: number | null }[];
+}
 interface Me {
   authenticated: boolean;
   customer?: { id: string; phone: string; name: string | null; locale: string };
   favorite_ids?: string[];
   saved_searches?: SavedSearch[];
   orders?: OrderRow[];
+  warranties?: WarrantyRow[];
 }
 
 export default function AccountPage() {
@@ -230,6 +238,8 @@ export default function AccountPage() {
   // ---- Logged in: portal ----
   const orders = me.orders || [];
   const searches = me.saved_searches || [];
+  const warranties = me.warranties || [];
+  const nowMs = Date.now();
 
   return (
     <div className="pt-24 pb-16">
@@ -284,6 +294,38 @@ export default function AccountPage() {
             </div>
           )}
         </section>
+
+        {/* Warranties */}
+        {warranties.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+              {t("Гарантия и обслуживание", "Kafolat va xizmat", "Warranty & service")}
+            </h2>
+            <div className="space-y-3">
+              {warranties.map((w, i) => {
+                const st = warrantyStatus(w.warranty_until, nowMs);
+                const stLabel = st === "active" ? t("действует", "amal qiladi", "active") : st === "expiring" ? t("истекает", "tugayapti", "expiring") : st === "expired" ? t("истекла", "tugagan", "expired") : "—";
+                const tone = st === "active" ? "text-[var(--success)]" : st === "expiring" ? "text-[var(--warning)]" : "text-white/50";
+                return (
+                  <div key={i} className="border border-border bg-card p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium">{w.car_label}</p>
+                      <span className={`text-xs font-mono uppercase ${tone}`}>{stLabel}{w.warranty_until ? ` · ${w.warranty_until}` : ""}</span>
+                    </div>
+                    {w.services && w.services.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-sm text-white/60">
+                        {w.services.slice(0, 5).map((s, j) => (
+                          <li key={j}>• {s.date} — {s.description}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Garage */}
         <section className="space-y-4">
