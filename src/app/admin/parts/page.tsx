@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { MediaImporter } from "@/components/admin/media-importer";
 import { cn } from "@/lib/utils";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
 import type { Part, PartCategory } from "@/types/part";
@@ -659,6 +660,12 @@ function PartFormModal({
 
           <div>
             <span className="text-xs font-medium block mb-2">Images</span>
+            <div className="mb-3">
+              <MediaImporter
+                bucket="part-images"
+                onImages={(urls) => onChange({ ...part, images: [...(part.images || []), ...urls] })}
+              />
+            </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {(part.images || []).map((url) => (
                 <div key={url} className="relative aspect-square rounded-lg overflow-hidden bg-muted group">

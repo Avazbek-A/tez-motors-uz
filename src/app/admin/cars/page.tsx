@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { MediaImporter } from "@/components/admin/media-importer";
 import { cn, formatPrice } from "@/lib/utils";
 import type { Car as CarType } from "@/types/car";
 
@@ -698,6 +699,13 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
 
           <div>
             <label className="text-sm font-medium mb-2 block">Images</label>
+            <div className="mb-3">
+              <MediaImporter
+                bucket="car-images"
+                onImages={(urls) => setImages((prev) => [...prev, ...urls])}
+                onVideo={(u) => setVideoUrl(u)}
+              />
+            </div>
             <label
               className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-6 cursor-pointer hover:border-lime/50 transition-colors text-sm text-muted-foreground"
               onDragOver={(e) => {
