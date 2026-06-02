@@ -19,6 +19,7 @@ const ROUTES = {
   "0 5 * * *": "/api/cron/otp-cleanup",
   "30 6 * * *": "/api/cron/saved-search-alerts",
   "0 7 * * *": "/api/cron/review-requests",
+  "20 */2 * * *": "/api/cron/reservation-recovery",
 };
 
 async function fire(path, env) {

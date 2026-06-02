@@ -291,6 +291,89 @@ export function reviewRequestEmail(
 }
 
 /** Order status change — sent to the customer as their import progresses (Phase O). */
+/**
+ * Nudge a customer whose reservation is still unpaid — sent once by the
+ * recovery cron after the reminder delay, before the release deadline.
+ */
+export function reservationReminderEmail(
+  locale: EmailLocale,
+  data: { name?: string; carName: string; trackUrl: string; hoursLeft: number },
+): Template {
+  const name = data.name ? esc(data.name) : "";
+  const car = esc(data.carName);
+  const hrs = Math.max(1, Math.round(data.hoursLeft));
+  const copy = {
+    ru: {
+      subject: `${BRAND}: завершите бронирование ${car}`,
+      hi: name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      body: `Автомобиль <b>${car}</b> пока забронирован за вами. Чтобы закрепить его, внесите депозит онлайн.`,
+      warn: `Если депозит не поступит в течение ~${hrs} ч, бронь снимется и автомобиль вернётся в продажу.`,
+      cta: "Завершить и внести депозит",
+    },
+    uz: {
+      subject: `${BRAND}: ${car} bronini yakunlang`,
+      hi: name ? `Assalomu alaykum, ${name}!` : "Assalomu alaykum!",
+      body: `<b>${car}</b> avtomobili hozircha siz uchun band qilingan. Uni mustahkamlash uchun depozitni onlayn to'lang.`,
+      warn: `Agar depozit ~${hrs} soat ichida kelib tushmasa, bron bekor qilinadi va avtomobil sotuvga qaytadi.`,
+      cta: "Yakunlash va depozit to'lash",
+    },
+    en: {
+      subject: `${BRAND}: finish reserving the ${car}`,
+      hi: name ? `Hello, ${name}!` : "Hello!",
+      body: `The <b>${car}</b> is still held for you. Pay the deposit online to lock it in.`,
+      warn: `If the deposit isn't received within ~${hrs}h, the hold is released and the car returns to sale.`,
+      cta: "Finish & pay deposit",
+    },
+  }[locale];
+  return {
+    subject: copy.subject,
+    html: layout(
+      `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
+       <p style="margin:0 0 8px;font-size:14px;line-height:1.6">${copy.body}</p>
+       <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#a16207">${copy.warn}</p>
+       ${btn(data.trackUrl, copy.cta)}`,
+    ),
+  };
+}
+
+/** Tell a customer their unpaid reservation expired and the car is available again. */
+export function reservationReleasedEmail(
+  locale: EmailLocale,
+  data: { name?: string; carName: string },
+): Template {
+  const name = data.name ? esc(data.name) : "";
+  const car = esc(data.carName);
+  const url = `${siteUrl()}/${locale}/catalog`;
+  const copy = {
+    ru: {
+      subject: `${BRAND}: бронь ${car} снята`,
+      hi: name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      body: `Срок бронирования <b>${car}</b> истёк, и автомобиль снова доступен. Если вы всё ещё заинтересованы — забронируйте снова, мы будем рады помочь.`,
+      cta: "Открыть каталог",
+    },
+    uz: {
+      subject: `${BRAND}: ${car} broni bekor qilindi`,
+      hi: name ? `Assalomu alaykum, ${name}!` : "Assalomu alaykum!",
+      body: `<b>${car}</b> bron muddati tugadi va avtomobil yana mavjud. Agar hali ham qiziqsangiz — qayta bron qiling, yordam berishdan mamnunmiz.`,
+      cta: "Katalogni ochish",
+    },
+    en: {
+      subject: `${BRAND}: your hold on the ${car} expired`,
+      hi: name ? `Hello, ${name}!` : "Hello!",
+      body: `Your reservation for the <b>${car}</b> has expired and the car is available again. If you're still interested, reserve it again — we're happy to help.`,
+      cta: "Browse catalog",
+    },
+  }[locale];
+  return {
+    subject: copy.subject,
+    html: layout(
+      `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
+       <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       ${btn(url, copy.cta)}`,
+    ),
+  };
+}
+
 export function orderStatusChangedEmail(
   locale: EmailLocale,
   data: { carName: string; statusLabel: string; referenceCode: string; note?: string },

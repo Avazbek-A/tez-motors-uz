@@ -28,6 +28,7 @@ crons = [
   "0 5 * * *",   # 10:00 Tashkent — prune expired/consumed OTP rows
   "30 6 * * *",  # 11:30 Tashkent — saved-search match alerts (new arrivals)
   "0 7 * * *",   # 12:00 Tashkent — post-delivery review requests
+  "20 */2 * * *", # every 2h — nudge unpaid reservations, auto-release stale holds
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.

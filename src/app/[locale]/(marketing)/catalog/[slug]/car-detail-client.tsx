@@ -18,6 +18,7 @@ import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
 import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
+import { track, FUNNEL } from "@/lib/analytics";
 import { formatPrice, whatsappLink } from "@/lib/utils";
 import { estimatedMonthlyFrom, FINANCE_DEFAULTS } from "@/lib/finance";
 import { localizedPath } from "@/lib/locale-path";
@@ -135,6 +136,7 @@ export default function CarDetailPage() {
         return;
       }
       setIsSuccess(true);
+      track(FUNNEL.inquirySubmit, { type: financing ? "financing" : "car_inquiry" });
       setForm({ name: "", phone: "", message: "" });
       setTimeout(() => setIsSuccess(false), 5000);
     } catch {

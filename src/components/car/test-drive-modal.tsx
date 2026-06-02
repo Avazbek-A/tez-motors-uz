@@ -5,6 +5,7 @@ import { X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Turnstile } from "@/components/shared/turnstile";
+import { track, FUNNEL } from "@/lib/analytics";
 
 export function TestDriveModal({
   carId,
@@ -53,6 +54,7 @@ export function TestDriveModal({
         return;
       }
       setSuccess(true);
+      track(FUNNEL.testDriveSubmit);
       setTimeout(() => {
         setSuccess(false);
         onClose();

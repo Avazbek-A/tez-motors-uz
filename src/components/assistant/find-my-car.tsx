@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { CarCard } from "@/components/catalog/car-card";
 import { Turnstile } from "@/components/shared/turnstile";
 import { useLocale } from "@/i18n/locale-context";
+import { track, FUNNEL } from "@/lib/analytics";
 import type { Car } from "@/types/car";
 
 /**
@@ -76,6 +77,7 @@ export function FindMyCar() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim().length < 2 || loading) return;
+    track(FUNNEL.assistantAsk);
     setLoading(true);
     setError(false);
     try {

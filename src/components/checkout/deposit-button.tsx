@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
+import { track, FUNNEL } from "@/lib/analytics";
 
 /**
  * "Pay deposit online" button(s).
@@ -35,6 +36,7 @@ export function DepositButton({
     locale === "uz" ? uz : locale === "en" ? en : ru;
 
   const pay = async (provider: "payme" | "click") => {
+    track(FUNNEL.depositClick, { provider });
     setLoading(provider);
     setError(null);
     try {

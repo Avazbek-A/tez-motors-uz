@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Turnstile } from "@/components/shared/turnstile";
 import { DepositButton } from "@/components/checkout/deposit-button";
 import { useLocale } from "@/i18n/locale-context";
+import { track, FUNNEL } from "@/lib/analytics";
 
 export function ReservationModal({
   carId,
@@ -54,6 +55,11 @@ export function ReservationModal({
   };
   const T = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
 
+  // Funnel: reservation modal opened (top of the reserve→deposit funnel).
+  useEffect(() => {
+    if (open) track(FUNNEL.reserveOpen);
+  }, [open]);
+
   if (!open) return null;
 
   const submit = async (e: React.FormEvent) => {
@@ -83,6 +89,7 @@ export function ReservationModal({
       const data = await res.json().catch(() => ({}));
       setReferenceCode(typeof data.reference_code === "string" ? data.reference_code : null);
       setSuccess(true);
+      track(FUNNEL.reserveSubmit);
     } catch {
       setError("Network error");
     } finally {

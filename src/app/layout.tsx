@@ -158,12 +158,19 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans">
         {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
-          <Script
-            defer
-            src="https://plausible.io/js/script.js"
-            data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
-            strategy="afterInteractive"
-          />
+          <>
+            <Script
+              defer
+              src="https://plausible.io/js/script.tagged-events.js"
+              data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
+              strategy="afterInteractive"
+            />
+            {/* Queue stub so custom funnel events fired before the script loads
+                (or while it's blocked) are captured rather than throwing. */}
+            <Script id="plausible-init" strategy="afterInteractive">
+              {`window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)}`}
+            </Script>
+          </>
         )}
         {/* Tawk widget is mounted once via the marketing-layout
             <TawkChat /> component, with deferred loading. Don't double-load

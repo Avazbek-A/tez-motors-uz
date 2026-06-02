@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { DepositButton } from "@/components/checkout/deposit-button";
 import { useLocale } from "@/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,7 @@ const LABELS = {
     notFoundHint: "Проверьте номер заказа и телефон, указанные при бронировании",
     currentStatus: "Текущий статус",
     deposit: "Депозит",
+    depositPrompt: "Закрепите бронь — внесите депозит онлайн, пока автомобиль удерживается за вами.",
     placed: "Оформлен",
     helpText: "Отслеживайте доставку вашего автомобиля от заказа до выдачи",
   },
@@ -79,6 +81,7 @@ const LABELS = {
     notFoundHint: "Bron qilishda ko'rsatilgan buyurtma raqami va telefonni tekshiring",
     currentStatus: "Joriy holat",
     deposit: "Depozit",
+    depositPrompt: "Bronni mustahkamlang — avtomobil siz uchun band turganida depozitni onlayn to'lang.",
     placed: "Rasmiylashtirilgan",
     helpText: "Avtomobilingizni buyurtmadan to'liq yetkazib berilgungacha kuzating",
   },
@@ -92,6 +95,7 @@ const LABELS = {
     notFoundHint: "Check the reference code and the phone number you used to reserve",
     currentStatus: "Current status",
     deposit: "Deposit",
+    depositPrompt: "Secure your reservation — pay the deposit online while the car is held for you.",
     placed: "Placed",
     helpText: "Follow your car from order to handover",
   },
@@ -230,6 +234,16 @@ export default function TrackOrderPage() {
                   </p>
                 </div>
               </div>
+
+              {/* Unpaid reservation: surface the deposit CTA so the recovery
+                  reminder (→ /track) actually leads to a payment. Hidden when no
+                  payment rail is configured (DepositButton returns null). */}
+              {order.status === "ordered" && (
+                <div className="px-5 py-4 border-b border-border bg-primary/[0.06]">
+                  <p className="text-sm text-white/70 mb-3">{t.depositPrompt}</p>
+                  <DepositButton referenceCode={order.reference_code} phone={phone} />
+                </div>
+              )}
 
               {/* Status timeline */}
               <div className="p-5">
