@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import {
   Search, Phone, Mail, MessageSquare, Clock,
-  CheckCircle, XCircle, ArrowRight, Eye, RefreshCw, Download, Trash2, AlertCircle
+  CheckCircle, XCircle, ArrowRight, Eye, RefreshCw, Download, Trash2, AlertCircle, Sparkles, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,10 +55,41 @@ export default function AdminInquiriesPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [aiDraft, setAiDraft] = useState<string | null>(null);
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [aiDraftIsAi, setAiDraftIsAi] = useState(false);
 
   const showFeedback = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 3000);
+  };
+
+  // Reset any drafted reply when a different lead is opened.
+  useEffect(() => {
+    setAiDraft(null);
+    setAiDraftIsAi(false);
+  }, [selectedInquiry?.id]);
+
+  const generateAiDraft = async () => {
+    if (!selectedInquiry) return;
+    setAiDraftLoading(true);
+    try {
+      const res = await fetch(`/api/admin/inquiries/${selectedInquiry.id}/draft-reply`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && typeof data.reply === "string") {
+        setAiDraft(data.reply);
+        setAiDraftIsAi(!!data.ai);
+      }
+    } finally {
+      setAiDraftLoading(false);
+    }
+  };
+
+  // wa.me-ready international digits (Uzbek 9-digit locals get the 998 prefix).
+  const waDigits = (phone: string) => {
+    let d = (phone || "").replace(/\D/g, "");
+    if (d.length === 9) d = "998" + d;
+    return d;
   };
 
   const fetchInquiries = () => {
@@ -360,6 +391,39 @@ export default function AdminInquiriesPage() {
                   <p className="font-medium text-white">{new Date(selectedInquiry.created_at).toLocaleString()}</p>
                 </div>
               </div>
+              {/* Proactive AI sales: draft a reply, edit if needed, send in one tap. */}
+              <div className="pt-4 border-t border-white/10">
+                {!aiDraft ? (
+                  <Button variant="outline" size="sm" onClick={generateAiDraft} disabled={aiDraftLoading} className="w-full">
+                    {aiDraftLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Draft AI reply</>}
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-primary" /> Suggested reply{aiDraftIsAi ? "" : " (template)"}
+                      </p>
+                      <button onClick={generateAiDraft} disabled={aiDraftLoading} className="text-xs text-muted-foreground hover:text-primary">
+                        {aiDraftLoading ? "…" : "Regenerate"}
+                      </button>
+                    </div>
+                    <textarea
+                      value={aiDraft}
+                      onChange={(e) => setAiDraft(e.target.value)}
+                      className="w-full min-h-[100px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
+                    />
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(aiDraft)} className="flex-1">Copy</Button>
+                      <Button size="sm" asChild className="flex-1">
+                        <a href={`https://wa.me/${waDigits(selectedInquiry.phone)}?text=${encodeURIComponent(aiDraft)}`} target="_blank" rel="noopener noreferrer">
+                          Send on WhatsApp
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-between pt-4 border-t border-white/10">
                 <Button
                   variant="destructive"

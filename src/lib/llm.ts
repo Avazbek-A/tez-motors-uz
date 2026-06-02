@@ -113,3 +113,52 @@ export async function generateAssistantReply(args: {
     return null;
   }
 }
+
+/**
+ * Generic single-shot completion (system + user → text). Returns null when the
+ * LLM is unconfigured or the call fails, so callers fail open to a template.
+ * Used by the proactive sales-reply drafter (src/lib/sales-ai.ts).
+ */
+export async function llmText(args: {
+  system: string;
+  user: string;
+  maxTokens?: number;
+}): Promise<string | null> {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey) return null;
+
+  const url = process.env.LLM_API_URL || "https://api.anthropic.com/v1/messages";
+  const model = process.env.LLM_MODEL || "claude-3-5-haiku-latest";
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: args.maxTokens ?? 400,
+        system: args.system,
+        messages: [{ role: "user", content: args.user }],
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      console.error("LLM non-OK", res.status, body.slice(0, 500));
+      return null;
+    }
+    const data = (await res.json()) as { content?: Array<{ type?: string; text?: string }> };
+    const text = (data.content || [])
+      .filter((b) => b?.type === "text" && typeof b.text === "string")
+      .map((b) => b.text as string)
+      .join("\n")
+      .trim();
+    return text.length > 0 ? text : null;
+  } catch (err) {
+    console.error("LLM call failed", err);
+    return null;
+  }
+}

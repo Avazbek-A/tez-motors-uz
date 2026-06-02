@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TrendingUp, Heart, Bell, MessageSquare, Loader2, Flame, PackagePlus } from "lucide-react";
+import { TrendingUp, Heart, Bell, MessageSquare, Loader2, Flame, PackagePlus, Truck } from "lucide-react";
 
 interface HotCar {
   car_id: string;
@@ -122,14 +122,23 @@ export default function AdminDemandPage() {
                       <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{c.inquiries}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{usd(c.minTarget)}</td>
                       <td className="px-4 py-2.5 text-right font-mono font-semibold text-primary">{c.score}</td>
-                      <td className="px-4 py-2.5 text-right">
-                        <Link
-                          href={`/admin/models?brand=${encodeURIComponent(c.brand || "")}&model=${encodeURIComponent(c.model || "")}${c.year ? `&year=${c.year}` : ""}${c.price_usd ? `&base_price_usd=${c.price_usd}` : ""}`}
-                          title="Create an orderable pre-order model from this car"
-                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          <PackagePlus className="w-3.5 h-3.5" /> Pre-order
-                        </Link>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-3 justify-end">
+                          <Link
+                            href={`/admin/models?brand=${encodeURIComponent(c.brand || "")}&model=${encodeURIComponent(c.model || "")}${c.year ? `&year=${c.year}` : ""}${c.price_usd ? `&base_price_usd=${c.price_usd}` : ""}`}
+                            title="Create an orderable pre-order model from this car"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            <PackagePlus className="w-3.5 h-3.5" /> Model
+                          </Link>
+                          <Link
+                            href={`/admin/procurement?brand=${encodeURIComponent(c.brand || "")}&model=${encodeURIComponent(c.model || "")}`}
+                            title="Open a draft purchase order to a supplier for this car"
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+                          >
+                            <Truck className="w-3.5 h-3.5" /> Procure
+                          </Link>
+                        </span>
                       </td>
                     </tr>
                   ))}
