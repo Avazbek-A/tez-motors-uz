@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:migrations": "node scripts/verify-migrations.mjs",
+    "test:e2e": "playwright test",
     "build:cf": "npx opennextjs-cloudflare build",
     "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy"
   },
@@ -47,6 +48,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -1,0 +1,26 @@
+name: Deploy (manual)
+
+# Manual-only on purpose: production deploy is gated on the dealer's Cloudflare
+# plan (the OpenNext bundle exceeds the free 3 MiB Worker limit — needs Workers
+# Paid, or self-host). Triggering this auto on every push would red-X until that
+# decision is made. Run it from the Actions tab once the plan + secrets are set.
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SITE_URL: https://tezmotors.uz
