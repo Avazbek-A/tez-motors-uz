@@ -85,6 +85,23 @@ export function toAssistantCarLite(cars: Car[]): AssistantCarLite[] {
   }));
 }
 
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+/**
+ * Map stored conversation rows to the lean turn shape the LLM expects, keeping
+ * only the most recent `max` (a small window bounds prompt size + cost). Pure
+ * and order-preserving; unknown roles are coerced to "user".
+ */
+export function historyFromRows(
+  rows: { role?: string | null; content?: string | null }[],
+  max = 6,
+): ChatTurn[] {
+  const turns = rows
+    .filter((r) => typeof r.content === "string" && r.content.length > 0)
+    .map<ChatTurn>((r) => ({ role: r.role === "assistant" ? "assistant" : "user", content: r.content as string }));
+  return turns.slice(-Math.max(0, max));
+}
+
 export interface RecommendResult {
   reply: string;
   cars: Car[];
@@ -105,7 +122,7 @@ export interface RecommendResult {
  */
 export async function recommendCars(
   supabase: SupabaseClient,
-  opts: { message: string; locale: string },
+  opts: { message: string; locale: string; history?: ChatTurn[] },
 ): Promise<RecommendResult> {
   const locale = opts.locale === "uz" ? "uz" : opts.locale === "en" ? "en" : "ru";
 
@@ -149,6 +166,7 @@ export async function recommendCars(
     locale,
     userMessage: opts.message,
     cars: toAssistantCarLite(carList),
+    history: opts.history,
   });
   const reply = llmReply || templatedReply(locale, carList);
 

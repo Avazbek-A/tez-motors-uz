@@ -66,6 +66,7 @@ export async function generateAssistantReply(args: {
   locale: string;
   userMessage: string;
   cars: AssistantCarLite[];
+  history?: { role: "user" | "assistant"; content: string }[];
 }): Promise<string | null> {
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) return null;
@@ -86,6 +87,9 @@ export async function generateAssistantReply(args: {
         max_tokens: 400,
         system: systemPrompt(args.locale),
         messages: [
+          // Prior turns give the model conversational memory; the current turn
+          // carries the freshly-retrieved inventory so grounding stays exact.
+          ...(args.history ?? []).map((m) => ({ role: m.role, content: m.content })),
           { role: "user", content: userPrompt(args.userMessage, args.cars) },
         ],
       }),

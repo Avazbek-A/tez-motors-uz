@@ -6,7 +6,7 @@ import { reportServerError } from "@/lib/error-report";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { recommendCars } from "@/lib/assistant-core";
+import { recommendCars, historyFromRows } from "@/lib/assistant-core";
 
 // Chattier than a form, so a looser bucket than /api/inquiry — but still
 // capped to keep LLM spend (and abuse) bounded per IP.
@@ -22,6 +22,8 @@ const assistantSchema = z.object({
   // Honeypot: must be empty/absent.
   website: z.string().max(0).optional(),
   turnstile_token: z.string().max(4096).optional(),
+  // Conversation thread (client-generated) for multi-turn memory.
+  thread_id: z.string().min(8).max(64).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -47,13 +49,42 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    // --- Conversation memory: load prior turns for this thread (if any) so a
+    // follow-up is answered in context. Fail-open — never blocks a reply.
+    const threadId = data.thread_id || crypto.randomUUID();
+    let history;
+    if (data.thread_id) {
+      try {
+        const { data: msgs } = await supabase
+          .from("assistant_messages")
+          .select("role, content")
+          .eq("thread_id", data.thread_id)
+          .order("created_at", { ascending: true })
+          .limit(12);
+        history = historyFromRows(msgs || [], 6);
+      } catch {
+        // no memory available — proceed stateless
+      }
+    }
+
     // --- Retrieval + grounded reply (shared with the Telegram bot). The cars and
     // prices the customer sees always come straight from the DB; the reply falls
     // back to a deterministic template if the LLM is unconfigured or fails.
     const { reply, cars: carList, ceiling } = await recommendCars(supabase, {
       message: data.message,
       locale,
+      history,
     });
+
+    // Persist this turn so the next message has context. Fail-open.
+    try {
+      await supabase.from("assistant_messages").insert([
+        { thread_id: threadId, role: "user", content: data.message },
+        { thread_id: threadId, role: "assistant", content: reply },
+      ]);
+    } catch {
+      // memory storage unavailable (e.g. migration not applied) — ignore
+    }
 
     // --- Qualification: if the visitor left a phone, capture a lead and notify.
     let leadCaptured = false;
@@ -91,7 +122,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, reply, cars: carList, lead_captured: leadCaptured });
+    return NextResponse.json({ success: true, reply, cars: carList, lead_captured: leadCaptured, thread_id: threadId });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, errors: error.issues }, { status: 400 });

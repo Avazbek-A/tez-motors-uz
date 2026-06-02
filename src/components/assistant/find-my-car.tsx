@@ -73,6 +73,12 @@ export function FindMyCar() {
   const [cars, setCars] = useState<Car[]>([]);
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [error, setError] = useState(false);
+  // Stable conversation id so follow-up questions are answered in context.
+  const [threadId] = useState(() =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `t_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +97,7 @@ export function FindMyCar() {
           phone: phone.trim() || undefined,
           website: website || undefined,
           turnstile_token: turnstileToken ?? undefined,
+          thread_id: threadId,
         }),
       });
       const data = await res.json();
@@ -101,6 +108,7 @@ export function FindMyCar() {
       setReply(data.reply || null);
       setCars(Array.isArray(data.cars) ? data.cars : []);
       setLeadCaptured(Boolean(data.lead_captured));
+      setMessage(""); // ready for a follow-up — the thread keeps the context
     } catch {
       setError(true);
     } finally {

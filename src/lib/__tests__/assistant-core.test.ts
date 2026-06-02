@@ -4,6 +4,7 @@ import {
   parseBudgetCeiling,
   templatedReply,
   toAssistantCarLite,
+  historyFromRows,
 } from "../assistant-core";
 import { priceFromMonthly, estimatedMonthlyFrom } from "../finance";
 import type { Car } from "@/types/car";
@@ -80,5 +81,38 @@ describe("toAssistantCarLite", () => {
       body_type: "suv",
       fuel_type: "hybrid",
     });
+  });
+});
+
+describe("historyFromRows", () => {
+  it("maps rows to turns, preserving order", () => {
+    const turns = historyFromRows([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ]);
+    expect(turns).toEqual([
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+    ]);
+  });
+
+  it("keeps only the last `max` turns", () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", content: `m${i}` }));
+    const turns = historyFromRows(rows, 4);
+    expect(turns).toHaveLength(4);
+    expect(turns[0].content).toBe("m6");
+    expect(turns[3].content).toBe("m9");
+  });
+
+  it("coerces unknown roles to user and drops empty content", () => {
+    const turns = historyFromRows([
+      { role: "system", content: "x" },
+      { role: "assistant", content: "" },
+      { role: null, content: "y" },
+    ]);
+    expect(turns).toEqual([
+      { role: "user", content: "x" },
+      { role: "user", content: "y" },
+    ]);
   });
 });
