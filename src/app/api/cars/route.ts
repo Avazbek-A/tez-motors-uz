@@ -4,6 +4,7 @@ import { carWriteSchema } from "@/lib/schemas/car";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
 import { priceFromMonthly } from "@/lib/finance";
 import { logAdminAction } from "@/lib/audit";
+import { postCarToChannel } from "@/lib/telegram";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -219,6 +220,17 @@ export async function POST(request: NextRequest) {
       entity_id: car?.id,
       diff: { brand: data.brand, model: data.model, year: data.year, price_usd: data.price_usd, slug },
     }).catch(() => {});
+
+    // New arrival → auto-announce to the Telegram channel (free reach, fail-open).
+    if (data.inventory_status === "available") {
+      postCarToChannel({
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        price_usd: data.price_usd,
+        slug,
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, car }, { status: 201 });
   } catch (err) {

@@ -84,6 +84,52 @@ export async function sendTelegramNotification(data: {
   }
 }
 
+/**
+ * Auto-announce a new arrival to the dealer's public Telegram channel. Free
+ * reach, on-brand for a messaging-first market. Fail-open: no bot token or
+ * TELEGRAM_CHANNEL_ID ⇒ no-op.
+ */
+export async function postCarToChannel(car: {
+  brand: string;
+  model: string;
+  year?: number | null;
+  price_usd?: number | null;
+  slug: string;
+}): Promise<void> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!botToken || !channelId) return;
+
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
+  const url = `${base}/ru/catalog/${car.slug}`;
+  const price = car.price_usd ? `$${Number(car.price_usd).toLocaleString("en-US")}` : "";
+  const text = [
+    "🚗 *Новинка в наличии*",
+    "",
+    `*${escapeMarkdown(`${car.brand} ${car.model}${car.year ? ` ${car.year}` : ""}`)}*`,
+    price ? `💰 от ${escapeMarkdown(price)}` : "",
+    "",
+    "Импорт «под ключ» от Tez Motors",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: channelId,
+        text,
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard: [[{ text: "Открыть", url }]] },
+      }),
+    });
+  } catch (err) {
+    console.error("Telegram channel post failed", err);
+  }
+}
+
 function escapeMarkdown(text: string): string {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, "\\$&");
 }

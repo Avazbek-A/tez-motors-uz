@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ const adminNav = [
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
   { href: "/admin/posts", label: "Posts", icon: FileText },
+  { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/audit", label: "Audit", icon: ScrollText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
