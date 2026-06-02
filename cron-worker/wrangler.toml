@@ -33,6 +33,8 @@ crons = [
   "30 4 * * *",  # 09:30 Tashkent — order SLA watchdog (stuck-order alerts)
   "30 5 * * *",  # 10:30 Tashkent — cold-lead nurture follow-up
   "0 6 * * 1",   # Mon 11:00 Tashkent — aged-inventory markdown suggestions
+  "0 8 * * *",   # 13:00 Tashkent — post-delivery service reminders
+  "0 5 1 * *",   # 1st of month, 10:00 Tashkent — monthly owner report
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.

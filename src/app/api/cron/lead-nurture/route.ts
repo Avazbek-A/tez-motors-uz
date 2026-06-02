@@ -12,7 +12,7 @@ import { logEvent, reportServerError } from "@/lib/error-report";
  * Inquiries carry no locale column, so copy defaults to Russian (the primary
  * market); fail-open per lead; per-run cap bounds spend.
  */
-const NURTURE_AFTER_HOURS = 48;
+const STEP_HOURS = [48, 120, 336]; // 3-touch drip: step 1 @2d, step 2 @5d, step 3 @14d
 const MAX_PER_RUN = 100;
 
 async function handle(request: NextRequest) {
@@ -21,15 +21,16 @@ async function handle(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const cutoff = new Date(Date.now() - NURTURE_AFTER_HOURS * 3600 * 1000).toISOString();
+    const now = Date.now();
+    const eligibleCutoff = new Date(now - STEP_HOURS[0] * 3600 * 1000).toISOString();
 
     const { data: leads, error } = await supabase
       .from("inquiries")
-      .select("id, name, email, status, created_at, nurtured_at")
+      .select("id, name, email, created_at, nurture_step")
       .eq("status", "new")
-      .is("nurtured_at", null)
       .not("email", "is", null)
-      .lte("created_at", cutoff)
+      .lt("nurture_step", 3)
+      .lte("created_at", eligibleCutoff)
       .order("created_at", { ascending: true })
       .limit(MAX_PER_RUN);
 
@@ -40,13 +41,17 @@ async function handle(request: NextRequest) {
     let sent = 0;
     for (const lead of leads || []) {
       if (!lead.email) continue;
-      const tpl = leadNurtureEmail("ru", { name: (lead.name as string) || undefined });
+      const ageHours = (now - new Date(lead.created_at as string).getTime()) / 3_600_000;
+      const dueStep = ageHours >= STEP_HOURS[2] ? 3 : ageHours >= STEP_HOURS[1] ? 2 : ageHours >= STEP_HOURS[0] ? 1 : 0;
+      const current = (lead.nurture_step as number) ?? 0;
+      if (dueStep <= current) continue;
+
+      const tpl = leadNurtureEmail("ru", { name: (lead.name as string) || undefined, step: dueStep });
       const { ok } = await sendEmail({ to: lead.email as string, subject: tpl.subject, html: tpl.html });
-      // Stamp regardless of send result so we don't reprocess the same lead every
-      // run; a transient send failure simply means this lead isn't nurtured.
+      // Advance the step regardless of send result so we don't reprocess every run.
       await supabase
         .from("inquiries")
-        .update({ nurtured_at: new Date().toISOString() })
+        .update({ nurture_step: dueStep, nurtured_at: new Date().toISOString() })
         .eq("id", lead.id);
       if (ok) sent += 1;
     }

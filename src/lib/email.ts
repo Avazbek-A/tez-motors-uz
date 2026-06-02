@@ -290,9 +290,44 @@ export function reviewRequestEmail(
   };
 }
 
+/** Post-purchase service / maintenance reminder with a parts cross-sell. */
+export function serviceReminderEmail(locale: EmailLocale, data: { name?: string; carName?: string }): Template {
+  const name = data.name ? esc(data.name) : "";
+  const car = data.carName ? esc(data.carName) : "";
+  const partsUrl = `${siteUrl()}/${locale}/parts`;
+  const copy = {
+    ru: {
+      subject: `${BRAND}: пора на сервис${car ? ` — ${car}` : ""}`,
+      hi: name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      body: `Прошло несколько месяцев с покупки${car ? ` ${car}` : ""}. Рекомендуем плановое ТО. У нас есть оригинальные и совместимые запчасти для вашего авто — поможем подобрать.`,
+      cta: "Посмотреть запчасти",
+    },
+    uz: {
+      subject: `${BRAND}: texnik xizmat vaqti${car ? ` — ${car}` : ""}`,
+      hi: name ? `Assalomu alaykum, ${name}!` : "Assalomu alaykum!",
+      body: `Xariddan${car ? ` (${car})` : ""} bir necha oy o'tdi. Rejali texnik xizmatni tavsiya qilamiz. Avtomobilingiz uchun original va mos ehtiyot qismlarimiz bor — tanlashda yordam beramiz.`,
+      cta: "Ehtiyot qismlarni ko'rish",
+    },
+    en: {
+      subject: `${BRAND}: time for a service${car ? ` — ${car}` : ""}`,
+      hi: name ? `Hello, ${name}!` : "Hello!",
+      body: `It's been a few months since your${car ? ` ${car}` : ""} purchase. We recommend a scheduled service — and we stock OEM and compatible parts for your car. Happy to help.`,
+      cta: "Browse parts",
+    },
+  }[locale];
+  return {
+    subject: copy.subject,
+    html: layout(
+      `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
+       <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       ${btn(partsUrl, copy.cta)}`,
+    ),
+  };
+}
+
 /** Order status change — sent to the customer as their import progresses (Phase O). */
 /** Gentle one-time follow-up for a cold lead that hasn't been worked yet. */
-export function leadNurtureEmail(locale: EmailLocale, data: { name?: string }): Template {
+export function leadNurtureEmail(locale: EmailLocale, data: { name?: string; step?: number }): Template {
   const name = data.name ? esc(data.name) : "";
   const base = siteUrl();
   const copy = {
@@ -318,11 +353,19 @@ export function leadNurtureEmail(locale: EmailLocale, data: { name?: string }): 
       url: `${base}/en/catalog`,
     },
   }[locale];
+  const s = data.step ?? 1;
+  const noteMap: Record<EmailLocale, Record<number, string>> = {
+    ru: { 1: "", 2: "Подобрали популярные модели в наличии — посмотрите свежие предложения.", 3: "Последнее напоминание — но мы всегда на связи, когда будете готовы." },
+    uz: { 1: "", 2: "Mavjud mashhur modellarni tanladik — yangi takliflarni ko'ring.", 3: "So'nggi eslatma — tayyor bo'lganingizda doimo aloqadamiz." },
+    en: { 1: "", 2: "We lined up popular in-stock models — take a look at fresh offers.", 3: "Our last nudge — but we're here whenever you're ready." },
+  };
+  const note = noteMap[locale][s >= 3 ? 3 : s === 2 ? 2 : 1] || "";
   return {
     subject: copy.subject,
     html: layout(
       `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
        <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       ${note ? `<p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#3f3f46">${note}</p>` : ""}
        ${btn(copy.url, copy.cta)}`,
     ),
   };
