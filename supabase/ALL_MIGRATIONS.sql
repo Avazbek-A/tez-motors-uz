@@ -1,6 +1,6 @@
 -- ============================================================
 -- Tez Motors — consolidated schema (ALL migrations, in order)
--- Generated from 46 files in supabase/migrations/
+-- Generated from 47 files in supabase/migrations/
 -- FRESH DATABASE ONLY: paste this once into the Supabase SQL editor.
 -- For an existing DB, apply only the new individual migration files.
 -- ============================================================
@@ -1636,4 +1636,14 @@ CREATE INDEX IF NOT EXISTS idx_content_drafts_created ON public.content_drafts (
 
 ALTER TABLE public.content_drafts ENABLE ROW LEVEL SECURITY;
 -- No policies on purpose: service-role only.
+
+-- ─── 047_content_schedule.sql ───────────────────────────────────────────
+-- Phase: marketing scheduling.
+--
+-- Schedule a saved draft to auto-publish to the Telegram channel at a future
+-- time. The marketing-poster cron publishes drafts whose scheduled_at has
+-- passed and that are still in 'draft' status.
+ALTER TABLE public.content_drafts ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_content_drafts_schedule
+  ON public.content_drafts (scheduled_at) WHERE scheduled_at IS NOT NULL AND status = 'draft';
 

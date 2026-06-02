@@ -21,6 +21,7 @@ const schema = z.object({
   subject: z.string().max(300).optional().nullable(),
   car_id: z.string().uuid().optional().nullable(),
   body: z.string().min(1).max(8000),
+  scheduled_at: z.string().max(40).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {

@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Megaphone, Loader2, Sparkles, Copy, Send, Save, Trash2, Check } from "lucide-react";
+import { Megaphone, Loader2, Sparkles, Copy, Send, Save, Trash2, Check, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CONTENT_KINDS, contentKindLabel } from "@/lib/marketing-content";
 
 interface Car { id: string; brand: string; model: string; year: number | null }
-interface Draft { id: string; kind: string; locale: string; subject: string | null; body: string; status: string; created_at: string }
+interface Draft { id: string; kind: string; locale: string; subject: string | null; body: string; status: string; scheduled_at: string | null; created_at: string }
 
 const LOCALES = [{ k: "ru", l: "RU" }, { k: "uz", l: "UZ" }, { k: "en", l: "EN" }];
 const SOCIAL = new Set(["telegram", "instagram", "facebook", "promo", "ad"]);
@@ -26,6 +26,7 @@ export default function AdminMarketingPage() {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState("");
 
   const loadDrafts = useCallback(() => {
     fetch("/api/admin/marketing/drafts").then((r) => r.json()).then((d) => setDrafts(d.drafts || []));
@@ -57,15 +58,16 @@ export default function AdminMarketingPage() {
     return topic.trim() || null;
   };
 
-  const save = async () => {
+  const save = async (withSchedule = false) => {
     if (!text.trim()) return;
+    if (withSchedule && !scheduleAt) { setNote("Pick a date & time to schedule."); return; }
     setBusy(true); setNote(null);
     try {
       const res = await fetch("/api/admin/marketing/drafts", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, locale, subject: subjectLabel(), car_id: mode === "car" ? carId || null : null, body: text }),
+        body: JSON.stringify({ kind, locale, subject: subjectLabel(), car_id: mode === "car" ? carId || null : null, body: text, scheduled_at: withSchedule ? new Date(scheduleAt).toISOString() : null }),
       });
-      if (res.ok) { setNote("Saved to library."); loadDrafts(); }
+      if (res.ok) { setNote(withSchedule ? "Scheduled — it'll auto-post to Telegram at that time." : "Saved to library."); setScheduleAt(""); loadDrafts(); }
     } finally { setBusy(false); }
   };
 
@@ -130,11 +132,18 @@ export default function AdminMarketingPage() {
             className="w-full rounded-[2px] border border-border bg-[var(--bg-3)] px-3 py-2 text-sm text-foreground focus:outline-none focus:border-[var(--accent)] whitespace-pre-wrap" />
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={copy} disabled={!text.trim()}>{copied ? <><Check className="w-4 h-4" /> Copied</> : <><Copy className="w-4 h-4" /> Copy</>}</Button>
-            <Button type="button" variant="outline" size="sm" onClick={save} disabled={busy || !text.trim()}><Save className="w-4 h-4" /> Save</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => save(false)} disabled={busy || !text.trim()}><Save className="w-4 h-4" /> Save</Button>
             {SOCIAL.has(kind) && (
-              <Button type="button" size="sm" onClick={publish} disabled={busy || !text.trim()}><Send className="w-4 h-4" /> Post to Telegram</Button>
+              <Button type="button" size="sm" onClick={publish} disabled={busy || !text.trim()}><Send className="w-4 h-4" /> Post now</Button>
             )}
           </div>
+          {SOCIAL.has(kind) && (
+            <div className="flex items-center gap-2 pt-1 border-t border-border">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} className="text-xs h-9 flex-1" />
+              <Button type="button" variant="outline" size="sm" onClick={() => save(true)} disabled={busy || !text.trim() || !scheduleAt}>Schedule</Button>
+            </div>
+          )}
           {note && <p className="text-xs text-primary">{note}</p>}
         </div>
       </div>
@@ -152,6 +161,7 @@ export default function AdminMarketingPage() {
                   <span className="font-mono uppercase text-muted-foreground">{contentKindLabel(d.kind)} · {d.locale}</span>
                   {d.subject && <span className="text-foreground truncate">{d.subject}</span>}
                   {d.status === "published" && <span className="text-[10px] font-mono uppercase text-[var(--success)]">published</span>}
+                  {d.status === "draft" && d.scheduled_at && <span className="inline-flex items-center gap-0.5 text-[10px] font-mono uppercase text-[var(--warning)]"><Clock className="w-3 h-3" />{new Date(d.scheduled_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => applyDraft(d)} className="text-xs text-primary hover:underline">Use</button>
