@@ -69,14 +69,21 @@ public and may live in `wrangler.toml` `[vars]` or the dashboard.
 
 1. Create a Supabase project. Copy the URL, anon key, and service-role key.
 2. Apply migrations **in numeric order** from `supabase/migrations/` (001 →
-   027) via the Supabase SQL editor or CLI. They are ordered and must be applied
+   043) via the Supabase SQL editor or CLI. They are ordered and must be applied
    in sequence; some depend on earlier ones (e.g. trigram RPCs, the
    `inventory_status` GENERATED column, the `inquiries.type` CHECK).
-3. Verify RLS is enabled on PII/money tables (`inquiries`, `orders`,
-   `payments`, `customers`, `customer_sessions`, `otp_codes`,
-   `newsletter_subscribers`, `admin_audit`, etc.) — these have **no policies**
-   (service-role only). Public tables (`cars`, `parts`, `reviews`, `posts`)
-   expose SELECT-on-published only.
+   - **Fresh project shortcut:** run `npm run migrations:bundle` to generate
+     `supabase/ALL_MIGRATIONS.sql` (all 43 concatenated in order) and paste it
+     once into the SQL editor. For an *existing* DB, apply only the new files.
+   - `npm run verify:migrations` confirms numbering is sequential and well-formed.
+3. Verify RLS is enabled on PII/money/internal tables (service-role only, **no
+   policies**): `inquiries`, `orders`, `order_events`, `payments`, `customers`,
+   `customer_sessions`, `otp_codes`, `newsletter_subscribers`, `admin_audit`,
+   `car_costs`, `purchase_orders`, `cron_runs`, `error_events`,
+   `assistant_messages`, `assistant_conversations`, `market_listings`,
+   `crm_tasks`, `campaigns`. Public tables (`cars`, `parts`, `reviews`, `posts`)
+   expose SELECT-on-published only; `site_settings` (incl. `fx_rate`,
+   `import_config`) is public-read, service-role write.
 
 ### 2.1 Rate-limit KV namespace (fixes the in-memory fallback)
 
@@ -92,13 +99,39 @@ wrangler kv namespace create RATE_LIMIT_KV
 
 ### 2.2 Deploy the app
 
+First, set the required secrets and confirm readiness:
+
 ```bash
 npm install
-npm run deploy   # opennextjs-cloudflare build && deploy
+npm run check:env            # ✓/✗ for every required + recommended var
+npm run test && npm run build  # gates: must be green
 ```
 
-Set the required secrets first: `wrangler secret put SUPABASE_SERVICE_ROLE_KEY`,
-`wrangler secret put ADMIN_PASSWORD`, etc.
+Then pick **one** deploy path:
+
+**Path A — Cloudflare Workers (OpenNext).** The intended target, but the
+**free plan caps a Worker at 3 MiB gzipped and the OpenNext handler exceeds it**
+— so this path needs a **Workers Paid plan ($5/mo, 10 MiB limit)**. After
+upgrading:
+
+```bash
+wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler secret put ADMIN_PASSWORD           # …and the rest of §1
+npm run deploy                                # opennextjs build && deploy
+```
+
+**Path B — Self-host (no size limit, ~free).** `next.config` already emits
+`output: "standalone"`. Run the Node server on any always-on box (the dealer's
+Vostro, or a $5 VPS) and expose it with a free Cloudflare Tunnel. Full steps and
+the systemd units are in **`deploy/selfhost/SETUP.md`** (`tez-motors.service` +
+`cloudflared.service`). In short: `npm run selfhost:build` then
+`npm run selfhost:start` behind the tunnel.
+
+After either path, verify the live site:
+
+```bash
+npm run smoke https://tezmotors.uz   # public 200s + admin/cron guards return 401
+```
 
 ### 2.3 Cron Worker (scheduled jobs)
 

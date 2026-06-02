@@ -10,9 +10,14 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "verify:migrations": "node scripts/verify-migrations.mjs",
+    "migrations:bundle": "node scripts/build-all-migrations.mjs",
+    "check:env": "node scripts/check-env.mjs",
+    "smoke": "node scripts/smoke-test.mjs",
     "test:e2e": "playwright test",
     "build:cf": "npx opennextjs-cloudflare build",
-    "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy"
+    "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy",
+    "selfhost:build": "next build",
+    "selfhost:start": "node .next/standalone/server.js"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.18.1",
