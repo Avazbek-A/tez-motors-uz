@@ -19,6 +19,7 @@ jobs:
       - run: npx next lint
       - run: npx tsc --noEmit
       - run: npm run test
+      - run: npm run verify:migrations
       - run: npx next build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co

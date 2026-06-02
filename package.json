@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "verify:migrations": "node scripts/verify-migrations.mjs",
     "build:cf": "npx opennextjs-cloudflare build",
     "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy"
   },
