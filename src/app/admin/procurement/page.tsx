@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Loader2, Truck, MessageCircle, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Loader2, Truck, MessageCircle, Sparkles, Container, Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PURCHASE_ORDER_STATUSES } from "@/lib/schemas/purchase-order";
@@ -295,6 +296,23 @@ export default function AdminProcurementPage() {
                 )}
               </div>
             </div>
+            {editing.id && (
+              <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-border text-xs">
+                <span className="text-muted-foreground">Next:</span>
+                <Link
+                  href={`/admin/shipments?po_id=${editing.id}&title=${encodeURIComponent(`${editing.qty || 1}× ${editing.brand} ${editing.model}${editing.supplier ? ` from ${editing.supplier}` : ""}`)}&supplier=${encodeURIComponent(editing.supplier || "")}&qty=${editing.qty || 1}`}
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Container className="w-3.5 h-3.5" /> Create shipment
+                </Link>
+                <Link
+                  href={`/admin/finance?exp_category=supplier_payment&exp_currency=USD&exp_supplier=${encodeURIComponent(editing.supplier || "")}&exp_amount=${Math.round((editing.unit_cost_usd || 0) * (editing.qty || 1))}&exp_desc=${encodeURIComponent(`${editing.brand} ${editing.model} — PO`)}`}
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Receipt className="w-3.5 h-3.5" /> Log supplier payment
+                </Link>
+              </div>
+            )}
             <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-border">
               <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
               <Button size="sm" onClick={save} disabled={saving || !editing.brand || !editing.model}>

@@ -58,6 +58,20 @@ export default function AdminFinancePage() {
 
   useEffect(() => { loadAll(from, to); }, [from, to, loadAll]);
 
+  // Prefill the expense form from a procurement "log supplier payment" link.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (!p.get("exp_amount") && !p.get("exp_supplier")) return;
+    setExp((e) => ({
+      ...e,
+      category: p.get("exp_category") || e.category,
+      currency: p.get("exp_currency") || e.currency,
+      amount: p.get("exp_amount") || e.amount,
+      supplier: p.get("exp_supplier") || e.supplier,
+      description: p.get("exp_desc") || e.description,
+    }));
+  }, []);
+
   const invTotals = computeInvoiceTotals(inv.items, inv.vat);
 
   const createInvoice = async () => {
