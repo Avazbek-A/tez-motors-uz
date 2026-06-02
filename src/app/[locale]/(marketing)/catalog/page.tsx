@@ -3,6 +3,9 @@ import { cookies, headers } from "next/headers";
 import CatalogContentWrapper from "./_content";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { SITE_CONFIG } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/server";
+import { fetchCarsPage } from "@/lib/cars-query";
+import type { Car } from "@/types/car";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -38,6 +41,20 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function CatalogPage() {
-  return <CatalogContentWrapper />;
+export default async function CatalogPage() {
+  // Server-render the first page so the catalog's initial paint has cars (no
+  // client-fetch waterfall, better LCP + crawlable). The client component takes
+  // over for filtering/pagination. Fail-open: on error it falls back to the
+  // client fetch on mount.
+  let initialCars: Car[] = [];
+  let initialTotal = 0;
+  try {
+    const supabase = await createClient();
+    const r = await fetchCarsPage(supabase, { page: 1, pageSize: 12, sort: "default" });
+    initialCars = r.cars as Car[];
+    initialTotal = r.total;
+  } catch {
+    // ignore — the client will fetch
+  }
+  return <CatalogContentWrapper initialCars={initialCars} initialTotal={initialTotal} />;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,17 +34,32 @@ interface CatalogContentInnerProps {
    * pinned filters stay in the route, layered filters in the query.
    */
   basePath?: string;
+  /** First page rendered server-side (eliminates the initial client fetch). */
+  initialCars?: Car[];
+  initialTotal?: number;
 }
 
-function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogContentInnerProps) {
+function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, initialTotal }: CatalogContentInnerProps) {
   const { locale, dictionary } = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [cars, setCars] = useState<Car[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use the server-rendered first page when this is the default view (no URL
+  // filters and no pinned initialFilters); otherwise fetch on mount.
+  const seeded =
+    (initialCars?.length ?? 0) > 0 &&
+    !initialFilters &&
+    !["brand", "body_type", "fuel_type", "price_min", "price_max", "monthly_max", "q", "sort", "page"].some(
+      (k) => searchParams.get(k),
+    );
+
+  const [cars, setCars] = useState<Car[]>(initialCars ?? []);
+  const [loading, setLoading] = useState(!seeded);
   const [showFilters, setShowFilters] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(initialTotal ?? 0);
+  // Skip the first fetch when seeded from the server; subsequent filter/page
+  // changes fetch normally.
+  const skipFirstFetch = useRef(seeded);
   const [page, setPage] = useState(1);
   const [searchText, setSearchText] = useState(searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(searchParams.get("q") || "");
@@ -99,6 +114,10 @@ function CatalogContent({ initialFilters, basePath = "/catalog" }: CatalogConten
   }, [searchText]);
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false;
+      return; // first render already has the server-rendered page
+    }
     setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(page));

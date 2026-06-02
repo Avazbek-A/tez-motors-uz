@@ -5,6 +5,7 @@ import { requireAdmin, isAdminRequest } from "@/lib/auth";
 import { priceFromMonthly } from "@/lib/finance";
 import { logAdminAction } from "@/lib/audit";
 import { postCarToChannel } from "@/lib/telegram";
+import { applySort, fetchCarsPage } from "@/lib/cars-query";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -19,25 +20,6 @@ function parseIntSafe(raw: string | null, min: number, max: number): number | nu
   const n = parseInt(raw, 10);
   if (!Number.isFinite(n)) return null;
   return Math.min(Math.max(n, min), max);
-}
-
-function applySort<T extends { price_usd: number; year: number; brand: string; model: string }>(
-  items: T[],
-  sort: string | null,
-) {
-  const next = [...items];
-  switch (sort) {
-    case "price_asc":
-      return next.sort((a, b) => a.price_usd - b.price_usd);
-    case "price_desc":
-      return next.sort((a, b) => b.price_usd - a.price_usd);
-    case "year_desc":
-      return next.sort((a, b) => b.year - a.year);
-    case "name_asc":
-      return next.sort((a, b) => `${a.brand} ${a.model}`.localeCompare(`${b.brand} ${b.model}`));
-    default:
-      return next.sort((a, b) => b.year - a.year);
-  }
 }
 
 // GET all cars with optional filters
@@ -84,51 +66,38 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Pagination mode: use count + range
+    // Pagination mode: use count + range (shared with the server-rendered catalog).
     if (page !== null) {
       const size = Math.min(parseInt(pageSize || "12") || 12, 50);
       const pageNum = Math.max(parseInt(page) || 1, 1);
-      const offset = (pageNum - 1) * size;
+      const idList = ids
+        ? ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100)
+        : null;
 
-      let query = supabase
-        .from("cars")
-        .select("*", { count: "exact" });
-
-      if (!all) query = query.neq("inventory_status", "sold");
-      if (brand) query = query.eq("brand", brand);
-      if (bodyType) query = query.eq("body_type", bodyType);
-      if (fuelType) query = query.eq("fuel_type", fuelType);
-      if (priceMin !== null) query = query.gte("price_usd", priceMin);
-      if (priceMax !== null) query = query.lte("price_usd", priceMax);
-      if (hotOnly === "true") query = query.eq("is_hot_offer", true);
-      if (search) {
-        if (searchIds && searchIds.length > 0) {
-          query = query.in("id", searchIds);
-        } else {
-          query = query.or(`brand.ilike.%${search}%,model.ilike.%${search}%,description_ru.ilike.%${search}%`);
-        }
+      try {
+        const { cars, total } = await fetchCarsPage(supabase, {
+          page: pageNum,
+          pageSize: size,
+          brand,
+          bodyType,
+          fuelType,
+          priceMin,
+          priceMax,
+          hotOnly: hotOnly === "true",
+          search,
+          searchIds,
+          ids: idList,
+          sort,
+          includeAll: !!all,
+        });
+        return NextResponse.json(
+          { cars, total, page: pageNum, page_size: size },
+          { headers: all ? {} : publicCacheHeaders },
+        );
+      } catch (err) {
+        console.error("Supabase error:", err);
+        return NextResponse.json({ cars: [], total: 0, error: "query failed" }, { status: 500 });
       }
-      if (ids) {
-        const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
-        if (idList.length > 0) query = query.in("id", idList);
-      }
-
-      query = query
-        .order("order_position", { ascending: true })
-        .order("created_at", { ascending: false })
-        .range(offset, offset + size - 1);
-
-      const { data: cars, error, count } = await query;
-
-      if (error) {
-        console.error("Supabase error:", error);
-        return NextResponse.json({ cars: [], total: 0, error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json(
-        { cars: applySort(cars || [], sort), total: count || 0, page: pageNum, page_size: size },
-        { headers: all ? {} : publicCacheHeaders },
-      );
     }
 
     // Legacy mode (no pagination)
