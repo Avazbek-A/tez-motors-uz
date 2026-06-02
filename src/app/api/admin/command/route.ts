@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   const nowIso = now.toISOString();
   const today = nowIso.slice(0, 10);
   const oneDayAgo = new Date(now.getTime() - 86_400_000).toISOString();
+  const in30 = new Date(now.getTime() + 30 * 86_400_000).toISOString().slice(0, 10);
   const monthStart = `${today.slice(0, 8)}01`;
   const headCount = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0, () => 0);
 
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
     overdueShipments,
     unpaidReservations,
     newInquiries,
+    warrantiesExpiring,
     paymentsRes,
     poRes,
     carsRes,
@@ -46,6 +48,7 @@ export async function GET(request: NextRequest) {
     headCount(supabase.from("shipments").select("*", { count: "exact", head: true }).neq("status", "delivered").not("eta_date", "is", null).lt("eta_date", today)),
     headCount(supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "ordered").lt("created_at", oneDayAgo)),
     headCount(supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new")),
+    headCount(supabase.from("warranties").select("*", { count: "exact", head: true }).gte("warranty_until", today).lte("warranty_until", in30)),
     supabase.from("payments").select("amount_tiyin").eq("state", 2).limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("purchase_orders").select("status, qty, unit_cost_usd").limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("cars").select("id, price_usd, inventory_status").limit(MAX).then((r) => r.data ?? [], () => []),
@@ -76,7 +79,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     fx,
-    actions: { tasksDue, hotLeads, overdueShipments, unpaidReservations, newInquiries },
+    actions: { tasksDue, hotLeads, overdueShipments, unpaidReservations, newInquiries, warrantiesExpiring },
     money: {
       revenueMtdUsd,
       depositsUzs,

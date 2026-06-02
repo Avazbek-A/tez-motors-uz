@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Gauge, Loader2, ListChecks, Flame, Container, AlertTriangle, MessageSquare, ArrowRight, Target } from "lucide-react";
+import { Gauge, Loader2, ListChecks, Flame, Container, AlertTriangle, MessageSquare, ArrowRight, Target, ShieldCheck } from "lucide-react";
 
 interface CommandData {
   fx: { usd_uzs: number };
-  actions: { tasksDue: number; hotLeads: number; overdueShipments: number; unpaidReservations: number; newInquiries: number };
+  actions: { tasksDue: number; hotLeads: number; overdueShipments: number; unpaidReservations: number; newInquiries: number; warrantiesExpiring: number };
   money: { revenueMtdUsd: number; depositsUzs: number; depositsUsd: number; committedSupplierUsd: number; potentialMarginUsd: number };
   recentInquiries: { name: string; phone: string; type: string; status: string; created_at: string }[];
   hotLeads: { name: string | null; phone: string | null; lead_score: number; stage: string }[];
@@ -40,6 +40,7 @@ export default function AdminCommandPage() {
     { label: "Overdue shipments", value: data.actions.overdueShipments, href: "/admin/shipments", icon: Container },
     { label: "Unpaid reservations", value: data.actions.unpaidReservations, href: "/admin/orders", icon: AlertTriangle },
     { label: "New inquiries", value: data.actions.newInquiries, href: "/admin/inquiries", icon: MessageSquare },
+    { label: "Warranties expiring", value: data.actions.warrantiesExpiring, href: "/admin/after-sales", icon: ShieldCheck },
   ] : [];
   const totalActions = data ? Object.values(data.actions).reduce((a, b) => a + b, 0) : 0;
 
@@ -64,7 +65,7 @@ export default function AdminCommandPage() {
             <h2 className="text-sm font-semibold text-foreground mb-3">
               Needs attention {totalActions > 0 ? <span className="text-primary">({totalActions})</span> : <span className="text-[var(--success)]">— all clear 🎉</span>}
             </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
               {actionCards.map((c) => (
                 <Link key={c.label} href={c.href} className={`bg-card border p-4 rounded-[2px] transition-colors ${c.value > 0 ? "border-[var(--accent-line)] hover:border-[var(--accent)]" : "border-border hover:border-[var(--accent-line)]"}`}>
                   <div className="flex items-center justify-between">

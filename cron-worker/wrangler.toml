@@ -40,6 +40,7 @@ crons = [
   "45 4 * * *",  # 09:45 Tashkent — overdue-shipment SLA watchdog
   "0 * * * *",   # hourly — publish scheduled marketing posts to Telegram
   "10 * * * *",  # hourly — apply/end scheduled price promotions
+  "0 9 * * 3",   # Wed 14:00 Tashkent — warranties expiring within 30 days
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.
