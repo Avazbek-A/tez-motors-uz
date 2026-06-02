@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { jsonLd } from "@/lib/json-ld";
 import { useLocale } from "@/i18n/locale-context";
 import type { Review } from "@/types/car";
 
@@ -149,7 +150,7 @@ export default function ReviewsPage() {
   return (
     <div className="pt-24 pb-16">
       {aggregateSchema && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aggregateSchema) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(aggregateSchema) }} />
       )}
       <div className="container-custom">
         <SectionHeading as="h1" title={title} subtitle={subtitle} />

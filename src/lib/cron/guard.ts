@@ -12,13 +12,7 @@
  * can be exercised manually — they're harmless idempotent jobs.
  */
 import { NextResponse } from "next/server";
-
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 function extractBearer(request: Request): string | null {
   const auth = request.headers.get("authorization");

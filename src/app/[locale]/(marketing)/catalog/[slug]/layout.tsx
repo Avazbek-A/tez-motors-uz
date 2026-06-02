@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { SITE_CONFIG } from "@/lib/constants";
+import { jsonLd } from "@/lib/json-ld";
 import { formatPrice } from "@/lib/utils";
 import { getLocaleFromCookie } from "@/i18n/config";
 
@@ -124,7 +125,7 @@ async function CarDetailSchemaInjector({ slug }: { slug: string }) {
     return (
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
       />
     );
   } catch {

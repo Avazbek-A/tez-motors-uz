@@ -2,6 +2,8 @@
  * BreadcrumbList JSON-LD. Render once per detail page; Google uses it
  * for SERP breadcrumb display and as a topical signal.
  */
+import { jsonLd } from "@/lib/json-ld";
+
 export function BreadcrumbSchema({
   items,
 }: {
@@ -23,7 +25,7 @@ export function BreadcrumbSchema({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
     />
   );
 }

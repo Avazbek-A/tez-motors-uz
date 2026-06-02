@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Script from "next/script";
 import { SITE_CONFIG } from "@/lib/constants";
+import { jsonLd as toJsonLd } from "@/lib/json-ld";
 import { createClient } from "@/lib/supabase/server";
 import { getLocaleFromCookie } from "@/i18n/config";
 import PartDetailClient from "./part-detail-client";
@@ -110,7 +111,7 @@ export default async function PartDetailPage(
       <Script
         id={`jsonld-part-${part.id}`}
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: toJsonLd(jsonLd) }}
       />
       <BreadcrumbSchema
         items={[

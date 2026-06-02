@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { toUsd, priceToUsd, fingerprint } from "@/lib/market-intel";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * Ingest observed market listings — from the admin "add data" UI OR an
@@ -39,7 +40,7 @@ function authorize(request: NextRequest, isAdmin: boolean): boolean {
   if (!secret) return false;
   const auth = request.headers.get("authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  return token.length > 0 && token === secret;
+  return token.length > 0 && timingSafeEqual(token, secret);
 }
 
 export async function POST(request: NextRequest) {
