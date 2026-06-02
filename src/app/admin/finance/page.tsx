@@ -174,7 +174,10 @@ export default function AdminFinancePage() {
                       <button onClick={() => cycleStatus(i)} className={`text-[10px] font-mono uppercase tracking-wider ${STATUS_TONE[i.status]}`} title="Click to advance status">{i.status}</button>
                     </td>
                     <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{i.issued_at}</td>
-                    <td className="px-4 py-2 text-right"><button onClick={() => delInvoice(i.id)} className="text-muted-foreground hover:text-[var(--danger)]"><Trash2 className="w-3.5 h-3.5" /></button></td>
+                    <td className="px-4 py-2 text-right whitespace-nowrap">
+                      <a href={`/api/admin/invoices/${i.id}/print`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs mr-3">Print</a>
+                      <button onClick={() => delInvoice(i.id)} className="text-muted-foreground hover:text-[var(--danger)] align-middle"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </td>
                   </tr>
                 ))}
                 {invoices.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No invoices yet.</td></tr>}
