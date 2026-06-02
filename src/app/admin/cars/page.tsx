@@ -704,6 +704,15 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                 bucket="car-images"
                 onImages={(urls) => setImages((prev) => [...prev, ...urls])}
                 onVideo={(u) => setVideoUrl(u)}
+                onSpec={(spec) => {
+                  if (spec.year) setYear(String(spec.year));
+                  if (spec.body_type) setBodyType(String(spec.body_type));
+                  if (spec.fuel_type) setFuelType(String(spec.fuel_type));
+                  if (spec.transmission) setTransmission(String(spec.transmission));
+                  if (spec.engine_volume != null) setEngineVolume(String(spec.engine_volume));
+                  if (spec.engine_power != null) setEnginePower(String(spec.engine_power));
+                  if (spec.color) setColor(String(spec.color));
+                }}
               />
             </div>
             <label

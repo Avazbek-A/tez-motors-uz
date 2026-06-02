@@ -15,6 +15,15 @@ The admin car and part forms have an **Import from URL** panel (the
 You can always **paste direct image URLs** in the textarea — this path always
 works and is the fallback for sites that block server fetches (below).
 
+## Car configuration from AutoHome (and similar)
+On the **car** form, the Import panel also pulls the **configuration** from the
+pasted page (AI-assisted): it strips the page text and the LLM maps it — even
+from Chinese AutoHome spec tables — to our fields (year, body/fuel type,
+transmission, drivetrain, engine volume & power, colour). Click **"Apply
+configuration"** to fill the form; **review before saving**. It never extracts a
+price (that's your landed-cost decision). Requires `LLM_API_KEY`; without it the
+button simply won't appear and you fill the form manually.
+
 ## Per-source notes
 
 ### Cars — AutoHome (autohome.com.cn)

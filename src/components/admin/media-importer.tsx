@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Loader2, Download, Film } from "lucide-react";
+import { Link2, Loader2, Download, Film, Settings2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -20,10 +20,13 @@ export function MediaImporter({
   bucket,
   onImages,
   onVideo,
+  onSpec,
 }: {
   bucket: "car-images" | "part-images";
   onImages: (urls: string[]) => void;
   onVideo?: (url: string) => void;
+  /** When provided (car form), Extract also pulls the car config from the page. */
+  onSpec?: (spec: Record<string, unknown>) => void;
 }) {
   const [pageUrl, setPageUrl] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -32,6 +35,7 @@ export function MediaImporter({
   const [manual, setManual] = useState("");
   const [importing, setImporting] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [spec, setSpec] = useState<Record<string, unknown> | null>(null);
 
   const imageCandidates = candidates.filter((c) => c.type === "image");
   const videoCandidates = candidates.filter((c) => c.type === "video");
@@ -50,6 +54,22 @@ export function MediaImporter({
       const found: Candidate[] = Array.isArray(data.candidates) ? data.candidates : [];
       setCandidates(found);
       setSelected(new Set(found.filter((c) => c.type === "image").map((c) => c.url)));
+
+      // Cars: also pull the configuration from the same page (AI-assisted).
+      if (onSpec) {
+        try {
+          const sres = await fetch("/api/admin/cars/extract-spec", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: pageUrl.trim() }),
+          });
+          const sdata = await sres.json().catch(() => ({}));
+          setSpec(sdata.spec && typeof sdata.spec === "object" ? sdata.spec : null);
+        } catch {
+          setSpec(null);
+        }
+      }
+
       if (found.length === 0) {
         setNote("No media found on that page (it may block server fetches) — paste direct image URLs below instead.");
       }
@@ -131,6 +151,23 @@ export function MediaImporter({
             </button>
           ))}
         </div>
+      )}
+
+      {onSpec && spec && Object.keys(spec).length > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            onSpec(spec);
+            setNote("Applied car configuration — review before saving.");
+          }}
+          className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+        >
+          <Settings2 className="w-3.5 h-3.5" /> Apply configuration
+          {(() => {
+            const n = Object.keys(spec).filter((k) => k !== "specs").length;
+            return n > 0 ? ` (${n} fields)` : "";
+          })()}
+        </button>
       )}
 
       {imageCandidates.length > 0 && (
