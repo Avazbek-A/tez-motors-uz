@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { parseCsvToObjects } from "@/lib/csv";
 import { carWriteSchema } from "@/lib/schemas/car";
+import { computeLandedPrice, priceUsdToUzs, type PricingParams } from "@/lib/pricing";
+import { getUsdUzsRate } from "@/lib/fx-rate";
 
 export const runtime = "nodejs";
 
@@ -84,6 +86,8 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  // Read the FX rate once so cost-priced rows can also fill price_uzs.
+  const usdUzsRate = await getUsdUzsRate(supabase);
   const result: ImportResult = { inserted: 0, updated: 0, skipped: 0, errors: [] };
 
   for (let i = 0; i < rows.length; i += 1) {
@@ -101,14 +105,34 @@ export async function POST(request: NextRequest) {
     const slug =
       r.slug?.trim() || slugify(`${brand}-${model}-${r.year ?? ""}`);
 
+    // Auto-pricing: when a purchase cost is supplied and no explicit price_usd,
+    // run it through the landed-cost engine (with optional per-row rate
+    // overrides) and derive price_uzs from the current FX rate. This turns a
+    // cost-only supplier sheet into priced, ready-to-publish listings.
+    const costUsd = parseNumber(r.cost_usd || r.purchase_cost_usd || "");
+    let priceUsd = parseInt10(r.price_usd);
+    let priceUzs = parseInt10(r.price_uzs);
+    if (priceUsd == null && costUsd != null && costUsd > 0) {
+      const overrides: Partial<PricingParams> = {};
+      const mp = parseNumber(r.margin_pct || ""); if (mp != null) overrides.marginPct = mp;
+      const fr = parseNumber(r.freight_usd || ""); if (fr != null) overrides.freightUsd = fr;
+      const dp = parseNumber(r.duty_pct || ""); if (dp != null) overrides.dutyPct = dp;
+      const ex = parseNumber(r.excise_usd || ""); if (ex != null) overrides.exciseUsd = ex;
+      const rc = parseNumber(r.recycling_usd || ""); if (rc != null) overrides.recyclingUsd = rc;
+      const cl = parseNumber(r.clearance_usd || ""); if (cl != null) overrides.clearanceUsd = cl;
+      const computed = computeLandedPrice(costUsd, overrides);
+      priceUsd = Math.round(computed.priceUsd);
+      if (priceUzs == null) priceUzs = priceUsdToUzs(computed.priceUsd, usdUzsRate);
+    }
+
     // Empty enum/boolean cells become undefined so schema defaults apply.
     const payload = {
       brand,
       model,
       year: parseInt10(r.year),
-      price_usd: parseInt10(r.price_usd),
+      price_usd: priceUsd,
       original_price_usd: parseInt10(r.original_price_usd),
-      price_uzs: parseInt10(r.price_uzs),
+      price_uzs: priceUzs,
       body_type: r.body_type?.trim().toLowerCase() || undefined,
       fuel_type: r.fuel_type?.trim().toLowerCase() || undefined,
       engine_volume: parseNumber(r.engine_volume),
