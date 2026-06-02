@@ -56,6 +56,24 @@ export default function AdminModelsPage() {
     fetchModels();
   }, [fetchModels]);
 
+  // Prefill from the demand board's "Source as pre-order" action
+  // (/admin/models?brand=&model=&year=&base_price_usd=) — open the create modal
+  // pre-populated so a hot car becomes an orderable model in one step.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const brand = params.get("brand");
+    if (!brand) return;
+    const year = params.get("year");
+    const base = params.get("base_price_usd");
+    setEditing({
+      ...emptyModel(),
+      brand,
+      model: params.get("model") || "",
+      year: year ? Number(year) : null,
+      base_price_usd: base ? Number(base) : null,
+    });
+  }, []);
+
   const filtered = models.filter((m) => {
     if (!search) return true;
     const q = search.toLowerCase();

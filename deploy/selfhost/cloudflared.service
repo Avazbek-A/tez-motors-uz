@@ -1,0 +1,18 @@
+[Unit]
+Description=cloudflared tunnel for Tez Motors
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+# Runs the named tunnel you created with `cloudflared tunnel create tez-motors`
+# and routed to http://localhost:3000 (see SETUP.md). Credentials live in
+# ~/.cloudflared/. Prefer `cloudflared service install` which generates its own
+# unit — use this only if you run the tunnel by name manually.
+ExecStart=/usr/local/bin/cloudflared tunnel run tez-motors
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

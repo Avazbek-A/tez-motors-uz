@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUp, Heart, Bell, MessageSquare, Loader2, Flame } from "lucide-react";
+import Link from "next/link";
+import { TrendingUp, Heart, Bell, MessageSquare, Loader2, Flame, PackagePlus } from "lucide-react";
 
 interface HotCar {
   car_id: string;
@@ -100,6 +101,7 @@ export default function AdminDemandPage() {
                     <th className="px-4 py-2 font-medium text-right">Inq</th>
                     <th className="px-4 py-2 font-medium text-right">Min target</th>
                     <th className="px-4 py-2 font-medium text-right">Score</th>
+                    <th className="px-4 py-2 font-medium text-right">Source</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -120,6 +122,15 @@ export default function AdminDemandPage() {
                       <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{c.inquiries}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{usd(c.minTarget)}</td>
                       <td className="px-4 py-2.5 text-right font-mono font-semibold text-primary">{c.score}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <Link
+                          href={`/admin/models?brand=${encodeURIComponent(c.brand || "")}&model=${encodeURIComponent(c.model || "")}${c.year ? `&year=${c.year}` : ""}${c.price_usd ? `&base_price_usd=${c.price_usd}` : ""}`}
+                          title="Create an orderable pre-order model from this car"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <PackagePlus className="w-3.5 h-3.5" /> Pre-order
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

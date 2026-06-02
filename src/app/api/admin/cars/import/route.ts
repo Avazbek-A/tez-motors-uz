@@ -178,6 +178,8 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
+    let carId: string | null = existing?.id ?? null;
+    let ok = false;
     if (existing?.id) {
       const { error } = await supabase.from("cars").update(record).eq("id", existing.id);
       if (error) {
@@ -185,15 +187,26 @@ export async function POST(request: NextRequest) {
         result.skipped += 1;
       } else {
         result.updated += 1;
+        ok = true;
       }
     } else {
-      const { error } = await supabase.from("cars").insert(record);
+      const { data: ins, error } = await supabase.from("cars").insert(record).select("id").single();
       if (error) {
         result.errors.push({ row: rowNum, slug, message: error.message });
         result.skipped += 1;
       } else {
         result.inserted += 1;
+        carId = ins?.id ?? null;
+        ok = true;
       }
+    }
+
+    // Store the purchase cost (if supplied) in the service-role car_costs table
+    // so the profit ledger can compute margin. Never written to public.cars.
+    if (ok && carId && costUsd != null && costUsd > 0) {
+      await supabase
+        .from("car_costs")
+        .upsert({ car_id: carId, cost_usd: costUsd, updated_at: new Date().toISOString() });
     }
   }
 

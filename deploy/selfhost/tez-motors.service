@@ -1,0 +1,23 @@
+[Unit]
+Description=Tez Motors (Next.js production server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Change to the Linux user that owns the checkout (NOT root).
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/tez-motors
+Environment=NODE_ENV=production
+Environment=PORT=3000
+# Next.js loads .env.local from WorkingDirectory automatically. Put your
+# Supabase keys + secrets there (chmod 600 .env.local).
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+# Survive transient failures but stop flapping if it can't start at all.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
