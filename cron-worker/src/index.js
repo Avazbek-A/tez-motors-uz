@@ -21,6 +21,8 @@ const ROUTES = {
   "0 7 * * *": "/api/cron/review-requests",
   "20 */2 * * *": "/api/cron/reservation-recovery",
   "0 3 * * *": "/api/cron/ops-digest",
+  "30 4 * * *": "/api/cron/order-sla",
+  "30 5 * * *": "/api/cron/lead-nurture",
 };
 
 async function fire(path, env) {

@@ -68,6 +68,7 @@ const LABELS = {
     currentStatus: "Текущий статус",
     deposit: "Депозит",
     depositPrompt: "Закрепите бронь — внесите депозит онлайн, пока автомобиль удерживается за вами.",
+    receipt: "Чек / подтверждение",
     placed: "Оформлен",
     helpText: "Отслеживайте доставку вашего автомобиля от заказа до выдачи",
   },
@@ -82,6 +83,7 @@ const LABELS = {
     currentStatus: "Joriy holat",
     deposit: "Depozit",
     depositPrompt: "Bronni mustahkamlang — avtomobil siz uchun band turganida depozitni onlayn to'lang.",
+    receipt: "Chek / tasdiq",
     placed: "Rasmiylashtirilgan",
     helpText: "Avtomobilingizni buyurtmadan to'liq yetkazib berilgungacha kuzating",
   },
@@ -96,6 +98,7 @@ const LABELS = {
     currentStatus: "Current status",
     deposit: "Deposit",
     depositPrompt: "Secure your reservation — pay the deposit online while the car is held for you.",
+    receipt: "Receipt",
     placed: "Placed",
     helpText: "Follow your car from order to handover",
   },
@@ -233,6 +236,18 @@ export default function TrackOrderPage() {
                     {t.placed}: <span className="font-mono">{new Date(order.created_at).toLocaleDateString(dateLocale)}</span>
                   </p>
                 </div>
+              </div>
+
+              {/* Printable receipt / order confirmation (available for any found order). */}
+              <div className="px-5 py-3 border-b border-border flex justify-end">
+                <a
+                  href={`/api/receipt?code=${encodeURIComponent(order.reference_code)}&phone=${encodeURIComponent(phone.trim())}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.12em] text-primary hover:underline"
+                >
+                  <FileText className="w-3.5 h-3.5" /> {t.receipt}
+                </a>
               </div>
 
               {/* Unpaid reservation: surface the deposit CTA so the recovery

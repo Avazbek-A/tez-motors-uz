@@ -291,6 +291,43 @@ export function reviewRequestEmail(
 }
 
 /** Order status change — sent to the customer as their import progresses (Phase O). */
+/** Gentle one-time follow-up for a cold lead that hasn't been worked yet. */
+export function leadNurtureEmail(locale: EmailLocale, data: { name?: string }): Template {
+  const name = data.name ? esc(data.name) : "";
+  const base = siteUrl();
+  const copy = {
+    ru: {
+      subject: `${BRAND}: помочь с подбором автомобиля?`,
+      hi: name ? `Здравствуйте, ${name}!` : "Здравствуйте!",
+      body: "Вы недавно интересовались автомобилем у нас. Если вопрос ещё актуален — мы поможем подобрать модель, рассчитать стоимость «под ключ» и условия доставки. Просто ответьте на это письмо или напишите нам.",
+      cta: "Смотреть каталог",
+      url: `${base}/ru/catalog`,
+    },
+    uz: {
+      subject: `${BRAND}: avtomobil tanlashda yordam kerakmi?`,
+      hi: name ? `Assalomu alaykum, ${name}!` : "Assalomu alaykum!",
+      body: "Yaqinda bizdan avtomobil bilan qiziqqan edingiz. Agar savol dolzarb bo'lsa — model tanlash, «kalit topshirish» narxini hisoblash va yetkazib berish shartlarida yordam beramiz. Shu xatga javob yozing yoki bizga murojaat qiling.",
+      cta: "Katalogni ko'rish",
+      url: `${base}/uz/catalog`,
+    },
+    en: {
+      subject: `${BRAND}: still looking for a car?`,
+      hi: name ? `Hello, ${name}!` : "Hello!",
+      body: "You recently asked us about a car. If you're still looking, we'll help you choose a model, estimate the all-inclusive price, and arrange delivery. Just reply to this email or message us.",
+      cta: "Browse catalog",
+      url: `${base}/en/catalog`,
+    },
+  }[locale];
+  return {
+    subject: copy.subject,
+    html: layout(
+      `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
+       <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       ${btn(copy.url, copy.cta)}`,
+    ),
+  };
+}
+
 /**
  * Nudge a customer whose reservation is still unpaid — sent once by the
  * recovery cron after the reminder delay, before the release deadline.

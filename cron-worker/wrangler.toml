@@ -30,6 +30,8 @@ crons = [
   "0 7 * * *",   # 12:00 Tashkent — post-delivery review requests
   "20 */2 * * *", # every 2h — nudge unpaid reservations, auto-release stale holds
   "0 3 * * *",   # 08:00 Tashkent — daily operations action-queue briefing
+  "30 4 * * *",  # 09:30 Tashkent — order SLA watchdog (stuck-order alerts)
+  "30 5 * * *",  # 10:30 Tashkent — cold-lead nurture follow-up
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.
