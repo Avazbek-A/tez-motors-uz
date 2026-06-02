@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ const navGroups = [
       { href: "/admin/shipments", label: "Shipments", icon: Container },
       { href: "/admin/import-calculator", label: "Import Calc", icon: Ship },
       { href: "/admin/pricing", label: "Pricing", icon: Calculator },
+      { href: "/admin/aging", label: "Aged Stock", icon: Hourglass },
     ],
   },
   {

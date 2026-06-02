@@ -82,7 +82,8 @@ public and may live in `wrangler.toml` `[vars]` or the dashboard.
    `car_costs`, `purchase_orders`, `cron_runs`, `error_events`,
    `assistant_messages`, `assistant_conversations`, `market_listings`,
    `crm_tasks`, `campaigns`, `shipments`, `shipment_events`,
-   `shipment_documents`, `invoices`, `expenses`. Public tables (`cars`,
+   `shipment_documents`, `invoices`, `expenses`, `content_drafts`,
+   `promotions`, `warranties`. Public tables (`cars`,
    `parts`, `reviews`, `posts`)
    expose SELECT-on-published only; `site_settings` (incl. `fx_rate`,
    `import_config`) is public-read, service-role write.
