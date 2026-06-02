@@ -85,6 +85,31 @@ export async function sendTelegramNotification(data: {
 }
 
 /**
+ * Publish an arbitrary marketing post to the Telegram channel. Fail-open: no-op
+ * if the bot token / channel id are unset. Returns whether it was sent.
+ */
+export async function sendChannelMessage(
+  text: string,
+  opts: { linkUrl?: string; linkLabel?: string } = {},
+): Promise<{ ok: boolean }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!botToken || !channelId || !text.trim()) return { ok: false };
+  try {
+    const body: Record<string, unknown> = { chat_id: channelId, text: text.slice(0, 4000) };
+    if (opts.linkUrl) body.reply_markup = { inline_keyboard: [[{ text: opts.linkLabel || "Открыть", url: opts.linkUrl }]] };
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { ok: res.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
  * Auto-announce a new arrival to the dealer's public Telegram channel. Free
  * reach, on-brand for a messaging-first market. Fail-open: no bot token or
  * TELEGRAM_CHANNEL_ID ⇒ no-op.

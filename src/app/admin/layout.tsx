@@ -9,40 +9,76 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-const adminNav = [
-  { href: "/admin/command", label: "Command", icon: Gauge },
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/autopilot", label: "Autopilot", icon: Activity },
-  { href: "/admin/cars", label: "Cars", icon: Car },
-  { href: "/admin/models", label: "Pre-order Models", icon: Boxes },
-  { href: "/admin/buying", label: "Buying Brain", icon: Target },
-  { href: "/admin/procurement", label: "Procurement", icon: Truck },
-  { href: "/admin/shipments", label: "Shipments", icon: Container },
-  { href: "/admin/supplier-intel", label: "Supplier Intel", icon: LineChart },
-  { href: "/admin/market", label: "Market Intel", icon: TrendingUp },
-  { href: "/admin/parts", label: "Parts", icon: Wrench },
-  { href: "/admin/pricing", label: "Pricing", icon: Calculator },
-  { href: "/admin/import-calculator", label: "Import Calc", icon: Ship },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/demand", label: "Demand", icon: TrendingUp },
-  { href: "/admin/money", label: "Money", icon: Banknote },
-  { href: "/admin/finance", label: "Finance", icon: Receipt },
-  { href: "/admin/ledger", label: "Ledger", icon: Wallet },
-  { href: "/admin/customers", label: "Customers", icon: Contact },
-  { href: "/admin/tasks", label: "Tasks", icon: ListChecks },
-  { href: "/admin/conversations", label: "AI Sales", icon: Bot },
-  { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
-  { href: "/admin/pipeline", label: "Pipeline", icon: Columns3 },
-  { href: "/admin/orders", label: "Orders", icon: Package },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
-  { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
-  { href: "/admin/posts", label: "Posts", icon: FileText },
-  { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
-  { href: "/admin/segments", label: "Campaigns", icon: Send },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/audit", label: "Audit", icon: ScrollText },
-  { href: "/admin/errors", label: "Errors", icon: AlertTriangle },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    section: "Overview",
+    items: [
+      { href: "/admin/command", label: "Command", icon: Gauge },
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/admin/autopilot", label: "Autopilot", icon: Activity },
+      { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    section: "Sell",
+    items: [
+      { href: "/admin/customers", label: "Customers", icon: Contact },
+      { href: "/admin/conversations", label: "AI Sales", icon: Bot },
+      { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
+      { href: "/admin/pipeline", label: "Pipeline", icon: Columns3 },
+      { href: "/admin/tasks", label: "Tasks", icon: ListChecks },
+      { href: "/admin/orders", label: "Orders", icon: Package },
+    ],
+  },
+  {
+    section: "Buy & import",
+    items: [
+      { href: "/admin/buying", label: "Buying Brain", icon: Target },
+      { href: "/admin/demand", label: "Demand", icon: TrendingUp },
+      { href: "/admin/market", label: "Market Intel", icon: LineChart },
+      { href: "/admin/procurement", label: "Procurement", icon: Truck },
+      { href: "/admin/supplier-intel", label: "Supplier Intel", icon: LineChart },
+      { href: "/admin/shipments", label: "Shipments", icon: Container },
+      { href: "/admin/import-calculator", label: "Import Calc", icon: Ship },
+      { href: "/admin/pricing", label: "Pricing", icon: Calculator },
+    ],
+  },
+  {
+    section: "Catalog",
+    items: [
+      { href: "/admin/cars", label: "Cars", icon: Car },
+      { href: "/admin/models", label: "Pre-order Models", icon: Boxes },
+      { href: "/admin/parts", label: "Parts", icon: Wrench },
+    ],
+  },
+  {
+    section: "Money",
+    items: [
+      { href: "/admin/money", label: "Money", icon: Banknote },
+      { href: "/admin/finance", label: "Finance", icon: Receipt },
+      { href: "/admin/ledger", label: "Ledger", icon: Wallet },
+    ],
+  },
+  {
+    section: "Marketing",
+    items: [
+      { href: "/admin/marketing", label: "Content Studio", icon: Megaphone },
+      { href: "/admin/segments", label: "Campaigns", icon: Send },
+      { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
+      { href: "/admin/posts", label: "Blog", icon: FileText },
+      { href: "/admin/reviews", label: "Reviews", icon: Star },
+      { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
+    ],
+  },
+  {
+    section: "System",
+    items: [
+      { href: "/admin/users", label: "Users", icon: Users },
+      { href: "/admin/audit", label: "Audit", icon: ScrollText },
+      { href: "/admin/errors", label: "Errors", icon: AlertTriangle },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -96,26 +132,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {adminNav.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-[var(--accent-tint)] text-[var(--accent)] shadow-[inset_2px_0_0_0_var(--accent)]"
-                    : "text-white/60 hover:text-white hover:bg-white/10"
-                )}
-              >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
+          {navGroups.map((group) => (
+            <div key={group.section} className="space-y-1">
+              {!collapsed && (
+                <p className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-white/30">{group.section}</p>
+              )}
+              {group.items.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-[var(--accent-tint)] text-[var(--accent)] shadow-[inset_2px_0_0_0_var(--accent)]"
+                        : "text-white/60 hover:text-white hover:bg-white/10"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Back to site + Logout */}
