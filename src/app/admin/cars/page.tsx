@@ -420,6 +420,7 @@ export default function AdminCarsPage() {
 function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose: () => void; onSaved: () => void }) {
   const isEditing = !!car;
   const [saving, setSaving] = useState(false);
+  const [genCopy, setGenCopy] = useState(false);
   const [brand, setBrand] = useState(car?.brand || "");
   const [model, setModel] = useState(car?.model || "");
   const [year, setYear] = useState(car?.year?.toString() || "2024");
@@ -665,7 +666,28 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">Description (RU)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium">Description (RU)</label>
+              {car?.id && (
+                <button
+                  type="button"
+                  disabled={genCopy}
+                  onClick={async () => {
+                    setGenCopy(true);
+                    try {
+                      const res = await fetch(`/api/admin/cars/${car.id}/generate-copy`, { method: "POST" });
+                      const data = await res.json().catch(() => ({}));
+                      if (res.ok && data.copy?.description_ru) setDescriptionRu(data.copy.description_ru);
+                    } finally {
+                      setGenCopy(false);
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline disabled:opacity-50"
+                >
+                  {genCopy ? "Generating…" : "✨ Generate RU/UZ/EN with AI"}
+                </button>
+              )}
+            </div>
             <textarea
               value={descriptionRu}
               onChange={(e) => setDescriptionRu(e.target.value)}

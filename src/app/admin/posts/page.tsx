@@ -41,6 +41,7 @@ export default function AdminPostsPage() {
   const [showEditor, setShowEditor] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  const [genPost, setGenPost] = useState(false);
 
   const fetchPosts = () => {
     setLoading(true);
@@ -137,6 +138,31 @@ export default function AdminPostsPage() {
             <CardTitle>{editing ? "Edit Post" : "Create Post"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <button
+              type="button"
+              disabled={genPost}
+              onClick={async () => {
+                const topic = window.prompt("Blog topic? (the AI will draft a Russian post)");
+                if (!topic) return;
+                setGenPost(true);
+                try {
+                  const res = await fetch("/api/admin/posts/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ topic }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (res.ok && data.title) {
+                    setDraft((d) => ({ ...d, title_ru: data.title, body_ru: data.content || d.body_ru }));
+                  }
+                } finally {
+                  setGenPost(false);
+                }
+              }}
+              className="text-xs text-primary hover:underline disabled:opacity-50"
+            >
+              {genPost ? "Drafting…" : "✨ Draft with AI"}
+            </button>
             <Input placeholder="Slug" value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} />
             <Input placeholder="Title RU" value={draft.title_ru} onChange={(e) => setDraft({ ...draft, title_ru: e.target.value })} />
             <Input placeholder="Title UZ" value={draft.title_uz} onChange={(e) => setDraft({ ...draft, title_uz: e.target.value })} />
