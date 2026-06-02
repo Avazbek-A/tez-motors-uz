@@ -50,6 +50,12 @@ export function logEvent(
   if (event.startsWith("cron.")) {
     void recordCronRun(event.slice(5), fields);
   }
+
+  // Persist error-level events to an in-house, queryable feed (admin → Errors).
+  // Fire-and-forget, fail-open; reliable on a Node host, best-effort on Workers.
+  if (level === "error") {
+    void recordErrorEvent(event, fields);
+  }
 }
 
 async function recordCronRun(job: string, detail: Record<string, unknown>): Promise<void> {
@@ -59,6 +65,16 @@ async function recordCronRun(job: string, detail: Record<string, unknown>): Prom
     await supabase.from("cron_runs").insert({ job, detail });
   } catch {
     // observability must never break a cron
+  }
+}
+
+async function recordErrorEvent(event: string, detail: Record<string, unknown>): Promise<void> {
+  try {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const supabase = createServiceClient();
+    await supabase.from("error_events").insert({ event, detail });
+  } catch {
+    // observability must never break a request
   }
 }
 
