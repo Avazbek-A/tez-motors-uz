@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { reviewWriteSchema } from "@/lib/schemas/car";
-import { requireAdmin, isAdminRequest } from "@/lib/auth";
+import { isAdminRequest } from "@/lib/auth";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
+import { getClientIp } from "@/lib/rate-limit";
+
+// Public review submissions go to a moderation queue — cap per IP to stop
+// flooding it (admins bypass: they're authenticated and set is_published).
+const checkReviewRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "review" });
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -38,6 +44,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const isAdmin = await isAdminRequest(request);
+    // Rate-limit anonymous submissions (admins are exempt — they moderate).
+    if (!isAdmin && !(await checkReviewRateLimit(getClientIp(request)))) {
+      return NextResponse.json({ success: false, error: "Too many submissions. Please try again later." }, { status: 429 });
+    }
+
     const body = await request.json();
     const result = reviewWriteSchema.safeParse(body);
 
@@ -52,7 +64,6 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     // Public submissions must go through moderation — ignore any attempt to self-publish or reorder
-    const isAdmin = (await isAdminRequest(request));
     const payload = isAdmin ? data : { ...data, is_published: false, order_position: 0 };
 
     const { data: review, error } = await supabase
