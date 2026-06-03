@@ -1,5 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { isSafeRemoteUrl } from "../media-ingest";
+import { isSafeRemoteUrl, sniffImageMime } from "../media-ingest";
+
+const bytes = (...b: number[]) => new Uint8Array([...b, ...new Array(Math.max(0, 12 - b.length)).fill(0)]);
+
+describe("sniffImageMime (magic-byte validation)", () => {
+  it("recognizes JPEG / PNG / WebP by signature", () => {
+    expect(sniffImageMime(bytes(0xff, 0xd8, 0xff, 0xe0))).toBe("image/jpeg");
+    expect(sniffImageMime(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))).toBe("image/png");
+    // RIFF....WEBP
+    expect(sniffImageMime(new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]))).toBe("image/webp");
+  });
+  it("rejects SVG (XSS vector), GIF, HTML, and short buffers", () => {
+    const svg = new TextEncoder().encode("<svg xmlns='http://www.w3.org/2000/svg'><script>");
+    expect(sniffImageMime(svg)).toBeNull();
+    expect(sniffImageMime(bytes(0x47, 0x49, 0x46, 0x38))).toBeNull(); // GIF89a
+    expect(sniffImageMime(new TextEncoder().encode("<html><body>x"))).toBeNull();
+    expect(sniffImageMime(new Uint8Array([0xff, 0xd8]))).toBeNull(); // too short
+  });
+  it("rejects a RIFF container that isn't WEBP (e.g. WAV)", () => {
+    expect(sniffImageMime(new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45]))).toBeNull();
+  });
+});
 
 describe("isSafeRemoteUrl (SSRF guard)", () => {
   it("allows normal public http(s) URLs", () => {

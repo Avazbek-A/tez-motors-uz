@@ -154,7 +154,10 @@ export async function extractMediaFromPage(pageUrl: string): Promise<MediaCandid
   return out.slice(0, MAX_CANDIDATES);
 }
 
-function sniffImageMime(bytes: Uint8Array): string | null {
+/** Identify an image strictly by magic bytes (never trust Content-Type). Only
+ *  raster jpeg/png/webp pass — SVG and everything else are rejected, which
+ *  blocks content-type spoofing and SVG-borne XSS in re-hosted media. */
+export function sniffImageMime(bytes: Uint8Array): string | null {
   if (bytes.length < 12) return null;
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
   if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "image/png";
