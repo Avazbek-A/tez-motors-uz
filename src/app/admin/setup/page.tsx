@@ -37,6 +37,23 @@ export default function AdminSetupPage() {
     }
   };
 
+  const [testingNotify, setTestingNotify] = useState(false);
+  const [notifyResult, setNotifyResult] = useState<{ telegram?: { configured: boolean; ok: boolean }; email?: { configured: boolean; ok: boolean } } | null>(null);
+  const testNotify = async () => {
+    setTestingNotify(true);
+    setNotifyResult(null);
+    try {
+      const r = await fetch("/api/admin/notify/test", { method: "POST" });
+      setNotifyResult(await r.json());
+    } catch {
+      setNotifyResult(null);
+    } finally {
+      setTestingNotify(false);
+    }
+  };
+  const channelMsg = (c?: { configured: boolean; ok: boolean }) =>
+    !c ? "" : c.ok ? "✓ sent — check your inbox/Telegram" : c.configured ? "✗ configured but send failed" : "not configured";
+
   const grouped = (cat: IntegrationCategory) => data?.integrations.filter((i) => i.category === cat) ?? [];
 
   return (
@@ -110,6 +127,18 @@ export default function AdminSetupPage() {
                                 {llmResult.ok
                                   ? `✓ ${llmResult.provider} · ${llmResult.model} · ${llmResult.latencyMs}ms — replied "${llmResult.sample}"`
                                   : `✗ ${llmResult.message || "no response"}`}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {(i.key === "telegram_alerts" || i.key === "email") && (
+                          <div className="mt-2">
+                            <Button type="button" variant="outline" size="sm" onClick={testNotify} disabled={testingNotify}>
+                              {testingNotify ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Send test
+                            </Button>
+                            {notifyResult && (
+                              <p className={`text-[11px] mt-1.5 ${(i.key === "telegram_alerts" ? notifyResult.telegram?.ok : notifyResult.email?.ok) ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
+                                {channelMsg(i.key === "telegram_alerts" ? notifyResult.telegram : notifyResult.email)}
                               </p>
                             )}
                           </div>
