@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, RefreshCw, CheckCircle2, Circle, Settings, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, Circle, Settings, ShieldCheck, ShieldAlert, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, type SetupSummary, type IntegrationCategory } from "@/lib/setup-status";
 
@@ -10,6 +10,8 @@ const ORDER: IntegrationCategory[] = ["core", "ai", "messaging", "payments", "ma
 export default function AdminSetupPage() {
   const [data, setData] = useState<SetupSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [testingLlm, setTestingLlm] = useState(false);
+  const [llmResult, setLlmResult] = useState<{ ok: boolean; message?: string; provider?: string; model?: string; sample?: string; latencyMs?: number } | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -21,6 +23,19 @@ export default function AdminSetupPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const testLlm = async () => {
+    setTestingLlm(true);
+    setLlmResult(null);
+    try {
+      const r = await fetch("/api/admin/llm/test", { method: "POST" });
+      setLlmResult(await r.json());
+    } catch {
+      setLlmResult({ ok: false, message: "Request failed." });
+    } finally {
+      setTestingLlm(false);
+    }
+  };
 
   const grouped = (cat: IntegrationCategory) => data?.integrations.filter((i) => i.category === cat) ?? [];
 
@@ -84,6 +99,20 @@ export default function AdminSetupPage() {
                           <p className="text-[11px] text-muted-foreground/80 mt-1">
                             Set: {i.missing.map((v) => <code key={v} className="text-foreground bg-[var(--bg-3)] px-1 rounded mr-1">{v}</code>)}
                           </p>
+                        )}
+                        {i.key === "llm" && (
+                          <div className="mt-2">
+                            <Button type="button" variant="outline" size="sm" onClick={testLlm} disabled={testingLlm}>
+                              {testingLlm ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Test connection
+                            </Button>
+                            {llmResult && (
+                              <p className={`text-[11px] mt-1.5 ${llmResult.ok ? "text-[var(--success)]" : "text-[var(--warning)]"}`}>
+                                {llmResult.ok
+                                  ? `✓ ${llmResult.provider} · ${llmResult.model} · ${llmResult.latencyMs}ms — replied "${llmResult.sample}"`
+                                  : `✗ ${llmResult.message || "no response"}`}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
