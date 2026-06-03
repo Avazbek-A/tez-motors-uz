@@ -29,6 +29,7 @@ import { notifyNewInquiry } from "@/lib/notify";
 import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
 import { normalizePhone } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/error-report";
+import { verifyHmacSha256 } from "@/lib/hmac";
 import type { Car } from "@/types/car";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
@@ -229,9 +230,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Read the raw body so we can verify Meta's HMAC signature before parsing.
+  const raw = await request.text();
+
+  // Authenticity: when WHATSAPP_APP_SECRET is set, require a valid
+  // X-Hub-Signature-256 — otherwise anyone who knows the URL could POST fake
+  // message events (inject leads, burn LLM/send budget). Fail-OPEN when the
+  // secret is unset, matching the channel's ships-dark pattern.
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  if (appSecret) {
+    const header = request.headers.get("x-hub-signature-256") || "";
+    const provided = header.startsWith("sha256=") ? header.slice(7) : "";
+    if (!(await verifyHmacSha256(appSecret, raw, provided))) {
+      logEvent("bot.whatsapp.bad_signature", {}, "warn");
+      return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    }
+  }
+
   let update: WaUpdate;
   try {
-    update = (await request.json()) as WaUpdate;
+    update = JSON.parse(raw) as WaUpdate;
   } catch {
     return NextResponse.json({ ok: true });
   }
