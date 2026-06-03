@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Plus, RefreshCw, Shield, User } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Shield, User, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +23,16 @@ export default function AdminUsersPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<AdminUser["role"]>("rep");
   const [error, setError] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   const fetchUsers = () => {
     setLoading(true);
+    setForbidden(false);
     fetch("/api/admin/users")
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (r.status === 403) { setForbidden(true); return { users: [] }; }
+        return r.json();
+      })
       .then((data) => setUsers(data.users || []))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -75,6 +80,23 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
+      {forbidden && !loading && (
+        <Card className="border-[var(--warning)]/40">
+          <CardContent className="flex items-start gap-3 py-4">
+            <KeyRound className="w-5 h-5 text-[var(--warning)] shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-foreground">You&apos;re signed in with the master password.</p>
+              <p className="text-muted-foreground mt-1">
+                For security, the master password can&apos;t manage admin accounts once real users exist.
+                Sign in with an <span className="font-mono">Owner</span> account (email + password) to add, view, or change users here.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!forbidden && (
+      <>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -132,6 +154,8 @@ export default function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }
