@@ -24,12 +24,12 @@ export async function GET(request: NextRequest) {
     supabase
       .from("orders")
       .select("id, reference_code, status, created_at, updated_at, cars(brand, model, year, slug)")
-      .eq("customer_phone", ctx.customer.phone)
+      .eq("customer_phone", ctx.customer.phone ?? "")
       .order("created_at", { ascending: false }),
     supabase
       .from("warranties")
       .select("car_label, warranty_until, warranty_months, services")
-      .eq("customer_phone", ctx.customer.phone)
+      .eq("customer_phone", ctx.customer.phone ?? "")
       .order("warranty_until", { ascending: false })
       .then((r) => r, () => ({ data: [] })),
   ]);

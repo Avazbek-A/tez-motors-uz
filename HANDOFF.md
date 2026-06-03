@@ -176,6 +176,21 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
   -d secret_token="<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
+### 2.5b Telegram Mini App (optional)
+
+The catalog/find-a-car flow also runs inside Telegram as a Mini App at
+`/{locale}/app` (e.g. `https://tezmotors.uz/ru/app`), authenticated by Telegram
+identity (no OTP). The bot's `/start` already shows an "Open the app" button.
+One-time setup in **@BotFather**:
+1. `/setdomain` → set the bot's domain to `tezmotors.uz` (required for `web_app`
+   buttons + initData to work).
+2. Optionally `/setmenubutton` → set the persistent menu button to the Web App
+   URL `https://tezmotors.uz/ru/app`.
+
+Reuses `TELEGRAM_BOT_TOKEN` (validates initData HMAC) — no new secret. Sign-in
+upserts a `customers` row by `telegram_id` (phone stays null until shared) and
+issues the standard `customer_session` cookie.
+
 ### 2.6 WhatsApp inbound bot (optional)
 
 In the Meta app dashboard set the callback URL to

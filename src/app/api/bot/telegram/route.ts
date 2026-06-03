@@ -51,10 +51,17 @@ interface TgUpdate {
 }
 
 interface ReplyMarkup {
-  inline_keyboard?: { text: string; url: string }[][];
+  inline_keyboard?: { text: string; url?: string; web_app?: { url: string } }[][];
   keyboard?: { text: string; request_contact?: boolean }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
+}
+
+/** Inline keyboard with a Telegram Mini App launch button (web_app). Requires
+ *  the bot's domain to be configured in BotFather; see HANDOFF.md. */
+function appButton(locale: BotLocale): ReplyMarkup {
+  const label = locale === "uz" ? "🚗 Ilovani ochish" : locale === "en" ? "🚗 Open the app" : "🚗 Открыть приложение";
+  return { inline_keyboard: [[{ text: label, web_app: { url: `${siteUrl()}/${locale}/app` } }]] };
 }
 
 function siteUrl(): string {
@@ -245,9 +252,16 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
   const text = (message.text || "").trim();
   if (!text) return;
 
-  // 2) /start → welcome + share-contact keyboard.
+  // 2) /start → welcome + share-contact keyboard, then a Mini App launch button.
   if (text === "/start" || text.startsWith("/start")) {
     await tgSend(chatId, COPY[locale].welcome, contactKeyboard(locale));
+    const appPrompt =
+      locale === "uz"
+        ? "Yoki butun katalogni shu yerda ko'ring 👇"
+        : locale === "en"
+        ? "Or browse the whole catalog right here 👇"
+        : "Или посмотрите весь каталог прямо здесь 👇";
+    await tgSend(chatId, appPrompt, appButton(locale));
     return;
   }
 
