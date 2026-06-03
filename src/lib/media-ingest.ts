@@ -89,7 +89,19 @@ export async function extractMediaFromPage(pageUrl: string): Promise<MediaCandid
   } catch {
     return [];
   }
+  return parseMediaFromHtml(html, pageUrl);
+}
 
+/** Junk image URLs (icons/sprites/placeholders) to skip in the raw-URL scan. */
+const JUNK_IMG = /sprite|favicon|\bicons?\b|logo|placeholder|blank[._-]|avatar|loading|1x1|spacer|pixel|\.gif/i;
+
+/**
+ * Pure HTML → media candidates. Parses og/twitter meta, JSON-LD, <img>/<source>,
+ * AND does a raw-URL scan that catches image URLs embedded in inline <script>
+ * JSON (lazy-load galleries on JS-heavy sites like AutoHome's autoimg.cn CDN)
+ * which never appear as <img> tags in server HTML. Exported for unit tests.
+ */
+export function parseMediaFromHtml(html: string, pageUrl: string): MediaCandidate[] {
   const images = new Set<string>();
   const videos = new Set<string>();
   const add = (raw: string | null | undefined, set: Set<string>) => {
@@ -145,6 +157,14 @@ export async function extractMediaFromPage(pageUrl: string): Promise<MediaCandid
   // <video src> / <source src>
   for (const m of html.matchAll(/<(?:video|source)[^>]+src=["']([^"']+)["']/gi)) {
     if (VIDEO_EXT.test(m[1])) add(m[1], videos);
+  }
+
+  // Raw URL scan — last, so structured (og/jsonld/img) candidates rank first.
+  // Catches image URLs embedded in inline-script JSON (AutoHome autoimg.cn,
+  // AliExpress, etc.) that the tag-based passes miss. The admin selects which to
+  // keep, so some noise is fine; obvious junk (icons/sprites) is filtered.
+  for (const m of html.matchAll(/(?:https?:)?\/\/[^"'\s\\<>()]+?\.(?:jpe?g|png|webp)(?:\?[^"'\s\\<>()]*)?/gi)) {
+    if (!JUNK_IMG.test(m[0])) add(m[0], images);
   }
 
   const out: MediaCandidate[] = [

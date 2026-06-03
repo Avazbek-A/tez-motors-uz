@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSafeRemoteUrl, sniffImageMime } from "../media-ingest";
+import { isSafeRemoteUrl, sniffImageMime, parseMediaFromHtml } from "../media-ingest";
 
 const bytes = (...b: number[]) => new Uint8Array([...b, ...new Array(Math.max(0, 12 - b.length)).fill(0)]);
 
@@ -71,5 +71,39 @@ describe("isSafeRemoteUrl (SSRF guard)", () => {
   it("rejects garbage input", () => {
     expect(isSafeRemoteUrl("not a url")).toBe(false);
     expect(isSafeRemoteUrl("")).toBe(false);
+  });
+});
+
+describe("parseMediaFromHtml (AutoHome / lazy-load galleries)", () => {
+  const html = `
+    <html><head>
+      <meta property="og:image" content="https://www.autohome.com.cn/share/cover.jpg" />
+    </head><body>
+      <div id="app"></div>
+      <script>
+        window.__INITIAL__ = {"gallery":[
+          {"src":"https://car2.autoimg.cn/cardfs/product/g30/M00/front.jpg"},
+          {"src":"//car3.autoimg.cn/cardfs/product/g30/M01/rear.jpg"}
+        ],"logo":"https://x.autohome.com.cn/sprite-icons.png"};
+      </script>
+      <img data-src="https://car2.autoimg.cn/cardfs/product/g30/M02/side.jpg" />
+    </body></html>`;
+  const urls = () => parseMediaFromHtml(html, "https://www.autohome.com.cn/x").map((c) => c.url);
+
+  it("extracts gallery images embedded in inline-script JSON (autoimg.cn)", () => {
+    expect(urls()).toContain("https://car2.autoimg.cn/cardfs/product/g30/M00/front.jpg");
+    expect(urls()).toContain("https://car2.autoimg.cn/cardfs/product/g30/M02/side.jpg");
+  });
+  it("resolves protocol-relative // URLs against the page", () => {
+    expect(urls()).toContain("https://car3.autoimg.cn/cardfs/product/g30/M01/rear.jpg");
+  });
+  it("keeps og:image and ranks structured candidates first", () => {
+    expect(urls()[0]).toBe("https://www.autohome.com.cn/share/cover.jpg");
+  });
+  it("filters out obvious icon/sprite junk", () => {
+    expect(urls().some((u) => u.includes("sprite-icons"))).toBe(false);
+  });
+  it("returns [] for HTML with no images", () => {
+    expect(parseMediaFromHtml("<html><body>nothing</body></html>", "https://x.com")).toEqual([]);
   });
 });
