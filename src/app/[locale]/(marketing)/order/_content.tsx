@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle, Loader2, AlertCircle, Clock, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,16 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
   const [result, setResult] = useState<{ referenceCode: string | null; phone: string } | null>(null);
 
   const selected = useMemo(() => models.find((m) => m.id === selectedId) ?? null, [models, selectedId]);
+
+  // Honor a ?brand= deep-link (e.g. from a car detail page) by pre-selecting the
+  // first matching model. Fail-safe: no param or no match keeps the default.
+  useEffect(() => {
+    const brand = new URLSearchParams(window.location.search).get("brand");
+    if (!brand) return;
+    const match = models.find((m) => m.brand.toLowerCase() === brand.toLowerCase());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (match) setSelectedId(match.id);
+  }, [models]);
 
   const localizedDescription = (m: ModelCatalog) =>
     (locale === "uz" ? m.description_uz : locale === "en" ? m.description_en : m.description_ru) ||

@@ -349,6 +349,16 @@ export default function CarDetailPage() {
                     : "Запчасти для этого авто"}
                 </Link>
               </Button>
+              {/* High intent: viewing a model but wanting a different spec → import it to order. */}
+              <Button type="button" variant="outline" asChild className="w-full mb-4">
+                <Link href={localizedPath(locale, `/order?brand=${encodeURIComponent(car.brand)}`)}>
+                  {locale === "uz"
+                    ? "Boshqa rang yoki komplektatsiya kerakmi? Buyurtma bering →"
+                    : locale === "en"
+                    ? "Want a different colour or trim? Order it →"
+                    : "Нужен другой цвет или комплектация? Заказать →"}
+                </Link>
+              </Button>
 
               {isSuccess ? (
                 <div className="text-center py-8">
