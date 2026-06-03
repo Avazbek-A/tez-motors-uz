@@ -26,3 +26,18 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Scheduled jobs — the self-host equivalent of the Cloudflare cron Worker.
+  # Fires the guarded /api/cron/* routes on the schedule in deploy/selfhost/crontab.
+  cron:
+    image: alpine:3.20
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_URL: http://app:3000
+      CRON_SECRET: ${CRON_SECRET}
+    volumes:
+      - ./deploy/selfhost/fire-cron.sh:/scripts/fire-cron.sh:ro
+      - ./deploy/selfhost/crontab:/etc/crontabs/root:ro
+    command: sh -c "apk add --no-cache curl >/dev/null 2>&1 && crond -f -l 8"

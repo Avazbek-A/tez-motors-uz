@@ -53,8 +53,10 @@ Owner decisions you must make up front:
 ## 5. Scheduled jobs (cron Worker)
 - [ ] `cd cron-worker && wrangler secret put CRON_SECRET` (SAME value as the app).
 - [ ] Set `APP_BASE_URL` in `cron-worker/wrangler.toml` if the domain differs.
-- [ ] `wrangler deploy`. (Self-host alt: a uptime-cron service POSTing the
-      `/api/cron/*` routes with the bearer secret on the schedules listed there.)
+- [ ] `wrangler deploy`. **Docker self-host needs no separate step** — the
+      `cron` sidecar in `docker-compose.yml` already fires every `/api/cron/*`
+      on the canonical schedule (set `CRON_SECRET` in `.env`). Bare-Node alt: add
+      `deploy/selfhost/crontab` to the host crontab.
 
 ## 6. Verify the live site
 - [ ] `npm run smoke https://tezmotors.uz` → public 200s, admin/cron guards 401.
