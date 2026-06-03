@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Sparkles, Loader2, RefreshCw, ArrowRight } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, ArrowRight, Tag, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface Markdown { carId: string; name: string; daysOnLot: number; markdownPct: number; suggestedPriceUsd: number; currentPriceUsd: number }
 interface Ctx {
   actions: { newInquiries: number; hotLeads: number; tasksDue: number; unpaidReservations: number; overdueShipments: number; warrantiesExpiring: number };
   money: { revenueMtdUsd: number; depositsUsd: number; committedSupplierUsd: number; potentialMarginUsd: number };
-  topMarkdowns: { name: string; daysOnLot: number; markdownPct: number; suggestedPriceUsd: number }[];
+  topMarkdowns: Markdown[];
   topDemand: { name: string; inquiries: number }[];
 }
+
+const usd = (n: number) => "$" + Math.round(n || 0).toLocaleString("en-US");
 
 const LOCALES = [{ k: "ru", l: "RU" }, { k: "uz", l: "UZ" }, { k: "en", l: "EN" }];
 
@@ -20,6 +23,8 @@ export default function AdminOperatorPage() {
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [loading, setLoading] = useState(true);
   const [locale, setLocale] = useState("ru");
+  const [promoBusy, setPromoBusy] = useState<string | null>(null);
+  const [promoDone, setPromoDone] = useState<Record<string, string>>({});
 
   const load = useCallback((loc: string) => {
     setLoading(true);
@@ -30,6 +35,23 @@ export default function AdminOperatorPage() {
   }, []);
 
   useEffect(() => { load(locale); }, [locale, load]);
+
+  const createPromo = async (m: Markdown) => {
+    setPromoBusy(m.carId);
+    try {
+      const res = await fetch("/api/admin/promotions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ car_id: m.carId, fixed_price_usd: m.suggestedPriceUsd, label: `Aged-stock markdown (${m.daysOnLot}d)` }),
+      });
+      const d = await res.json();
+      setPromoDone((prev) => ({ ...prev, [m.carId]: res.ok ? "✓ Promo created — goes live within the hour" : d.error || "Failed" }));
+    } catch {
+      setPromoDone((prev) => ({ ...prev, [m.carId]: "Failed" }));
+    } finally {
+      setPromoBusy(null);
+    }
+  };
 
   return (
     <div className="max-w-3xl">
@@ -75,6 +97,35 @@ export default function AdminOperatorPage() {
                   <p className="text-[11px] text-muted-foreground mt-0.5">{c.label}</p>
                 </Link>
               ))}
+            </div>
+          )}
+
+          {ctx && ctx.topMarkdowns.length > 0 && (
+            <div className="mt-5">
+              <h2 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5"><Tag className="w-4 h-4 text-[var(--accent)]" /> Move aged stock — one click</h2>
+              <div className="space-y-2">
+                {ctx.topMarkdowns.map((m) => {
+                  const result = promoDone[m.carId];
+                  return (
+                    <div key={m.carId} className="bg-card border border-border p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground font-medium truncate">{m.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {m.daysOnLot}d on lot · <span className="line-through">{usd(m.currentPriceUsd)}</span> → <span className="text-[var(--accent)]">{usd(m.suggestedPriceUsd)}</span> (−{m.markdownPct}%)
+                        </p>
+                      </div>
+                      {result ? (
+                        <span className="text-xs text-[var(--success)] inline-flex items-center gap-1 shrink-0"><Check className="w-3.5 h-3.5" />{result.replace("✓ ", "")}</span>
+                      ) : (
+                        <Button type="button" size="sm" variant="outline" onClick={() => createPromo(m)} disabled={promoBusy === m.carId} className="shrink-0">
+                          {promoBusy === m.carId ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Tag className="w-4 h-4" /> Create promo at {usd(m.suggestedPriceUsd)}</>}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Creates a price promotion (storefront strikethrough); Marketing Autopilot will then suggest announcing it. Revert anytime in <Link href="/admin/promotions" className="text-primary hover:underline">Promotions</Link>.</p>
             </div>
           )}
 

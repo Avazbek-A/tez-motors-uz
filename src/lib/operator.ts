@@ -22,7 +22,7 @@ export interface OperatorContext {
     committedSupplierUsd: number;
     potentialMarginUsd: number;
   };
-  topMarkdowns: { name: string; daysOnLot: number; markdownPct: number; suggestedPriceUsd: number }[];
+  topMarkdowns: { carId: string; name: string; daysOnLot: number; markdownPct: number; suggestedPriceUsd: number; currentPriceUsd: number }[];
   topDemand: { name: string; inquiries: number }[];
 }
 

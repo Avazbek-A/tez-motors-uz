@@ -68,7 +68,7 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
       const daysOnLot = Math.floor((now - new Date(c.created_at).getTime()) / 86_400_000);
       const demandScore = (inqByCar.get(c.id) || 0) * 5;
       const s = agingSuggestion({ price_usd: num(c.price_usd), daysOnLot, demandScore });
-      return { name: carName.get(c.id) || "car", daysOnLot, markdownPct: s.markdownPct, suggestedPriceUsd: s.suggestedPriceUsd };
+      return { carId: c.id, name: carName.get(c.id) || "car", daysOnLot, markdownPct: s.markdownPct, suggestedPriceUsd: s.suggestedPriceUsd, currentPriceUsd: num(c.price_usd) };
     })
     .filter((m) => m.markdownPct > 0)
     .sort((a, b) => b.daysOnLot - a.daysOnLot)

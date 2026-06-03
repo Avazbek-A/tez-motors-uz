@@ -22,7 +22,7 @@ describe("buildActions", () => {
   it("includes markdowns and demand suggestions (capped at 3 each)", () => {
     const ctx: OperatorContext = {
       ...base,
-      topMarkdowns: Array.from({ length: 5 }, (_, i) => ({ name: `Car ${i}`, daysOnLot: 60 + i, markdownPct: 10, suggestedPriceUsd: 20000 })),
+      topMarkdowns: Array.from({ length: 5 }, (_, i) => ({ carId: `car-${i}`, name: `Car ${i}`, daysOnLot: 60 + i, markdownPct: 10, suggestedPriceUsd: 20000, currentPriceUsd: 22000 })),
       topDemand: Array.from({ length: 5 }, (_, i) => ({ name: `Model ${i}`, inquiries: 9 - i })),
     };
     const actions = buildActions(ctx);
