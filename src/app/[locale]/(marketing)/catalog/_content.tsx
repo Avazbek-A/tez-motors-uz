@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, SlidersHorizontal, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -396,6 +397,21 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                 <Button variant="outline" onClick={resetFilters} className="mt-4">
                   {dictionary.catalog.filters.reset}
                 </Button>
+                {/* High-intent moment: nothing in stock matched — offer to import it. */}
+                <div className="mt-8 pt-6 border-t border-white/10 max-w-md mx-auto">
+                  <p className="text-white/70 text-sm">
+                    {locale === "uz"
+                      ? "Kerakli mashinani topmadingizmi? Biz uni Xitoydan buyurtma asosida olib kelamiz."
+                      : locale === "en"
+                      ? "Didn't find the car you want? We'll import the exact trim and colour from China."
+                      : "Не нашли нужную машину? Привезём именно ту комплектацию и цвет из Китая под заказ."}
+                  </p>
+                  <Button asChild className="mt-3">
+                    <Link href={localizedPath(locale, "/order")}>
+                      {locale === "uz" ? "Buyurtma berish →" : locale === "en" ? "Order a car →" : "Заказать под импорт →"}
+                    </Link>
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
