@@ -20,7 +20,6 @@ export const SITE_CONFIG = {
 export const NAV_LINKS = [
   { href: "/", label: { ru: "Главная", uz: "Bosh sahifa", en: "Home" } },
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
-  { href: "/order", label: { ru: "Под заказ", uz: "Buyurtma", en: "Order a car" } },
   { href: "/deals", label: { ru: "Скидки", uz: "Chegirmalar", en: "Deals" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
   { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
