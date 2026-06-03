@@ -34,7 +34,6 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
     const brand = new URLSearchParams(window.location.search).get("brand");
     if (!brand) return;
     const match = models.find((m) => m.brand.toLowerCase() === brand.toLowerCase());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (match) setSelectedId(match.id);
   }, [models]);
 

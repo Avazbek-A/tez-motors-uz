@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft, Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
+  Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
   Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
