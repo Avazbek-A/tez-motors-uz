@@ -1,0 +1,18 @@
+{
+  "name": "tez-motors-collectors",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Off-Workers data collectors: OLX + Telegram market scrapers and a headless media extractor. Run on the dealer's box (Node 18+).",
+  "scripts": {
+    "extractor": "node extractor.mjs",
+    "olx": "node olx-collector.mjs",
+    "telegram": "node telegram-collector.mjs",
+    "telegram:login": "node telegram-collector.mjs --login",
+    "postinstall": "echo 'Run: npx playwright install chromium  (needed for extractor + OLX browser fallback)'"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0",
+    "telegram": "^2.26.0"
+  }
+}

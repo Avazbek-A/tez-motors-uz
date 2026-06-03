@@ -17,23 +17,31 @@ Requires `LLM_API_KEY`; without it, use the manual add row.
 For one-off entries (or when the LLM is off): type brand / model / year / price
 / currency and **Add**.
 
-### 3. Automated collector (the scalable path)
+### 3. Automated collectors (the scalable path — now working)
 You **cannot scrape OLX/Telegram from Cloudflare Workers** — OLX has anti-bot
 protection a Worker `fetch` can't pass, and Telegram channel history can only be
-read by a logged-in user client (MTProto), not a bot. So a small **collector
-runs off-Workers** (ideally on your always-on Vostro) and POSTs listings to the
-site's ingest endpoint:
+read by a logged-in user client (MTProto), not a bot. So two **collectors run
+off-Workers** (on your always-on Vostro / any Node 18+ box) and POST listings to
+the ingest endpoint. Full setup is in **`deploy/collector/README.md`**:
 
-- **OLX** → `deploy/collector/olx-collector.mjs` (Playwright reference script).
-  `npm i playwright && npx playwright install chromium`, set `INGEST_URL` +
-  `MARKET_INGEST_SECRET`, run on a `cron`/systemd-timer every few hours.
-- **Telegram** → use a **Telethon** (Python) or **gramJS** user client logged in
-  with your own account + `api_id`/`api_hash`; read recent messages from the car
-  channels you follow, and POST them to the same endpoint with
-  `{ source: "telegram", listings: [{ brand, model, year, raw_text }] }`. The
-  server parses the messy price text for you.
+- **OLX** → `deploy/collector/olx-collector.mjs`. **API-first** (OLX's JSON API,
+  plain `fetch`, robust) with a **Playwright DOM fallback** if the API changes.
+  Searches are configurable (`OLX_SEARCHES_FILE`, else a sensible default set).
+- **Telegram** → `deploy/collector/telegram-collector.mjs` (**gramJS** MTProto
+  user client). One-time `node telegram-collector.mjs --login` mints a reusable
+  `TG_SESSION`; then it reads recent messages from `TG_CHANNELS` and posts only
+  the ones matching its brand/model dictionary (clean data) — the server parses
+  the messy price text.
 
-Set `MARKET_INGEST_SECRET` (a Worker secret) and the collector presents it as
+```bash
+cd deploy/collector && npm install && npx playwright install chromium
+export INGEST_URL=https://tezmotors.uz/api/admin/market/ingest
+export MARKET_INGEST_SECRET=…same value as the app secret…
+node olx-collector.mjs           # schedule every 6h
+node telegram-collector.mjs --login   # once, then schedule the bare command
+```
+
+Set `MARKET_INGEST_SECRET` (a Worker/app secret) and the collectors present it as
 `Authorization: Bearer …`. Admin sessions can ingest without it.
 
 > **Respect the sources.** Keep the cadence gentle, follow OLX's Terms/robots and
