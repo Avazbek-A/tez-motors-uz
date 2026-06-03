@@ -42,13 +42,18 @@ takes deposits. Re-run before each major release.
   Plausible/Tawk when enabled.
 
 ## Dependency audit
-- `npm audit --omit=dev` is clean for the **runtime** dependency tree.
-- Outstanding advisories are confined to the **dev-only** `wrangler →
-  miniflare → ws` chain (the Cloudflare deploy CLI / local emulator). They do
-  **not** ship in the production bundle. Resolve by upgrading wrangler in a
-  dedicated change (verify the OpenNext build still passes) rather than
-  `npm audit fix --force`, which can bump wrangler across a major and break the
-  deploy.
+- **Next.js** is kept on the latest patch OpenNext supports (currently
+  **16.2.7**; OpenNext peer is `^16.1.5`, so Next 17 isn't yet an option). Bump
+  the patch whenever a new 16.x ships — it carries the framework security fixes.
+- Remaining `npm audit --omit=dev` flags are **build/deploy tooling**, not in
+  the served bundle:
+  - `wrangler → miniflare → ws` (deploy CLI / local emulator),
+  - `@opennextjs/aws → qs` and `fast-xml-builder` (OpenNext build step),
+  - `@supabase/realtime-js → ws` (only reachable if Supabase Realtime is used —
+    this app doesn't open realtime/websocket connections).
+- Do **not** run `npm audit fix --force`: it bumps wrangler/OpenNext across a
+  major and breaks the deploy. Upgrade those deliberately, verifying the
+  OpenNext build still passes.
 
 ## Handoff
 - Rotate `ADMIN_PASSWORD` before handover; deliver secrets via 1Password / a
