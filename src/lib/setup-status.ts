@@ -26,7 +26,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
   { key: "admin", label: "Admin login", unlocks: "Access to this admin panel.", envVars: ["ADMIN_PASSWORD"], category: "core", required: true },
 
   // AI.
-  { key: "llm", label: "AI brain (LLM)", unlocks: "Natural-language morning briefings, AI sales replies, and marketing copy — instead of templates.", envVars: ["LLM_API_KEY"], category: "ai" },
+  { key: "llm", label: "AI brain (LLM)", unlocks: "Natural-language briefings, AI sales/marketing copy & replies. Use a hosted key (LLM_API_KEY) or a FREE local Ollama (LLM_PROVIDER=openai + LLM_API_URL).", envVars: ["LLM_API_KEY"], category: "ai" },
   { key: "ai_autorespond", label: "AI auto-respond", unlocks: "Bots reply to customers automatically (otherwise they wait for you).", envVars: ["AI_AUTORESPOND"], category: "ai" },
 
   // Messaging / notifications.
@@ -60,11 +60,16 @@ export interface SetupSummary {
   coreReady: boolean;
 }
 
-/** Turn a presence map (envVar -> isSet) into a grouped, computed status. */
-export function buildSetupStatus(present: Record<string, boolean>): SetupSummary {
+/**
+ * Turn a presence map (envVar -> isSet) into a grouped, computed status.
+ * `overrides` forces an integration's `active` regardless of its env vars — used
+ * for capabilities with multi-var logic (e.g. LLM: a key OR an Ollama URL).
+ */
+export function buildSetupStatus(present: Record<string, boolean>, overrides: Record<string, boolean> = {}): SetupSummary {
   const integrations: IntegrationStatus[] = INTEGRATIONS.map((def) => {
     const missing = def.envVars.filter((v) => !present[v]);
-    return { ...def, active: missing.length === 0, missing };
+    const active = def.key in overrides ? !!overrides[def.key] : missing.length === 0;
+    return { ...def, active, missing: active ? [] : missing };
   });
   const optional = integrations.filter((i) => !i.required);
   return {

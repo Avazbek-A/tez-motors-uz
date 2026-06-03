@@ -34,6 +34,15 @@ describe("buildSetupStatus", () => {
     expect(buildSetupStatus(present).coreReady).toBe(true);
   });
 
+  it("honors an override (e.g. LLM enabled by Ollama URL, no key)", () => {
+    const present = allFalse(); // LLM_API_KEY absent
+    const llm = buildSetupStatus(present, { llm: true }).integrations.find((i) => i.key === "llm")!;
+    expect(llm.active).toBe(true);
+    expect(llm.missing).toEqual([]);
+    // and it counts toward activeOptional
+    expect(buildSetupStatus(present, { llm: true }).activeOptional).toBe(1);
+  });
+
   it("counts active optional integrations without counting required ones", () => {
     const present = allFalse();
     present["LLM_API_KEY"] = true; // optional
