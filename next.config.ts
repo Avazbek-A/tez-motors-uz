@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Pin the file-tracing root to THIS project. Without it, a stray lockfile in a
+// parent dir (e.g. ~/package-lock.json) makes Next infer the wrong workspace
+// root and nest the standalone output under .next/standalone/<deep/path>/server.js
+// — which breaks self-hosting (Docker / systemd / `npm run selfhost:start`).
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: projectRoot,
   images: {
     remotePatterns: [
       {

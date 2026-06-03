@@ -42,10 +42,13 @@ Owner decisions you must make up front:
 - [ ] `wrangler secret put …` for each server secret.
 - [ ] `npm run deploy`.
 
-**Path B — Self-host (no size cap):**
-- [ ] Follow `deploy/selfhost/SETUP.md` (install Node, `npm ci`,
+**Path B — Self-host (no size cap; ~free on the Vostro or a VPS):**
+- [ ] **Easiest — Docker:** `cp .env.example .env` (fill required values) →
+      `docker compose up -d --build`. App serves on `:3000` with a healthcheck.
+- [ ] **Or bare Node:** follow `deploy/selfhost/SETUP.md` (install Node, `npm ci`,
       `npm run selfhost:build`, install `tez-motors.service` + `cloudflared.service`).
-- [ ] Point the Cloudflare Tunnel at the box; map `tezmotors.uz` to it.
+- [ ] Point a free Cloudflare Tunnel at `http://localhost:3000`; map `tezmotors.uz`
+      to it (no open ports needed).
 
 ## 5. Scheduled jobs (cron Worker)
 - [ ] `cd cron-worker && wrangler secret put CRON_SECRET` (SAME value as the app).
