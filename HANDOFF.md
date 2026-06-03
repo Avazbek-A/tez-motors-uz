@@ -318,8 +318,10 @@ or the CSV import, both of which also upsert on slug.
 - The cron jobs handle: USD/UZS rate refresh, lead digest, follow-up reminders,
   price-watch sweep, OTP cleanup, saved-search alerts, post-delivery review
   requests, the **AI Operator morning briefing** (`/api/cron/operator-briefing`,
-  daily 08:20 Tashkent), and the **Marketing Autopilot** weekly content drafts
-  (`/api/cron/marketing-autopilot`, Mon 11:30 Tashkent). Verify they run (Workers
+  daily 08:20 Tashkent), the **Marketing Autopilot** weekly content drafts
+  (`/api/cron/marketing-autopilot`, Mon 11:30 Tashkent), and the **weekly market
+  digest** (`/api/cron/market-digest`, Fri 13:00 Tashkent — OLX/Telegram pricing
+  intel from `deploy/collector/`). Verify they run (Workers
   Logs show `cron <path> -> 200`). All schedules live in `cron-worker/wrangler.toml`
   and route in `cron-worker/src/index.js` (keyed by the exact cron expression —
   duplicate keys overwrite, so each new job needs a unique expression).
