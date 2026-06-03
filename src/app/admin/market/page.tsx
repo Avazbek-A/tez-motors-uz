@@ -40,7 +40,7 @@ const ago = (s: string | null) => {
 export default function AdminMarketPage() {
   const [rows, setRows] = useState<StatRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [meta, setMeta] = useState<{ totalListings: number; windowDays: number }>({ totalListings: 0, windowDays: 90 });
+  const [meta, setMeta] = useState<{ totalListings: number; windowDays: number; sources?: Record<string, { count: number; latest: string | null }> }>({ totalListings: 0, windowDays: 90 });
 
   const [source, setSource] = useState<"olx" | "telegram" | "manual" | "other">("olx");
   const [rawText, setRawText] = useState("");
@@ -60,7 +60,7 @@ export default function AdminMarketPage() {
       .then((d) => {
         if (d?.ok) {
           setRows(d.rows || []);
-          setMeta({ totalListings: d.totalListings || 0, windowDays: d.windowDays || 90 });
+          setMeta({ totalListings: d.totalListings || 0, windowDays: d.windowDays || 90, sources: d.sources });
         }
       })
       .finally(() => setLoading(false));
@@ -150,10 +150,30 @@ export default function AdminMarketPage() {
         <LineChart className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-foreground">Market intelligence</h1>
       </div>
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="text-sm text-muted-foreground mb-1.5">
         What cars actually sell for on OLX &amp; Telegram — so you quote competitively and import the
         models with the best market price vs landed cost. {meta.totalListings} listings (last {meta.windowDays}d).
       </p>
+      {meta.sources && Object.keys(meta.sources).length > 0 && (
+        <p className="text-[11px] text-muted-foreground mb-6">
+          Collector freshness:{" "}
+          {(["olx", "telegram", "manual", "other"] as const)
+            .filter((s) => meta.sources?.[s])
+            .map((s) => {
+              const v = meta.sources![s];
+              const ageDays = v.latest ? Math.floor((Date.now() - new Date(v.latest).getTime()) / 86_400_000) : null;
+              const stale = ageDays != null && (s === "olx" || s === "telegram") && ageDays > 7;
+              return (
+                <span key={s} className={stale ? "text-[var(--warning)]" : undefined}>
+                  {s.toUpperCase()} {v.count}{ageDays != null ? ` (${ageDays === 0 ? "today" : ageDays + "d ago"})` : ""}
+                  {stale ? " ⚠" : ""}
+                  {" · "}
+                </span>
+              );
+            })}
+          <span className="text-muted-foreground/70">scrapers run from deploy/collector/</span>
+        </p>
+      )}
 
       {/* Add market data */}
       <div className="bg-card border border-border p-4 mb-8 space-y-3">

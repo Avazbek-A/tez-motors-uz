@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const [listingsRes, carsRes] = await Promise.all([
       supabase
         .from("market_listings")
-        .select("brand, model, year, price_usd, observed_at")
+        .select("brand, model, year, price_usd, observed_at, source")
         .gte("observed_at", since)
         .not("price_usd", "is", null)
         .limit(MAX_ROWS),
@@ -55,11 +55,24 @@ export async function GET(request: NextRequest) {
       return { ...g, ourPriceUsd: ours, weSell: ours != null, vsMarketPct };
     });
 
+    // Per-source freshness so the dealer can see their OLX/Telegram collectors
+    // are actually feeding data (and how recently).
+    const bySource: Record<string, { count: number; latest: string | null }> = {};
+    for (const l of listingsRes.data || []) {
+      const s = (l as { source?: string }).source || "other";
+      const cur = bySource[s] || { count: 0, latest: null };
+      cur.count += 1;
+      const obs = (l as { observed_at?: string }).observed_at || null;
+      if (obs && (!cur.latest || obs > cur.latest)) cur.latest = obs;
+      bySource[s] = cur;
+    }
+
     return NextResponse.json({
       ok: true,
       windowDays: WINDOW_DAYS,
       totalListings: (listingsRes.data || []).length,
       models: rows.length,
+      sources: bySource,
       rows,
     });
   } catch {
