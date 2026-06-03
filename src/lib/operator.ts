@@ -15,6 +15,7 @@ export interface OperatorContext {
     unpaidReservations: number;
     overdueShipments: number;
     warrantiesExpiring: number;
+    pendingMarketingDrafts?: number;
   };
   money: {
     revenueMtdUsd: number;
@@ -61,6 +62,7 @@ export function buildActions(ctx: OperatorContext): OperatorAction[] {
   if (a.tasksDue > 0) out.push({ priority: 4, text: `${a.tasksDue} follow-up task${a.tasksDue === 1 ? "" : "s"} due today` });
   if (a.overdueShipments > 0) out.push({ priority: 5, text: `${a.overdueShipments} shipment${a.overdueShipments === 1 ? "" : "s"} overdue — chase the supplier/broker` });
   if (a.warrantiesExpiring > 0) out.push({ priority: 6, text: `${a.warrantiesExpiring} warrant${a.warrantiesExpiring === 1 ? "y" : "ies"} expiring in 30 days — offer a service/extended warranty` });
+  if ((a.pendingMarketingDrafts ?? 0) > 0) out.push({ priority: 6.5, text: `📣 ${a.pendingMarketingDrafts} marketing draft${a.pendingMarketingDrafts === 1 ? "" : "s"} waiting — review & schedule in Content Studio` });
   for (const m of ctx.topMarkdowns.slice(0, 3)) {
     out.push({ priority: 7, text: `Mark down ${m.name} (${m.daysOnLot}d on lot) by ${m.markdownPct}% → $${m.suggestedPriceUsd.toLocaleString("en-US")}` });
   }

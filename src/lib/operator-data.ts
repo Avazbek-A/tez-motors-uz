@@ -37,7 +37,7 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
   const [
     newInquiries, hotLeads, tasksDue, unpaidReservations, overdueShipments, warrantiesExpiring,
     paymentsRes, poRes, carsRes, costsRes, invoicesRes, recentInqRes, fx,
-    leadsTrendRes, invoiceTrendRes, orderTrendRes,
+    leadsTrendRes, invoiceTrendRes, orderTrendRes, pendingMarketingDrafts,
   ] = await Promise.all([
     headCount(supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new")),
     headCount(supabase.from("assistant_conversations").select("*", { count: "exact", head: true }).eq("handoff", true)),
@@ -55,6 +55,7 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
     supabase.from("inquiries").select("created_at").gte("created_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("invoices").select("total_usd, issued_at").eq("status", "paid").gte("issued_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("orders").select("created_at").gte("created_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
+    headCount(supabase.from("content_drafts").select("*", { count: "exact", head: true }).eq("status", "draft").is("scheduled_at", null)),
   ]);
 
   // Money.
@@ -97,7 +98,7 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
   const orderT = bucketByWeek(orderTrendRes as { created_at: string }[], "created_at");
 
   return {
-    actions: { newInquiries, hotLeads, tasksDue, unpaidReservations, overdueShipments, warrantiesExpiring },
+    actions: { newInquiries, hotLeads, tasksDue, unpaidReservations, overdueShipments, warrantiesExpiring, pendingMarketingDrafts },
     money: { revenueMtdUsd, depositsUsd: fx.usd_uzs > 0 ? Math.round(depositsUzs / fx.usd_uzs) : 0, committedSupplierUsd, potentialMarginUsd: Math.round(potentialMarginUsd) },
     topMarkdowns,
     topDemand,

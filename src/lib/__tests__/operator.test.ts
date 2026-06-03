@@ -19,6 +19,12 @@ describe("buildActions", () => {
     expect(actions[1].text).toMatch(/unpaid reservation/i);
     expect(actions[2].text).toMatch(/new inquir/i);
   });
+  it("nudges about pending marketing drafts when any are waiting", () => {
+    expect(buildActions({ ...base, actions: { ...base.actions, pendingMarketingDrafts: 0 } }).some((a) => /marketing draft/.test(a.text))).toBe(false);
+    const ctx = { ...base, actions: { ...base.actions, pendingMarketingDrafts: 3 } };
+    const draftAction = buildActions(ctx).find((a) => /marketing draft/.test(a.text));
+    expect(draftAction?.text).toMatch(/3 marketing drafts waiting/);
+  });
   it("includes markdowns and demand suggestions (capped at 3 each)", () => {
     const ctx: OperatorContext = {
       ...base,
