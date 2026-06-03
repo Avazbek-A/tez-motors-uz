@@ -26,6 +26,11 @@ Secrets are set as **Cloudflare Worker secrets** in production
 (`wrangler secret put NAME`), not committed. `NEXT_PUBLIC_*` values are build-time
 public and may live in `wrangler.toml` `[vars]` or the dashboard.
 
+> **See it in-product:** the admin **Setup** page (`/admin/setup`, System group)
+> shows which integrations are connected vs not, what each unlocks, and the exact
+> env vars to set for each — booleans only, never the secret values. Use it after
+> any deploy to confirm what's live.
+
 ### Required (site is broken without these)
 
 | Variable | Purpose |
@@ -296,7 +301,12 @@ or the CSV import, both of which also upsert on slug.
 - **`npm run test`** (vitest) — money/auth/parsing coverage; wired as a CI gate.
 - **`npx tsc --noEmit`** + **`npm run build`** before every deploy.
 - The cron jobs handle: USD/UZS rate refresh, lead digest, follow-up reminders,
-  price-watch sweep, OTP cleanup, saved-search alerts, and post-delivery review
-  requests. Verify they run (Workers Logs show `cron <path> -> 200`).
+  price-watch sweep, OTP cleanup, saved-search alerts, post-delivery review
+  requests, the **AI Operator morning briefing** (`/api/cron/operator-briefing`,
+  daily 08:20 Tashkent), and the **Marketing Autopilot** weekly content drafts
+  (`/api/cron/marketing-autopilot`, Mon 11:30 Tashkent). Verify they run (Workers
+  Logs show `cron <path> -> 200`). All schedules live in `cron-worker/wrangler.toml`
+  and route in `cron-worker/src/index.js` (keyed by the exact cron expression —
+  duplicate keys overwrite, so each new job needs a unique expression).
 - **Storage quota:** monitor the Supabase Storage usage; ~500 KB/image. Plan a
   paid upgrade before the dealer's inventory photos approach the tier limit.
