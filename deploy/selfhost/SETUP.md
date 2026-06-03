@@ -129,6 +129,60 @@ pg_dump "$SUPABASE_DB_URL" -Fc -f ~/backups/tez-$(date +\%F).dump
 Add to cron; copy `~/backups` to an external drive periodically. Apply pending
 SQL migrations from `supabase/migrations/` via the Supabase SQL editor in order.
 
+## 10. Free local AI (Ollama) — the big self-host win
+
+Self-hosting is the ONLY way the platform's AI runs for free (a Cloudflare
+Workers edge can't reach a local model). With Ollama on this same box, the
+operator briefings, marketing copy, lead/supplier draft replies, the "Find my
+car" assistant and market-text parsing all work at $0/token.
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull qwen2.5:7b-instruct      # great RU/UZ; qwen2.5:3b-instruct is faster
+sudo systemctl enable --now ollama   # serves http://localhost:11434
+```
+Add to `.env.local`, then `sudo systemctl restart tez-motors`:
+```
+LLM_PROVIDER=openai
+LLM_API_URL=http://localhost:11434/v1
+LLM_MODEL=qwen2.5:7b-instruct
+# LLM_API_KEY=   (leave empty for local Ollama)
+```
+Verify in the admin: **Setup → AI brain → Test connection** (should reply OK).
+
+## 11. Market collectors + media extractor (run on this box)
+
+These can't run on Workers either (anti-bot, a headless browser, Telegram
+MTProto). Full setup in `deploy/collector/README.md`. In short:
+```bash
+cd ~/tez-motors/deploy/collector && npm install && npx playwright install chromium
+# set INGEST_URL=https://tezmotors.uz/api/admin/market/ingest + MARKET_INGEST_SECRET
+node olx-collector.mjs            # + schedule in cron (every 6h)
+node telegram-collector.mjs --login   # once → TG_SESSION, then schedule
+node extractor.mjs &              # headless media extractor for AutoHome etc.
+```
+Set `MARKET_INGEST_SECRET` (and `EXTRACTOR_URL=http://localhost:8789`,
+`EXTRACTOR_SECRET`) in the app's `.env.local` so ingest + the AutoHome
+"Import from URL" button work. Car photos are already populated; to refresh:
+`node scripts/fill-missing-car-photos.mjs && node scripts/mirror-car-images.mjs`.
+
+## 12. Later: cut over to Cloudflare Workers (optional, paid)
+
+To move the public site to Cloudflare's global edge (faster worldwide, no box to
+keep up): upgrade the Cloudflare account to **Workers Paid** (~$5/mo → 10 MiB
+limit; the free 3 MiB limit is too small for this app), then from a dev machine:
+```bash
+# (optional, recommended) Enable R2 in the dashboard, then restore the R2 cache:
+#   open-next.config.ts → incrementalCache: r2IncrementalCache
+#   wrangler.toml       → uncomment the [[r2_buckets]] binding
+npx wrangler kv namespace create RATE_LIMIT_KV   # if not already (id is in wrangler.toml)
+# set server secrets once: wrangler secret put SUPABASE_SERVICE_ROLE_KEY (etc.)
+npm run deploy            # opennextjs-cloudflare build && deploy → tezmotors.uz
+```
+The Vostro then becomes the AI/scraper backend: keep Ollama + the collectors
+running here; they POST market data to the Workers site via `MARKET_INGEST_SECRET`.
+(LLM features on the Workers site need a hosted `LLM_API_KEY`, since Workers
+can't reach this box's Ollama.)
+
 ---
 
 ### Reality check
