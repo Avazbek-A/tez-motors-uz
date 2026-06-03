@@ -17,12 +17,13 @@ enabled = true
 binding = "RATE_LIMIT_KV"
 id = "5073cfd006be4151b665d032d665e885"
 
-# Persistent incremental (ISR / data) cache for OpenNext — see open-next.config.ts.
-# The OpenNext deploy step creates this bucket automatically; or pre-create it:
+# Persistent incremental (ISR / data) cache for OpenNext — DISABLED until R2 is
+# enabled in the Cloudflare dashboard (free tier). To re-enable: turn on R2, then
+# uncomment this binding AND restore the override in open-next.config.ts.
 #   wrangler r2 bucket create tez-motors-cache
-[[r2_buckets]]
-binding = "NEXT_INC_CACHE_R2_BUCKET"
-bucket_name = "tez-motors-cache"
+# [[r2_buckets]]
+# binding = "NEXT_INC_CACHE_R2_BUCKET"
+# bucket_name = "tez-motors-cache"
 
 [[routes]]
 pattern = "tezmotors.uz"
