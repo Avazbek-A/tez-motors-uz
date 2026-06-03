@@ -34,12 +34,20 @@ export function isSafeRemoteUrl(raw: string): boolean {
     return false;
   }
   if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-  const host = u.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false;
-  // Block obvious private / loopback / link-local IP literals.
-  if (/^(127\.|10\.|169\.254\.|0\.|::1$|fc|fd)/.test(host)) return false;
+  // Strip IPv6 brackets so "[::1]" compares as "::1".
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!host) return false;
+  if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".localhost")) return false;
+  // Integer ("http://2130706433") and hex ("0x7f000001") IP encodings are
+  // classic loopback/SSRF bypasses — block any all-numeric / 0x-prefixed host.
+  if (/^\d+$/.test(host) || /^0x[0-9a-f]+$/i.test(host)) return false;
+  // IPv4 private / loopback / link-local / unspecified.
+  if (/^(127\.|10\.|169\.254\.|0\.)/.test(host)) return false;
   if (/^192\.168\./.test(host)) return false;
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  // IPv6 loopback (::1) and unique-local (fc00::/7) — only when it's truly IPv6
+  // (contains a colon), so domains like "fcbarcelona.com" aren't false-blocked.
+  if (host.includes(":") && (host === "::1" || /^f[cd]/.test(host))) return false;
   return true;
 }
 
