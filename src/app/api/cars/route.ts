@@ -198,6 +198,7 @@ export async function POST(request: NextRequest) {
         year: data.year,
         price_usd: data.price_usd,
         slug,
+        images: data.images,
       }).catch(() => {});
     }
 

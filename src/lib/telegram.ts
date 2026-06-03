@@ -110,6 +110,34 @@ export async function sendChannelMessage(
 }
 
 /**
+ * Post a PHOTO with a caption (+ optional deep-link button) to the channel.
+ * Visual posts massively outperform text on Telegram. Caption is capped at
+ * Telegram's 1024-char limit; callers that have longer copy should fall back to
+ * sendChannelMessage. Fail-open: missing token/channel/photo ⇒ { ok: false }.
+ */
+export async function sendChannelPhoto(
+  photoUrl: string,
+  caption: string,
+  opts: { linkUrl?: string; linkLabel?: string } = {},
+): Promise<{ ok: boolean }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!botToken || !channelId || !photoUrl) return { ok: false };
+  try {
+    const body: Record<string, unknown> = { chat_id: channelId, photo: photoUrl, caption: caption.slice(0, 1024) };
+    if (opts.linkUrl) body.reply_markup = { inline_keyboard: [[{ text: opts.linkLabel || "Открыть", url: opts.linkUrl }]] };
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { ok: res.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
  * Auto-announce a new arrival to the dealer's public Telegram channel. Free
  * reach, on-brand for a messaging-first market. Fail-open: no bot token or
  * TELEGRAM_CHANNEL_ID ⇒ no-op.
@@ -120,6 +148,7 @@ export async function postCarToChannel(car: {
   year?: number | null;
   price_usd?: number | null;
   slug: string;
+  images?: string[] | null;
 }): Promise<void> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const channelId = process.env.TELEGRAM_CHANNEL_ID;
@@ -139,16 +168,19 @@ export async function postCarToChannel(car: {
     .filter(Boolean)
     .join("\n");
 
+  const photo = Array.isArray(car.images) && car.images[0] ? car.images[0] : null;
+  const reply_markup = { inline_keyboard: [[{ text: "Открыть", url }]] };
+
   try {
-    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    // A photo post gets far more engagement; fall back to text when there's no image.
+    const endpoint = photo ? "sendPhoto" : "sendMessage";
+    const payload = photo
+      ? { chat_id: channelId, photo, caption: text.slice(0, 1024), parse_mode: "Markdown", reply_markup }
+      : { chat_id: channelId, text, parse_mode: "Markdown", reply_markup };
+    await fetch(`https://api.telegram.org/bot${botToken}/${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: channelId,
-        text,
-        parse_mode: "Markdown",
-        reply_markup: { inline_keyboard: [[{ text: "Открыть", url }]] },
-      }),
+      body: JSON.stringify(payload),
     });
   } catch (err) {
     console.error("Telegram channel post failed", err);

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendChannelMessage } from "@/lib/telegram";
+import { sendChannelMessage, sendChannelPhoto } from "@/lib/telegram";
 import { reportServerError, logEvent } from "@/lib/error-report";
+
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
 
 /**
  * Publish scheduled marketing posts whose time has come to the Telegram
@@ -22,7 +24,7 @@ async function handle(request: NextRequest) {
 
     const { data: due } = await supabase
       .from("content_drafts")
-      .select("id, body, kind")
+      .select("id, body, kind, car_id")
       .eq("status", "draft")
       .not("scheduled_at", "is", null)
       .lte("scheduled_at", nowIso)
@@ -32,7 +34,25 @@ async function handle(request: NextRequest) {
 
     let posted = 0;
     for (const d of due || []) {
-      const { ok } = await sendChannelMessage(d.body as string);
+      const body = d.body as string;
+      // Car-linked posts get a photo + a "view car" deep link — visual posts
+      // convert far better on Telegram. Fall back to text when there's no image
+      // or the caption is too long for Telegram's 1024-char photo caption.
+      let link: { linkUrl?: string; linkLabel?: string } = {};
+      let photoUrl: string | null = null;
+      if (d.car_id) {
+        const { data: car } = await supabase
+          .from("cars")
+          .select("slug, images")
+          .eq("id", d.car_id)
+          .maybeSingle();
+        if (car?.slug) link = { linkUrl: `${SITE}/ru/catalog/${car.slug}`, linkLabel: "Открыть" };
+        const firstImage = Array.isArray(car?.images) ? car!.images[0] : null;
+        if (firstImage && body.length <= 1024) photoUrl = firstImage as string;
+      }
+      const { ok } = photoUrl
+        ? await sendChannelPhoto(photoUrl, body, link)
+        : await sendChannelMessage(body, link);
       if (ok) {
         await supabase
           .from("content_drafts")
