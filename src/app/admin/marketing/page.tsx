@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Megaphone, Loader2, Sparkles, Copy, Send, Save, Trash2, Check, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -90,13 +91,19 @@ export default function AdminMarketingPage() {
 
   return (
     <div className="max-w-5xl">
-      <div className="flex items-center gap-3 mb-1">
-        <Megaphone className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-foreground">Content Studio</h1>
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="flex items-center gap-3">
+          <Megaphone className="w-6 h-6 text-primary" />
+          <h1 className="text-2xl font-semibold text-foreground">Content Studio</h1>
+        </div>
+        <Link href="/admin/marketing/autopilot" className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-[var(--accent)] hover:underline">
+          <Sparkles className="w-4 h-4" /> Autopilot
+        </Link>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
         AI-drafted marketing — social posts, ad copy, blog articles and promos, grounded on your real
         inventory, in RU / UZ / EN. Generate, edit, post to your Telegram channel, or save to the library.
+        Not sure what to post? Let <Link href="/admin/marketing/autopilot" className="text-primary hover:underline">Autopilot</Link> read your inventory and suggest.
       </p>
 
       <div className="grid gap-5 lg:grid-cols-2">

@@ -42,6 +42,7 @@ crons = [
   "10 * * * *",  # hourly — apply/end scheduled price promotions
   "0 9 * * 3",   # Wed 14:00 Tashkent — warranties expiring within 30 days
   "20 3 * * *",  # 08:20 Tashkent — AI Operator morning briefing to the dealer
+  "30 6 * * 1",  # Mon 11:30 Tashkent — Marketing Autopilot drafts content for the week
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.
