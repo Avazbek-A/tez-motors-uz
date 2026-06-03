@@ -99,6 +99,40 @@ async function tgSend(chatId: number, text: string, replyMarkup?: ReplyMarkup): 
   }
 }
 
+/**
+ * Send the recommended cars as photos (visual cards convert far better than a
+ * text list). Up to 3, as a media group (or a single sendPhoto). Additive to
+ * the text reply + link buttons; fail-open and silent when cars have no images.
+ */
+async function tgSendCarPhotos(chatId: number, cars: Car[]): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  const items = cars
+    .slice(0, 3)
+    .map((c) => ({ c, img: Array.isArray(c.images) ? c.images[0] : undefined }))
+    .filter((x): x is { c: Car; img: string } => typeof x.img === "string" && x.img.length > 0);
+  if (items.length === 0) return;
+  const caption = ({ c }: { c: Car }) => `${c.brand} ${c.model} ${c.year} — $${c.price_usd.toLocaleString("en-US")}`;
+  try {
+    if (items.length === 1) {
+      await fetch(`${TG_API}/bot${token}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, photo: items[0].img, caption: caption(items[0]) }),
+      });
+    } else {
+      const media = items.map((x) => ({ type: "photo", media: x.img, caption: caption(x) }));
+      await fetch(`${TG_API}/bot${token}/sendMediaGroup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, media }),
+      });
+    }
+  } catch {
+    // fail-open
+  }
+}
+
 // ---- Localized copy --------------------------------------------------------
 
 const COPY: Record<BotLocale, { welcome: string; nudge: string; thanks: string; share: string }> = {
@@ -237,6 +271,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     knownName: from.first_name || null,
   });
   await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
+  await tgSendCarPhotos(chatId, cars);
 }
 
 export async function POST(request: NextRequest) {

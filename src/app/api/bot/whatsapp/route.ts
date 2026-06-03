@@ -91,6 +91,39 @@ async function waSend(to: string, body: string): Promise<void> {
   }
 }
 
+/**
+ * Send the recommended cars as images with captions (visual cards convert far
+ * better than a text list). Up to 3, one message each. Additive to the text
+ * reply; fail-open and silent when cars have no images.
+ */
+async function waSendCarImages(to: string, cars: Car[], locale: BotLocale): Promise<void> {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  if (!token || !phoneId) return;
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
+  const items = cars
+    .slice(0, 3)
+    .map((c) => ({ c, img: Array.isArray(c.images) ? c.images[0] : undefined }))
+    .filter((x): x is { c: Car; img: string } => typeof x.img === "string" && x.img.length > 0);
+  for (const { c, img } of items) {
+    const caption = `${c.brand} ${c.model} ${c.year} — $${c.price_usd.toLocaleString("en-US")}\n${base}/${locale}/catalog/${c.slug}`;
+    try {
+      await fetch(`${GRAPH_API}/${phoneId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          type: "image",
+          image: { link: img, caption: caption.slice(0, 1024) },
+        }),
+      });
+    } catch {
+      // fail-open
+    }
+  }
+}
+
 // ---- Localized copy --------------------------------------------------------
 
 const COPY: Record<BotLocale, { nudge: string; thanks: string }> = {
@@ -204,6 +237,7 @@ async function handleUpdate(update: WaUpdate): Promise<void> {
   const lines = carLines(cars, locale);
   const body = [reply, lines].filter(Boolean).join("\n\n");
   await waSend(from, body);
+  await waSendCarImages(from, cars, locale);
 }
 
 // ---- Webhook verification (GET) -------------------------------------------
