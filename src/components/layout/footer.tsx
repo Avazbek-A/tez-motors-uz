@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
-import { FOOTER_LINKS, CAR_BRANDS } from "@/lib/constants";
+import { FOOTER_LINKS, CAR_BRANDS, DELIVERY_CITIES } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
@@ -143,6 +143,30 @@ export function Footer() {
                 </Link>
               );
             })}
+          </div>
+        </div>
+
+        {/* Delivery cities — geo SEO landing pages funneling to the Tashkent ops. */}
+        <div className="mt-10">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-neon-blue/60 mb-4">
+            {locale === "ru" ? "Доставка по городам" : locale === "uz" ? "Shaharlar bo'ylab yetkazib berish" : "Delivery cities"}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={localizedPath(locale, "/tashkent")}
+              className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white text-xs font-medium border border-white/[0.06] hover:border-neon-blue/30 transition-all"
+            >
+              {locale === "ru" ? "Ташкент" : locale === "uz" ? "Toshkent" : "Tashkent"}
+            </Link>
+            {DELIVERY_CITIES.map((city) => (
+              <Link
+                key={city.slug}
+                href={localizedPath(locale, `/city/${city.slug}`)}
+                className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white text-xs font-medium border border-white/[0.06] hover:border-neon-blue/30 transition-all"
+              >
+                {city[locale]}
+              </Link>
+            ))}
           </div>
         </div>
 

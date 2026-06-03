@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { locales } from "@/i18n/config";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
-import { CAR_BRANDS } from "@/lib/constants";
+import { CAR_BRANDS, DELIVERY_CITIES } from "@/lib/constants";
 
 const CAR_FILTER_SLUGS = ["electric", "hybrid", "phev", "suv", "sedan", "crossover"];
 
@@ -126,10 +126,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
+    const cityPages = DELIVERY_CITIES.flatMap((city) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/city/${city.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+        alternates: alternatesFor(`/city/${city.slug}`),
+      })),
+    );
+
     return [
       ...staticPages,
       ...brandPages,
       ...filterPages,
+      ...cityPages,
       ...carPages,
       ...blogPages,
       ...partPages,

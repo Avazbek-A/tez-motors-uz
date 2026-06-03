@@ -47,6 +47,23 @@ export const FOOTER_LINKS = [
   { href: "/contacts", label: { ru: "Контакты", uz: "Kontaktlar", en: "Contacts" } },
 ] as const;
 
+/**
+ * Cities we deliver imported cars to. These power thin SEO landing pages
+ * (/city/[slug]) that funnel geo-intent traffic to the single Tashkent
+ * operation — there is NO per-city inventory or contact, just localized copy +
+ * CTAs. Tashkent keeps its own bespoke /tashkent page. `days` = typical car-
+ * carrier delivery window from the Tashkent office.
+ */
+export const DELIVERY_CITIES = [
+  { slug: "samarkand", ru: "Самарканд", uz: "Samarqand", en: "Samarkand", days: "1–2" },
+  { slug: "bukhara", ru: "Бухара", uz: "Buxoro", en: "Bukhara", days: "1–2" },
+  { slug: "fergana", ru: "Фергана", uz: "Farg'ona", en: "Fergana", days: "1–2" },
+  { slug: "andijan", ru: "Андижан", uz: "Andijon", en: "Andijan", days: "1–2" },
+  { slug: "namangan", ru: "Наманган", uz: "Namangan", en: "Namangan", days: "1–2" },
+  { slug: "qarshi", ru: "Карши", uz: "Qarshi", en: "Qarshi", days: "1–2" },
+  { slug: "nukus", ru: "Нукус", uz: "Nukus", en: "Nukus", days: "2–3" },
+] as const;
+
 export const CAR_BRANDS = [
   "BYD", "Chery", "Haval", "Geely", "Changan", "JETOUR", "Tank",
   "Li Auto", "NIO", "Zeekr", "Exeed", "Hongqi", "Dongfeng", "GAC",
