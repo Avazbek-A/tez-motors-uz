@@ -19,11 +19,25 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
   const in30 = new Date(now + 30 * 86_400_000).toISOString().slice(0, 10);
   const monthStart = `${today.slice(0, 8)}01`;
   const thirtyAgo = new Date(now - 30 * 86_400_000).toISOString();
+  const twoWeeksAgo = new Date(now - 14 * 86_400_000).toISOString();
   const headCount = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0, () => 0);
+  // Bucket rows with a timestamp field into this-week (0–7d) vs last-week (7–14d).
+  const bucketByWeek = <T extends Record<string, unknown>>(rows: T[], field: keyof T, weighFn?: (r: T) => number) => {
+    let thisW = 0, lastW = 0;
+    const weekAgoMs = now - 7 * 86_400_000;
+    for (const r of rows) {
+      const ts = new Date(String(r[field])).getTime();
+      if (Number.isNaN(ts)) continue;
+      const w = weighFn ? weighFn(r) : 1;
+      if (ts >= weekAgoMs) thisW += w; else lastW += w;
+    }
+    return { thisW, lastW };
+  };
 
   const [
     newInquiries, hotLeads, tasksDue, unpaidReservations, overdueShipments, warrantiesExpiring,
     paymentsRes, poRes, carsRes, costsRes, invoicesRes, recentInqRes, fx,
+    leadsTrendRes, invoiceTrendRes, orderTrendRes,
   ] = await Promise.all([
     headCount(supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new")),
     headCount(supabase.from("assistant_conversations").select("*", { count: "exact", head: true }).eq("handoff", true)),
@@ -38,6 +52,9 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
     supabase.from("invoices").select("total_usd, status, issued_at").eq("status", "paid").gte("issued_at", monthStart).limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("inquiries").select("car_id, created_at").not("car_id", "is", null).gte("created_at", thirtyAgo).limit(MAX).then((r) => r.data ?? [], () => []),
     getFxRates(supabase),
+    supabase.from("inquiries").select("created_at").gte("created_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
+    supabase.from("invoices").select("total_usd, issued_at").eq("status", "paid").gte("issued_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
+    supabase.from("orders").select("created_at").gte("created_at", twoWeeksAgo).limit(MAX).then((r) => r.data ?? [], () => []),
   ]);
 
   // Money.
@@ -74,10 +91,20 @@ export async function gatherOperatorContext(supabase: SupabaseClient): Promise<O
     .sort((a, b) => b.daysOnLot - a.daysOnLot)
     .slice(0, 3);
 
+  // Week-over-week trends (this week 0–7d vs last week 7–14d).
+  const leadsT = bucketByWeek(leadsTrendRes as { created_at: string }[], "created_at");
+  const invoiceT = bucketByWeek(invoiceTrendRes as { total_usd: number; issued_at: string }[], "issued_at", (r) => num(r.total_usd));
+  const orderT = bucketByWeek(orderTrendRes as { created_at: string }[], "created_at");
+
   return {
     actions: { newInquiries, hotLeads, tasksDue, unpaidReservations, overdueShipments, warrantiesExpiring },
     money: { revenueMtdUsd, depositsUsd: fx.usd_uzs > 0 ? Math.round(depositsUzs / fx.usd_uzs) : 0, committedSupplierUsd, potentialMarginUsd: Math.round(potentialMarginUsd) },
     topMarkdowns,
     topDemand,
+    trends: {
+      leadsThisWeek: leadsT.thisW, leadsLastWeek: leadsT.lastW,
+      revenueThisWeekUsd: Math.round(invoiceT.thisW), revenueLastWeekUsd: Math.round(invoiceT.lastW),
+      ordersThisWeek: orderT.thisW, ordersLastWeek: orderT.lastW,
+    },
   };
 }

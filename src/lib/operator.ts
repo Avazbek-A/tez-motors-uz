@@ -24,6 +24,26 @@ export interface OperatorContext {
   };
   topMarkdowns: { carId: string; name: string; daysOnLot: number; markdownPct: number; suggestedPriceUsd: number; currentPriceUsd: number }[];
   topDemand: { name: string; inquiries: number }[];
+  trends?: {
+    leadsThisWeek: number; leadsLastWeek: number;
+    revenueThisWeekUsd: number; revenueLastWeekUsd: number;
+    ordersThisWeek: number; ordersLastWeek: number;
+  };
+}
+
+/** Percent change current vs previous. null = no baseline (previous was 0 but
+ *  current is not) — i.e. "new", no meaningful percentage. */
+export function pctDelta(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+/** A compact "12 (▲25%)" style trend token from a current count + its delta. */
+export function trendToken(current: number, previous: number): string {
+  const d = pctDelta(current, previous);
+  if (d === null) return `${current} (new)`;
+  if (d === 0) return `${current} (▬)`;
+  return `${current} (${d > 0 ? "▲" : "▼"}${Math.abs(d)}%)`;
 }
 
 export interface OperatorAction {
@@ -55,9 +75,28 @@ const usd = (n: number) => "$" + Math.round(n || 0).toLocaleString("en-US");
 const GREETING = { ru: "Доброе утро! Сводка на сегодня.", uz: "Xayrli tong! Bugungi xulosa.", en: "Good morning — here's your day." };
 const ACTIONS_LABEL = { ru: "Что сделать сегодня:", uz: "Bugun nima qilish kerak:", en: "Today's actions:" };
 const NOTHING = { ru: "Срочных дел нет — хороший день, чтобы заняться маркетингом и поиском поставщиков.", uz: "Shoshilinch ish yo'q — marketing va ta'minotchilar bilan shug'ullaning.", en: "Nothing urgent — a good day for marketing and sourcing." };
+const TREND_LABEL = { ru: "За неделю", uz: "Hafta davomida", en: "This week" };
+const TREND_LEADS = { ru: "лидов", uz: "lid", en: "leads" };
+const TREND_REVENUE = { ru: "выручка", uz: "tushum", en: "revenue" };
+const TREND_ORDERS = { ru: "заказов", uz: "buyurtma", en: "orders" };
 
 function L(locale: string): "ru" | "uz" | "en" {
   return locale === "uz" ? "uz" : locale === "en" ? "en" : "ru";
+}
+
+/** "📈 This week: 5 leads (▲25%) · $12,000 revenue (▼10%) · 2 orders (new)". */
+function trendLine(ctx: OperatorContext, l: "ru" | "uz" | "en"): string | null {
+  const t = ctx.trends;
+  if (!t) return null;
+  const rev = `${usd(t.revenueThisWeekUsd)} ${TREND_REVENUE[l]} ${pctSuffix(t.revenueThisWeekUsd, t.revenueLastWeekUsd)}`;
+  return `📈 ${TREND_LABEL[l]}: ${trendToken(t.leadsThisWeek, t.leadsLastWeek)} ${TREND_LEADS[l]} · ${rev} · ${trendToken(t.ordersThisWeek, t.ordersLastWeek)} ${TREND_ORDERS[l]}.`;
+}
+
+function pctSuffix(current: number, previous: number): string {
+  const d = pctDelta(current, previous);
+  if (d === null) return "(new)";
+  if (d === 0) return "(▬)";
+  return `(${d > 0 ? "▲" : "▼"}${Math.abs(d)}%)`;
 }
 
 /** Deterministic briefing used when the LLM is unconfigured/unavailable. */
@@ -67,6 +106,8 @@ export function operatorFallback(ctx: OperatorContext, locale = "ru"): string {
   const lines: string[] = [GREETING[l]];
   lines.push("");
   lines.push(`💰 ${usd(ctx.money.revenueMtdUsd)} revenue MTD · ${usd(ctx.money.depositsUsd)} deposits · ${usd(ctx.money.committedSupplierUsd)} committed to suppliers · ${usd(ctx.money.potentialMarginUsd)} potential margin on the lot.`);
+  const trend = trendLine(ctx, l);
+  if (trend) lines.push(trend);
   lines.push("");
   lines.push(ACTIONS_LABEL[l]);
   if (actions.length === 0) lines.push(`• ${NOTHING[l]}`);
@@ -81,6 +122,9 @@ export async function generateOperatorBriefing(ctx: OperatorContext, locale = "r
     `Deposits collected: ${usd(ctx.money.depositsUsd)}`,
     `Committed to suppliers (in transit): ${usd(ctx.money.committedSupplierUsd)}`,
     `Potential margin on the lot: ${usd(ctx.money.potentialMarginUsd)}`,
+    ctx.trends
+      ? `Week-over-week: leads ${ctx.trends.leadsThisWeek} (prev ${ctx.trends.leadsLastWeek}), revenue ${usd(ctx.trends.revenueThisWeekUsd)} (prev ${usd(ctx.trends.revenueLastWeekUsd)}), orders ${ctx.trends.ordersThisWeek} (prev ${ctx.trends.ordersLastWeek})`
+      : "",
     `New inquiries: ${ctx.actions.newInquiries}, hot AI leads: ${ctx.actions.hotLeads}, tasks due: ${ctx.actions.tasksDue}, unpaid reservations: ${ctx.actions.unpaidReservations}, overdue shipments: ${ctx.actions.overdueShipments}, warranties expiring: ${ctx.actions.warrantiesExpiring}`,
     ctx.topMarkdowns.length ? `Aged stock to mark down: ${ctx.topMarkdowns.map((m) => `${m.name} (${m.daysOnLot}d, -${m.markdownPct}%)`).join("; ")}` : "",
     ctx.topDemand.length ? `Most-demanded models: ${ctx.topDemand.map((d) => `${d.name} (${d.inquiries})`).join("; ")}` : "",
