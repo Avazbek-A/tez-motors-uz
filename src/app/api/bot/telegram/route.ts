@@ -24,6 +24,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry } from "@/lib/notify";
 import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
 import { normalizePhone } from "@/lib/customer-auth";
+import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 import type { Car } from "@/types/car";
 
@@ -246,10 +247,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Verify the secret header Telegram echoes from setWebhook. Locked: a missing
-  // or wrong header (or an unset secret) is rejected.
+  // or wrong header (or an unset secret) is rejected. Constant-time compare.
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
   const header = request.headers.get("x-telegram-bot-api-secret-token");
-  if (!secret || header !== secret) {
+  if (!secret || !timingSafeEqual(header || "", secret)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
