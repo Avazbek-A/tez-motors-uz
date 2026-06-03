@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link2, Loader2, Download, Film, Settings2 } from "lucide-react";
+import { Link2, Loader2, Download, Film, Settings2, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -21,21 +21,57 @@ export function MediaImporter({
   onImages,
   onVideo,
   onSpec,
+  brand,
+  model,
+  year,
 }: {
   bucket: "car-images" | "part-images";
   onImages: (urls: string[]) => void;
   onVideo?: (url: string) => void;
   /** When provided (car form), Extract also pulls the car config from the page. */
   onSpec?: (spec: Record<string, unknown>) => void;
+  /** When provided (car form), enables one-click "Suggest photos" from Wikimedia. */
+  brand?: string;
+  model?: string;
+  year?: string;
 }) {
   const [pageUrl, setPageUrl] = useState("");
   const [extracting, setExtracting] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [manual, setManual] = useState("");
   const [importing, setImporting] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [spec, setSpec] = useState<Record<string, unknown> | null>(null);
+
+  const canSuggest = !!(brand?.trim() && model?.trim());
+
+  const suggest = async () => {
+    if (!canSuggest) return;
+    setSuggesting(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/admin/media/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand, model, year: year || undefined }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const found: Candidate[] = Array.isArray(data.candidates) ? data.candidates : [];
+      setCandidates(found);
+      setSelected(new Set(found.map((c) => c.url)));
+      setNote(
+        found.length > 0
+          ? `Found ${found.length} CC-licensed photo${found.length === 1 ? "" : "s"} for ${brand} ${model} — review, then Import.`
+          : "No Wikimedia photos found for that model — paste a source URL or direct image URLs instead.",
+      );
+    } catch {
+      setNote("Could not fetch suggestions — paste a source URL instead.");
+    } finally {
+      setSuggesting(false);
+    }
+  };
 
   const imageCandidates = candidates.filter((c) => c.type === "image");
   const videoCandidates = candidates.filter((c) => c.type === "video");
@@ -136,6 +172,12 @@ export function MediaImporter({
           {extracting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Extract"}
         </Button>
       </div>
+
+      {canSuggest && (
+        <Button type="button" variant="outline" size="sm" onClick={suggest} disabled={suggesting} className="w-full">
+          {suggesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Suggest photos ({brand} {model}, Wikimedia)</>}
+        </Button>
+      )}
 
       {videoCandidates.length > 0 && onVideo && (
         <div className="flex flex-wrap gap-2">

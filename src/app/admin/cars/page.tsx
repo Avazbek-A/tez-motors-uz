@@ -702,6 +702,9 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             <div className="mb-3">
               <MediaImporter
                 bucket="car-images"
+                brand={brand}
+                model={model}
+                year={year}
                 onImages={(urls) => setImages((prev) => [...prev, ...urls])}
                 onVideo={(u) => setVideoUrl(u)}
                 onSpec={(spec) => {
