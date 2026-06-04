@@ -30,6 +30,13 @@ describe("parseAttributionCookie", () => {
     expect(parseAttributionCookie(JSON.stringify({ foo: 1 }))).toBeNull();
     expect(parseAttributionCookie(null)).toBeNull();
   });
+  it("rejects an oversized cookie BEFORE parsing (DoS guard)", () => {
+    const big = JSON.stringify({ source: "x".repeat(20_000) }); // >8 KB
+    const t0 = performance.now();
+    expect(parseAttributionCookie(big)).toBeNull();
+    // Proves we short-circuited before JSON.parse touched the giant payload.
+    expect(performance.now() - t0).toBeLessThan(50);
+  });
 });
 
 describe("attributionLabel", () => {

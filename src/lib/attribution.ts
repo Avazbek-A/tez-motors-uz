@@ -37,6 +37,10 @@ export function attributionFromParams(search: string, referrer?: string | null):
 /** Parse the attribution cookie value back into an object (server-side). */
 export function parseAttributionCookie(raw: string | null | undefined): Attribution | null {
   if (!raw) return null;
+  // Browsers cap cookies at ~4 KB; an attacker hitting the API directly could
+  // supply a megabyte string just to slow JSON.parse on every inquiry request.
+  // Guard the worker.
+  if (raw.length > 8 * 1024) return null;
   try {
     const o = JSON.parse(raw) as Record<string, unknown>;
     if (!o || typeof o !== "object") return null;

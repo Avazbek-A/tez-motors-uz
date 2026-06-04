@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 
 const schema = z.object({
