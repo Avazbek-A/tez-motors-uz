@@ -44,7 +44,14 @@ export async function GET(
       .eq("order_id", id)
       .order("created_at", { ascending: true });
 
-    return NextResponse.json({ success: true, order, events: events || [] });
+    // Signed documents (Phase AR) — best-effort; table may predate this order.
+    const { data: signatures } = await supabase
+      .from("document_signatures")
+      .select("document_type, signer_name, signed_at")
+      .eq("order_id", id)
+      .order("signed_at", { ascending: false });
+
+    return NextResponse.json({ success: true, order, events: events || [], signatures: signatures || [] });
   } catch {
     return NextResponse.json({ success: false, error: "Failed to load order" }, { status: 500 });
   }
