@@ -70,12 +70,21 @@ function imageDims(b) {
 
 async function measure(url) {
   try {
-    const r = await fetch(url, { headers: { "user-agent": UA, accept: "image/*" }, signal: AbortSignal.timeout(15000) });
-    if (!r.ok) return { ok: false, bytes: 0, edge: 0 };
+    // Range-fetch only the header (256 KB) — dimensions live in the first bytes
+    // (PNG IHDR, JPEG SOF, WebP header). Avoids downloading multi-MB photos and
+    // the timeouts that would falsely flag good images as unmeasurable.
+    const r = await fetch(url, {
+      headers: { "user-agent": UA, accept: "image/*", range: "bytes=0-262143" },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!r.ok && r.status !== 206) return { ok: false, bytes: 0, edge: 0 };
     const b = new Uint8Array(await r.arrayBuffer());
+    // Total size from Content-Range (206) or Content-Length, else the partial len.
+    const cr = r.headers.get("content-range");
+    const total = cr && cr.includes("/") ? Number(cr.split("/")[1]) : Number(r.headers.get("content-length") || b.byteLength);
     const d = imageDims(b);
     const edge = d ? Math.max(d.w || 0, d.h || 0) : 0;
-    return { ok: true, bytes: b.byteLength, edge, dims: d };
+    return { ok: true, bytes: Number.isFinite(total) && total > 0 ? total : b.byteLength, edge, dims: d };
   } catch {
     return { ok: false, bytes: 0, edge: 0 };
   }
