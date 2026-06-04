@@ -27,6 +27,8 @@ export interface SpecData {
   captured_at: string;
   brand?: string;
   model?: string;
+  /** AutoHome series id — used to fetch the full image gallery. */
+  series_id?: number;
   /** ordered group names (Basic Information, Body, Electric Motor, …). */
   groups: string[];
   trims: SpecTrim[];
@@ -67,9 +69,22 @@ interface NextTrim {
   paramconfList?: { titleId?: number; itemName?: string }[];
 }
 interface NextInit {
-  bread?: { brandName?: string; seriesName?: string };
+  bread?: { brandName?: string; seriesName?: string; seriesId?: number };
   titlelist?: NextGroup[];
   datalist?: NextTrim[];
+}
+
+/** Build the global AutoHome image-gallery URL for a series (same host+locale). */
+export function autohomeGlobalImageUrl(sourceUrl: string, seriesId: number): string | null {
+  if (!seriesId) return null;
+  try {
+    const u = new URL(sourceUrl);
+    const seg = u.pathname.split("/").filter(Boolean);
+    const locale = seg[0] && /^[a-z]{2}-[a-z]{2}$/i.test(seg[0]) ? seg[0] : "en-hk";
+    return `${u.protocol}//${u.host}/${locale}/image/series/${seriesId}`;
+  } catch {
+    return null;
+  }
 }
 
 function trimPrice(t: NextTrim): string | null {
@@ -126,6 +141,7 @@ export function parseGlobalAutohome(html: string, sourceUrl: string): SpecData |
     captured_at: new Date().toISOString(),
     brand: init.bread?.brandName?.trim(),
     model: init.bread?.seriesName?.trim(),
+    series_id: typeof init.bread?.seriesId === "number" ? init.bread.seriesId : undefined,
     groups,
     trims,
   };

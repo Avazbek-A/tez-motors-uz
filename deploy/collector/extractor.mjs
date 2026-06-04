@@ -62,7 +62,7 @@ async function extract(url) {
       return Array.from(out);
     });
     const JUNK = /sprite|favicon|\bicons?\b|logo|placeholder|blank[._-]|avatar|loading|1x1|spacer|pixel/i;
-    return urls.filter((u) => !JUNK.test(u)).slice(0, 60).map((u) => ({ url: u, type: "image" }));
+    return urls.filter((u) => !JUNK.test(u)).slice(0, 200).map((u) => ({ url: u, type: "image" }));
   } finally {
     await ctx.close();
   }

@@ -206,12 +206,14 @@ function randomId(): string {
 export async function ingestImageUrl(
   supabase: SupabaseClient,
   imageUrl: string,
-  opts: { bucket: string },
+  opts: { bucket: string; referer?: string },
 ): Promise<string> {
   if (!isSafeRemoteUrl(imageUrl)) throw new Error("unsafe or invalid URL");
 
   const res = await fetchWithTimeout(imageUrl, {
-    headers: { "user-agent": BROWSER_UA, accept: "image/*" },
+    // A Referer is required by some CDNs (e.g. AutoHome's autoimg.cn returns 403
+    // to hotlinks without one).
+    headers: { "user-agent": BROWSER_UA, accept: "image/*", ...(opts.referer ? { referer: opts.referer } : {}) },
   });
   if (!res.ok) throw new Error(`source returned ${res.status}`);
 

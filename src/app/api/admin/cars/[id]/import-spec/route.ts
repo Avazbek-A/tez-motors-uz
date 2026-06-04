@@ -4,8 +4,33 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
-import { fetchGlobalAutohomeSpec, parseVisionSpec, isAutohomeGlobalUrl, isAutohomeCnConfigUrl, type SpecData } from "@/lib/autohome-spec";
+import { fetchGlobalAutohomeSpec, parseVisionSpec, autohomeGlobalImageUrl, isAutohomeGlobalUrl, isAutohomeCnConfigUrl, type SpecData } from "@/lib/autohome-spec";
+import { isSafeRemoteUrl, ingestImageUrl } from "@/lib/media-ingest";
 import { llmVision } from "@/lib/llm";
+
+/** Scrape all gallery images from a rendered AutoHome page via the extractor. */
+async function scrapeGalleryImages(pageUrl: string): Promise<string[]> {
+  const base = process.env.EXTRACTOR_URL;
+  if (!base) return [];
+  try {
+    const secret = process.env.EXTRACTOR_SECRET;
+    const res = await fetch(`${base.replace(/\/$/, "")}/extract`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(secret ? { authorization: `Bearer ${secret}` } : {}) },
+      body: JSON.stringify({ url: pageUrl }),
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { candidates?: { url: string; type: string }[] };
+    return (data.candidates || [])
+      // Keep only AutoHome's car-photo CDN (autoimg.cn) — drops site chrome
+      // (logos, flags, UI icons) so we re-host real vehicle photos only.
+      .filter((c) => c?.type === "image" && c.url && /autoimg\.cn/i.test(c.url) && isSafeRemoteUrl(c.url))
+      .map((c) => c.url);
+  } catch {
+    return [];
+  }
+}
 
 const VISION_SYSTEM = [
   "You read screenshots of a Chinese car CONFIGURATION/parameter table from AutoHome (汽车之家).",
@@ -60,9 +85,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const url = parsed.data.url;
 
   let spec: SpecData | null = null;
+  let scraped: string[] = []; // gallery images (hotlinked AutoHome URLs; mirror re-hosts later)
   if (isAutohomeGlobalUrl(url)) {
     spec = await fetchGlobalAutohomeSpec(url);
     if (!spec) return NextResponse.json({ ok: false, reason: "parse_failed", message: "Couldn't read spec data from that global AutoHome page." }, { status: 422 });
+    // Scrape the FULL image gallery (rendered via the extractor) for this series.
+    if (process.env.EXTRACTOR_URL && spec.series_id) {
+      const galleryUrl = autohomeGlobalImageUrl(url, spec.series_id);
+      if (galleryUrl) scraped = await scrapeGalleryImages(galleryUrl);
+    }
   } else if (isAutohomeCnConfigUrl(url)) {
     // Obfuscated CN page: Vostro Playwright screenshots → vision LLM reads pixels.
     if (!process.env.EXTRACTOR_URL) {
@@ -80,18 +111,47 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!spec) {
       return NextResponse.json({ ok: false, reason: "parse_failed", message: "Couldn't read a usable spec table from the page screenshots — try the global AutoHome site." }, { status: 422 });
     }
-    if (Array.isArray(cap.images) && cap.images.length) spec.gallery = cap.images.slice(0, 6);
+    if (Array.isArray(cap.images) && cap.images.length) scraped = cap.images;
   } else {
     return NextResponse.json({ ok: false, reason: "unsupported_url", message: "Paste a global.autohome.com config/spec URL (or a car.autohome.com.cn/config URL once the extractor is enabled)." }, { status: 422 });
   }
 
   const supabase = createServiceClient();
-  const { error } = await supabase
-    .from("cars")
-    .update({ spec_data: spec, spec_captured_at: new Date().toISOString() })
-    .eq("id", id);
+
+  // Re-host the scraped gallery to our own Storage (AutoHome's CDN 403s hotlinks
+  // without a Referer; ingestImageUrl sends one), then merge into images[].
+  const update: Record<string, unknown> = { spec_data: spec, spec_captured_at: new Date().toISOString() };
+  let addedImages = 0;
+  if (scraped.length) {
+    const referer = (() => { try { return `${new URL(url).origin}/`; } catch { return undefined; } })();
+    const results = await Promise.allSettled(
+      scraped.slice(0, 30).map((src) => ingestImageUrl(supabase, src, { bucket: "car-images", referer })),
+    );
+    const hosted = results.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value);
+    if (hosted.length) {
+      const { data: cur } = await supabase.from("cars").select("images").eq("id", id).maybeSingle();
+      const existing = Array.isArray(cur?.images) ? (cur!.images as string[]) : [];
+      const merged = Array.from(new Set([...existing, ...hosted])).slice(0, 120);
+      addedImages = merged.length - existing.length;
+      update.images = merged;
+    }
+  }
+
+  const { error } = await supabase.from("cars").update(update).eq("id", id);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
 
-  logAdminAction(request, { action: "update", entity: "car", entity_id: id, diff: { spec_import: spec.source, trims: spec.trims.length } }).catch(() => {});
-  return NextResponse.json({ ok: true, spec: { source: spec.source, brand: spec.brand, model: spec.model, groups: spec.groups, trims: spec.trims.length, paramCount: spec.trims[0] ? Object.values(spec.trims[0].params).reduce((a, g) => a + Object.keys(g).length, 0) : 0 } });
+  logAdminAction(request, { action: "update", entity: "car", entity_id: id, diff: { spec_import: spec.source, trims: spec.trims.length, images_added: addedImages } }).catch(() => {});
+  return NextResponse.json({
+    ok: true,
+    spec: {
+      source: spec.source,
+      brand: spec.brand,
+      model: spec.model,
+      groups: spec.groups,
+      trims: spec.trims.length,
+      paramCount: spec.trims[0] ? Object.values(spec.trims[0].params).reduce((a, g) => a + Object.keys(g).length, 0) : 0,
+      imagesScraped: scraped.length,
+      imagesAdded: addedImages,
+    },
+  });
 }
