@@ -29,6 +29,7 @@
  * API limit: a user can query a rolling set of ~30 unique hashtags per 7 days.
  */
 import { writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const BASE = "https://graph.facebook.com/v21.0";
 const TOKEN = process.env.IG_ACCESS_TOKEN;
@@ -39,6 +40,31 @@ const HASHTAGS = (process.env.IG_HASHTAGS || "avtosalontashkent,byduzbekistan,ch
   .split(",").map((s) => s.trim().replace(/^#/, "")).filter(Boolean);
 
 const MEDIA_FIELDS = "id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count";
+
+/**
+ * Mine #hashtags from a batch of captions and rank them by a blend of frequency
+ * and engagement (a tag on a high-like post counts more). Returns the top tags —
+ * the REAL, currently-trending hashtags under these car-market topics, which the
+ * dealer (or the app's content generator) should use instead of guessed ones.
+ */
+export function rankHashtags(media, limit = 25) {
+  const score = new Map(); // tag -> { count, weight }
+  for (const m of media) {
+    const tags = (m.caption || "").match(/#[\p{L}\p{N}_]+/gu) || [];
+    const engagement = 1 + Math.log1p((m.like_count || 0) + (m.comments_count || 0));
+    const unique = new Set(tags.map((t) => t.toLowerCase()));
+    for (const t of unique) {
+      const cur = score.get(t) || { count: 0, weight: 0 };
+      cur.count += 1;
+      cur.weight += engagement;
+      score.set(t, cur);
+    }
+  }
+  return Array.from(score.entries())
+    .map(([tag, s]) => ({ tag, posts: s.count, weight: Math.round(s.weight * 10) / 10 }))
+    .sort((a, b) => b.weight - a.weight || b.posts - a.posts)
+    .slice(0, limit);
+}
 
 async function api(path, params) {
   const url = new URL(`${BASE}/${path}`);
@@ -93,13 +119,24 @@ async function main() {
     }
   }
 
+  // Mine the real trending hashtags across everything we fetched.
+  const allMedia = report.hashtags.flatMap((h) => h.media || []);
+  report.trending_hashtags = rankHashtags(allMedia);
+
   writeFileSync(OUT, JSON.stringify(report, null, 2), "utf8");
-  const total = report.hashtags.reduce((a, h) => a + (h.count || 0), 0);
+  const total = allMedia.length;
   console.log(`wrote ${total} posts across ${HASHTAGS.length} hashtags → ${OUT}`);
+  if (report.trending_hashtags.length) {
+    console.log("Top trending hashtags to use:");
+    console.log("  " + report.trending_hashtags.slice(0, 15).map((h) => h.tag).join(" "));
+  }
   console.log("Review for trending car content, competitor activity, and image/marketing ideas.");
 }
 
-main().catch((e) => {
-  console.error("[instagram] failed:", e?.message || e);
-  process.exit(1);
-});
+// Only run when executed directly (so rankHashtags can be imported/tested).
+if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+  main().catch((e) => {
+    console.error("[instagram] failed:", e?.message || e);
+    process.exit(1);
+  });
+}

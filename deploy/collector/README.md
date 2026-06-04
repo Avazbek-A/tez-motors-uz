@@ -158,6 +158,11 @@ export IG_HASHTAGS="avtosalontashkent,byduzbekistan,cheryuzbekistan"
 export IG_MEDIA_TYPE=top               # top | recent
 node instagram-collector.mjs           # → instagram-report.json
 ```
+The report includes **`trending_hashtags`** — the real hashtags mined from the
+fetched captions, ranked by frequency × engagement (a tag on a high-like post
+counts more). These are the current, regional hashtags to put in your posts
+instead of guessed ones (the report also prints the top 15 to the console).
+
 Setup (one-time, Meta side) + limits are documented in the file header. Without a
 token it skips cleanly (fail-open). **Arbitrary profile scraping is intentionally
 not supported** — the official API doesn't allow it, and unofficial scraping isn't
