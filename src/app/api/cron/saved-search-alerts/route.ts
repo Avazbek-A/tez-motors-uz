@@ -65,9 +65,7 @@ function asNumber(v: unknown): number | null {
   return null;
 }
 
-function sanitizeSearch(raw: string): string {
-  return raw.replace(/[,()\\%*]/g, "").slice(0, 64);
-}
+import { sanitizePostgrestSearchTerm as sanitizeSearch } from "@/lib/search-safe";
 
 function localeOf(c: CustomerLite): EmailLocale {
   return c.locale === "uz" || c.locale === "en" ? c.locale : "ru";

@@ -14,6 +14,7 @@ const navGroups = [
     section: "Overview",
     items: [
       { href: "/admin/command", label: "Command", icon: Gauge },
+      { href: "/admin/copilot", label: "Copilot", icon: Bot },
       { href: "/admin/operator", label: "AI Operator", icon: Sparkles },
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
       { href: "/admin/autopilot", label: "Autopilot", icon: Activity },

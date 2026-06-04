@@ -8,9 +8,7 @@ const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 };
 
-function sanitizeSearch(raw: string): string {
-  return raw.replace(/[,()\\%*]/g, "").slice(0, 64);
-}
+import { sanitizePostgrestSearchTerm as sanitizeSearch } from "@/lib/search-safe";
 
 function parseIntSafe(raw: string | null, min: number, max: number): number | null {
   if (!raw) return null;
