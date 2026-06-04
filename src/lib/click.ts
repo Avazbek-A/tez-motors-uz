@@ -12,6 +12,7 @@
  * unset, sign verification fails closed (every call → SIGN_CHECK_FAILED) so the
  * endpoint is inert rather than crashing.
  */
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 // ---- Click action + error codes (from the Click SHOP-API spec) ------------
 
@@ -191,13 +192,8 @@ export { md5 };
 
 // ---- Sign verification ----------------------------------------------------
 
-/** Constant-time hex-string compare. */
-function timingSafeEqualHex(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return mismatch === 0;
-}
+// Constant-time hex-string compare lives in @/lib/timing-safe — one impl across
+// the codebase (also adds a string-type guard the local copy didn't have).
 
 export interface ClickCallback {
   click_trans_id: string;
@@ -232,7 +228,7 @@ export function verifyClickSign(cb: ClickCallback): boolean {
     cb.sign_time,
   ];
   const expected = md5(parts.join(""));
-  return timingSafeEqualHex(expected.toLowerCase(), (cb.sign_string || "").toLowerCase());
+  return timingSafeEqual(expected.toLowerCase(), (cb.sign_string || "").toLowerCase());
 }
 
 /** Build the Click JSON-RPC-ish callback response (always HTTP 200). */

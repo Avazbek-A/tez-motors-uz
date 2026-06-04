@@ -119,7 +119,11 @@ const h = vi.hoisted(() => {
         const matched = rows.filter((r) => this._matches(r));
         for (const r of matched) Object.assign(r, this.payload);
         this._rows = matched;
-        this._result = { data: null, error: null };
+        // Supabase semantics: `.update().select()` returns the affected rows
+        // (UPDATE...RETURNING), `.update()` alone returns no body. The
+        // payment-advance helper depends on this — only fires side effects when
+        // the conditional UPDATE actually transitioned a row.
+        this._result = { data: this.selectAfter ? matched : null, error: null };
       } else if (this.op === "delete") {
         const keep: Row[] = [];
         const removed: Row[] = [];

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isSafeRemoteUrl } from "@/lib/media-ingest";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,18 @@ const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gi
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB per image
 const MAX_IMAGES_PER_REQUEST = 100;
 const FETCH_TIMEOUT_MS = 15000;
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+/** Same-origin Referer — bypasses hotlink protection (Alibaba alicdn, AutoHome
+ *  autoimg, etc. 403 image hotlinks that arrive without one). */
+function refererFor(url: string): string | undefined {
+  try {
+    return `${new URL(url).origin}/`;
+  } catch {
+    return undefined;
+  }
+}
 
 function isSupabasePublicUrl(url: string): boolean {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -33,8 +46,13 @@ function extensionForMime(mime: string): string {
 async function fetchWithTimeout(url: string): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  const referer = refererFor(url);
   try {
-    return await fetch(url, { signal: ctrl.signal, redirect: "follow" });
+    return await fetch(url, {
+      signal: ctrl.signal,
+      redirect: "follow",
+      headers: { "user-agent": BROWSER_UA, accept: "image/*", ...(referer ? { referer } : {}) },
+    });
   } finally {
     clearTimeout(t);
   }
@@ -110,8 +128,10 @@ export async function POST(request: NextRequest) {
       processedUrls += 1;
 
       try {
-        if (!/^https?:\/\//i.test(original)) {
-          throw new Error("not an http(s) URL");
+        // SSRF guard: only http(s), reject private/loopback/link-local hosts
+        // before we fetch an admin-supplied URL into our own storage.
+        if (!isSafeRemoteUrl(original)) {
+          throw new Error("unsafe or non-http(s) URL");
         }
 
         const res = await fetchWithTimeout(original);

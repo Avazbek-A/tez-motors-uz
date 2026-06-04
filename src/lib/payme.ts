@@ -12,6 +12,7 @@
  * rather than crashing.
  */
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 // Payme transaction lifecycle states.
 export const PAYME_STATE = {
@@ -91,13 +92,8 @@ export const PAYME_MESSAGES = {
   },
 } as const;
 
-/** Constant-time string compare (avoids leaking the key length/contents by timing). */
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return mismatch === 0;
-}
+// Constant-time compare lives in @/lib/timing-safe (one implementation across
+// the codebase — also adds a string-type guard the local copy didn't have).
 
 /**
  * Verify the `Authorization: Basic base64(login:key)` header against the merchant

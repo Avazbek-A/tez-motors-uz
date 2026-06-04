@@ -19,6 +19,8 @@ npx playwright install chromium   # for extractor.mjs + the OLX browser fallback
 | `alibaba-crawlee.mjs` | **Crawlee-based** Alibaba parts crawler — writes a reviewable DRAFT CSV. Needs residential `PROXY_URLS`. | Admin uploads the CSV to Parts → Import. |
 | `olx-parts-crawlee.mjs` | **Crawlee-based** OLX parts crawler — proven API, **no proxies needed**; writes a reviewable DRAFT CSV. | Admin uploads the CSV to Parts → Import. |
 | `telegram-collector.mjs` | Reads car-sales Telegram channels (MTProto / your account via gramJS). | POSTs to `/api/admin/market/ingest`. |
+| `instagram-collector.mjs` | Instagram **official Graph API** hashtag discovery (no profile scraping). | Writes a JSON research report. |
+| `proxy-check.mjs` | Verify `PROXY_URLS` connects + rotates before running the Alibaba crawler. | — |
 
 All POSTs authenticate with `MARKET_INGEST_SECRET` (set the same value as a Worker
 secret on the app). The extractor uses an optional `EXTRACTOR_SECRET`.
@@ -99,6 +101,13 @@ dry-run first), translate RU/UZ names, set OEM/fitment, then publish.
 > proxies and run gently (`category` ∈ engine, body, electrical, suspension, brakes,
 > interior, other). Verify product/price/image rights before publishing.
 
+**Test your proxies first** (verifies they connect + rotate, before a real run):
+```bash
+export PROXY_URLS="http://user:pass@gw1:8000,http://user:pass@gw2:8000"
+node proxy-check.mjs        # prints egress IP per probe; warns if not rotating
+```
+With no `PROXY_URLS` it reports your direct egress IP — the one Alibaba blocks.
+
 ## 4. OLX parts crawler (Crawlee → reviewable CSV, no proxies)
 
 Like the Alibaba crawler but on OLX's **proven public API** — so it works without
@@ -133,6 +142,26 @@ node telegram-collector.mjs
 ```
 Only messages matching the brand/model dictionary in `telegram-collector.mjs`
 become listings (keeps the data clean) — extend `MODELS` for what you track.
+
+## 6. Instagram content discovery (official Graph API)
+
+Social media is best sourced via **official APIs**, not fragile profile scrapers
+(which break constantly and risk bans/ToS). Instagram's API permits **Hashtag
+Search** for a connected Business/Creator account — find trending/top public car
+content for marketing + competitor research. It writes a JSON report (this is
+research, not catalog data).
+
+```bash
+export IG_ACCESS_TOKEN="EAAB..."     # long-lived token (instagram_basic + manage_insights)
+export IG_USER_ID="178414..."         # your IG Business account id
+export IG_HASHTAGS="avtosalontashkent,byduzbekistan,cheryuzbekistan"
+export IG_MEDIA_TYPE=top               # top | recent
+node instagram-collector.mjs           # → instagram-report.json
+```
+Setup (one-time, Meta side) + limits are documented in the file header. Without a
+token it skips cleanly (fail-open). **Arbitrary profile scraping is intentionally
+not supported** — the official API doesn't allow it, and unofficial scraping isn't
+worth the breakage/ban risk.
 
 ## Local LLM (Ollama) — free, for the self-hosted app
 

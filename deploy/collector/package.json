@@ -10,6 +10,8 @@
     "olx:crawlee": "node olx-crawlee.mjs",
     "alibaba": "node alibaba-crawlee.mjs",
     "olx:parts": "node olx-parts-crawlee.mjs",
+    "proxy:check": "node proxy-check.mjs",
+    "instagram": "node instagram-collector.mjs",
     "telegram": "node telegram-collector.mjs",
     "telegram:login": "node telegram-collector.mjs --login",
     "postinstall": "echo 'Run: npx playwright install chromium  (needed for extractor + OLX browser fallback)'"

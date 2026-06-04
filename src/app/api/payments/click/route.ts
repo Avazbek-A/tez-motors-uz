@@ -20,7 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { logEvent, alertDealer } from "@/lib/error-report";
-import { notifyOrderStatus } from "@/lib/order-status";
+import { advanceOrderToDepositPaid } from "@/lib/payment-advance";
 import {
   CLICK_ACTION,
   CLICK_ERROR,
@@ -270,7 +270,7 @@ async function handleComplete(supabase: Supabase, cb: ClickCallback): Promise<Ne
     );
   }
 
-  await advanceOrderToDepositPaid(supabase, payment.order_id);
+  await advanceOrderToDepositPaid(supabase, payment.order_id, "Click");
   logEvent("click.transaction.performed", { click_tx: cb.click_trans_id, order_id: payment.order_id });
 
   return NextResponse.json(
@@ -283,50 +283,10 @@ async function handleComplete(supabase: Supabase, cb: ClickCallback): Promise<Ne
   );
 }
 
-// Move the order to deposit_paid (only from the initial 'ordered' state, so we
-// never downgrade an order already further along) and notify the customer.
-// Mirrors the Payme route's advance helper (not exported there).
-async function advanceOrderToDepositPaid(supabase: Supabase, orderId: string): Promise<void> {
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, reference_code, status, customer_email, customer_phone, locale, cars(brand, model, year)")
-    .eq("id", orderId)
-    .maybeSingle();
-  if (!order) return;
-
-  if (order.status === "ordered") {
-    await supabase
-      .from("orders")
-      .update({ status: "deposit_paid", updated_at: new Date().toISOString() })
-      .eq("id", orderId)
-      .eq("status", "ordered");
-  }
-
-  await supabase.from("order_events").insert({
-    order_id: orderId,
-    status: "deposit_paid",
-    note: "Депозит оплачен онлайн (Click)",
-  });
-
-  const carRel = order.cars as
-    | { brand: string; model: string; year: number }
-    | { brand: string; model: string; year: number }[]
-    | null;
-  const car = Array.isArray(carRel) ? carRel[0] : carRel;
-  const carName = car ? `${car.brand} ${car.model} ${car.year}` : "Ваш автомобиль";
-
-  await notifyOrderStatus(
-    supabase,
-    {
-      referenceCode: order.reference_code,
-      locale: order.locale,
-      customerEmail: order.customer_email,
-      customerPhone: order.customer_phone,
-      carName,
-    },
-    "deposit_paid",
-  ).catch(() => {});
-}
+// advanceOrderToDepositPaid lives in @/lib/payment-advance — shared with Payme.
+// The shared helper does an atomic conditional UPDATE: the order_events insert
+// and customer notify fire ONLY on the call that actually transitioned the
+// order, so a Click retry / concurrent Complete can't double-notify the buyer.
 
 // ---- Dispatcher -----------------------------------------------------------
 
