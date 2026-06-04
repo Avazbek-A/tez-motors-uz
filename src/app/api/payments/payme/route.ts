@@ -320,6 +320,16 @@ export async function POST(request: NextRequest) {
     return rpcError(null, { code: PAYME_ERROR.INSUFFICIENT_PRIVILEGE, message: PAYME_MESSAGES.unauthorized });
   }
 
+  // Defense in depth: cap the body before parsing. Payme JSON-RPC frames are
+  // ~1 KB; 64 KB is generous headroom while blunting an oversized-body DoS
+  // (an attacker who knows the URL but not the auth could otherwise burn
+  // Worker CPU on JSON.parse before the next request even arrives).
+  const MAX_BODY = 64 * 1024;
+  const cl = Number(request.headers.get("content-length") || 0);
+  if (cl && cl > MAX_BODY) {
+    return rpcError(null, { code: PAYME_ERROR.PARSE_ERROR, message: "Payload too large" });
+  }
+
   let body: { method?: unknown; params?: unknown; id?: unknown };
   try {
     body = await request.json();

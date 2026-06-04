@@ -291,6 +291,18 @@ async function handleComplete(supabase: Supabase, cb: ClickCallback): Promise<Ne
 // ---- Dispatcher -----------------------------------------------------------
 
 export async function POST(request: NextRequest) {
+  // Defense in depth: Click callbacks are tiny urlencoded forms (~500 bytes).
+  // 32 KB caps an oversized-body DoS attempt without truncating any real
+  // callback — and we cap BEFORE the .text() decode so a multi-MB body
+  // doesn't waste CPU before the sign-check rejects it anyway.
+  const MAX_BODY = 32 * 1024;
+  const cl = Number(request.headers.get("content-length") || 0);
+  if (cl && cl > MAX_BODY) {
+    return NextResponse.json(
+      clickResponse({ click_trans_id: "", merchant_trans_id: "", error: CLICK_ERROR.BAD_REQUEST }),
+    );
+  }
+
   let form: URLSearchParams;
   try {
     form = new URLSearchParams(await request.text());
