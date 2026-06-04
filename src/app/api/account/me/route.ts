@@ -13,6 +13,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = createServiceClient();
   const customerId = ctx.customer.id;
+  // Orders / warranties are matched by customer_phone (pre-account inventory).
+  // CRITICAL: never match on empty — a Telegram-Mini-App customer signs in by
+  // telegram_id with no phone, so `.eq("customer_phone", "")` would otherwise
+  // leak every order whose phone field is blank/null to that customer. Skip
+  // the queries entirely when the session has no phone.
+  const phone = ctx.customer.phone && ctx.customer.phone.trim().length > 0 ? ctx.customer.phone : null;
 
   const [favRes, searchRes, orderRes, warrantyRes] = await Promise.all([
     supabase.from("favorites").select("car_id").eq("customer_id", customerId),
@@ -21,17 +27,21 @@ export async function GET(request: NextRequest) {
       .select("id, label, filters, created_at")
       .eq("customer_id", customerId)
       .order("created_at", { ascending: false }),
-    supabase
-      .from("orders")
-      .select("id, reference_code, status, created_at, updated_at, cars(brand, model, year, slug)")
-      .eq("customer_phone", ctx.customer.phone ?? "")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("warranties")
-      .select("car_label, warranty_until, warranty_months, services")
-      .eq("customer_phone", ctx.customer.phone ?? "")
-      .order("warranty_until", { ascending: false })
-      .then((r) => r, () => ({ data: [] })),
+    phone
+      ? supabase
+          .from("orders")
+          .select("id, reference_code, status, created_at, updated_at, cars(brand, model, year, slug)")
+          .eq("customer_phone", phone)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as unknown[] }),
+    phone
+      ? supabase
+          .from("warranties")
+          .select("car_label, warranty_until, warranty_months, services")
+          .eq("customer_phone", phone)
+          .order("warranty_until", { ascending: false })
+          .then((r) => r, () => ({ data: [] as unknown[] }))
+      : Promise.resolve({ data: [] as unknown[] }),
   ]);
 
   const favoriteIds = (favRes.data || []).map((r) => r.car_id);
