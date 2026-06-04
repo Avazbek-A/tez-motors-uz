@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { notifyPriceWatchers } from "@/lib/price-watch";
 import { logEvent } from "@/lib/error-report";
 import { logAdminAction, compactDiff } from "@/lib/audit";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 
 // GET single car by ID or slug
 export async function GET(
@@ -17,17 +18,19 @@ export async function GET(
   try {
     const supabase = await createClient();
 
-    // Try by slug first (more common for public pages), then by ID
+    // Try by slug first (more common for public pages), then by ID.
+    // Use PUBLIC_CAR_COLUMNS (NOT "*") so any future internal column added to
+    // `cars` doesn't silently leak through this public endpoint.
     let { data: car, error } = await supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .eq("slug", id)
       .single();
 
     if (error || !car) {
       const result = await supabase
         .from("cars")
-        .select("*")
+        .select(PUBLIC_CAR_COLUMNS)
         .eq("id", id)
         .single();
       car = result.data;

@@ -6,6 +6,7 @@ import { priceFromMonthly } from "@/lib/finance";
 import { logAdminAction } from "@/lib/audit";
 import { postCarToChannel } from "@/lib/telegram";
 import { applySort, fetchCarsPage } from "@/lib/cars-query";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -100,8 +101,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Legacy mode (no pagination)
-    let query = supabase.from("cars").select("*");
+    // Legacy mode (no pagination). Explicit column list (PUBLIC_CAR_COLUMNS) so
+    // a future internal column added to `cars` doesn't silently leak.
+    let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS);
 
     if (!all) {
       query = query.neq("inventory_status", "sold");
@@ -137,7 +139,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        cars: applySort(cars || [], sort),
+        cars: applySort((cars || []) as unknown as Parameters<typeof applySort>[0], sort),
         total: cars?.length || 0,
         filters: { brand, bodyType, fuelType, priceMin, priceMax },
       },

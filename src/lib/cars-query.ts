@@ -4,6 +4,7 @@
  * params, computes any trigram search ids, and applies cache headers.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 
 interface Sortable {
   price_usd: number;
@@ -57,7 +58,9 @@ export async function fetchCarsPage(
   const pageNum = Math.max(opts.page || 1, 1);
   const offset = (pageNum - 1) * size;
 
-  let query = supabase.from("cars").select("*", { count: "exact" });
+  // Explicit column list (PUBLIC_CAR_COLUMNS) — never "*", so any internal
+  // column added to `cars` doesn't leak through the catalog list.
+  let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS, { count: "exact" });
 
   if (!opts.includeAll) query = query.neq("inventory_status", "sold");
   if (opts.brand) query = query.eq("brand", opts.brand);
@@ -84,5 +87,5 @@ export async function fetchCarsPage(
 
   const { data, count, error } = await query;
   if (error) throw error;
-  return { cars: applySort((data || []) as Sortable[], opts.sort ?? null), total: count || 0 };
+  return { cars: applySort((data || []) as unknown as Sortable[], opts.sort ?? null), total: count || 0 };
 }
