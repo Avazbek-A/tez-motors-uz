@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { normalizeReferenceCode } from "@/lib/order-code";
 import { ORDER_STATUS_LABELS, toEmailLocale } from "@/lib/order-status";
 
@@ -11,7 +12,8 @@ import { ORDER_STATUS_LABELS, toEmailLocale } from "@/lib/order-status";
  * /api/track (service-role, rate-limited, constant "not found" on mismatch),
  * so no order data leaks by code alone.
  */
-const checkRateLimit = createRateLimiter({ max: 10, windowMs: 5 * 60 * 1000 });
+// KV-backed so the cap is shared across Workers isolates.
+const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 5 * 60 * 1000, prefix: "receipt" });
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-()]/g, "");
@@ -47,7 +49,7 @@ const COPY = {
 } as const;
 
 export async function GET(request: NextRequest) {
-  if (!checkRateLimit(getClientIp(request))) {
+  if (!(await checkRateLimit(getClientIp(request)))) {
     return new Response("Too many requests", { status: 429 });
   }
 

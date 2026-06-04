@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { normalizeReferenceCode } from "@/lib/order-code";
 
 // Order lookup is service-role (orders/order_events are RLS-locked, no anon
 // read) and gated on reference_code + phone so an unauthenticated caller can
-// never enumerate orders by code alone. Rate-limited to blunt brute-forcing
-// the phone for a known code.
-const checkRateLimit = createRateLimiter({ max: 10, windowMs: 5 * 60 * 1000 });
+// never enumerate orders by code alone. Rate-limited (KV-backed so the cap is
+// shared across Workers isolates) to blunt brute-forcing the phone for a code.
+const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 5 * 60 * 1000, prefix: "track" });
 
 function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-()]/g, "");
@@ -15,7 +16,7 @@ function normalizePhone(phone: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!checkRateLimit(getClientIp(request))) {
+    if (!(await checkRateLimit(getClientIp(request)))) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Please try again later." },
         { status: 429 },

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { reportServerError } from "@/lib/error-report";
 import { z } from "zod";
 
-const checkRateLimit = createRateLimiter({ max: 3, windowMs: 10 * 60 * 1000 });
+// KV-backed so the cap is shared across Workers isolates.
+const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "trade-in" });
 const MAX_BYTES = 4 * 1024 * 1024;
 const MAX_DIMENSION = 8000;
 const MAX_FILES = 4;
@@ -69,7 +71,7 @@ function randomId(): string {
 }
 
 export async function POST(request: NextRequest) {
-  if (!checkRateLimit(getClientIp(request))) {
+  if (!(await checkRateLimit(getClientIp(request)))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

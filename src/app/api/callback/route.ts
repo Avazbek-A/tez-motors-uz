@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendTelegramNotification } from "@/lib/telegram";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 
-const checkRateLimit = createRateLimiter({ max: 3, windowMs: 5 * 60 * 1000 });
+// KV-backed so the cap is shared across Workers isolates.
+const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 5 * 60 * 1000, prefix: "callback" });
 
 const callbackSchema = z.object({
   name: z.string().min(2).max(100).refine((s) => !/https?:\/\//i.test(s), "invalid name"),
@@ -17,7 +19,7 @@ const callbackSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    if (!checkRateLimit(getClientIp(request))) {
+    if (!(await checkRateLimit(getClientIp(request)))) {
       return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 });
     }
 
