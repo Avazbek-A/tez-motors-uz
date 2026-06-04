@@ -16,7 +16,8 @@ npx playwright install chromium   # for extractor.mjs + the OLX browser fallback
 | `extractor.mjs` | Headless-browser media extractor — renders JS pages (AutoHome, AliExpress) and returns real gallery image URLs. | The app's `/api/admin/media/extract` calls it when `EXTRACTOR_URL` is set. |
 | `olx-crawlee.mjs` | **Crawlee-based** OLX crawler (recommended) — managed retries, session pool, proxy rotation, fingerprints. | POSTs to `/api/admin/market/ingest`. |
 | `olx-collector.mjs` | Legacy naive OLX scraper (fetch-loop + ad-hoc Playwright). Kept as a zero-dep fallback. | POSTs to `/api/admin/market/ingest`. |
-| `alibaba-crawlee.mjs` | **Crawlee-based** Alibaba parts crawler — writes a reviewable DRAFT CSV. | Admin uploads the CSV to Parts → Import. |
+| `alibaba-crawlee.mjs` | **Crawlee-based** Alibaba parts crawler — writes a reviewable DRAFT CSV. Needs residential `PROXY_URLS`. | Admin uploads the CSV to Parts → Import. |
+| `olx-parts-crawlee.mjs` | **Crawlee-based** OLX parts crawler — proven API, **no proxies needed**; writes a reviewable DRAFT CSV. | Admin uploads the CSV to Parts → Import. |
 | `telegram-collector.mjs` | Reads car-sales Telegram channels (MTProto / your account via gramJS). | POSTs to `/api/admin/market/ingest`. |
 
 All POSTs authenticate with `MARKET_INGEST_SECRET` (set the same value as a Worker
@@ -98,7 +99,26 @@ dry-run first), translate RU/UZ names, set OEM/fitment, then publish.
 > proxies and run gently (`category` ∈ engine, body, electrical, suspension, brakes,
 > interior, other). Verify product/price/image rights before publishing.
 
-## 4. Telegram collector
+## 4. OLX parts crawler (Crawlee → reviewable CSV, no proxies)
+
+Like the Alibaba crawler but on OLX's **proven public API** — so it works without
+proxies and is the fastest way to seed real, local parts sourcing. Output matches
+`Parts → Import` exactly (drafts: `is_published=false`).
+
+```bash
+# optional: searches file = [{ "q":"тормозные колодки","category":"brakes","fits_brands":["BYD"] }, …]
+export OLX_PARTS_SEARCHES_FILE=./olx-parts-searches.json
+export OLX_PARTS_OUT=./olx-parts.csv
+export OLX_PARTS_PER_SEARCH=20
+export USD_UZS=12600        # UZS→USD for price_usd (admin verifies on review)
+node olx-parts-crawlee.mjs
+```
+Prices convert UZS→USD (original sum label + condition + city + source URL go into
+`description_ru` for the admin). Then **Admin → Parts → Import** (dry-run first),
+translate UZ/EN names, set OEM/fitment, publish. `category` ∈ engine, body,
+electrical, suspension, brakes, interior, other.
+
+## 5. Telegram collector
 
 ```bash
 # one-time: get api_id/api_hash at https://my.telegram.org, then mint a session:
