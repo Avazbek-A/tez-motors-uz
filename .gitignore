@@ -60,3 +60,6 @@ next-env.d.ts
 # Claude
 .claude/
 .hermes/
+
+# collector deps (installed on the box)
+deploy/collector/node_modules/
