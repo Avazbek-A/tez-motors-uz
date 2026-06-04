@@ -10,6 +10,7 @@ interface ErrorEvent {
   created_at: string;
 }
 interface EventAgg { event: string; last24h: number; last7d: number; total: number; lastSeen: string }
+interface VitalRow { metric: string; p75: number | null; samples: number; rating: string | null }
 interface Data {
   total: number;
   last24h: number;
@@ -41,6 +42,7 @@ function detailText(detail: Record<string, unknown> | null): string {
 export default function AdminErrorsPage() {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
+  const [vitals, setVitals] = useState<VitalRow[] | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/stats/errors")
@@ -48,7 +50,14 @@ export default function AdminErrorsPage() {
       .then((d) => setData(d && d.ok ? d : null))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+    fetch("/api/admin/stats/vitals")
+      .then((r) => r.json())
+      .then((d) => { if (d?.ok) setVitals(d.metrics || []); })
+      .catch(() => {});
   }, []);
+
+  const vitalColor = (r: string | null) =>
+    r === "good" ? "text-[var(--success,#16a34a)]" : r === "poor" ? "text-[var(--danger,#ef4444)]" : "text-muted-foreground";
 
   return (
     <div className="max-w-4xl">
@@ -60,6 +69,24 @@ export default function AdminErrorsPage() {
         Recent server errors. These are fail-open (they never break a request) and the dealer is
         alerted — this feed is for diagnosing them. {data && <span className="font-mono text-foreground">{data.last24h}</span>} in the last 24h.
       </p>
+
+      {/* Real-user Core Web Vitals (p75, last 7d) — the experience visitors get. */}
+      {vitals && vitals.some((v) => v.p75 != null) && (
+        <div className="mb-6">
+          <h2 className="text-sm font-semibold text-foreground mb-2">Core Web Vitals (real users, p75 · 7d)</h2>
+          <div className="flex flex-wrap gap-3">
+            {vitals.filter((v) => v.p75 != null).map((v) => (
+              <div key={v.metric} className="bg-card border border-border px-4 py-3 rounded">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">{v.metric}</div>
+                <div className={`text-lg font-mono ${vitalColor(v.rating)}`}>
+                  {v.metric === "CLS" ? v.p75!.toFixed(3) : `${Math.round(v.p75!)}ms`}
+                </div>
+                <div className="text-[10px] text-muted-foreground">{v.samples} samples</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* SLO summary: error volume by event tag (24h / 7d) so spikes stand out. */}
       {data && data.byEvent && data.byEvent.length > 0 && (
