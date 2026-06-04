@@ -77,6 +77,23 @@ const nextConfig: NextConfig = {
           { key: "Content-Security-Policy-Report-Only", value: csp },
         ],
       },
+      // Cookie-gated routes should NEVER be cached by intermediate proxies or
+      // a misconfigured CDN. Routes can still set their own Cache-Control if
+      // they intentionally want public caching (e.g. /api/cars list which uses
+      // s-maxage in-route — those headers come from the route response and
+      // override this global default).
+      {
+        source: "/api/admin/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
+      },
+      {
+        source: "/api/account/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
+      },
+      {
+        source: "/api/payments/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store, must-revalidate" }],
+      },
     ];
   },
 };
