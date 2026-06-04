@@ -16,9 +16,7 @@ import { escapeHtml as esc } from "@/lib/escape-html";
 // KV-backed so the cap is shared across Workers isolates.
 const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 5 * 60 * 1000, prefix: "receipt" });
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-()]/g, "");
-}
+import { loosePhone as normalizePhone } from "@/lib/phone";
 
 
 const COPY = {

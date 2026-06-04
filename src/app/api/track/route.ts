@@ -10,9 +10,7 @@ import { normalizeReferenceCode } from "@/lib/order-code";
 // shared across Workers isolates) to blunt brute-forcing the phone for a code.
 const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 5 * 60 * 1000, prefix: "track" });
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-()]/g, "");
-}
+import { loosePhone as normalizePhone } from "@/lib/phone";
 
 export async function GET(request: NextRequest) {
   try {
