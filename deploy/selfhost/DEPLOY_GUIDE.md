@@ -68,6 +68,11 @@ You do **not** need: a public IP, port-forwarding, Docker, or a paid plan.
 
 ## 3. Where each secret comes from
 
+> **📑 Full per-provider walkthrough for every key (Supabase, Telegram, Resend,
+> Payme, Click, Eskiz, WhatsApp, VAPID, Turnstile, analytics) is in
+> [`KEYS.md`](./KEYS.md)** — grouped by priority tier, with the exact dashboard
+> path and value for each. The table below is the short version.
+
 You'll paste these into `.env.local` in Step B. **Required** (the build fails
 without them); everything else is optional and fails open (the feature just
 stays off until you add its key).
