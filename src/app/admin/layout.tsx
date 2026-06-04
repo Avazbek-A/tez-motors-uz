@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone, Landmark
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,7 @@ const navGroups = [
       { href: "/admin/money", label: "Money", icon: Banknote },
       { href: "/admin/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/admin/finance", label: "Finance", icon: Receipt },
+      { href: "/admin/financing", label: "Financing & Insurance", icon: Landmark },
       { href: "/admin/ledger", label: "Ledger", icon: Wallet },
     ],
   },
