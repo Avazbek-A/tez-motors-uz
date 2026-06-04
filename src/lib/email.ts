@@ -259,6 +259,7 @@ export function reviewRequestEmail(
       body: car
         ? `Поздравляем с покупкой ${car}! Расскажите, как впечатления — ваш отзыв поможет другим покупателям.`
         : "Поздравляем с покупкой! Расскажите, как впечатления — ваш отзыв поможет другим покупателям.",
+      video: "Снимите короткое видео о вашем авто — его можно приложить ссылкой в форме отзыва (видео-отзывы вызывают больше доверия).",
       cta: "Оставить отзыв",
     },
     uz: {
@@ -267,6 +268,7 @@ export function reviewRequestEmail(
       body: car
         ? `${car} xaridingiz bilan tabriklaymiz! Taassurotlaringizni baham ko'ring — fikringiz boshqa xaridorlarga yordam beradi.`
         : "Xaridingiz bilan tabriklaymiz! Taassurotlaringizni baham ko'ring — fikringiz boshqa xaridorlarga yordam beradi.",
+      video: "Avtomobilingiz haqida qisqa video oling — uni fikr formasida havola sifatida qo'shishingiz mumkin (video-fikrlar ko'proq ishonch uyg'otadi).",
       cta: "Fikr qoldirish",
     },
     en: {
@@ -275,6 +277,7 @@ export function reviewRequestEmail(
       body: car
         ? `Congratulations on your ${car}! Tell us how it's going — your review helps other buyers.`
         : "Congratulations on your purchase! Tell us how it's going — your review helps other buyers.",
+      video: "Film a short clip of your car — you can add it as a link in the review form (video reviews build more trust).",
       cta: "Leave a review",
     },
   }[locale];
@@ -282,7 +285,8 @@ export function reviewRequestEmail(
     subject: copy.subject,
     html: layout(
       `<p style="margin:0 0 12px;font-size:16px;font-weight:bold">${copy.hi}</p>
-       <p style="margin:0 0 16px;font-size:14px;line-height:1.6">${copy.body}</p>
+       <p style="margin:0 0 12px;font-size:14px;line-height:1.6">${copy.body}</p>
+       <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#52525b">${copy.video}</p>
        ${btn(data.reviewUrl, copy.cta)}`,
     ),
   };

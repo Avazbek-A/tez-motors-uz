@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Star, Quote, Send, CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { Star, Quote, Send, CheckCircle, Loader2, AlertCircle, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +21,8 @@ const LABELS = {
     namePlaceholder: "Ваше имя",
     carPlaceholder: "Какой автомобиль купили?",
     reviewPlaceholder: "Расскажите о вашем опыте...",
+    videoPlaceholder: "Ссылка на видео-отзыв (необязательно)",
+    watchVideo: "Смотреть видео-отзыв",
     submit: "Отправить",
     successMsg: "Спасибо за отзыв! Он будет опубликован после модерации.",
     errorSend: "Ошибка отправки. Попробуйте ещё раз.",
@@ -36,6 +38,8 @@ const LABELS = {
     namePlaceholder: "Ismingiz",
     carPlaceholder: "Qaysi avtomobilni sotib oldingiz?",
     reviewPlaceholder: "Tajribangiz haqida gapirib bering...",
+    videoPlaceholder: "Video-fikr havolasi (ixtiyoriy)",
+    watchVideo: "Video-fikrni ko'rish",
     submit: "Yuborish",
     successMsg: "Fikr uchun rahmat! Moderatsiyadan keyin e'lon qilinadi.",
     errorSend: "Yuborishda xatolik. Qayta urinib ko'ring.",
@@ -51,6 +55,8 @@ const LABELS = {
     namePlaceholder: "Your name",
     carPlaceholder: "Which car did you buy?",
     reviewPlaceholder: "Tell us about your experience...",
+    videoPlaceholder: "Video review link (optional)",
+    watchVideo: "Watch video review",
     submit: "Submit",
     successMsg: "Thank you! Your review will be published after moderation.",
     errorSend: "Failed to send. Please try again.",
@@ -117,6 +123,7 @@ export default function ReviewsPage() {
           car_description: String(formData.get("car") ?? ""),
           review_text_ru: String(formData.get("review") ?? ""),
           rating,
+          ...(String(formData.get("video") ?? "").trim() ? { video_url: String(formData.get("video")).trim() } : {}),
           ...(prefillCarId ? { car_id: prefillCarId } : {}),
         }),
       });
@@ -207,6 +214,7 @@ export default function ReviewsPage() {
                 <Input name="name" placeholder={t.namePlaceholder} required />
                 <Input name="car" placeholder={t.carPlaceholder} defaultValue={prefillCar} />
                 <Textarea name="review" placeholder={t.reviewPlaceholder} rows={4} required />
+                <Input name="video" type="url" placeholder={t.videoPlaceholder} />
 
                 {submitError && (
                   <p className="text-sm text-neon-pink flex items-center gap-1.5">
@@ -238,6 +246,17 @@ export default function ReviewsPage() {
                 <p className="text-white/80 text-sm leading-relaxed mb-6">
                   {getReviewText(review)}
                 </p>
+                {review.video_url && (
+                  <a
+                    href={review.video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mb-6 -mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    {t.watchVideo}
+                  </a>
+                )}
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div>
                     <p className="font-semibold text-white">{review.client_name}</p>
