@@ -460,6 +460,12 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [videoUrl, setVideoUrl] = useState(car?.video_url || "");
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
   const [inventoryStatus, setInventoryStatus] = useState<string>(car?.inventory_status || "available");
+  const [listingType, setListingType] = useState<string>(car?.listing_type || "new");
+  const [mileage, setMileage] = useState<string>(car?.mileage != null ? String(car.mileage) : "0");
+  const [vin, setVin] = useState(car?.vin || "");
+  const [ownersCount, setOwnersCount] = useState<string>(car?.owners_count != null ? String(car.owners_count) : "");
+  const [accidentFree, setAccidentFree] = useState<boolean>(car?.accident_free ?? false);
+  const [conditionGrade, setConditionGrade] = useState<string>(car?.condition_grade || "");
   const [images, setImages] = useState<string[]>(car?.images || []);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -544,7 +550,12 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       video_url: videoUrl || null,
       is_hot_offer: isHotOffer,
       inventory_status: inventoryStatus,
-      mileage: 0,
+      mileage: parseInt(mileage) || 0,
+      listing_type: listingType,
+      vin: listingType === "used" ? (vin || null) : null,
+      owners_count: listingType === "used" && ownersCount ? parseInt(ownersCount) : null,
+      accident_free: listingType === "used" ? accidentFree : null,
+      condition_grade: listingType === "used" && conditionGrade ? conditionGrade : null,
       images,
       specs: car?.specs || {},
     };
@@ -621,6 +632,53 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               <Input value={color} onChange={(e) => setColor(e.target.value)} />
             </div>
           </div>
+
+          {/* Listing type (New / Used) + mileage. Used reveals disclosure fields. */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Listing type</label>
+              <select
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value)}
+                className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
+              >
+                <option value="new">New (import)</option>
+                <option value="used">Used (pre-owned)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Mileage (km)</label>
+              <Input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} />
+            </div>
+          </div>
+
+          {listingType === "used" && (
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-muted/20 p-3">
+              <div>
+                <label className="text-sm font-medium mb-1 block">VIN</label>
+                <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder="Optional" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Owners</label>
+                <Input type="number" value={ownersCount} onChange={(e) => setOwnersCount(e.target.value)} placeholder="e.g. 1" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Condition</label>
+                <select value={conditionGrade} onChange={(e) => setConditionGrade(e.target.value)} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
+                  <option value="">—</option>
+                  <option value="excellent">Excellent</option>
+                  <option value="good">Good</option>
+                  <option value="fair">Fair</option>
+                </select>
+              </div>
+              <div className="flex items-end pb-2">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={accidentFree} onChange={(e) => setAccidentFree(e.target.checked)} />
+                  Accident-free
+                </label>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

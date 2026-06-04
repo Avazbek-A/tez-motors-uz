@@ -74,6 +74,9 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     price_min: searchParams.get("price_min") ? parseInt(searchParams.get("price_min")!) : initialFilters?.price_min,
     price_max: searchParams.get("price_max") ? parseInt(searchParams.get("price_max")!) : initialFilters?.price_max,
     monthly_max: searchParams.get("monthly_max") ? parseInt(searchParams.get("monthly_max")!) : initialFilters?.monthly_max,
+    // Used-car section pins listing_type via initialFilters; mileage_max is a user filter.
+    listing_type: searchParams.get("listing_type") || initialFilters?.listing_type || undefined,
+    mileage_max: searchParams.get("mileage_max") ? parseInt(searchParams.get("mileage_max")!) : initialFilters?.mileage_max,
     search: searchParams.get("q") || undefined,
   }));
 
@@ -90,6 +93,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     if (newFilters.price_min) params.set("price_min", String(newFilters.price_min));
     if (newFilters.price_max) params.set("price_max", String(newFilters.price_max));
     if (newFilters.monthly_max) params.set("monthly_max", String(newFilters.monthly_max));
+    if (newFilters.mileage_max) params.set("mileage_max", String(newFilters.mileage_max));
     if (newFilters.search) params.set("q", newFilters.search);
     if (newSort !== "default") params.set("sort", newSort);
     if (newPage > 1) params.set("page", String(newPage));
@@ -130,6 +134,8 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     if (filters.price_min) params.set("price_min", String(filters.price_min));
     if (filters.price_max) params.set("price_max", String(filters.price_max));
     if (filters.monthly_max) params.set("monthly_max", String(filters.monthly_max));
+    if (filters.listing_type) params.set("listing_type", filters.listing_type);
+    if (filters.mileage_max) params.set("mileage_max", String(filters.mileage_max));
     if (sortBy !== "default") params.set("sort", sortBy);
 
     fetch(`/api/cars?${params.toString()}`)
