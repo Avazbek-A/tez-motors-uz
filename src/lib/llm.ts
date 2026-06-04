@@ -196,3 +196,51 @@ export async function generateAssistantReply(args: {
 export async function llmText(args: { system: string; user: string; maxTokens?: number }): Promise<string | null> {
   return callChat({ system: args.system, messages: [{ role: "user", content: args.user }], maxTokens: args.maxTokens ?? 400 });
 }
+
+/** Pure: OpenAI-compatible multimodal messages (text + image parts). Unit-tested. */
+export function buildVisionMessages(system: string, user: string, images: string[]) {
+  return [
+    { role: "system", content: system },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: user },
+        ...images.slice(0, 8).map((url) => ({ type: "image_url", image_url: { url } })),
+      ],
+    },
+  ];
+}
+
+/**
+ * Vision completion — reads images (screenshots / data URLs / http URLs) into
+ * text. Used to defeat AutoHome's font/pseudo-element obfuscation (read pixels).
+ * Supported via the OpenAI-compatible path only — free local Ollama `qwen2.5-vl`
+ * (or GPT-4o / Groq vision). Returns null on the Anthropic provider or any
+ * failure (caller fails open). `LLM_VISION_MODEL` overrides the model.
+ */
+export async function llmVision(args: { system: string; user: string; images: string[]; maxTokens?: number }): Promise<string | null> {
+  if (!llmConfigured() || resolveProvider() !== "openai" || args.images.length === 0) return null;
+  const apiKey = process.env.LLM_API_KEY || "";
+  const url = process.env.LLM_API_URL || OLLAMA_URL;
+  const model = process.env.LLM_VISION_MODEL || "qwen2.5-vl";
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
+  const body = JSON.stringify({
+    model,
+    max_tokens: args.maxTokens ?? 1800,
+    temperature: 0.1,
+    stream: false,
+    messages: buildVisionMessages(args.system, args.user, args.images),
+  });
+  try {
+    const res = await fetch(openaiChatUrl(url), { method: "POST", headers, body });
+    if (!res.ok) {
+      console.error("LLM vision non-OK", res.status);
+      return null;
+    }
+    return parseChatResponse("openai", await res.json());
+  } catch (err) {
+    console.error("LLM vision failed", err);
+    return null;
+  }
+}

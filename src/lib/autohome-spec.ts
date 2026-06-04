@@ -131,6 +131,66 @@ export function parseGlobalAutohome(html: string, sourceUrl: string): SpecData |
   };
 }
 
+/**
+ * Normalize a vision LLM's JSON (read from screenshots of an obfuscated CN config
+ * page) into SpecData. Tolerant: strips code fences, finds the first JSON object,
+ * accepts `{brand?, model?, trims:[{name, price?, params:{group:{k:v}}}]}`.
+ * Returns null if it can't recover a usable structure.
+ */
+export function parseVisionSpec(raw: string, sourceUrl: string): SpecData | null {
+  if (!raw) return null;
+  let text = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  text = text.slice(start, end + 1);
+  let obj: { brand?: unknown; model?: unknown; trims?: unknown };
+  try {
+    obj = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const rawTrims = Array.isArray(obj.trims) ? obj.trims : [];
+  const groupOrder: string[] = [];
+  const trims: SpecTrim[] = [];
+  for (const rt of rawTrims) {
+    if (!rt || typeof rt !== "object") continue;
+    const t = rt as { name?: unknown; price?: unknown; price_raw?: unknown; year?: unknown; params?: unknown };
+    const params: Record<string, Record<string, string>> = {};
+    const rp = t.params && typeof t.params === "object" ? (t.params as Record<string, unknown>) : {};
+    for (const [g, section] of Object.entries(rp)) {
+      if (!section || typeof section !== "object") continue;
+      const gName = String(g).trim();
+      if (!gName) continue;
+      if (!groupOrder.includes(gName)) groupOrder.push(gName);
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(section as Record<string, unknown>)) {
+        const kk = String(k).trim();
+        const vv = v == null ? "" : String(v).trim();
+        if (kk && vv && vv !== "-") out[kk] = vv;
+      }
+      if (Object.keys(out).length) params[gName] = out;
+    }
+    const price = t.price_raw ?? t.price;
+    trims.push({
+      name: String(t.name ?? `Trim ${trims.length + 1}`).trim(),
+      price_raw: price != null && String(price).trim() ? String(price).trim() : null,
+      year: typeof t.year === "number" ? t.year : null,
+      params,
+    });
+  }
+  if (trims.length === 0 || groupOrder.length === 0) return null;
+  return {
+    source: "cn",
+    source_url: sourceUrl,
+    captured_at: new Date().toISOString(),
+    brand: typeof obj.brand === "string" ? obj.brand.trim() : undefined,
+    model: typeof obj.model === "string" ? obj.model.trim() : undefined,
+    groups: groupOrder,
+    trims,
+  };
+}
+
 /** Fetch + parse a global AutoHome config URL. Fail-open to null. */
 export async function fetchGlobalAutohomeSpec(url: string): Promise<SpecData | null> {
   if (!isAutohomeGlobalUrl(url)) return null;

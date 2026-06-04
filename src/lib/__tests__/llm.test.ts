@@ -5,6 +5,7 @@ import {
   llmConfigured,
   buildChatRequest,
   parseChatResponse,
+  buildVisionMessages,
 } from "../llm";
 
 describe("resolveProvider", () => {
@@ -66,6 +67,18 @@ describe("buildChatRequest", () => {
     const body = JSON.parse(r.body);
     expect(body.system).toBe("SYS");
     expect(body.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+});
+
+describe("buildVisionMessages", () => {
+  it("builds OpenAI multimodal content (text + image parts, capped at 8)", () => {
+    const imgs = Array.from({ length: 10 }, (_, i) => `data:image/png;base64,IMG${i}`);
+    const msgs = buildVisionMessages("SYS", "read this", imgs);
+    expect(msgs[0]).toEqual({ role: "system", content: "SYS" });
+    const content = msgs[1].content as { type: string; text?: string; image_url?: { url: string } }[];
+    expect(content[0]).toEqual({ type: "text", text: "read this" });
+    expect(content.filter((c) => c.type === "image_url")).toHaveLength(8); // capped
+    expect(content[1]).toEqual({ type: "image_url", image_url: { url: "data:image/png;base64,IMG0" } });
   });
 });
 

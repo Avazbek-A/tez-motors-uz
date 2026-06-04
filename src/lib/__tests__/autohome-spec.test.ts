@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseGlobalAutohome, isAutohomeGlobalUrl, isAutohomeCnConfigUrl } from "../autohome-spec";
+import { parseGlobalAutohome, parseVisionSpec, isAutohomeGlobalUrl, isAutohomeCnConfigUrl } from "../autohome-spec";
 
 // Mirrors the real global.autohome.com __NEXT_DATA__ shape (titlelist groups with
 // per-trim values[], datalist trims with paramconfList fallback).
@@ -61,6 +61,32 @@ describe("parseGlobalAutohome", () => {
 
   it("returns null for HTML without __NEXT_DATA__", () => {
     expect(parseGlobalAutohome("<html>nope</html>", "https://global.autohome.com/x")).toBeNull();
+  });
+});
+
+describe("parseVisionSpec (vision LLM JSON → SpecData)", () => {
+  it("parses fenced JSON, derives ordered groups, drops empties", () => {
+    const raw = "```json\n" + JSON.stringify({
+      brand: "BYD",
+      model: "Song Plus",
+      trims: [
+        { name: "DM-i 110km", price: "¥159,800", params: { Engine: { Displacement: "1.5L", Power: "" }, Body: { Length: "4775mm" } } },
+        { name: "DM-i 150km", params: { Engine: { Displacement: "1.5L" }, Body: { Length: "4775mm", Wheelbase: "-" } } },
+      ],
+    }) + "\n```";
+    const spec = parseVisionSpec(raw, "https://car.autohome.com.cn/config/series/5569.html")!;
+    expect(spec.source).toBe("cn");
+    expect(spec.brand).toBe("BYD");
+    expect(spec.groups).toEqual(["Engine", "Body"]);
+    expect(spec.trims).toHaveLength(2);
+    expect(spec.trims[0].params.Engine.Displacement).toBe("1.5L");
+    expect(spec.trims[0].params.Engine).not.toHaveProperty("Power"); // empty dropped
+    expect(spec.trims[1].params.Body).not.toHaveProperty("Wheelbase"); // "-" dropped
+    expect(spec.trims[0].price_raw).toBe("¥159,800");
+  });
+  it("returns null for unrecoverable input", () => {
+    expect(parseVisionSpec("sorry, I cannot read this", "https://x")).toBeNull();
+    expect(parseVisionSpec(JSON.stringify({ trims: [] }), "https://x")).toBeNull();
   });
 });
 

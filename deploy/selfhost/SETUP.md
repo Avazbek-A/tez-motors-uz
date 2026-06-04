@@ -142,7 +142,8 @@ operator briefings, marketing copy, lead/supplier draft replies, the "Find my
 car" assistant and market-text parsing all work at $0/token.
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull qwen2.5:7b-instruct      # great RU/UZ; qwen2.5:3b-instruct is faster
+ollama pull qwen2.5:7b-instruct      # text: great RU/UZ; qwen2.5:3b-instruct is faster
+ollama pull qwen2.5-vl               # VISION: reads obfuscated AutoHome CN spec screenshots
 sudo systemctl enable --now ollama   # serves http://localhost:11434
 ```
 Add to `.env.local`, then `sudo systemctl restart tez-motors`:
@@ -150,8 +151,13 @@ Add to `.env.local`, then `sudo systemctl restart tez-motors`:
 LLM_PROVIDER=openai
 LLM_API_URL=http://localhost:11434/v1
 LLM_MODEL=qwen2.5:7b-instruct
+LLM_VISION_MODEL=qwen2.5-vl          # for the AutoHome CN spec-sheet scrape
 # LLM_API_KEY=   (leave empty for local Ollama)
 ```
+The spec extractor (deploy/collector/extractor.mjs) renders obfuscated
+car.autohome.com.cn config pages and screenshots them; the vision model reads the
+parameter table into a clean spec sheet (the global.autohome.com EN site needs no
+vision — it's parsed directly).
 Verify in the admin: **Setup → AI brain → Test connection** (should reply OK).
 
 ## 11. Market collectors + media extractor (run on this box)

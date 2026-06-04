@@ -68,6 +68,47 @@ async function extract(url) {
   }
 }
 
+/**
+ * Capture a (possibly obfuscated, JS-rendered) AutoHome CN config page for the
+ * spec sheet: slice screenshots of the full parameter table (so a vision LLM can
+ * read the values that font/pseudo-element tricks hide from the DOM text) + the
+ * gallery image URLs. The app feeds the screenshots to llmVision.
+ */
+async function captureSpec(url) {
+  const b = await getBrowser();
+  const ctx = await b.newContext({ userAgent: UA, viewport: { width: 1400, height: 2000 } });
+  const page = await ctx.newPage();
+  try {
+    await page.goto(url, { waitUntil: "networkidle", timeout: NAV_TIMEOUT });
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.body.scrollHeight; y += 1000) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 200)); }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForTimeout(1200);
+    const images = await page.evaluate(() => {
+      const out = new Set();
+      const push = (u) => { if (u && /^https?:\/\//.test(u) && /\.(jpe?g|png|webp)(\?|$)/i.test(u)) out.add(u); };
+      for (const img of Array.from(document.querySelectorAll("img"))) { push(img.currentSrc || img.src); push(img.getAttribute("data-src")); push(img.getAttribute("data-original")); }
+      return Array.from(out);
+    });
+    const JUNK = /sprite|favicon|\bicons?\b|logo|placeholder|blank[._-]|avatar|loading|1x1|spacer|pixel/i;
+    const gallery = images.filter((u) => !JUNK.test(u)).slice(0, 12);
+
+    const total = await page.evaluate(() => document.body.scrollHeight);
+    const VH = 2000, MAX = 6;
+    const screenshots = [];
+    for (let i = 0, y = 0; y < total && i < MAX; i++, y += VH) {
+      await page.evaluate((yy) => window.scrollTo(0, yy), y);
+      await page.waitForTimeout(200);
+      const buf = await page.screenshot({ type: "jpeg", quality: 70 });
+      screenshots.push("data:image/jpeg;base64," + buf.toString("base64"));
+    }
+    return { screenshots, images: gallery, title: await page.title() };
+  } finally {
+    await ctx.close();
+  }
+}
+
 /** Render a page (with its print CSS) to a styled A4 PDF — used for spec sheets. */
 async function renderPdf(url) {
   const b = await getBrowser();
@@ -90,7 +131,7 @@ const server = createServer((req, res) => {
   const json = (code, obj) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
   if (req.method === "GET" && req.url === "/health") return json(200, { ok: true });
   const route = (req.url || "").split("?")[0];
-  if (req.method !== "POST" || (route !== "/extract" && route !== "/render-pdf")) return json(404, { error: "not found" });
+  if (req.method !== "POST" || (route !== "/extract" && route !== "/render-pdf" && route !== "/spec")) return json(404, { error: "not found" });
   if (SECRET) {
     const auth = req.headers["authorization"] || "";
     if (auth !== `Bearer ${SECRET}`) return json(401, { error: "unauthorized" });
@@ -109,6 +150,15 @@ const server = createServer((req, res) => {
       } catch (e) {
         console.error("render-pdf failed", e?.message || e);
         json(502, { error: "render failed" }); // app falls back to raw-text PDF
+      }
+      return;
+    }
+    if (route === "/spec") {
+      try {
+        json(200, await captureSpec(url));
+      } catch (e) {
+        console.error("spec capture failed", e?.message || e);
+        json(200, { screenshots: [], images: [] }); // fail-open
       }
       return;
     }
