@@ -74,7 +74,16 @@ export async function POST(request: NextRequest) {
       }
       csvText = await file.text();
     } else {
+      // Raw body path also bounded so a compromised-admin payload can't OOM
+      // the worker (Content-Length pre-check + post-read length check).
+      const cl = Number(request.headers.get("content-length") || 0);
+      if (cl && cl > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: "CSV too large (max 5 MB)" }, { status: 413 });
+      }
       csvText = await request.text();
+      if (csvText.length > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: "CSV too large (max 5 MB)" }, { status: 413 });
+      }
     }
   } catch {
     return NextResponse.json({ error: "Failed to read CSV body" }, { status: 400 });
