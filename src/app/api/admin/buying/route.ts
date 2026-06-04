@@ -14,6 +14,7 @@ import {
   type FuelKind,
 } from "@/lib/import-cost";
 import { demandScore, opportunityScore, verdict, recommendedQty } from "@/lib/buying-brain";
+import { aggregatePreorderDemand, modelKey } from "@/lib/procurement-demand";
 
 /**
  * Buying & pricing brain — fuses demand (inquiries/saved-searches/watches/
@@ -58,6 +59,12 @@ export async function GET(request: NextRequest) {
     ]);
 
     const config = mergeConfig(cfgRes.data?.values);
+
+    // Pre-order demand (deposited = committed) keyed on the SAME brand|model key,
+    // so made-to-order demand fuses with in-stock car demand. This is the signal
+    // the buying brain was previously blind to (pre-orders reference
+    // model_catalog, not cars). Used below once modelMeta is built.
+    const preorderDemand = await aggregatePreorderDemand(supabase);
 
     // car_id → model key + a representative fuel for the model.
     const carToKey = new Map<string, string>();
@@ -108,15 +115,29 @@ export async function GET(request: NextRequest) {
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: p.brand as string, model: p.model as string, fuel: "petrol" });
     }
 
-    // Score every model that has market data OR demand.
-    const candidates = new Set<string>([...marketByKey.keys(), ...demand.keys()]);
+    // Surface pre-order-only models too: a model nobody stocks but several
+    // people pre-ordered is exactly what to import. Seed meta from the catalog.
+    for (const [k, pd] of preorderDemand) {
+      if (!modelMeta.has(k)) modelMeta.set(k, { brand: pd.brand, model: pd.model, fuel: "petrol" });
+    }
+
+    // Score every model that has market data OR demand OR pre-orders.
+    const candidates = new Set<string>([...marketByKey.keys(), ...demand.keys(), ...preorderDemand.keys()]);
     const rows = [];
     for (const k of candidates) {
       const meta = modelMeta.get(k);
       if (!meta) continue;
       const d = demand.get(k) || { inquiries: 0, watches: 0, favorites: 0 };
       const savedSearches = savedByBrand.get(meta.brand.toLowerCase()) || 0;
-      const dScore = demandScore({ inquiries: d.inquiries, watches: d.watches, favorites: d.favorites, savedSearches });
+      const pre = preorderDemand.get(k) || { total: 0, deposited: 0 };
+      const dScore = demandScore({
+        inquiries: d.inquiries,
+        watches: d.watches,
+        favorites: d.favorites,
+        savedSearches,
+        preordersTotal: pre.total,
+        preordersDeposited: pre.deposited,
+      });
 
       const mk = marketByKey.get(k);
       const marketMedian = mk ? median(mk.prices) : null;
@@ -154,6 +175,8 @@ export async function GET(request: NextRequest) {
         model: meta.model,
         fuel: meta.fuel,
         demand: { ...d, savedSearches },
+        preorders: { total: pre.total, deposited: pre.deposited },
+        committed: pre.deposited > 0, // money is down — import against this first
         demandScore: dScore,
         marketMedianUsd: marketMedian,
         marketSample: sampleSize,
@@ -165,7 +188,8 @@ export async function GET(request: NextRequest) {
         suggestedPriceUsd,
         opportunityScore: score,
         verdict: verdict(score, marginPct),
-        recommendedQty: recommendedQty(dScore, marginPct),
+        // Never recommend fewer than the units already paid for via deposits.
+        recommendedQty: Math.max(recommendedQty(dScore, marginPct), pre.deposited),
       });
     }
 
