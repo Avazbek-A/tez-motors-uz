@@ -19,7 +19,7 @@ import { RelatedCars } from "@/components/catalog/related-cars";
 import { FavoriteButton } from "@/components/catalog/favorite-button";
 import { useRecentlyViewed } from "@/hooks/use-recently-viewed";
 import { track, FUNNEL } from "@/lib/analytics";
-import { formatPrice, whatsappLink } from "@/lib/utils";
+import { formatPrice, whatsappLink, telegramLink } from "@/lib/utils";
 import { estimatedMonthlyFrom, FINANCE_DEFAULTS } from "@/lib/finance";
 import { localizedPath } from "@/lib/locale-path";
 import { useSiteSettings } from "@/lib/site-settings-context";
@@ -98,6 +98,7 @@ export default function CarDetailPage() {
       ? `Assalomu alaykum! ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}) qiziqtiryapti. Mavjudligi va shartlari bo'yicha ma'lumot bering.`
       : `Hello! I'm interested in the ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}). Could you share availability and terms?`;
   const waHref = whatsappLink(settings.whatsapp, waMessage);
+  const tgHref = telegramLink(settings.telegram);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,15 +290,29 @@ export default function CarDetailPage() {
                 </Button>
               )}
 
+              {/* Telegram is the primary contact CTA in Uzbekistan; WhatsApp is a
+                  secondary text link beneath. (Telegram t.me links can't carry a
+                  prefilled message — they just open the chat.) */}
+              {tgHref && (
+                <a
+                  href={tgHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full h-12 mb-2 rounded-xl bg-[#229ED9] hover:bg-[#1c8abf] text-white font-semibold transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                  {locale === "ru" ? "Написать в Telegram" : locale === "uz" ? "Telegram'da yozish" : "Chat on Telegram"}
+                </a>
+              )}
               {waHref && (
                 <a
                   href={waHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full h-12 mb-4 rounded-xl bg-[#25D366] hover:bg-[#1ebe5b] text-white font-semibold transition-colors"
+                  className="flex items-center justify-center gap-2 w-full mb-4 text-sm text-white/60 hover:text-white transition-colors"
                 >
-                  <MessageCircle className="w-5 h-5" />
-                  {locale === "ru" ? "Написать в WhatsApp" : locale === "uz" ? "WhatsAppda yozish" : "Chat on WhatsApp"}
+                  <MessageCircle className="w-4 h-4" />
+                  {locale === "ru" ? "или в WhatsApp" : locale === "uz" ? "yoki WhatsAppda" : "or on WhatsApp"}
                 </a>
               )}
 

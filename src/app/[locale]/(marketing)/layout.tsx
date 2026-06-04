@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { TelegramButton } from "@/components/shared/telegram-button";
 import { WhatsAppButton } from "@/components/shared/whatsapp-button";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
 import { CallbackWidget } from "@/components/shared/callback-widget";
@@ -21,6 +22,9 @@ export default async function LocaleMarketingLayout({
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      {/* Floating contact stack — Telegram is the primary touch point in
+          Uzbekistan; WhatsApp is kept as a secondary option above it. */}
+      <TelegramButton />
       <WhatsAppButton />
       <CallbackWidget />
       <FavoritesPill />
