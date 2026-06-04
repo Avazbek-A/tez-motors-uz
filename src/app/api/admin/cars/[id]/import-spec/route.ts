@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
-import { fetchGlobalAutohomeSpec, parseVisionSpec, autohomeGlobalImageUrl, isAutohomeGlobalUrl, isAutohomeCnConfigUrl, type SpecData } from "@/lib/autohome-spec";
+import { fetchGlobalAutohome, parseVisionSpec, autohomeGlobalImageUrl, isAutohomeGlobalUrl, isAutohomeCnConfigUrl, type SpecData } from "@/lib/autohome-spec";
 import { isSafeRemoteUrl, ingestImageUrl } from "@/lib/media-ingest";
 import { llmVision } from "@/lib/llm";
 
@@ -41,7 +41,7 @@ const VISION_SYSTEM = [
   'Output STRICT JSON only, no commentary: {"brand":"","model":"","trims":[{"name":"","price":"","params":{"GroupName":{"ParamName":"value"}}}]}',
 ].join(" ");
 
-async function captureCnSpec(url: string): Promise<{ screenshots: string[]; images: string[] } | null> {
+async function captureSpecScreenshots(url: string): Promise<{ screenshots: string[]; images: string[] } | null> {
   const base = process.env.EXTRACTOR_URL;
   if (!base) return null;
   try {
@@ -57,6 +57,31 @@ async function captureCnSpec(url: string): Promise<{ screenshots: string[]; imag
   } catch {
     return null;
   }
+}
+
+interface VisionResult { spec: SpecData | null; images: string[]; fail?: { reason: string; message: string; status: number } }
+
+/**
+ * Render → screenshot → vision-LLM → SpecData. Used for obfuscated CN config
+ * pages AND client-rendered global pages whose params aren't in the server HTML.
+ */
+async function visionExtract(url: string): Promise<VisionResult> {
+  if (!process.env.EXTRACTOR_URL) {
+    return { spec: null, images: [], fail: { reason: "needs_extractor", message: "This AutoHome page renders its data in the browser. Enable the Vostro spec extractor (EXTRACTOR_URL) + a vision model (Ollama qwen2.5-vl), or use a global config URL that loads server-side.", status: 422 } };
+  }
+  const cap = await captureSpecScreenshots(url);
+  if (!cap || !cap.screenshots?.length) {
+    return { spec: null, images: [], fail: { reason: "capture_failed", message: "The spec extractor couldn't capture that page (down, or it didn't render).", status: 502 } };
+  }
+  const vis = await llmVision({ system: VISION_SYSTEM, user: "Extract the full configuration table from these screenshots into the JSON schema.", images: cap.screenshots, maxTokens: 3000 });
+  if (!vis) {
+    return { spec: null, images: cap.images || [], fail: { reason: "vision_unavailable", message: "No vision model configured. Set LLM_PROVIDER=openai + LLM_API_URL (Ollama) and `ollama pull qwen2.5-vl`.", status: 422 } };
+  }
+  const spec = parseVisionSpec(vis, url);
+  if (!spec) {
+    return { spec: null, images: cap.images || [], fail: { reason: "parse_failed", message: "Couldn't read a usable spec table from the page screenshots.", status: 422 } };
+  }
+  return { spec, images: cap.images || [] };
 }
 
 /**
@@ -87,31 +112,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let spec: SpecData | null = null;
   let scraped: string[] = []; // gallery images (hotlinked AutoHome URLs; mirror re-hosts later)
   if (isAutohomeGlobalUrl(url)) {
-    spec = await fetchGlobalAutohomeSpec(url);
-    if (!spec) return NextResponse.json({ ok: false, reason: "parse_failed", message: "Couldn't read spec data from that global AutoHome page." }, { status: 422 });
-    // Scrape the FULL image gallery (rendered via the extractor) for this series.
+    // Clean path: parse the server-rendered config JSON.
+    const { spec: cleanSpec, seriesId } = await fetchGlobalAutohome(url);
+    spec = cleanSpec;
+    if (!spec) {
+      // Client-rendered global page (empty server HTML) → auto-fall-back to the
+      // browser extractor + vision, so every AutoHome URL works from one button.
+      const r = await visionExtract(url);
+      if (r.fail) return NextResponse.json({ ok: false, ...r.fail }, { status: r.fail.status });
+      spec = r.spec!;
+      spec.source = "global";
+    }
+    if (seriesId && !spec.series_id) spec.series_id = seriesId;
+    // Scrape the FULL image gallery for this series (works for both paths).
     if (process.env.EXTRACTOR_URL && spec.series_id) {
       const galleryUrl = autohomeGlobalImageUrl(url, spec.series_id);
       if (galleryUrl) scraped = await scrapeGalleryImages(galleryUrl);
     }
   } else if (isAutohomeCnConfigUrl(url)) {
     // Obfuscated CN page: Vostro Playwright screenshots → vision LLM reads pixels.
-    if (!process.env.EXTRACTOR_URL) {
-      return NextResponse.json({ ok: false, reason: "cn_needs_extractor", message: "Chinese AutoHome config pages are obfuscated. Use the global site (global.autohome.com/en-hk/config/spec/<id>) or enable the Vostro spec extractor (EXTRACTOR_URL) + a vision model (Ollama qwen2.5-vl)." }, { status: 422 });
-    }
-    const cap = await captureCnSpec(url);
-    if (!cap || !cap.screenshots?.length) {
-      return NextResponse.json({ ok: false, reason: "capture_failed", message: "The spec extractor couldn't capture that page (down, or the page didn't render)." }, { status: 502 });
-    }
-    const vis = await llmVision({ system: VISION_SYSTEM, user: "Extract the full configuration table from these screenshots into the JSON schema.", images: cap.screenshots, maxTokens: 3000 });
-    if (!vis) {
-      return NextResponse.json({ ok: false, reason: "vision_unavailable", message: "No vision model configured. Set LLM_PROVIDER=openai + LLM_API_URL (Ollama) and `ollama pull qwen2.5-vl`." }, { status: 422 });
-    }
-    spec = parseVisionSpec(vis, url);
-    if (!spec) {
-      return NextResponse.json({ ok: false, reason: "parse_failed", message: "Couldn't read a usable spec table from the page screenshots — try the global AutoHome site." }, { status: 422 });
-    }
-    if (Array.isArray(cap.images) && cap.images.length) scraped = cap.images;
+    const r = await visionExtract(url);
+    if (r.fail) return NextResponse.json({ ok: false, ...r.fail }, { status: r.fail.status });
+    spec = r.spec!;
+    scraped = r.images;
   } else {
     return NextResponse.json({ ok: false, reason: "unsupported_url", message: "Paste a global.autohome.com config/spec URL (or a car.autohome.com.cn/config URL once the extractor is enabled)." }, { status: 422 });
   }

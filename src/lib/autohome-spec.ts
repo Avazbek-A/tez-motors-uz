@@ -207,15 +207,43 @@ export function parseVisionSpec(raw: string, sourceUrl: string): SpecData | null
   };
 }
 
-/** Fetch + parse a global AutoHome config URL. Fail-open to null. */
-export async function fetchGlobalAutohomeSpec(url: string): Promise<SpecData | null> {
-  if (!isAutohomeGlobalUrl(url)) return null;
+/**
+ * Pure: read the AutoHome series id from a global page's __NEXT_DATA__. Works even
+ * when initData is empty (client-rendered pages) — pageProps.seriesId is still set.
+ * The series id powers the image-gallery scrape.
+ */
+export function extractGlobalSeriesId(html: string): number | null {
+  const m = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+  if (!m) return null;
   try {
-    const res = await fetch(url, { headers: { "user-agent": UA, accept: "text/html" }, signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) return null;
-    const html = (await res.text()).slice(0, 6_000_000);
-    return parseGlobalAutohome(html, url);
+    const pp = JSON.parse(m[1])?.props?.pageProps ?? {};
+    const sid = pp?.initData?.bread?.seriesId ?? pp?.seriesId;
+    const n = typeof sid === "number" ? sid : Number(sid);
+    return Number.isFinite(n) && n > 0 ? n : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Fetch a global AutoHome config URL and return BOTH the parsed spec (null when
+ * the page renders its data client-side, i.e. empty initData) and the series id
+ * (available even then). Fail-open. The caller falls back to the browser
+ * extractor + vision when `spec` is null.
+ */
+export async function fetchGlobalAutohome(url: string): Promise<{ spec: SpecData | null; seriesId: number | null }> {
+  if (!isAutohomeGlobalUrl(url)) return { spec: null, seriesId: null };
+  try {
+    const res = await fetch(url, { headers: { "user-agent": UA, accept: "text/html" }, signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) return { spec: null, seriesId: null };
+    const html = (await res.text()).slice(0, 6_000_000);
+    return { spec: parseGlobalAutohome(html, url), seriesId: extractGlobalSeriesId(html) };
+  } catch {
+    return { spec: null, seriesId: null };
+  }
+}
+
+/** Fetch + parse a global AutoHome config URL. Fail-open to null. */
+export async function fetchGlobalAutohomeSpec(url: string): Promise<SpecData | null> {
+  return (await fetchGlobalAutohome(url)).spec;
 }

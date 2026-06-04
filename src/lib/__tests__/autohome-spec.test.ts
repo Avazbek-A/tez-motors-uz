@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseGlobalAutohome, parseVisionSpec, isAutohomeGlobalUrl, isAutohomeCnConfigUrl } from "../autohome-spec";
+import { parseGlobalAutohome, parseVisionSpec, extractGlobalSeriesId, isAutohomeGlobalUrl, isAutohomeCnConfigUrl } from "../autohome-spec";
 
 // Mirrors the real global.autohome.com __NEXT_DATA__ shape (titlelist groups with
 // per-trim values[], datalist trims with paramconfList fallback).
@@ -87,6 +87,19 @@ describe("parseVisionSpec (vision LLM JSON → SpecData)", () => {
   it("returns null for unrecoverable input", () => {
     expect(parseVisionSpec("sorry, I cannot read this", "https://x")).toBeNull();
     expect(parseVisionSpec(JSON.stringify({ trims: [] }), "https://x")).toBeNull();
+  });
+});
+
+describe("extractGlobalSeriesId", () => {
+  const wrap = (pp: object) => `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: pp } })}</script>`;
+  it("reads seriesId from bread", () => {
+    expect(extractGlobalSeriesId(wrap({ initData: { bread: { seriesId: 878 } } }))).toBe(878);
+  });
+  it("falls back to pageProps.seriesId when initData is empty (client-rendered page)", () => {
+    expect(extractGlobalSeriesId(wrap({ initData: {}, seriesId: 478, specId: 1735 }))).toBe(478);
+  });
+  it("returns null when absent", () => {
+    expect(extractGlobalSeriesId("<html>nope</html>")).toBeNull();
   });
 });
 
