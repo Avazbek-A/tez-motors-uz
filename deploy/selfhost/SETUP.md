@@ -39,14 +39,19 @@ chmod 600 .env.local   # keep secrets readable only by you
 ## 3. Build + smoke-test
 ```bash
 npm ci
-npm run build
-npm run start          # serves on http://localhost:3000 — Ctrl-C after you confirm it loads
+npm run selfhost:build        # next build + copies static/public beside the standalone server
+# smoke test — load env, then run the standalone server (it doesn't auto-read .env.local):
+set -a; source .env.local; set +a
+npm run selfhost:start        # http://localhost:3000 — Ctrl-C after you confirm it loads
 ```
 
 ## 4. Run it as a service (auto-restart, survives reboot)
+The unit runs the standalone server and injects secrets via
+`EnvironmentFile=.env.local` (the standalone server, unlike `next start`, does
+not auto-load it). Replace **both** `YOUR_USER` placeholders and the paths.
 ```bash
 sudo cp deploy/selfhost/tez-motors.service /etc/systemd/system/
-sudo nano /etc/systemd/system/tez-motors.service   # set YOUR_USER + WorkingDirectory
+sudo nano /etc/systemd/system/tez-motors.service   # set YOUR_USER in User=, WorkingDirectory=, EnvironmentFile=, ExecStart=
 sudo systemctl daemon-reload
 sudo systemctl enable --now tez-motors
 systemctl status tez-motors        # should be "active (running)"
@@ -116,7 +121,7 @@ Two options:
 cd ~/tez-motors
 git pull
 npm ci
-npm run build
+npm run selfhost:build
 sudo systemctl restart tez-motors
 ```
 

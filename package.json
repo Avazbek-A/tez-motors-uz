@@ -16,7 +16,7 @@
     "test:e2e": "playwright test",
     "build:cf": "npx opennextjs-cloudflare build",
     "deploy": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy",
-    "selfhost:build": "next build",
+    "selfhost:build": "next build && cp -r public .next/standalone/ && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/",
     "selfhost:start": "node .next/standalone/server.js"
   },
   "dependencies": {

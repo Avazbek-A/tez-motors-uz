@@ -10,9 +10,15 @@ User=YOUR_USER
 WorkingDirectory=/home/YOUR_USER/tez-motors
 Environment=NODE_ENV=production
 Environment=PORT=3000
-# Next.js loads .env.local from WorkingDirectory automatically. Put your
-# Supabase keys + secrets there (chmod 600 .env.local).
-ExecStart=/usr/bin/npm run start
+Environment=HOSTNAME=127.0.0.1
+# The standalone server does NOT auto-load .env.local, so inject it here.
+# Put your Supabase keys + all secrets in .env.local (chmod 600); systemd reads
+# KEY=value lines (comments/blank lines ok). NEXT_PUBLIC_* are baked at build
+# time, so only the server-side secrets in this file matter at runtime.
+EnvironmentFile=/home/YOUR_USER/tez-motors/.env.local
+# Runs the standalone server built by `npm run selfhost:build` (which copies
+# static + public beside server.js). Supported path for output:"standalone".
+ExecStart=/usr/bin/node /home/YOUR_USER/tez-motors/.next/standalone/server.js
 Restart=always
 RestartSec=5
 # Survive transient failures but stop flapping if it can't start at all.
