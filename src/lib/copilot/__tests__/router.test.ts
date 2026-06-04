@@ -46,6 +46,13 @@ describe("classifyDeterministic — writes", () => {
     expect(r.params.qty).toBe(3);
     expect(r.params.model?.toLowerCase()).toContain("byd han");
   });
+  it("draft_po keeps the model when the verb..supplier wrap the brand", () => {
+    const r = classifyDeterministic("закажи 3 BYD Han у поставщика");
+    expect(r.intent).toBe("draft_po");
+    expect(r.params.qty).toBe(3);
+    expect(r.params.model?.toLowerCase()).toContain("byd han");
+    expect(r.params.model?.toLowerCase()).not.toContain("поставщик");
+  });
   it("unknown for gibberish", () => {
     expect(classifyDeterministic("asdf qwerty").intent).toBe("unknown");
   });

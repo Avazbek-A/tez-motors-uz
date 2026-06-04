@@ -84,7 +84,8 @@ export function classifyDeterministic(message: string): ParsedIntent {
       .replace(RULES[0].re, " ")
       .replace(PRICE_TOKEN, " ")
       .replace(/\d{1,3}\s*%/g, " ")
-      .replace(/\b(до|to|за|на|by|цену|цены|price)\b/gi, " ")
+      // Token-boundary strip (NOT \b — it's ASCII-only and fails on Cyrillic).
+      .replace(/(?:^|\s)(?:до|to|за|на|by|цену|цены|price)(?=\s|$)/giu, " ")
       .replace(/\s+/g, " ")
       .trim() || null;
   } else if (intent === "advance_order") {
@@ -92,12 +93,14 @@ export function classifyDeterministic(message: string): ParsedIntent {
     if (st) params.status = st[1].toLowerCase();
   } else if (intent === "draft_po") {
     params.qty = extractQty(text);
-    // brand/model: the noun phrase after the order verb, minus qty tokens.
     params.brand = null;
+    // Strip order verbs, the supplier tail, and qty. Uses \p{L}* (Unicode) to eat
+    // Cyrillic suffixes — ASCII \b/\w don't work on Cyrillic and left the words in.
     params.model = text
-      .replace(RULES[2].re, " ")
-      .replace(/\d{1,3}\s*(?:шт|штук|pcs|units?|x|×)?/gi, " ")
-      .replace(/\b(поставщик\w*|supplier|штук\w*|единиц)\b/gi, " ")
+      .replace(/(?:закаж|закуп|нужно\s+(?:ввезти|заказать)|создай\s+заявку|purchase\s+order|order|draft)[\p{L}]*/giu, " ")
+      .replace(/у\s+поставщик[\p{L}]*|from\s+supplier|поставщик[\p{L}]*|supplier/giu, " ")
+      .replace(/\d{1,3}\s*(?:шт|штук|pcs|units?|x|×)?/giu, " ")
+      .replace(/(?:единиц|штук)[\p{L}]*/giu, " ")
       .replace(/\s+/g, " ")
       .trim() || null;
   }

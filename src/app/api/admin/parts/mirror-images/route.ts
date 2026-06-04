@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isSafeRemoteUrl } from "@/lib/media-ingest";
+import { isSafeRemoteUrl, sniffImageMime } from "@/lib/media-ingest";
 
 export const runtime = "nodejs";
 
@@ -43,16 +43,34 @@ function extensionForMime(mime: string): string {
   }
 }
 
+/** Maximum redirect hops we'll chase before giving up. */
+const MAX_REDIRECTS = 5;
+
 async function fetchWithTimeout(url: string): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-  const referer = refererFor(url);
   try {
-    return await fetch(url, {
-      signal: ctrl.signal,
-      redirect: "follow",
-      headers: { "user-agent": BROWSER_UA, accept: "image/*", ...(referer ? { referer } : {}) },
-    });
+    // SECURITY: manually follow redirects so we can re-run isSafeRemoteUrl on
+    // EACH hop. `redirect: "follow"` would defeat the SSRF guard — a public
+    // attacker URL can return 301 → http://169.254.169.254/... or http://10.0.0.1/...
+    // and the runtime's automatic follow would happily fetch from the private
+    // network on our behalf. The Referer is recomputed per hop because hotlink
+    // CDNs key on the immediate origin, not the original one.
+    let current = url;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      if (!isSafeRemoteUrl(current)) throw new Error(`unsafe redirect target after ${hop} hop(s)`);
+      const referer = refererFor(current);
+      const res = await fetch(current, {
+        signal: ctrl.signal,
+        redirect: "manual",
+        headers: { "user-agent": BROWSER_UA, accept: "image/*", ...(referer ? { referer } : {}) },
+      });
+      if (res.status < 300 || res.status >= 400) return res;
+      const loc = res.headers.get("location");
+      if (!loc) return res;
+      try { current = new URL(loc, current).toString(); } catch { throw new Error("invalid redirect Location"); }
+    }
+    throw new Error(`too many redirects (> ${MAX_REDIRECTS})`);
   } finally {
     clearTimeout(t);
   }
@@ -137,14 +155,26 @@ export async function POST(request: NextRequest) {
         const res = await fetchWithTimeout(original);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-        const mime = (res.headers.get("content-type") || "").split(";")[0].trim();
-        if (!ALLOWED_MIME.has(mime)) {
-          throw new Error(`unsupported mime: ${mime || "unknown"}`);
-        }
-
         const buf = Buffer.from(await res.arrayBuffer());
         if (buf.byteLength === 0) throw new Error("empty body");
         if (buf.byteLength > MAX_BYTES) throw new Error(`too large (${buf.byteLength} B)`);
+
+        // SECURITY: trust the bytes, not the headers. A remote server can
+        // claim Content-Type: image/png and serve arbitrary bytes; sniff the
+        // magic bytes instead so we never upload non-image content labeled
+        // as an image into our public bucket.
+        const sniffed = sniffImageMime(buf);
+        const headerMime = (res.headers.get("content-type") || "").split(";")[0].trim();
+        // sniffImageMime only knows jpeg/png/webp; accept GIF only when the
+        // header agrees AND the alleged GIF starts with the standard signature.
+        const mime =
+          sniffed ||
+          (headerMime === "image/gif" && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46
+            ? "image/gif"
+            : null);
+        if (!mime || !ALLOWED_MIME.has(mime)) {
+          throw new Error(`unsupported mime: header=${headerMime || "unknown"} sniff=${sniffed || "unknown"}`);
+        }
 
         const ext = extensionForMime(mime);
         const stamp = Date.now();
