@@ -26,6 +26,7 @@ export interface Car {
   inventory_status?: "available" | "reserved" | "sold";
   order_position: number;
   specs: Record<string, string | number>;
+  spec_data?: import("@/lib/autohome-spec").SpecData | null;
   created_at: string;
   updated_at: string;
 }

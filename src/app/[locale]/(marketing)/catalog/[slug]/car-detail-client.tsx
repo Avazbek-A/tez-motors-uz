@@ -329,6 +329,13 @@ export default function CarDetailPage() {
                   Reserve
                 </Button>
               </div>
+              {car.spec_data && (car.spec_data.trims?.length ?? 0) > 0 && (
+                <Button type="button" asChild className="w-full mb-4">
+                  <Link href={localizedPath(locale, `/catalog/${car.slug}/spec`)}>
+                    {locale === "uz" ? "To'liq texnik tavsif" : locale === "en" ? "View full spec sheet" : "Полная спецификация"}
+                  </Link>
+                </Button>
+              )}
               <Button type="button" variant="outline" asChild className="w-full mb-4">
                 <a href={`/api/cars/${car.id}/pdf`} download>
                   Download PDF spec sheet
