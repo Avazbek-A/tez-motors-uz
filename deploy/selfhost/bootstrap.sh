@@ -41,8 +41,16 @@ if [ -n "$NODE_BIN" ]; then
 fi
 if [ "$need_node" -eq 1 ]; then
   log "installing Node 20 LTS"
+  sudo apt-get update -y
+  # Fresh Ubuntu often lacks curl; NodeSource needs it. Install prereqs first.
+  sudo apt-get install -y curl ca-certificates gnupg git build-essential
+  # Remove any OLD distro node/npm (Ubuntu ships Node 12, which can't run this
+  # app) so NodeSource's package installs cleanly without file conflicts.
+  sudo apt-get purge -y nodejs npm libnode72 libnode-dev >/dev/null 2>&1 || true
+  sudo apt-get autoremove -y >/dev/null 2>&1 || true
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y nodejs git
+  sudo apt-get install -y nodejs
+  hash -r
 fi
 NODE_BIN="$(command -v node)"
 ok "node $(node -v) at $NODE_BIN"
