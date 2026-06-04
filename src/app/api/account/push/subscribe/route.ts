@@ -23,6 +23,9 @@ const subscribeSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  if (!(await checkRateLimit(getClientIp(request)))) {
+    return NextResponse.json({ success: false, error: "Too many requests" }, { status: 429 });
+  }
   const body = await request.json().catch(() => null);
   const parsed = subscribeSchema.safeParse(body);
   if (!parsed.success) {
