@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { isAdminRequest } from "@/lib/auth";
+import { reportServerError } from "@/lib/error-report";
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +20,8 @@ export async function GET(
 
   const { data, error } = await query;
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    reportServerError("GET /api/parts/[slug]", error).catch(() => {});
+    return NextResponse.json({ error: "Query failed" }, { status: 500 });
   }
   if (!data) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });

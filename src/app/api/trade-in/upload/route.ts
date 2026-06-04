@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { reportServerError } from "@/lib/error-report";
 import { z } from "zod";
 
 const checkRateLimit = createRateLimiter({ max: 3, windowMs: 10 * 60 * 1000 });
@@ -121,7 +122,9 @@ export async function POST(request: NextRequest) {
       upsert: false,
     });
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      // Public route — log via observability, return a generic message.
+      reportServerError("POST /api/trade-in/upload (storage)", error).catch(() => {});
+      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);

@@ -7,6 +7,7 @@ import { logAdminAction } from "@/lib/audit";
 import { postCarToChannel } from "@/lib/telegram";
 import { applySort, fetchCarsPage } from "@/lib/cars-query";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { reportServerError } from "@/lib/error-report";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -133,8 +134,11 @@ export async function GET(request: NextRequest) {
     const { data: cars, error } = await query;
 
     if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json({ cars: [], total: 0, error: error.message }, { status: 500 });
+      // Log the real error to our observability channel; return a generic
+      // message to the public caller (Supabase error.message can include schema
+      // / RLS hints — useless to a buyer, potentially useful to an attacker).
+      reportServerError("GET /api/cars list", error).catch(() => {});
+      return NextResponse.json({ cars: [], total: 0, error: "Query failed" }, { status: 500 });
     }
 
     return NextResponse.json(

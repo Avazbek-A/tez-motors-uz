@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { isAdminRequest } from "@/lib/auth";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
+import { reportServerError } from "@/lib/error-report";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -89,8 +90,9 @@ export async function GET(request: NextRequest) {
 
     const { data, error, count } = await query;
     if (error) {
-      console.error("Parts list error:", error);
-      return NextResponse.json({ parts: [], total: 0, error: error.message }, { status: 500 });
+      // Log to observability; never echo Supabase error.message to anon callers.
+      reportServerError("GET /api/parts list", error).catch(() => {});
+      return NextResponse.json({ parts: [], total: 0, error: "Query failed" }, { status: 500 });
     }
 
     return NextResponse.json(

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getAdminSessionContext, requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { logAdminAction } from "@/lib/audit";
+import { reportServerError } from "@/lib/error-report";
 
 const schema = z.object({
   slug: z.string().max(200).optional().or(z.literal("")),
@@ -25,7 +26,10 @@ export async function GET(request: NextRequest) {
   if (!all) query = query.eq("is_published", true);
   const { data, error } = await query.order("published_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
   if (error) {
-    return NextResponse.json({ posts: [], error: error.message }, { status: 500 });
+    // Log to observability; never echo Supabase error.message to anon callers
+    // (can include schema/RLS hints — useless to readers, useful to attackers).
+    reportServerError("GET /api/posts list", error).catch(() => {});
+    return NextResponse.json({ posts: [], error: "Query failed" }, { status: 500 });
   }
   return NextResponse.json({ posts: data || [] });
 }
