@@ -155,11 +155,17 @@ export function parseGlobalAutohome(html: string, sourceUrl: string): SpecData |
  */
 export function parseVisionSpec(raw: string, sourceUrl: string): SpecData | null {
   if (!raw) return null;
+  // Defense in depth: the LLM output is UNTRUSTED (a hostile screenshot could
+  // coax a megabyte response). Cap before JSON.parse so we don't tie up the
+  // worker. 256 KB is comfortable headroom for even the chattiest config page.
+  const MAX_VISION_BYTES = 256 * 1024;
   let text = raw.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  if (text.length > MAX_VISION_BYTES) text = text.slice(0, MAX_VISION_BYTES);
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
   text = text.slice(start, end + 1);
+  if (text.length > MAX_VISION_BYTES) return null;
   let obj: { brand?: unknown; model?: unknown; trims?: unknown };
   try {
     obj = JSON.parse(text);

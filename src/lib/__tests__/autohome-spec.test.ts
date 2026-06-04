@@ -88,6 +88,15 @@ describe("parseVisionSpec (vision LLM JSON → SpecData)", () => {
     expect(parseVisionSpec("sorry, I cannot read this", "https://x")).toBeNull();
     expect(parseVisionSpec(JSON.stringify({ trims: [] }), "https://x")).toBeNull();
   });
+  it("rejects oversized JSON without parsing (DoS guard)", () => {
+    // A 300 KB blob — over the 256 KB cap, must short-circuit to null and never
+    // touch JSON.parse on the giant payload.
+    const huge = "x".repeat(300 * 1024);
+    const payload = `{ "trims":[{"name":"X","params":{"G":{"a":"${huge}"}}}] }`;
+    const t0 = performance.now();
+    expect(parseVisionSpec(payload, "https://x")).toBeNull();
+    expect(performance.now() - t0).toBeLessThan(150); // proves it didn't fully parse
+  });
 });
 
 describe("extractGlobalSeriesId", () => {

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { SITE_CONFIG } from "@/lib/constants";
 
 /**
  * Beautiful spec-sheet PDF. When the car has imported spec_data AND a Playwright
@@ -6,12 +7,24 @@ import { createClient } from "@/lib/supabase/server";
  * page (print CSS) to a styled A4 PDF. Otherwise fall back to the always-works
  * raw-text PDF at /api/cars/[id]/pdf (edge-safe). Fail-open: any extractor error
  * → the raw-text fallback. `?trims=` / `?sections=` / `?locale=` pass through.
+ *
+ * Security: the origin we hand the extractor MUST come from a server-pinned URL
+ * (NEXT_PUBLIC_SITE_URL / SITE_CONFIG.url), NOT request.url's host. Otherwise an
+ * attacker with `Host: attacker.com` would have Chromium render attacker.com and
+ * return that as a "Tez Motors spec sheet" PDF (phishing + SSRF vector). The
+ * extractor is on a trusted box; we never want to point it at user-supplied
+ * origins. `id` is validated as a UUID before any interpolation, and the
+ * pass-through query params are length/charset clamped.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SAFE_QS = /^[A-Za-z0-9_,\-]{1,200}$/; // trims/sections: comma-separated slugs only
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || SITE_CONFIG.url).replace(/\/$/, "");
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID.test(id)) return Response.json({ error: "Invalid id" }, { status: 400 });
   const url = new URL(request.url);
-  const origin = url.origin;
-  const fallback = () => Response.redirect(`${origin}/api/cars/${id}/pdf`, 307);
+  const fallback = () => Response.redirect(`${SITE_URL}/api/cars/${id}/pdf`, 307);
 
   type CarRow = { slug: string; spec_data: unknown };
   let car: CarRow | null = null;
@@ -29,13 +42,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const extractor = process.env.EXTRACTOR_URL;
   if (!hasSpec || !extractor) return fallback();
 
-  const locale = (["ru", "uz", "en"].includes(url.searchParams.get("locale") || "") ? url.searchParams.get("locale") : "ru") as string;
+  const rawLocale = url.searchParams.get("locale") || "";
+  const locale = (["ru", "uz", "en"] as const).includes(rawLocale as "ru" | "uz" | "en") ? rawLocale : "ru";
   const qs = new URLSearchParams({ print: "1" });
-  for (const k of ["trims", "sections"]) {
+  for (const k of ["trims", "sections"] as const) {
     const v = url.searchParams.get(k);
-    if (v) qs.set(k, v);
+    if (v && SAFE_QS.test(v)) qs.set(k, v); // silently drop invalid/oversized inputs
   }
-  const specUrl = `${origin}/${locale}/catalog/${encodeURIComponent(car.slug)}/spec?${qs.toString()}`;
+  const specUrl = `${SITE_URL}/${locale}/catalog/${encodeURIComponent(car.slug)}/spec?${qs.toString()}`;
 
   try {
     const secret = process.env.EXTRACTOR_SECRET;
