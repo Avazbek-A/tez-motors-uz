@@ -12,10 +12,6 @@ import { Reviews } from "@/components/sections/reviews";
 import { FAQPreview } from "@/components/sections/faq-preview";
 import { ContactForm } from "@/components/sections/contact-form";
 import { CtaBanner } from "@/components/sections/cta-banner";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
-import { WhatsAppButton } from "@/components/shared/whatsapp-button";
-import { ScrollToTop } from "@/components/shared/scroll-to-top";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
@@ -54,28 +50,25 @@ export default async function HomePage() {
   const publishedReviews = reviewsResult.data || [];
   const publishedFaqs = faqsResult.data || [];
 
+  // Chrome (Header / Footer / widgets / <main>) is provided by the
+  // [locale]/(marketing)/layout.tsx that renders this page — do NOT repeat it
+  // here, or the homepage double-renders the header + footer.
   return (
     <>
-      <Header />
-      <main className="flex-1">
-        <Hero />
-        <Features />
-        <Brands />
-        <HotOffers cars={hotOfferCars} />
-        <HotParts parts={hotParts} />
-        <WhyChina />
-        <ProcessTimeline />
-        <Guarantees />
-        <PricingComparison />
-        <VideoReviews />
-        <Reviews reviews={publishedReviews} />
-        <FAQPreview faqs={publishedFaqs} />
-        <ContactForm />
-        <CtaBanner />
-      </main>
-      <Footer />
-      <WhatsAppButton />
-      <ScrollToTop />
+      <Hero />
+      <Features />
+      <Brands />
+      <HotOffers cars={hotOfferCars} />
+      <HotParts parts={hotParts} />
+      <WhyChina />
+      <ProcessTimeline />
+      <Guarantees />
+      <PricingComparison />
+      <VideoReviews />
+      <Reviews reviews={publishedReviews} />
+      <FAQPreview faqs={publishedFaqs} />
+      <ContactForm />
+      <CtaBanner />
     </>
   );
 }
