@@ -34,6 +34,9 @@ export interface Car {
   spec_data?: import("@/lib/autohome-spec").SpecData | null;
   created_at: string;
   updated_at: string;
+  /** Per-car review aggregates (attached by /api/cars for ★ on tiles). */
+  review_avg?: number;
+  review_count?: number;
 }
 
 export interface CarFilters {

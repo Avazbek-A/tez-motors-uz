@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Fuel, Gauge, Zap, Settings2, CarFront } from "lucide-react";
+import { Fuel, Gauge, Zap, Settings2, CarFront, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
@@ -84,6 +84,13 @@ export function CarCard({ car }: CarCardProps) {
               {car.brand} {car.model}
             </h3>
             <p className="text-sm text-muted-foreground mt-1 tracking-wide">{car.year} {dictionary.common.year}</p>
+            {typeof car.review_count === "number" && car.review_count > 0 && (
+              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-label={`${car.review_avg} / 5`}>
+                <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="font-medium text-foreground/80">{car.review_avg?.toFixed(1)}</span>
+                <span className="text-muted-foreground/70">({car.review_count})</span>
+              </p>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{dictionary.common.from}</p>

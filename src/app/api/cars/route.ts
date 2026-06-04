@@ -8,6 +8,22 @@ import { postCarToChannel } from "@/lib/telegram";
 import { applySort, fetchCarsPage } from "@/lib/cars-query";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { reportServerError } from "@/lib/error-report";
+import { fetchCarRatings } from "@/lib/reviews-aggregate";
+
+// Attach per-car review aggregates (★ on listing tiles) without bloating the
+// base query. One batched reviews read for the page; fail-soft to no ratings.
+async function enrichWithRatings<T extends { id: string }>(
+  supabase: Parameters<typeof fetchCarRatings>[0],
+  cars: T[],
+): Promise<(T & { review_avg?: number; review_count?: number })[]> {
+  if (!cars || cars.length === 0) return cars;
+  const ratings = await fetchCarRatings(supabase, cars.map((c) => c.id));
+  if (ratings.size === 0) return cars;
+  return cars.map((c) => {
+    const r = ratings.get(c.id);
+    return r ? { ...c, review_avg: r.avg, review_count: r.count } : c;
+  });
+}
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -95,8 +111,9 @@ export async function GET(request: NextRequest) {
           sort,
           includeAll: !!all,
         });
+        const enriched = await enrichWithRatings(supabase, cars as unknown as { id: string }[]);
         return NextResponse.json(
-          { cars, total, page: pageNum, page_size: size },
+          { cars: enriched, total, page: pageNum, page_size: size },
           { headers: all ? {} : publicCacheHeaders },
         );
       } catch (err) {
@@ -146,9 +163,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cars: [], total: 0, error: "Query failed" }, { status: 500 });
     }
 
+    const sorted = applySort((cars || []) as unknown as Parameters<typeof applySort>[0], sort);
+    const enriched = await enrichWithRatings(supabase, sorted as unknown as { id: string }[]);
     return NextResponse.json(
       {
-        cars: applySort((cars || []) as unknown as Parameters<typeof applySort>[0], sort),
+        cars: enriched,
         total: cars?.length || 0,
         filters: { brand, bodyType, fuelType, priceMin, priceMax },
       },
