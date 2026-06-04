@@ -120,9 +120,12 @@ export default function PartDetailClient({ part }: { part: Part }) {
 
   const toggleWholesale = () => {
     const next = !wholesale;
+    // Secure attribute (HTTPS-only) on https: pages; left off on http://localhost
+    // dev so the toggle still works there.
+    const secure = typeof window !== "undefined" && window.location.protocol === "https:" ? "; Secure" : "";
     document.cookie = next
-      ? "tm_wholesale=1; path=/; max-age=2592000; samesite=lax"
-      : "tm_wholesale=; path=/; max-age=0; samesite=lax";
+      ? `tm_wholesale=1; path=/; max-age=2592000; samesite=lax${secure}`
+      : `tm_wholesale=; path=/; max-age=0; samesite=lax${secure}`;
     setWholesale(next);
   };
 

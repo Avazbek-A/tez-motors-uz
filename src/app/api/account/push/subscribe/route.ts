@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getCustomerContext } from "@/lib/customer-auth";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 
 // A push subscription can be anonymous (customer_id null) or, more usefully,
 // linked to a logged-in customer so price-drop / order-status pushes can target
 // them. We attach the customer when a session is present.
+//
+// Rate-limited (KV) because anonymous subscriptions are accepted: without a cap
+// an attacker can spam distinct endpoint URLs to bloat push_subscriptions. A
+// real user clicks "allow notifications" at most a couple of times.
+const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "push-sub" });
 const subscribeSchema = z.object({
   endpoint: z.string().url().max(1000),
   keys: z.object({

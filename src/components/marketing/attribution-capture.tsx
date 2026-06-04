@@ -24,7 +24,11 @@ export function AttributionCapture() {
         }
       }
       const value = encodeURIComponent(JSON.stringify(attr));
-      document.cookie = `${ATTRIBUTION_COOKIE}=${value}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+      // Secure attribute (HTTPS-only) is set on https: pages — keep it off when
+      // the dev server runs over http://localhost so the cookie is still saved
+      // there. In production the site is HTTPS, so the flag turns on.
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `${ATTRIBUTION_COOKIE}=${value}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax${secure}`;
     } catch {
       /* no-op */
     }
