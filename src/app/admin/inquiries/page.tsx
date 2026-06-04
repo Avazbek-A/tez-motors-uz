@@ -443,6 +443,43 @@ export default function AdminInquiriesPage() {
                 )}
               </div>
 
+              {/* Acquisition → inventory: turn a trade-in into a used listing. */}
+              {selectedInquiry.type === "trade_in" && !(selectedInquiry as { metadata?: Record<string, unknown> }).metadata?.converted_car_id && (
+                <div className="pt-4 border-t border-white/10">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={async () => {
+                      const priceStr = window.prompt("Цена продажи (USD) для объявления с пробегом:");
+                      if (!priceStr) return;
+                      const price_usd = parseInt(priceStr, 10);
+                      if (!Number.isFinite(price_usd) || price_usd <= 0) { showFeedback("error", "Введите корректную цену"); return; }
+                      try {
+                        const res = await fetch(`/api/admin/inquiries/${selectedInquiry.id}/convert-to-car`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ price_usd }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok) {
+                          showFeedback("success", "Создано объявление с пробегом");
+                          window.open(`/ru/catalog/${data.slug}`, "_blank");
+                          setSelectedInquiry(null);
+                          fetchInquiries();
+                        } else {
+                          showFeedback("error", data.error || "Не удалось конвертировать");
+                        }
+                      } catch {
+                        showFeedback("error", "Ошибка связи");
+                      }
+                    }}
+                  >
+                    🚗 В объявление с пробегом
+                  </Button>
+                </div>
+              )}
+
               <div className="flex justify-between pt-4 border-t border-white/10">
                 <Button
                   variant="destructive"
