@@ -14,11 +14,35 @@ npx playwright install chromium   # for extractor.mjs + the OLX browser fallback
 | Script | What it does | Talks to |
 |---|---|---|
 | `extractor.mjs` | Headless-browser media extractor — renders JS pages (AutoHome, AliExpress) and returns real gallery image URLs. | The app's `/api/admin/media/extract` calls it when `EXTRACTOR_URL` is set. |
-| `olx-collector.mjs` | Scrapes OLX (olx.uz) car listings — API-first, Playwright fallback. | POSTs to `/api/admin/market/ingest`. |
+| `olx-crawlee.mjs` | **Crawlee-based** OLX crawler (recommended) — managed retries, session pool, proxy rotation, fingerprints. | POSTs to `/api/admin/market/ingest`. |
+| `olx-collector.mjs` | Legacy naive OLX scraper (fetch-loop + ad-hoc Playwright). Kept as a zero-dep fallback. | POSTs to `/api/admin/market/ingest`. |
 | `telegram-collector.mjs` | Reads car-sales Telegram channels (MTProto / your account via gramJS). | POSTs to `/api/admin/market/ingest`. |
 
 All POSTs authenticate with `MARKET_INGEST_SECRET` (set the same value as a Worker
 secret on the app). The extractor uses an optional `EXTRACTOR_SECRET`.
+
+## Crawling framework: Crawlee (Node/TS)
+
+The crawling layer is built on **[Crawlee](https://crawlee.dev)** — the same
+Node/TS stack as the app, so there is **no second runtime (no Python) to maintain
+on the box**. Crawlee gives every crawler, for free: a managed request queue,
+automatic retries with backoff, a rotating **session pool** (banned cookie-sets
+retired automatically), optional **proxy rotation**, realistic browser
+**fingerprints**, and bounded concurrency. New targets (Alibaba parts, etc.) are
+thin crawlers on top of `crawlee-shared.mjs`, which owns the cross-cutting policy.
+
+`crawlee-shared.mjs` exports:
+- `baseCrawlerOptions(overrides)` — retries / session pool / concurrency / proxy.
+- `buildProxyConfiguration()` — reads `PROXY_URLS` (comma-separated); the real
+  anti-bot lever for hostile targets. Unset → direct connection.
+- `ingestListings(source, listings)` — chunked POST to the ingest endpoint.
+
+Tuning env (all optional, sane defaults): `PROXY_URLS`, `CRAWL_MAX_CONCURRENCY`
+(4), `CRAWL_MAX_RETRIES` (5).
+
+> **When to add proxies / a paid API:** OLX is low-anti-bot — direct works.
+> Alibaba/social media are hostile; set `PROXY_URLS` (residential), and for the
+> worst targets prefer official APIs or a paid scraping API over fighting captchas.
 
 ## 1. Media extractor (AutoHome etc.)
 
@@ -32,16 +56,23 @@ Only works where the app can reach this host — i.e. the **self-hosted / local*
 deployment, NOT the Cloudflare Workers edge. The app always falls back to its
 static parser, so this just upgrades coverage for JS-only galleries.
 
-## 2. OLX collector
+## 2. OLX crawler (Crawlee — recommended)
 
 ```bash
 export INGEST_URL="https://tezmotors.uz/api/admin/market/ingest"   # or http://localhost:3000/...
 export MARKET_INGEST_SECRET="…same value as the app secret…"
 # optional: a JSON file of [{ "q":"byd song plus","brand":"BYD","model":"Song Plus" }, …]
 export OLX_SEARCHES_FILE=./searches.json
-node olx-collector.mjs
+# optional anti-bot/tuning:
+export PROXY_URLS="http://user:pass@gw:8000"   # residential proxies if OLX starts blocking
+export CRAWL_MAX_CONCURRENCY=4
+node olx-crawlee.mjs
 ```
-Schedule with cron, e.g. `0 */6 * * *`. Respect OLX ToS/robots; run gently.
+API-first (Crawlee `HttpCrawler` over OLX's JSON API), with a Crawlee-managed
+`PlaywrightCrawler` fallback for any query the API misses. Schedule with cron,
+e.g. `0 */6 * * *`. Respect OLX ToS/robots; run gently.
+
+The legacy `node olx-collector.mjs` still works (no Crawlee dep) as a fallback.
 
 ## 3. Telegram collector
 
@@ -78,7 +109,7 @@ extractor — point at Ollama from the self-hosted/local app, not the Workers ed
 
 A simple crontab on the box:
 ```
-0 */6 * * *  cd /path/deploy/collector && MARKET_INGEST_SECRET=… INGEST_URL=… node olx-collector.mjs >> olx.log 2>&1
+0 */6 * * *  cd /path/deploy/collector && MARKET_INGEST_SECRET=… INGEST_URL=… node olx-crawlee.mjs >> olx.log 2>&1
 30 */6 * * * cd /path/deploy/collector && TG_SESSION=… TG_CHANNELS=… MARKET_INGEST_SECRET=… INGEST_URL=… node telegram-collector.mjs >> tg.log 2>&1
 @reboot      cd /path/deploy/collector && EXTRACTOR_SECRET=… node extractor.mjs >> extractor.log 2>&1
 ```

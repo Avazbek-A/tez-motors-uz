@@ -14,6 +14,7 @@
  *
  * Run on the dealer's box (Node 18+). Never bundled into the Workers build.
  */
+import { readFileSync } from "node:fs";
 import { ProxyConfiguration, log } from "crawlee";
 
 export const UA =
@@ -104,7 +105,7 @@ export function loadJsonOrDefault(envVar, fallback) {
   const f = process.env[envVar];
   if (!f) return fallback;
   try {
-    return JSON.parse(require("node:fs").readFileSync(f, "utf8"));
+    return JSON.parse(readFileSync(f, "utf8"));
   } catch (e) {
     log.warning(`couldn't read ${f} (${envVar}); using defaults: ${e.message}`);
     return fallback;

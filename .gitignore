@@ -63,3 +63,6 @@ next-env.d.ts
 
 # collector deps (installed on the box)
 deploy/collector/node_modules/
+# Crawlee scratch storage (request queues / datasets — ephemeral)
+deploy/collector/storage/
+deploy/collector/crawlee_storage/
