@@ -5,12 +5,20 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { alertDealer, logEvent } from "@/lib/error-report";
 import { resolveAutopilot, sourceAllowed, AUTOPILOT_ROW_ID } from "@/lib/autopilot";
 import { createDraftPo } from "@/lib/copilot/actions";
+import { aggregatePreorderDemand } from "@/lib/procurement-demand";
 
 /**
  * Autopilot — demand → DRAFT purchase orders (Phase AH). Opt-in, capped. Creates
  * only DRAFT POs (never 'ordered' — the dealer reviews + sends), for in-demand
  * models that are out of stock and not already drafted. Reuses the audited
  * createDraftPo op. Safe: no money moves, no auto-ordering.
+ *
+ * Demand fuses two sources: 30-day inquiry counts on stocked cars AND open
+ * pre-orders by model (AH-amendment). A DEPOSITED pre-order is the strongest
+ * signal — money is down on an exact made-to-order config — so it weighs heavily
+ * and, unlike soft inquiry demand, fires even when generic stock exists (the
+ * buyer wants their specific config). The draft qty is floored at the deposited
+ * count so we never under-order what's already pre-sold.
  */
 export async function POST(request: NextRequest) {
   const unauth = assertCron(request);
@@ -29,14 +37,24 @@ export async function POST(request: NextRequest) {
   ]);
 
   // Demand per "brand|model" (inquiry count over 30d).
-  const demand = new Map<string, { brand: string; model: string; score: number }>();
+  const demand = new Map<string, { brand: string; model: string; score: number; deposited: number }>();
   for (const i of inqRes.data || []) {
     const rel = i.cars as { brand: string; model: string } | { brand: string; model: string }[] | null;
     const car = Array.isArray(rel) ? rel[0] : rel;
     if (!car) continue;
     const key = `${car.brand}|${car.model}`.toLowerCase();
-    const cur = demand.get(key) || { brand: car.brand, model: car.model, score: 0 };
+    const cur = demand.get(key) || { brand: car.brand, model: car.model, score: 0, deposited: 0 };
     cur.score += 1;
+    demand.set(key, cur);
+  }
+
+  // Fold in pre-order demand (deposited = committed). Deposited pre-orders weigh
+  // ×5, pending ×2 — so even a couple of paid pre-orders cross the threshold.
+  const preorder = await aggregatePreorderDemand(supabase);
+  for (const [key, pd] of preorder) {
+    const cur = demand.get(key) || { brand: pd.brand, model: pd.model, score: 0, deposited: 0 };
+    cur.score += pd.deposited * 5 + (pd.total - pd.deposited) * 2;
+    cur.deposited += pd.deposited;
     demand.set(key, cur);
   }
 
@@ -47,14 +65,26 @@ export async function POST(request: NextRequest) {
   for (const p of poRes.data || []) if (p.status === "draft" || p.status === "ordered" || p.status === "in_production") drafted.add(`${p.brand}|${p.model}`.toLowerCase());
 
   const targets = Array.from(demand.entries())
-    .filter(([key, d]) => d.score >= cfg.autoSourceDrafts.minDemandScore && !inStock.has(key) && !drafted.has(key))
+    .filter(([key, d]) => {
+      if (drafted.has(key)) return false;
+      if (d.score < cfg.autoSourceDrafts.minDemandScore) return false;
+      // Deposited pre-orders are committed buyers wanting a specific config —
+      // import even if generic stock exists. Soft (inquiry-only) demand still
+      // honors the in-stock skip.
+      if (inStock.has(key) && d.deposited === 0) return false;
+      return true;
+    })
     .sort((a, b) => b[1].score - a[1].score)
     .slice(0, cfg.autoSourceDrafts.maxPerRun);
 
   const created: string[] = [];
   for (const [, d] of targets) {
-    const res = await createDraftPo(supabase, { brand: d.brand, model: d.model, qty: 1 });
-    if (res.ok) created.push(`${d.brand} ${d.model} (спрос ${d.score})`);
+    // Never under-order what's already pre-sold; createDraftPo clamps to [1,100].
+    const qty = Math.max(1, d.deposited);
+    const res = await createDraftPo(supabase, { brand: d.brand, model: d.model, qty });
+    if (res.ok) {
+      created.push(`${d.brand} ${d.model} (спрос ${d.score}${d.deposited ? `, депозитов: ${d.deposited}` : ""})`);
+    }
   }
   if (created.length) await alertDealer(`🤖 Автопилот создал ${created.length} черновик(ов) заявок`, [...created, "Проверьте «Закупки» и отправьте.", "Отключить: Настройки → Автопилот."], { key: "auto-source" });
   logEvent("autopilot.source", { created: created.length });
