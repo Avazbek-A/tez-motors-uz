@@ -28,6 +28,7 @@ import { normalizePhone } from "@/lib/customer-auth";
 import { escapeHtml } from "@/lib/escape-html";
 import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
+import { reserveCarAndCreateOrder } from "@/lib/reservation";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -48,12 +49,19 @@ interface TgMessage {
   text?: string;
   contact?: TgContact;
 }
+interface TgCallbackQuery {
+  id: string;
+  from?: TgUser;
+  message?: { chat?: { id: number } };
+  data?: string;
+}
 interface TgUpdate {
   message?: TgMessage;
+  callback_query?: TgCallbackQuery;
 }
 
 interface ReplyMarkup {
-  inline_keyboard?: { text: string; url?: string; web_app?: { url: string } }[][];
+  inline_keyboard?: { text: string; url?: string; web_app?: { url: string }; callback_data?: string }[][];
   keyboard?: { text: string; request_contact?: boolean }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
@@ -180,13 +188,103 @@ function contactKeyboard(locale: BotLocale): ReplyMarkup {
 }
 
 function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
+  const reserve = locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать";
   const rows = cars.slice(0, 3).map((c) => [
     {
       text: `${c.brand} ${c.model} ${c.year} — $${c.price_usd.toLocaleString("en-US")}`,
-      url: `${siteUrl()}/${locale}/catalog/${c.slug}`,
+      url: `${siteUrl()}/${locale}/catalog/${c.slug}?utm_source=telegram`,
     },
+    // Transact in chat (Phase AS): reserve this car without leaving Telegram.
+    { text: `📝 ${reserve}`, callback_data: `rsv:${c.id}` },
   ]);
   return rows.length > 0 ? { inline_keyboard: rows } : undefined;
+}
+
+/** Ack a callback query so Telegram stops the button's loading spinner. */
+async function tgAnswerCallback(callbackId: string, text?: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  try {
+    await fetch(`${TG_API}/bot${token}/answerCallbackQuery`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callback_query_id: callbackId, ...(text ? { text } : {}) }),
+    });
+  } catch {
+    /* fail-open */
+  }
+}
+
+// Reserve a car straight from a chat button: resolve the customer's phone from
+// their linked telegram_id, reserve atomically, and reply with the reference
+// code + track/sign deep-links. No phone on file → ask them to share contact.
+async function handleReserveCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  const carId = (cb.data || "").slice(4);
+  await tgAnswerCallback(cb.id);
+  if (!chatId || !/^[a-f0-9-]{8,64}$/i.test(carId)) return;
+  const locale = botLocale(cb.from?.language_code);
+  const supabase = createServiceClient();
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("name, phone")
+    .eq("telegram_id", chatId)
+    .maybeSingle();
+
+  if (!customer?.phone) {
+    const ask =
+      locale === "uz"
+        ? "Band qilish uchun avval raqamingizni ulashing 👇"
+        : locale === "en"
+        ? "To reserve, share your number first 👇"
+        : "Чтобы забронировать, сначала поделитесь номером 👇";
+    await tgSend(chatId, ask, contactKeyboard(locale));
+    return;
+  }
+
+  const name = customer.name || cb.from?.first_name || "Telegram";
+  const result = await reserveCarAndCreateOrder(supabase, {
+    carId,
+    name,
+    phone: customer.phone,
+    locale,
+    attribution: { source: "telegram" },
+    sourcePage: "telegram-bot",
+  });
+
+  if (!result.ok) {
+    const taken =
+      locale === "uz" ? "Afsus, bu avto allaqachon band qilingan." : locale === "en" ? "Sorry, this car is no longer available." : "К сожалению, это авто уже забронировано.";
+    await tgSend(chatId, taken);
+    return;
+  }
+
+  notifyNewInquiry({
+    name,
+    phone: customer.phone,
+    type: "reservation",
+    message: `Reserved in Telegram: ${result.car.brand} ${result.car.model} ${result.car.year}`,
+    source_page: "telegram-bot",
+    locale,
+    metadata: { channel: "telegram", reference_code: result.referenceCode },
+  }).catch(() => {});
+
+  const code = result.referenceCode;
+  const phoneParam = encodeURIComponent(customer.phone);
+  const carName = `${result.car.brand} ${result.car.model} ${result.car.year}`;
+  const lines =
+    locale === "uz"
+      ? [`✅ ${carName} band qilindi!`, code ? `Buyurtma raqami: <b>${escapeHtml(code)}</b>` : ""]
+      : locale === "en"
+      ? [`✅ ${carName} reserved!`, code ? `Reference: <b>${escapeHtml(code)}</b>` : ""]
+      : [`✅ ${carName} забронирован!`, code ? `Номер заказа: <b>${escapeHtml(code)}</b>` : ""];
+  const buttons: { text: string; url: string }[] = [];
+  if (code) {
+    buttons.push({ text: locale === "uz" ? "Holatni kuzatish" : locale === "en" ? "Track order" : "Отследить заказ", url: `${siteUrl()}/${locale}/track?code=${encodeURIComponent(code)}&phone=${phoneParam}` });
+    buttons.push({ text: locale === "uz" ? "Shartnomani imzolash" : locale === "en" ? "Sign contract" : "Подписать договор", url: `${siteUrl()}/${locale}/sign?code=${encodeURIComponent(code)}&phone=${phoneParam}` });
+  }
+  await tgSend(chatId, lines.filter(Boolean).join("\n"), buttons.length ? { inline_keyboard: [buttons] } : undefined);
 }
 
 // ---- Lead capture ----------------------------------------------------------
@@ -263,6 +361,18 @@ async function captureLead(
 // ---- Update handling -------------------------------------------------------
 
 async function handleUpdate(update: TgUpdate): Promise<void> {
+  // Inline-button callbacks (Phase AS — reserve in chat). Operator confirm
+  // callbacks are handled elsewhere; here we only act on customer "rsv:" data.
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    if (typeof cb.data === "string" && cb.data.startsWith("rsv:") && !isOperatorChat(cb.message?.chat?.id ?? 0)) {
+      await handleReserveCallback(cb);
+    } else {
+      await tgAnswerCallback(cb.id);
+    }
+    return;
+  }
+
   const message = update.message;
   if (!message || !message.chat) return;
   const chatId = message.chat.id;

@@ -5,8 +5,8 @@ import { notifyNewInquiry, confirmToCustomer } from "@/lib/notify";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { generateReferenceCode } from "@/lib/order-code";
 import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
+import { reserveCarAndCreateOrder } from "@/lib/reservation";
 
 const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "reservation" });
 
@@ -44,89 +44,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    const { data: car, error: carError } = await supabase
-      .from("cars")
-      .select("id, brand, model, year, inventory_status")
-      .eq("id", data.car_id)
-      .single();
+    const result = await reserveCarAndCreateOrder(supabase, {
+      carId: data.car_id,
+      name: data.name,
+      phone: data.phone,
+      email: data.email || null,
+      locale: data.locale,
+      amountUsd: data.amount_usd ?? null,
+      notes: data.notes ?? null,
+      attribution,
+      sourcePage: "reservation-modal",
+    });
 
-    if (carError || !car) {
-      return NextResponse.json({ success: false, error: "Car not found" }, { status: 404 });
-    }
-
-    if (car.inventory_status !== "available") {
-      return NextResponse.json({ success: false, error: "Car is not available" }, { status: 409 });
-    }
-
-    const { error: updateError, data: updatedCar } = await supabase
-      .from("cars")
-      .update({ inventory_status: "reserved", updated_at: new Date().toISOString() })
-      .eq("id", data.car_id)
-      .eq("inventory_status", "available")
-      .select("id")
-      .single();
-
-    if (updateError || !updatedCar) {
-      return NextResponse.json({ success: false, error: "Car was reserved by someone else" }, { status: 409 });
-    }
-
-    const { data: inquiry, error: inquiryError } = await supabase
-      .from("inquiries")
-      .insert({
-        type: "reservation",
-        name: data.name,
-        phone: data.phone,
-        email: data.email || null,
-        car_id: data.car_id,
-        status: "new",
-        source_page: "reservation-modal",
-        message: `Reservation request for ${car.brand} ${car.model} ${car.year}${data.amount_usd ? `, deposit: $${data.amount_usd}` : ""}${data.notes ? `, notes: ${data.notes}` : ""}`,
-        metadata: {
-          amount_usd: data.amount_usd ?? null,
-          notes: data.notes ?? null,
-          ...(attribution ? { attribution } : {}),
-        },
-      })
-      .select("id")
-      .single();
-
-    if (inquiryError || !inquiry) {
-      return NextResponse.json({ success: false, error: "Failed to save reservation" }, { status: 500 });
-    }
-
-    // Turn the reservation into a trackable import order. The reference code is
-    // what the customer uses on /track (with their phone). Retry once on the
-    // (vanishingly unlikely) UNIQUE collision before giving up on the order;
-    // the reservation itself is already saved, so we never fail the request.
-    let referenceCode: string | null = null;
-    for (let attempt = 0; attempt < 2 && !referenceCode; attempt++) {
-      const code = generateReferenceCode();
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          reference_code: code,
-          status: "ordered",
-          car_id: data.car_id,
-          inquiry_id: inquiry.id,
-          customer_name: data.name,
-          customer_phone: data.phone,
-          customer_email: data.email || null,
-          locale: data.locale ?? "ru",
-          amount_usd: data.amount_usd ? Number(data.amount_usd) || null : null,
-          notes: data.notes ?? null,
-          attribution: attribution ?? null,
-        })
-        .select("id")
-        .single();
-
-      if (!orderError && order) {
-        referenceCode = code;
-        await supabase.from("order_events").insert({
-          order_id: order.id,
-          status: "ordered",
-          note: "Reservation received",
-        });
+    if (!result.ok) {
+      if (result.reason === "not_found") {
+        return NextResponse.json({ success: false, error: "Car not found" }, { status: 404 });
       }
+      if (result.reason === "unavailable") {
+        return NextResponse.json({ success: false, error: "Car was reserved by someone else" }, { status: 409 });
+      }
+      return NextResponse.json({ success: false, error: "Failed to save reservation" }, { status: 500 });
     }
 
     notifyNewInquiry({
@@ -134,13 +71,13 @@ export async function POST(request: NextRequest) {
       phone: data.phone,
       email: data.email || null,
       type: "reservation",
-      message: data.notes ?? `Reservation request for ${car.brand} ${car.model} ${car.year}`,
+      message: data.notes ?? `Reservation request for ${result.car.brand} ${result.car.model} ${result.car.year}`,
       source_page: "reservation-modal",
       locale: data.locale,
     }).catch(() => {});
     confirmToCustomer({ email: data.email || null, name: data.name, locale: data.locale }).catch(() => {});
 
-    return NextResponse.json({ success: true, reference_code: referenceCode }, { status: 201 });
+    return NextResponse.json({ success: true, reference_code: result.referenceCode }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ success: false, errors: error.issues }, { status: 400 });
