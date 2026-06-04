@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { isSafeRemoteUrl, sniffImageMime, parseMediaFromHtml } from "../media-ingest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { isSafeRemoteUrl, sniffImageMime, parseMediaFromHtml, extractMediaFromPage } from "../media-ingest";
 
 const bytes = (...b: number[]) => new Uint8Array([...b, ...new Array(Math.max(0, 12 - b.length)).fill(0)]);
 
@@ -105,5 +105,44 @@ describe("parseMediaFromHtml (AutoHome / lazy-load galleries)", () => {
   });
   it("returns [] for HTML with no images", () => {
     expect(parseMediaFromHtml("<html><body>nothing</body></html>", "https://x.com")).toEqual([]);
+  });
+});
+
+describe("fetchWithTimeout via extractMediaFromPage (SSRF-via-redirect guard)", () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; vi.restoreAllMocks(); });
+
+  it("REFUSES to follow a redirect into the private network (127.0.0.1)", async () => {
+    const calls: string[] = [];
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const u = typeof url === "string" ? url : url.toString();
+      calls.push(u);
+      // Public URL responds with a redirect to a private IP — the classic SSRF
+      // bypass. With redirect:"follow" the runtime would chase this; we don't.
+      if (u.startsWith("https://attacker.example.com")) {
+        return new Response("", { status: 302, headers: { location: "http://127.0.0.1/admin" } });
+      }
+      throw new Error(`unexpected fetch to ${u}`);
+    }) as unknown as typeof fetch;
+
+    const out = await extractMediaFromPage("https://attacker.example.com/r");
+    expect(out).toEqual([]); // fetch threw → fail-open empty
+    expect(calls).toEqual(["https://attacker.example.com/r"]); // NEVER hit 127.0.0.1
+  });
+
+  it("DOES follow safe public-to-public redirects (e.g. CDN reshuffles)", async () => {
+    const calls: string[] = [];
+    globalThis.fetch = vi.fn(async (url: string | URL | Request) => {
+      const u = typeof url === "string" ? url : url.toString();
+      calls.push(u);
+      if (u === "https://cdn.example.com/x") {
+        return new Response("", { status: 301, headers: { location: "https://cdn2.example.com/x.html" } });
+      }
+      return new Response('<meta property="og:image" content="https://cdn2.example.com/hero.jpg">', { status: 200 });
+    }) as unknown as typeof fetch;
+
+    const out = await extractMediaFromPage("https://cdn.example.com/x");
+    expect(calls).toEqual(["https://cdn.example.com/x", "https://cdn2.example.com/x.html"]);
+    expect(out.find((c) => c.url.endsWith("hero.jpg"))).toBeTruthy();
   });
 });

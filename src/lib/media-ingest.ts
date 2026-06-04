@@ -51,11 +51,29 @@ export function isSafeRemoteUrl(raw: string): boolean {
   return true;
 }
 
+/** Maximum redirect hops we'll chase before giving up. */
+const MAX_REDIRECTS = 5;
+
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...init, signal: ctrl.signal, redirect: "follow" });
+    // Manually follow redirects so we can re-run isSafeRemoteUrl() on EACH hop.
+    // `redirect: "follow"` would defeat the SSRF guard: a public attacker URL
+    // can return 301 → http://169.254.169.254/… or 127.0.0.1, and the runtime's
+    // automatic follow happily fetches from the private network. By doing it
+    // manually we validate every Location target.
+    let current = url;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      if (!isSafeRemoteUrl(current)) throw new Error(`unsafe redirect target after ${hop} hop(s)`);
+      const res = await fetch(current, { ...init, signal: ctrl.signal, redirect: "manual" });
+      if (res.status < 300 || res.status >= 400) return res;
+      const loc = res.headers.get("location");
+      if (!loc) return res;
+      // Resolve relative redirects against the current URL.
+      try { current = new URL(loc, current).toString(); } catch { throw new Error("invalid redirect Location"); }
+    }
+    throw new Error(`too many redirects (> ${MAX_REDIRECTS})`);
   } finally {
     clearTimeout(t);
   }
