@@ -33,8 +33,21 @@ const assistantSchema = z.object({
   // Honeypot: must be empty/absent.
   website: z.string().max(0).optional(),
   turnstile_token: z.string().max(4096).optional(),
-  // Conversation thread (client-generated) for multi-turn memory.
-  thread_id: z.string().min(8).max(64).optional(),
+  // Conversation thread (client-generated UUID) for multi-turn memory.
+  // SECURITY: must be a high-entropy UUID — a loose `min(8).max(64)` lets an
+  // attacker guess a short thread_id, then (a) read another buyer's history
+  // into the LLM context, (b) contaminate that buyer's `assistant_messages`
+  // with injected turns, or (c) clobber the conversation row's `profile` /
+  // `stage` / `lead_score`. Pinning to a v4-shaped UUID closes the guessing
+  // window — `crypto.randomUUID()` (what the client widgets already emit) is
+  // 122 bits of entropy, well past brute-force reach.
+  thread_id: z
+    .string()
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      "thread_id must be a UUID",
+    )
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {

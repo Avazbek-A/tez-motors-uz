@@ -74,11 +74,11 @@ export function FindMyCar() {
   const [leadCaptured, setLeadCaptured] = useState(false);
   const [error, setError] = useState(false);
   // Stable conversation id so follow-up questions are answered in context.
-  const [threadId] = useState(() =>
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `t_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
-  );
+  // Must be a UUID — the server pins thread_id to a v4 shape so a guessed
+  // short id can't hijack another buyer's conversation. crypto.randomUUID is
+  // baseline across every browser we support; the legacy `t_…` fallback was
+  // removed when the server-side regex landed.
+  const [threadId] = useState(() => crypto.randomUUID());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
