@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const [invoices, payments, orders, costs, expenses, pos, fx] = await Promise.all([
     safe(supabase.from("invoices").select("total_usd, status, due_at, issued_at").limit(MAX), [] as { total_usd: number; status: string; due_at: string | null; issued_at: string | null }[]),
     safe(supabase.from("payments").select("amount_tiyin, state, order_id").eq("state", 2).limit(MAX), [] as { amount_tiyin: number; state: number; order_id: string | null }[]),
-    safe(supabase.from("orders").select("id, reference_code, status, amount_usd, car_id, cars(brand, model, year)").order("created_at", { ascending: false }).limit(200), [] as { id: string; reference_code: string; status: string; amount_usd: number | null; car_id: string | null; cars: { brand: string; model: string; year: number }[] | null }[]),
+    safe(supabase.from("orders").select("id, reference_code, status, amount_usd, car_id, cars(brand, model, year)").order("created_at", { ascending: false }).limit(200), [] as { id: string; reference_code: string; status: string; amount_usd: number | null; car_id: string | null; cars: { brand: string; model: string; year: number }[] }[]),
     safe(supabase.from("car_costs").select("car_id, cost_usd").limit(MAX), [] as { car_id: string; cost_usd: number }[]),
     safe(supabase.from("expenses").select("amount_usd, spent_on").gte("spent_on", monthAgo.slice(0, 10)).limit(MAX), [] as { amount_usd: number; spent_on: string }[]),
     safe(supabase.from("purchase_orders").select("status, qty, unit_cost_usd, eta_date, created_at").limit(MAX), [] as { status: string; qty: number; unit_cost_usd: number | null; eta_date: string | null; created_at: string }[]),
