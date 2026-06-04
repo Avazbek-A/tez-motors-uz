@@ -2,6 +2,7 @@ import { Hero } from "@/components/sections/hero";
 import { Features } from "@/components/sections/features";
 import { Brands } from "@/components/sections/brands";
 import { HotOffers } from "@/components/sections/hot-offers";
+import { ForYou } from "@/components/sections/for-you";
 import { HotParts } from "@/components/sections/hot-parts";
 import { WhyChina } from "@/components/sections/why-china";
 import { ProcessTimeline } from "@/components/sections/process-timeline";
@@ -59,6 +60,7 @@ export default async function HomePage() {
       <Features />
       <Brands />
       <HotOffers cars={hotOfferCars} />
+      <ForYou />
       <HotParts parts={hotParts} />
       <WhyChina />
       <ProcessTimeline />
