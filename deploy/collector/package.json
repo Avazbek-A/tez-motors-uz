@@ -8,6 +8,7 @@
     "extractor": "node extractor.mjs",
     "olx": "node olx-collector.mjs",
     "olx:crawlee": "node olx-crawlee.mjs",
+    "alibaba": "node alibaba-crawlee.mjs",
     "telegram": "node telegram-collector.mjs",
     "telegram:login": "node telegram-collector.mjs --login",
     "postinstall": "echo 'Run: npx playwright install chromium  (needed for extractor + OLX browser fallback)'"

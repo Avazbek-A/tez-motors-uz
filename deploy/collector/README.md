@@ -16,6 +16,7 @@ npx playwright install chromium   # for extractor.mjs + the OLX browser fallback
 | `extractor.mjs` | Headless-browser media extractor — renders JS pages (AutoHome, AliExpress) and returns real gallery image URLs. | The app's `/api/admin/media/extract` calls it when `EXTRACTOR_URL` is set. |
 | `olx-crawlee.mjs` | **Crawlee-based** OLX crawler (recommended) — managed retries, session pool, proxy rotation, fingerprints. | POSTs to `/api/admin/market/ingest`. |
 | `olx-collector.mjs` | Legacy naive OLX scraper (fetch-loop + ad-hoc Playwright). Kept as a zero-dep fallback. | POSTs to `/api/admin/market/ingest`. |
+| `alibaba-crawlee.mjs` | **Crawlee-based** Alibaba parts crawler — writes a reviewable DRAFT CSV. | Admin uploads the CSV to Parts → Import. |
 | `telegram-collector.mjs` | Reads car-sales Telegram channels (MTProto / your account via gramJS). | POSTs to `/api/admin/market/ingest`. |
 
 All POSTs authenticate with `MARKET_INGEST_SECRET` (set the same value as a Worker
@@ -74,7 +75,30 @@ e.g. `0 */6 * * *`. Respect OLX ToS/robots; run gently.
 
 The legacy `node olx-collector.mjs` still works (no Crawlee dep) as a fallback.
 
-## 3. Telegram collector
+## 3. Alibaba parts crawler (Crawlee → reviewable CSV)
+
+Sources spare-parts listings from Alibaba into a CSV the dealer **reviews and
+publishes** — it never auto-publishes scraped data. Output matches the
+`Parts → Import` format exactly (rows are drafts: `is_published=false`).
+
+```bash
+export PROXY_URLS="http://user:pass@residential-gw:8000"   # STRONGLY recommended
+# optional: searches file = [{ "q":"brake pads","category":"brakes","fits_brands":["BYD"] }, …]
+export ALIBABA_SEARCHES_FILE=./alibaba-searches.json
+export ALIBABA_OUT=./alibaba-parts.csv
+export ALIBABA_PER_SEARCH=20
+node alibaba-crawlee.mjs
+```
+Then in the app: **Admin → Parts → Import → upload `alibaba-parts.csv`** (run a
+dry-run first), translate RU/UZ names, set OEM/fitment, then publish.
+
+> **Anti-bot reality:** Alibaba aggressively blocks datacenter IPs. Without
+> `PROXY_URLS` (residential) you'll get a captcha wall and `0 parts` — the crawler
+> detects this, rotates the session, and exits with a clear message. Set residential
+> proxies and run gently (`category` ∈ engine, body, electrical, suspension, brakes,
+> interior, other). Verify product/price/image rights before publishing.
+
+## 4. Telegram collector
 
 ```bash
 # one-time: get api_id/api_hash at https://my.telegram.org, then mint a session:

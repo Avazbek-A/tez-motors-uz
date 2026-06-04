@@ -14,7 +14,7 @@
  *
  * Run on the dealer's box (Node 18+). Never bundled into the Workers build.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { ProxyConfiguration, log } from "crawlee";
 
 export const UA =
@@ -110,6 +110,24 @@ export function loadJsonOrDefault(envVar, fallback) {
     log.warning(`couldn't read ${f} (${envVar}); using defaults: ${e.message}`);
     return fallback;
   }
+}
+
+/**
+ * Write rows → a UTF-8 CSV file (BOM-prefixed so Excel renders Cyrillic). Used by
+ * catalog crawlers (e.g. Alibaba parts) that produce DRAFT rows for the admin to
+ * review + upload via the existing /api/admin/parts/import UI — never auto-publish
+ * scraped data straight to the live catalog. `headers` is the column order; each
+ * row is an object keyed by header. List columns should already be ";"-joined.
+ */
+export function writeCsv(filePath, headers, rows) {
+  const esc = (v) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const lines = [headers.join(",")];
+  for (const row of rows) lines.push(headers.map((h) => esc(row[h])).join(","));
+  writeFileSync(filePath, "﻿" + lines.join("\r\n"), "utf8");
+  return { path: filePath, rows: rows.length };
 }
 
 export { log };
