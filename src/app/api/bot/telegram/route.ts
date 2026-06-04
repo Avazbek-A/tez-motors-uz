@@ -200,6 +200,30 @@ async function captureLead(
   const phone = normalizePhone(lead.phone) || lead.phone;
   const name = lead.name?.trim() || "Telegram";
 
+  // Link this Telegram identity to a customer record keyed on the shared phone,
+  // so future proactive messages (order status, price drops) can reach them on
+  // Telegram first (chat-first, Phase AI). In a private chat the chat id IS the
+  // user id. Best-effort + fail-open: a telegram_id already bound to another
+  // customer (UNIQUE) simply leaves the link unset.
+  try {
+    const { data: existing } = await supabase
+      .from("customers")
+      .select("id, telegram_id")
+      .eq("phone", phone)
+      .maybeSingle();
+    if (existing) {
+      if (!existing.telegram_id) {
+        await supabase.from("customers").update({ telegram_id: chatId }).eq("id", existing.id);
+      }
+    } else {
+      await supabase
+        .from("customers")
+        .insert({ phone, telegram_id: chatId, name, locale, last_login_at: new Date().toISOString() });
+    }
+  } catch {
+    /* unique race / telegram_id already linked elsewhere — fail-open */
+  }
+
   let inquiryId: string | null = null;
   try {
     const { data } = await supabase

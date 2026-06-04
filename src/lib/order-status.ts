@@ -10,8 +10,8 @@
  * break the request that triggered it.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail, orderStatusChangedEmail, type EmailLocale } from "@/lib/email";
-import { sendPushToMany, type PushSubscriptionRecord } from "@/lib/push";
+import { orderStatusChangedEmail, type EmailLocale } from "@/lib/email";
+import { sendToCustomer } from "@/lib/customer-messaging";
 
 export const ORDER_STATUSES = [
   "ordered",
@@ -83,36 +83,48 @@ export async function notifyOrderStatus(
   const locale = toEmailLocale(order.locale);
   const statusLabel = ORDER_STATUS_LABELS[locale][newStatus] ?? newStatus;
 
-  if (order.customerEmail) {
-    const tpl = orderStatusChangedEmail(locale, {
-      carName: order.carName,
-      statusLabel,
-      referenceCode: order.referenceCode,
-      note: note ?? undefined,
-    });
-    sendEmail({ to: order.customerEmail, subject: tpl.subject, html: tpl.html }).catch(() => {});
-  }
+  const tpl = orderStatusChangedEmail(locale, {
+    carName: order.carName,
+    statusLabel,
+    referenceCode: order.referenceCode,
+    note: note ?? undefined,
+  });
 
-  // Web push to the order's customer (if they have an account + subscription).
+  // Resolve the customer account (if any) so chat-first routing can reach their
+  // Telegram DM / honor their notify_channel. Falls back to the order's own
+  // email when there's no account. sendToCustomer handles the channel logic
+  // and is fully fail-open.
+  type AccountChannels = { id: string; telegram_id: number | null; notify_channel: string | null; email: string | null };
+  let account: AccountChannels | null = null;
   try {
-    const { data: customer } = await supabase
+    const { data } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, telegram_id, notify_channel, email")
       .eq("phone", order.customerPhone)
       .maybeSingle();
-    if (!customer) return;
-    const { data: subs } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .eq("customer_id", customer.id);
-    if (!subs || subs.length === 0) return;
-    await sendPushToMany(supabase, subs as PushSubscriptionRecord[], {
-      title: statusLabel,
-      body: `${order.carName}: статус обновлён`,
-      url: "/ru/account",
-      tag: "order-status",
-    });
+    account = (data as AccountChannels | null) ?? null;
   } catch {
-    // fail-open
+    // no account / table unavailable — proceed with order email only
   }
+
+  await sendToCustomer(
+    supabase,
+    {
+      id: account?.id ?? null,
+      phone: order.customerPhone,
+      telegram_id: account?.telegram_id ?? null,
+      email: order.customerEmail ?? account?.email ?? null,
+      locale,
+      notify_channel: account?.notify_channel ?? null,
+    },
+    {
+      title: statusLabel,
+      body: `${order.carName}: статус заказа обновлён${note ? ` — ${note}` : ""}`,
+      url: `/${locale}/track`,
+      buttonLabel: "Отследить заказ",
+      email: { subject: tpl.subject, html: tpl.html },
+      pushTag: "order-status",
+      kind: "order_status",
+    },
+  ).catch(() => {});
 }

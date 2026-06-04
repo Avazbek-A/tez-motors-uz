@@ -11,8 +11,8 @@
  * never fail the admin's car save.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { sendEmail, priceDropAlertEmail } from "./email";
-import { sendPushToMany, type PushSubscriptionRecord } from "./push";
+import { priceDropAlertEmail } from "./email";
+import { sendToCustomer } from "./customer-messaging";
 
 export interface WatchableCar {
   id: string;
@@ -43,16 +43,36 @@ export async function notifyPriceWatchers(
 
     if (error || !watches || watches.length === 0) return 0;
 
-    const carName = `${car.brand} ${car.model}${car.year ? ` ${car.year}` : ""}`;
-    let sent = 0;
-    const notifiedCustomerIds = new Set<string>();
-
-    for (const w of watches as Array<{
+    const typedWatches = watches as Array<{
       id: string;
       email: string;
       target_price_usd: number;
       customer_id: string | null;
-    }>) {
+    }>;
+
+    // Resolve account channels (telegram_id / notify_channel) for watchers who
+    // have an account, in one batch — so chat-first routing can reach them.
+    const accountIds = Array.from(
+      new Set(typedWatches.map((w) => w.customer_id).filter((x): x is string => !!x)),
+    );
+    const accountById = new Map<string, { telegram_id: number | null; notify_channel: string | null }>();
+    if (accountIds.length > 0) {
+      const { data: accts } = await supabase
+        .from("customers")
+        .select("id, telegram_id, notify_channel")
+        .in("id", accountIds);
+      for (const a of accts || []) {
+        accountById.set(a.id as string, {
+          telegram_id: (a.telegram_id as number) ?? null,
+          notify_channel: (a.notify_channel as string) ?? null,
+        });
+      }
+    }
+
+    const carName = `${car.brand} ${car.model}${car.year ? ` ${car.year}` : ""}`;
+    let sent = 0;
+
+    for (const w of typedWatches) {
       // price_watches has no locale column; default to ru (the dealer's primary market).
       const tpl = priceDropAlertEmail("ru", {
         carName,
@@ -60,48 +80,39 @@ export async function notifyPriceWatchers(
         targetPrice: Number(w.target_price_usd),
         slug: car.slug,
       });
-      const { ok } = await sendEmail({ to: w.email, subject: tpl.subject, html: tpl.html });
-      if (!ok) continue;
+      const acct = w.customer_id ? accountById.get(w.customer_id) : undefined;
+      const res = await sendToCustomer(
+        supabase,
+        {
+          id: w.customer_id,
+          telegram_id: acct?.telegram_id ?? null,
+          email: w.email,
+          locale: "ru",
+          notify_channel: acct?.notify_channel ?? null,
+        },
+        {
+          title: "Цена снижена",
+          body: `${carName} — цена снизилась до вашей цели ($${Math.round(car.price_usd).toLocaleString("en-US")})`,
+          url: `/ru/catalog/${car.slug}`,
+          buttonLabel: "Открыть авто",
+          email: { subject: tpl.subject, html: tpl.html },
+          pushTag: `price-drop-${car.slug}`,
+          kind: "price_drop",
+        },
+      );
+      // Only stamp notified when at least one channel actually delivered, so an
+      // unconfigured/down stack leaves the watch pending for a later run.
+      if (!res.delivered) continue;
       await supabase
         .from("price_watches")
         .update({ notified_at: new Date().toISOString(), notified_price_usd: car.price_usd })
         .eq("id", w.id);
       sent += 1;
-      if (w.customer_id) notifiedCustomerIds.add(w.customer_id);
-    }
-
-    // Web push to any notified watcher who has an account + a subscription
-    // (fail-open; sendPushToMany no-ops when VAPID keys are unset).
-    if (notifiedCustomerIds.size > 0) {
-      await pushPriceDrop(supabase, Array.from(notifiedCustomerIds), carName, car.slug);
     }
 
     return sent;
   } catch (err) {
     console.error("notifyPriceWatchers failed", err);
     return 0;
-  }
-}
-
-async function pushPriceDrop(
-  supabase: SupabaseClient,
-  customerIds: string[],
-  carName: string,
-  slug: string,
-): Promise<void> {
-  try {
-    const { data: subs } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .in("customer_id", customerIds);
-    if (!subs || subs.length === 0) return;
-    await sendPushToMany(supabase, subs as PushSubscriptionRecord[], {
-      title: "Цена снижена",
-      body: `${carName} — цена снизилась до вашей цели`,
-      url: `/ru/catalog/${slug}`,
-      tag: `price-drop-${slug}`,
-    });
-  } catch {
-    // fail-open
   }
 }

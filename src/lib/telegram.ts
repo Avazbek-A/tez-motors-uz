@@ -85,6 +85,44 @@ export async function sendTelegramNotification(data: {
 }
 
 /**
+ * Send a direct message to a specific Telegram USER (chat_id) — proactive
+ * customer outbound (order status, price drops), distinct from
+ * sendTelegramNotification (dealer alert) and sendChannelMessage (public
+ * channel). A bot can DM any user who has started it / opened the Mini App.
+ *
+ * `text` is sent with HTML parse mode — the caller is responsible for escaping
+ * any dynamic content (use escape-html). Fail-open: no bot token / empty text
+ * ⇒ { ok: false }. The inline button URL must be an absolute https URL.
+ */
+export async function sendBotMessage(
+  chatId: number | string,
+  text: string,
+  opts: { url?: string; label?: string } = {},
+): Promise<{ ok: boolean }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken || !chatId || !text.trim()) return { ok: false };
+  try {
+    const body: Record<string, unknown> = {
+      chat_id: chatId,
+      text: text.slice(0, 4000),
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+    };
+    if (opts.url && /^https:\/\//i.test(opts.url)) {
+      body.reply_markup = { inline_keyboard: [[{ text: opts.label || "Открыть", url: opts.url }]] };
+    }
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return { ok: res.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
  * Publish an arbitrary marketing post to the Telegram channel. Fail-open: no-op
  * if the bot token / channel id are unset. Returns whether it was sent.
  */
