@@ -18,6 +18,7 @@ import {
   type EmailLocale,
 } from "./email";
 import { logEvent, alertDealer } from "./error-report";
+import { escapeHtml as esc } from "@/lib/escape-html";
 
 export interface InquiryNotifyData {
   name: string;
@@ -38,13 +39,6 @@ function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
 }
 
-function esc(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 /** Plain dealer-facing alert email (Russian, matching the Telegram template). */
 async function sendDealerEmail(data: InquiryNotifyData): Promise<{ configured: boolean; ok: boolean }> {

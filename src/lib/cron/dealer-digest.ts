@@ -4,14 +4,7 @@
  * follow-ups due, the daily lead summary, etc. Both channels fail-open.
  */
 import { sendEmail } from "@/lib/email";
-
-function esc(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+import { escapeHtml as esc } from "@/lib/escape-html";
 
 export async function sendDealerDigest(subject: string, lines: string[]): Promise<void> {
   const tasks: Promise<unknown>[] = [];

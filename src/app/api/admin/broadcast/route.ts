@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail } from "@/lib/email";
 import { logAdminAction } from "@/lib/audit";
+import { escapeHtml as esc } from "@/lib/escape-html";
 
 /**
  * Broadcast an announcement to newsletter subscribers (e.g. new inventory).
@@ -13,10 +14,6 @@ import { logAdminAction } from "@/lib/audit";
  */
 const MAX = 2000;
 const schema = z.object({ subject: z.string().min(2).max(200), message: z.string().min(2).max(5000) });
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 export async function GET(request: NextRequest) {
   const guard = await requireAdmin(request);

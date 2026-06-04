@@ -4,6 +4,7 @@ import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { normalizeReferenceCode } from "@/lib/order-code";
 import { ORDER_STATUS_LABELS, toEmailLocale } from "@/lib/order-status";
+import { escapeHtml as esc } from "@/lib/escape-html";
 
 /**
  * Printable order/deposit receipt — a branded HTML document the customer can
@@ -19,13 +20,6 @@ function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-()]/g, "");
 }
 
-function esc(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 const COPY = {
   ru: {

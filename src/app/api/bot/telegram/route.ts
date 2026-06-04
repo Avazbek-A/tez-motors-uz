@@ -24,6 +24,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry } from "@/lib/notify";
 import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
 import { normalizePhone } from "@/lib/customer-auth";
+import { escapeHtml } from "@/lib/escape-html";
 import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 import type { Car } from "@/types/car";
@@ -73,10 +74,6 @@ function botLocale(code?: string): BotLocale {
   if (c.startsWith("uz")) return "uz";
   if (c.startsWith("en")) return "en";
   return "ru";
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 // A message is treated as a phone only if, once formatting is stripped, it is

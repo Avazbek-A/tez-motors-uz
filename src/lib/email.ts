@@ -10,6 +10,8 @@
  * domain verified in Resend), DEALER_EMAIL (where dealer alerts land).
  */
 
+import { escapeHtml as esc } from "@/lib/escape-html";
+
 export type EmailLocale = "ru" | "uz" | "en";
 
 const BRAND = "Tez Motors";
@@ -62,15 +64,6 @@ export async function sendEmail(args: SendEmailArgs): Promise<{ ok: boolean }> {
     console.error("Resend send failed", err);
     return { ok: false };
   }
-}
-
-/** Escape user-supplied strings before interpolating into HTML. */
-function esc(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 /** Shared, inline-styled shell so emails render consistently without a CSS dep. */

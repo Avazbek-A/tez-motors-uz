@@ -9,6 +9,8 @@
  * Plain-text only (no parse_mode) so error strings with Markdown characters
  * can't break formatting or get partially swallowed.
  */
+import { escapeHtml } from "@/lib/escape-html";
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return `${error.name}: ${error.message}`;
   if (typeof error === "string") return error;
@@ -150,13 +152,6 @@ export async function alertDealer(
   } catch {
     // Never let observability break the caller.
   }
-}
-
-function escapeHtml(s: string): string {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 export async function reportServerError(context: string, error: unknown): Promise<void> {
