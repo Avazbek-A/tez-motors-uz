@@ -53,6 +53,12 @@ describe("classifyDeterministic — writes", () => {
     expect(r.params.model?.toLowerCase()).toContain("byd han");
     expect(r.params.model?.toLowerCase()).not.toContain("поставщик");
   });
+  it("draft_po preserves model NUMBERS (Tiggo 9), strips only the count", () => {
+    const r = classifyDeterministic("закажи 2 Chery Tiggo 9 у поставщика");
+    expect(r.params.qty).toBe(2);
+    expect(r.params.model).toContain("Tiggo 9");
+    expect(r.params.model).not.toMatch(/^\s*2\b/);
+  });
   it("unknown for gibberish", () => {
     expect(classifyDeterministic("asdf qwerty").intent).toBe("unknown");
   });

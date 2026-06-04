@@ -20,8 +20,9 @@ import {
 } from "./actions";
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
-const AFFIRM = /^\s*(да|yes|ок|ok|подтверж\w*|давай|go|confirm|✅|👍)\b/i;
-const NEGATE = /^\s*(нет|no|отмен\w*|cancel|стоп|stop|❌)\b/i;
+// Token-boundary (NOT \b — ASCII-only, fails after Cyrillic да/нет) + \p{L}* suffix.
+const AFFIRM = /^\s*(да|yes|ок|ok|подтверж[\p{L}]*|давай|go|confirm|✅|👍)(?:\s|$|[.!,])/iu;
+const NEGATE = /^\s*(нет|no|отмен[\p{L}]*|cancel|стоп|stop|❌)(?:\s|$|[.!,])/iu;
 
 export interface CopilotTurn { reply: string; intent: string; proposed?: boolean; executed?: boolean; }
 

@@ -99,7 +99,10 @@ export function classifyDeterministic(message: string): ParsedIntent {
     params.model = text
       .replace(/(?:закаж|закуп|нужно\s+(?:ввезти|заказать)|создай\s+заявку|purchase\s+order|order|draft)[\p{L}]*/giu, " ")
       .replace(/у\s+поставщик[\p{L}]*|from\s+supplier|поставщик[\p{L}]*|supplier/giu, " ")
-      .replace(/\d{1,3}\s*(?:шт|штук|pcs|units?|x|×)?/giu, " ")
+      // Strip quantities ONLY — a unit-qualified count, or the leading count after
+      // the verb — so MODEL numbers survive (Tiggo 8, Tiggo 9, Tank 300).
+      .replace(/\d{1,3}\s*(?:шт|штук|pcs|units?|x|×)/giu, " ")
+      .replace(/^\s*\d{1,3}(?=\s|$)/, " ")
       .replace(/(?:единиц|штук)[\p{L}]*/giu, " ")
       .replace(/\s+/g, " ")
       .trim() || null;
