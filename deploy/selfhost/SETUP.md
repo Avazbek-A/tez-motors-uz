@@ -14,6 +14,12 @@ always-on server).
 
 ## ⚡ Quick start — one command (recommended)
 
+> **📖 New to this? Follow the full step-by-step walkthrough in
+> [`DEPLOY_GUIDE.md`](./DEPLOY_GUIDE.md)** — architecture, where each secret
+> comes from, the Cloudflare Tunnel + GitHub-webhook steps in detail, an
+> end-to-end auto-deploy test, day-2 operations, and troubleshooting. The
+> sections here are the condensed reference.
+
 Most of the steps below are automated by a single bootstrap script. On the
 Vostro:
 
