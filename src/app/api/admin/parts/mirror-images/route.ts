@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isSafeRemoteUrl, sniffImageMime } from "@/lib/media-ingest";
+import { safeFetch } from "@/lib/safe-fetch";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,17 @@ function refererFor(url: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function fetchWithTimeout(url: string): Promise<Response> {
+  return safeFetch(url, {
+    timeoutMs: FETCH_TIMEOUT_MS,
+    headers: { "user-agent": BROWSER_UA, accept: "image/*" },
+    getHeaders: (u) => {
+      const r = refererFor(u);
+      return r ? { referer: r } : undefined;
+    },
+  });
 }
 
 function isSupabasePublicUrl(url: string): boolean {
@@ -43,38 +55,8 @@ function extensionForMime(mime: string): string {
   }
 }
 
-/** Maximum redirect hops we'll chase before giving up. */
-const MAX_REDIRECTS = 5;
-
-async function fetchWithTimeout(url: string): Promise<Response> {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-  try {
-    // SECURITY: manually follow redirects so we can re-run isSafeRemoteUrl on
-    // EACH hop. `redirect: "follow"` would defeat the SSRF guard — a public
-    // attacker URL can return 301 → http://169.254.169.254/... or http://10.0.0.1/...
-    // and the runtime's automatic follow would happily fetch from the private
-    // network on our behalf. The Referer is recomputed per hop because hotlink
-    // CDNs key on the immediate origin, not the original one.
-    let current = url;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      if (!isSafeRemoteUrl(current)) throw new Error(`unsafe redirect target after ${hop} hop(s)`);
-      const referer = refererFor(current);
-      const res = await fetch(current, {
-        signal: ctrl.signal,
-        redirect: "manual",
-        headers: { "user-agent": BROWSER_UA, accept: "image/*", ...(referer ? { referer } : {}) },
-      });
-      if (res.status < 300 || res.status >= 400) return res;
-      const loc = res.headers.get("location");
-      if (!loc) return res;
-      try { current = new URL(loc, current).toString(); } catch { throw new Error("invalid redirect Location"); }
-    }
-    throw new Error(`too many redirects (> ${MAX_REDIRECTS})`);
-  } finally {
-    clearTimeout(t);
-  }
-}
+// fetchWithTimeout delegated to lib/safe-fetch above (manual redirects,
+// per-hop isSafeRemoteUrl re-check, per-hop Referer recomputation).
 
 /**
  * Walk every part's `images` array. Any URL that isn't already served from

@@ -10,6 +10,7 @@
  * source's MSRP.
  */
 import { isSafeRemoteUrl } from "./media-ingest";
+import { safeFetch } from "./safe-fetch";
 import { llmText } from "./llm";
 
 const FETCH_TIMEOUT_MS = 12_000;
@@ -58,41 +59,22 @@ function enumOrUndef(v: unknown, allowed: Set<string>): string | undefined {
   return allowed.has(s) ? s : undefined;
 }
 
-const MAX_REDIRECTS = 5;
-
 export async function extractCarSpecFromPage(pageUrl: string): Promise<CarSpecDraft | null> {
   if (!isSafeRemoteUrl(pageUrl)) return null;
 
   let html: string;
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    // SECURITY: manually follow redirects so isSafeRemoteUrl runs on EACH hop.
-    // `redirect: "follow"` would let a public attacker URL 301 to an internal
-    // host (169.254.169.254 metadata, 10.x/192.168.x/127.x) and have the worker
-    // fetch from the private network on our behalf, same class of bug fixed
-    // earlier in media-ingest.ts and the parts mirror route.
-    let current = pageUrl;
-    let res: Response | null = null;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      if (!isSafeRemoteUrl(current)) return null;
-      res = await fetch(current, {
-        headers: { "user-agent": BROWSER_UA, accept: "text/html,application/xhtml+xml" },
-        redirect: "manual",
-        signal: ctrl.signal,
-      });
-      if (res.status < 300 || res.status >= 400) break;
-      const loc = res.headers.get("location");
-      if (!loc) break;
-      try { current = new URL(loc, current).toString(); } catch { return null; }
-      if (hop === MAX_REDIRECTS) return null;
-    }
-    if (!res || !res.ok) return null;
+    // safeFetch validates isSafeRemoteUrl on EVERY hop (manual redirects),
+    // so a 301 to a private host can't trick us into reading from the
+    // worker's internal network. Cap output text at ~2 MB.
+    const res = await safeFetch(pageUrl, {
+      timeoutMs: FETCH_TIMEOUT_MS,
+      headers: { "user-agent": BROWSER_UA, accept: "text/html,application/xhtml+xml" },
+    });
+    if (!res.ok) return null;
     html = (await res.text()).slice(0, 2_000_000);
   } catch {
     return null;
-  } finally {
-    clearTimeout(t);
   }
 
   const text = htmlToText(html);
