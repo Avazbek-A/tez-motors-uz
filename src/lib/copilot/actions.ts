@@ -126,18 +126,29 @@ export async function advanceOrder(
 }
 
 /** Create a DRAFT purchase order (never 'ordered' — dealer reviews/sends). */
+const MAX_DRAFT_PO_QTY = 100;
 export async function createDraftPo(
   supabase: SupabaseClient,
   input: { brand: string; model: string; qty: number },
 ): Promise<ActionResult> {
+  // Clamp qty to a sane range. The rule-based extractor matches `\d{1,3}` (max
+  // 999) but the LLM path could return any number — defensively cap at 100
+  // here so a malformed classification can't drop a "1 000 000 BYD" draft in
+  // front of the dealer (a draft is not sent, but it's still UI noise + an
+  // audit row + a row in purchase_orders).
+  const qty = Math.min(MAX_DRAFT_PO_QTY, Math.max(1, Math.floor(input.qty) || 1));
+  // Cap brand/model strings — defense in depth against an LLM that returns a
+  // megabyte of text where a noun phrase was expected.
+  const brand = String(input.brand).slice(0, 60);
+  const model = String(input.model).slice(0, 80);
   const { data, error } = await supabase
     .from("purchase_orders")
-    .insert({ brand: input.brand, model: input.model, qty: Math.max(1, input.qty || 1), status: "draft", notes: "Draft created by copilot — review and send." })
+    .insert({ brand, model, qty, status: "draft", notes: "Draft created by copilot — review and send." })
     .select("id")
     .single();
   if (error) return { ok: false, message: `Не удалось создать черновик заявки: ${error.message}` };
-  logAdminAction(null, { action: "create", entity: "purchase_order", entity_id: data?.id ?? null, actor: OPERATOR_ACTOR, diff: { ...input, status: "draft", via: "copilot" } }).catch(() => {});
-  return { ok: true, message: `Черновик заявки поставщику создан: ${input.qty}× ${input.brand} ${input.model}. Откройте «Закупки», чтобы отправить.` };
+  logAdminAction(null, { action: "create", entity: "purchase_order", entity_id: data?.id ?? null, actor: OPERATOR_ACTOR, diff: { brand, model, qty, status: "draft", via: "copilot" } }).catch(() => {});
+  return { ok: true, message: `Черновик заявки поставщику создан: ${qty}× ${brand} ${model}. Откройте «Закупки», чтобы отправить.` };
 }
 
 /** Split a free-text model phrase into {brand, model} using a known-brand prefix. */
