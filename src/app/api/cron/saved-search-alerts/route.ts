@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendEmail, savedSearchAlertEmail, type EmailLocale } from "@/lib/email";
-import { sendPushToMany, type PushSubscriptionRecord } from "@/lib/push";
+import { savedSearchAlertEmail, type EmailLocale } from "@/lib/email";
+import { sendToCustomer } from "@/lib/customer-messaging";
 import { priceFromMonthly } from "@/lib/finance";
 import { reportServerError, logEvent } from "@/lib/error-report";
 
@@ -41,6 +41,8 @@ interface CustomerLite {
   id: string;
   email: string | null;
   locale: string | null;
+  telegram_id: number | null;
+  notify_channel: string | null;
 }
 
 interface MatchedCar {
@@ -167,24 +169,11 @@ async function handle(request: NextRequest) {
     const customerIds = Array.from(new Set(rows.map((r) => r.customer_id)));
     const { data: customers } = await supabase
       .from("customers")
-      .select("id, email, locale")
+      .select("id, email, locale, telegram_id, notify_channel")
       .in("id", customerIds);
     const customerById = new Map<string, CustomerLite>(
       (customers || []).map((c) => [c.id as string, c as CustomerLite]),
     );
-
-    const { data: subs } = await supabase
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth, customer_id")
-      .in("customer_id", customerIds);
-    const subsByCustomer = new Map<string, PushSubscriptionRecord[]>();
-    for (const s of subs || []) {
-      const cid = s.customer_id as string;
-      if (!cid) continue;
-      const list = subsByCustomer.get(cid) || [];
-      list.push({ id: s.id as string, endpoint: s.endpoint as string, p256dh: s.p256dh as string, auth: s.auth as string });
-      subsByCustomer.set(cid, list);
-    }
 
     let alerts = 0;
     for (const row of rows) {
@@ -206,30 +195,32 @@ async function handle(request: NextRequest) {
         })),
       });
 
-      const hasEmail = !!customer.email;
-      const pushSubs = subsByCustomer.get(customer.id) || [];
-      const hasPush = pushSubs.length > 0;
-      let delivered = false;
-
-      if (hasEmail) {
-        const { ok } = await sendEmail({ to: customer.email as string, subject: tpl.subject, html: tpl.html });
-        delivered = delivered || ok;
-      }
-      if (hasPush) {
-        const lead = matches[0];
-        const { sent } = await sendPushToMany(supabase, pushSubs, {
+      const lead = matches[0];
+      const res = await sendToCustomer(
+        supabase,
+        {
+          id: customer.id,
+          email: customer.email,
+          telegram_id: customer.telegram_id,
+          locale,
+          notify_channel: customer.notify_channel,
+        },
+        {
           title: locale === "uz" ? "Yangi avtomobillar" : locale === "en" ? "New cars" : "Новые авто",
           body: `${lead.brand} ${lead.model}${matches.length > 1 ? ` +${matches.length - 1}` : ""}`,
           url: `/${locale}/catalog`,
-          tag: `saved-search-${row.id}`,
-        });
-        delivered = delivered || sent > 0;
-      }
+          buttonLabel: locale === "uz" ? "Katalog" : locale === "en" ? "Browse" : "Каталог",
+          email: { subject: tpl.subject, html: tpl.html },
+          pushTag: `saved-search-${row.id}`,
+          kind: "saved_search",
+        },
+      );
+      const delivered = res.delivered;
 
       // Advance the watermark when something was delivered, or when there is no
       // channel we could ever deliver to (so we don't re-scan it forever). If a
       // channel exists but the send failed transiently, leave it for next run.
-      const noChannels = !hasEmail && !hasPush;
+      const noChannels = !customer.email && !customer.telegram_id;
       if (delivered || noChannels) {
         await supabase
           .from("saved_searches")
