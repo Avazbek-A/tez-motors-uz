@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - MARKET_WINDOW_DAYS * 86_400_000).toISOString();
     const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 
-    const [carsRes, marketRes, inqRes, watchRes, favRes, savedRes, poRes, cfgRes, fx] = await Promise.all([
+    const [carsRes, marketRes, inqRes, watchRes, favRes, savedRes, poRes, sourceRes, cfgRes, fx] = await Promise.all([
       supabase.from("cars").select("id, brand, model, fuel_type").limit(MAX),
       supabase.from("market_listings").select("brand, model, price_usd, observed_at").gte("observed_at", since).not("price_usd", "is", null).limit(MAX),
       supabase.from("inquiries").select("car_id").not("car_id", "is", null).limit(MAX),
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
       supabase.from("favorites").select("car_id").limit(MAX),
       supabase.from("saved_searches").select("filters").limit(MAX),
       supabase.from("purchase_orders").select("brand, model, unit_cost_usd").not("unit_cost_usd", "is", null).limit(MAX),
+      supabase.from("source_prices").select("brand, model, price_usd, observed_at").not("price_usd", "is", null).order("observed_at", { ascending: false }).limit(MAX).then((r) => r, () => ({ data: [] })),
       supabase.from("site_settings").select("values").eq("id", "import_config").maybeSingle(),
       getFxRates(supabase),
     ]);
@@ -116,14 +117,24 @@ export async function GET(request: NextRequest) {
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: p.brand as string, model: p.model as string, fuel: "petrol" });
     }
 
+    // Forward source cost per model (latest RFQ quote, USD). Rows are ordered
+    // newest-first, so the first seen per model is the most recent — this beats
+    // PO history because it reflects what the supplier quotes RIGHT NOW.
+    const sourceCostByKey = new Map<string, number>();
+    for (const s of (sourceRes.data as { brand: string; model: string; price_usd: number }[]) || []) {
+      const k = key(s.brand, s.model);
+      if (!sourceCostByKey.has(k)) sourceCostByKey.set(k, num(s.price_usd));
+      if (!modelMeta.has(k)) modelMeta.set(k, { brand: s.brand, model: s.model, fuel: "petrol" });
+    }
+
     // Surface pre-order-only models too: a model nobody stocks but several
     // people pre-ordered is exactly what to import. Seed meta from the catalog.
     for (const [k, pd] of preorderDemand) {
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: pd.brand, model: pd.model, fuel: "petrol" });
     }
 
-    // Score every model that has market data OR demand OR pre-orders.
-    const candidates = new Set<string>([...marketByKey.keys(), ...demand.keys(), ...preorderDemand.keys()]);
+    // Score every model that has market data OR demand OR pre-orders OR a quote.
+    const candidates = new Set<string>([...marketByKey.keys(), ...demand.keys(), ...preorderDemand.keys(), ...sourceCostByKey.keys()]);
     const rows = [];
     for (const k of candidates) {
       const meta = modelMeta.get(k);
@@ -146,8 +157,13 @@ export async function GET(request: NextRequest) {
       const latest = mk && mk.dates.length ? mk.dates.sort().slice(-1)[0] : null;
       const freshnessDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : null;
 
+      // Prefer a current RFQ source price over PO-history average — it reflects
+      // what the supplier quotes now, not what we paid in the past.
       const sup = supplierAgg.get(k);
-      const supplierCostUsd = sup ? Math.round(sup.sum / sup.n) : null;
+      const poAvgCostUsd = sup ? Math.round(sup.sum / sup.n) : null;
+      const sourceCostUsd = sourceCostByKey.get(k) ?? null;
+      const supplierCostUsd = sourceCostUsd ?? poAvgCostUsd;
+      const costSource = sourceCostUsd != null ? "rfq" : poAvgCostUsd != null ? "po_history" : null;
 
       let landedCostUsd: number | null = null;
       let marginUsd: number | null = null;
@@ -183,6 +199,7 @@ export async function GET(request: NextRequest) {
         marketSample: sampleSize,
         marketFreshnessDays: freshnessDays,
         supplierCostUsd,
+        costSource,
         landedCostUsd,
         marginUsd,
         marginPct,
