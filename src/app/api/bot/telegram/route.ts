@@ -303,6 +303,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
+  // Defense in depth: cap the body even after auth. Telegram updates are tiny;
+  // 256 KB is generous headroom and rejects a leaked-secret abuse / runaway.
+  const MAX_BODY = 256 * 1024;
+  const cl = Number(request.headers.get("content-length") || 0);
+  if (cl && cl > MAX_BODY) {
+    return NextResponse.json({ ok: false, error: "payload too large" }, { status: 413 });
+  }
+
   let update: TgUpdate;
   try {
     update = (await request.json()) as TgUpdate;

@@ -264,8 +264,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Cap the body BEFORE reading it — we have to read the full raw text to verify
+  // Meta's HMAC, so an unauthenticated attacker who just knows the URL could
+  // otherwise burn worker memory by sending a 100 MB body and only THEN failing
+  // the signature check. Typical Meta webhook payloads are well under 50 KB.
+  const MAX_WEBHOOK_BYTES = 256 * 1024;
+  const cl = Number(request.headers.get("content-length") || 0);
+  if (cl && cl > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "payload too large" }, { status: 413 });
+  }
+
   // Read the raw body so we can verify Meta's HMAC signature before parsing.
   const raw = await request.text();
+  if (raw.length > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "payload too large" }, { status: 413 });
+  }
 
   // Authenticity: when WHATSAPP_APP_SECRET is set, require a valid
   // X-Hub-Signature-256 — otherwise anyone who knows the URL could POST fake
