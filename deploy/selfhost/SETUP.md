@@ -163,14 +163,21 @@ Verify in the admin: **Setup → AI brain → Test connection** (should reply OK
 ## 11. Market collectors + media extractor (run on this box)
 
 These can't run on Workers either (anti-bot, a headless browser, Telegram
-MTProto). Full setup in `deploy/collector/README.md`. In short:
+MTProto). The crawlers are built on **Crawlee** (Node/TS — no Python runtime to
+maintain) for managed retries, session rotation, proxy support, and
+fingerprints. Full setup in `deploy/collector/README.md`. In short:
 ```bash
 cd ~/tez-motors/deploy/collector && npm install && npx playwright install chromium
 # set INGEST_URL=https://tezmotors.uz/api/admin/market/ingest + MARKET_INGEST_SECRET
-node olx-collector.mjs            # + schedule in cron (every 6h)
+node olx-crawlee.mjs              # car price intel (Crawlee) → market/ingest; cron every 6h
+node olx-parts-crawlee.mjs        # parts sourcing (OLX API, no proxies) → draft CSV → Parts→Import
+node alibaba-crawlee.mjs          # parts sourcing (needs residential PROXY_URLS) → draft CSV
 node telegram-collector.mjs --login   # once → TG_SESSION, then schedule
 node extractor.mjs &              # headless media extractor for AutoHome etc.
 ```
+The parts crawlers write a reviewable DRAFT CSV (is_published=false) — upload it
+in **Admin → Parts → Import** (dry-run first) and publish after review; scraped
+data never auto-publishes. Set `PROXY_URLS` (residential) only for Alibaba.
 Set `MARKET_INGEST_SECRET` (and `EXTRACTOR_URL=http://localhost:8789`,
 `EXTRACTOR_SECRET`) in the app's `.env.local` so ingest + the AutoHome
 "Import from URL" button work. Car photos are already populated; to refresh:
