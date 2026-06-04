@@ -5,12 +5,13 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendChannelMessage } from "@/lib/telegram";
 import { logAdminAction } from "@/lib/audit";
+import { safeHttpUrlNullable } from "@/lib/schemas/safe-url";
 
 /** Publish a marketing post to the Telegram channel. Fail-open: if the channel
  *  isn't configured, returns ok:false with a clear flag (no error thrown). */
 const schema = z.object({
   text: z.string().min(1).max(4000),
-  link_url: z.string().url().max(1000).optional().nullable(),
+  link_url: safeHttpUrlNullable, // Telegram strips javascript: itself, but we tighten upstream too.
   draft_id: z.string().uuid().optional().nullable(),
 });
 

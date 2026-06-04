@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getAdminSessionContext, requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { logAdminAction } from "@/lib/audit";
+import { safeHttpUrlNullable } from "@/lib/schemas/safe-url";
 
 const schema = z.object({
   slug: z.string().max(200).optional().or(z.literal("")),
@@ -13,7 +14,7 @@ const schema = z.object({
   body_ru: z.string().min(1).max(50_000),
   body_uz: z.string().max(50_000).optional().nullable(),
   body_en: z.string().max(50_000).optional().nullable(),
-  cover_image: z.string().url().optional().nullable(),
+  cover_image: safeHttpUrlNullable, // http(s) only — never javascript:/data:/file:
   is_published: z.boolean().default(false),
 });
 

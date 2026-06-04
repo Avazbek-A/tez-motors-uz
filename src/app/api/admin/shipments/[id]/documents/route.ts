@@ -4,13 +4,16 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
+import { safeHttpUrl } from "@/lib/schemas/safe-url";
 
 /** Attach / remove a shipment document (a URL reference: invoice, customs
  *  declaration, certificate, …). The file itself lives in Storage or any host;
- *  this records the link + kind. */
+ *  this records the link + kind. URL must be http(s) only — the admin page
+ *  renders it as `<a href={doc.url} target="_blank">`, so `javascript:` would
+ *  be a one-click DOM XSS to anyone with admin access. */
 const addSchema = z.object({
   kind: z.enum(["invoice", "packing_list", "bill_of_lading", "customs_declaration", "certificate", "other"]),
-  url: z.string().url().max(1000),
+  url: safeHttpUrl,
   filename: z.string().max(200).optional().nullable(),
 });
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeHttpUrl, safeHttpUrlNullable } from "./safe-url";
 
 export const carWriteSchema = z.object({
   brand: z.string().min(1).max(100),
@@ -18,9 +19,11 @@ export const carWriteSchema = z.object({
   description_ru: z.string().max(5000).optional().nullable(),
   description_uz: z.string().max(5000).optional().nullable(),
   description_en: z.string().max(5000).optional().nullable(),
-  images: z.array(z.string().url()).default([]),
-  thumbnail: z.string().url().optional().nullable(),
-  video_url: z.string().url().optional().nullable(),
+  // safeHttpUrl: rejects javascript:/data:/file: — these end up rendered as
+  // <img src>/<a href> on the storefront, so the URL scheme must be safe.
+  images: z.array(safeHttpUrl).default([]),
+  thumbnail: safeHttpUrlNullable,
+  video_url: safeHttpUrlNullable,
   is_hot_offer: z.boolean().default(false),
   // is_available is a GENERATED column derived from inventory_status (migration 022);
   // it is never written directly. inventory_status is the single source of truth.
@@ -36,8 +39,8 @@ export const reviewWriteSchema = z.object({
   review_text_uz: z.string().max(3000).optional().nullable(),
   review_text_en: z.string().max(3000).optional().nullable(),
   car_description: z.string().max(300).optional().nullable(),
-  photo_url: z.string().url().optional().nullable(),
-  video_url: z.string().url().optional().nullable(),
+  photo_url: safeHttpUrlNullable,
+  video_url: safeHttpUrlNullable,
   is_published: z.boolean().default(false),
   order_position: z.number().int().min(0).default(0),
   car_id: z.string().uuid().optional().nullable(),

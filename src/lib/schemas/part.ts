@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeHttpUrl } from "./safe-url";
 
 export const PART_CATEGORIES = [
   "engine",
@@ -32,7 +33,9 @@ export const partWriteSchema = z.object({
   wholesale_price_usd: z.number().nonnegative().optional().nullable(),
   min_order_qty: z.number().int().min(1).default(1),
   stock_qty: z.number().int().min(0).default(0),
-  images: z.array(z.string().url()).default([]),
+  // safeHttpUrl: rejects javascript:/data:/file: so a stored URL can't become
+  // a DOM XSS when rendered as <img src> / <a href> on the storefront.
+  images: z.array(safeHttpUrl).default([]),
   is_published: z.boolean().default(false),
   fits_brands: z.array(z.string().max(64)).default([]),
   fits_models: z.array(z.string().max(128)).default([]),

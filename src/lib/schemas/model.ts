@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeHttpUrl, safeHttpUrlNullable } from "./safe-url";
 
 /**
  * model_catalog write validation (Phase W pre-orders). This is the dealer's MENU
@@ -22,8 +23,9 @@ export const modelObjectSchema = z.object({
   lead_time_weeks_min: z.number().int().min(1).max(104).default(6),
   lead_time_weeks_max: z.number().int().min(1).max(104).default(8),
   available_colors: z.array(z.string().max(60)).default([]),
-  thumbnail: z.string().url().optional().nullable(),
-  images: z.array(z.string().url()).default([]),
+  // safeHttpUrl: rejects javascript:/data:/file: — DOM-XSS defense at write time.
+  thumbnail: safeHttpUrlNullable,
+  images: z.array(safeHttpUrl).default([]),
   description_ru: z.string().max(5000).optional().nullable(),
   description_uz: z.string().max(5000).optional().nullable(),
   description_en: z.string().max(5000).optional().nullable(),
