@@ -246,7 +246,9 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     return;
   }
 
-  const text = (message.text || "").trim();
+  // Cap at 500 chars (same as the web assistant) — bounds LLM token cost on
+  // pasted walls of text and limits the surface for prompt-injection attempts.
+  const text = (message.text || "").trim().slice(0, 500);
   if (!text) return;
 
   // 2) /start → welcome + share-contact keyboard, then a Mini App launch button.

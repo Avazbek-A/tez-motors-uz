@@ -203,7 +203,9 @@ async function handleUpdate(update: WaUpdate): Promise<void> {
 
   const from = message.from; // sender's wa_id (their phone, digits only)
   const profileName = change?.contacts?.[0]?.profile?.name || "WhatsApp";
-  const text = (message.text?.body || "").trim();
+  // Cap at 500 chars (same as the web assistant) — bounds LLM token cost on
+  // pasted walls of text and limits the surface for prompt-injection attempts.
+  const text = (message.text?.body || "").trim().slice(0, 500);
   const locale = DEFAULT_LOCALE;
   if (!text) return;
 
