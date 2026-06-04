@@ -337,7 +337,7 @@ export default function CarDetailPage() {
                 </Button>
               )}
               <Button type="button" variant="outline" asChild className="w-full mb-4">
-                <a href={`/api/cars/${car.id}/pdf`} download>
+                <a href={`/api/cars/${car.id}/spec-sheet?locale=${locale}`} download>
                   Download PDF spec sheet
                 </a>
               </Button>

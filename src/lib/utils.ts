@@ -63,3 +63,17 @@ export function whatsappLink(whatsapp: string | undefined, message?: string): st
   const sep = base.includes("?") ? "&" : "?";
   return `${base}${sep}text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * Normalize a Telegram contact into a t.me URL. Accepts a full t.me URL or an
+ * @username / username. Telegram is the primary contact channel in Uzbekistan.
+ * (t.me username/channel links can't carry a prefilled message — only the chat
+ * opens — so no `text` param here.)
+ */
+export function telegramLink(telegram: string | undefined): string {
+  const raw = (telegram || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const handle = raw.replace(/^@/, "").replace(/^t\.me\//i, "").trim();
+  return handle ? `https://t.me/${handle}` : "";
+}

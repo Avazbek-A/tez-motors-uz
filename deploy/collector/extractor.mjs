@@ -68,20 +68,50 @@ async function extract(url) {
   }
 }
 
+/** Render a page (with its print CSS) to a styled A4 PDF — used for spec sheets. */
+async function renderPdf(url) {
+  const b = await getBrowser();
+  const ctx = await b.newContext({ userAgent: UA });
+  const page = await ctx.newPage();
+  try {
+    await page.goto(url, { waitUntil: "networkidle", timeout: NAV_TIMEOUT });
+    await page.emulateMedia({ media: "print" });
+    return await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "12mm", bottom: "12mm", left: "10mm", right: "10mm" },
+    });
+  } finally {
+    await ctx.close();
+  }
+}
+
 const server = createServer((req, res) => {
   const json = (code, obj) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
   if (req.method === "GET" && req.url === "/health") return json(200, { ok: true });
-  if (req.method !== "POST" || !req.url?.startsWith("/extract")) return json(404, { error: "not found" });
+  const route = (req.url || "").split("?")[0];
+  if (req.method !== "POST" || (route !== "/extract" && route !== "/render-pdf")) return json(404, { error: "not found" });
   if (SECRET) {
     const auth = req.headers["authorization"] || "";
     if (auth !== `Bearer ${SECRET}`) return json(401, { error: "unauthorized" });
   }
   let body = "";
-  req.on("data", (c) => { body += c; if (body.length > 4000) req.destroy(); });
+  req.on("data", (c) => { body += c; if (body.length > 8000) req.destroy(); });
   req.on("end", async () => {
     let url;
     try { url = JSON.parse(body).url; } catch { return json(400, { error: "invalid json" }); }
     if (!url || !/^https?:\/\//.test(url)) return json(400, { error: "valid url required" });
+    if (route === "/render-pdf") {
+      try {
+        const pdf = await renderPdf(url);
+        res.writeHead(200, { "content-type": "application/pdf" });
+        res.end(pdf);
+      } catch (e) {
+        console.error("render-pdf failed", e?.message || e);
+        json(502, { error: "render failed" }); // app falls back to raw-text PDF
+      }
+      return;
+    }
     try {
       const candidates = await extract(url);
       json(200, { candidates });
