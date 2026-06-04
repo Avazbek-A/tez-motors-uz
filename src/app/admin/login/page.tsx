@@ -6,10 +6,30 @@ import { Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+/**
+ * Restrict the post-login redirect to SAME-ORIGIN relative paths. A phishing
+ * link like /admin/login?redirect=https://attacker.com/ would otherwise let an
+ * attacker bounce a freshly-logged-in admin to a clone of the login page
+ * ("session expired, please re-enter…") to capture creds. Accept only paths
+ * that start with a single "/" and don't contain "://" (catches "//host/...",
+ * "https:..." and similar). The fallback /admin is always safe.
+ */
+function safeRedirect(raw: string | null): string {
+  const FALLBACK = "/admin";
+  if (!raw) return FALLBACK;
+  if (raw.length > 500) return FALLBACK;
+  if (!raw.startsWith("/")) return FALLBACK; // not relative
+  if (raw.startsWith("//")) return FALLBACK; // protocol-relative
+  if (raw.startsWith("/\\")) return FALLBACK; // backslash trick
+  if (/[:\\]/.test(raw)) return FALLBACK; // any scheme indicator
+  if (!raw.startsWith("/admin")) return FALLBACK; // keep within admin tree
+  return raw;
+}
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/admin";
+  const redirect = safeRedirect(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
