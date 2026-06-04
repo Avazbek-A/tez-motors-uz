@@ -1,0 +1,21 @@
+[Unit]
+Description=Tez Motors update webhook (GitHub push -> auto-deploy)
+After=network-online.target tez-motors.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Same user as tez-motors.service (NOT root). The user needs passwordless sudo
+# ONLY for `systemctl restart tez-motors` — see SETUP.md §13.
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/tez-motors
+# Loads UPDATE_WEBHOOK_SECRET, DEPLOY_BRANCH, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+EnvironmentFile=/home/YOUR_USER/tez-motors/.env.local
+ExecStart=/usr/bin/node /home/YOUR_USER/tez-motors/deploy/selfhost/update-webhook.mjs
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

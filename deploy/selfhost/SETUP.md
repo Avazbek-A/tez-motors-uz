@@ -201,6 +201,91 @@ running here; they POST market data to the Workers site via `MARKET_INGEST_SECRE
 (LLM features on the Workers site need a hosted `LLM_API_KEY`, since Workers
 can't reach this box's Ollama.)
 
+## 13. Remote update & auto-deploy (Pages-grade ergonomics)
+
+Turns `git push` into a live deploy on this box from anywhere — no SSH typing
+required. Three parts: a remote-access tunnel, a one-command deploy script, and
+a GitHub webhook listener.
+
+### 13.1 Remote access without opening ports — Tailscale (recommended)
+
+Free for personal use, gives you `ssh vostro` from any of your devices over an
+encrypted mesh. No public IP, no port forwarding.
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up                    # opens a URL; sign in once
+tailscale ip -4                      # note the 100.x.y.z address
+# On your laptop: install Tailscale too, then `ssh YOUR_USER@<100.x.y.z>` works.
+```
+Alternative (no extra service): `cloudflared` already runs here for the public
+site. Add an SSH route to the same tunnel — see `cloudflared access ssh` docs —
+and `ssh -o ProxyCommand='cloudflared access ssh --hostname ssh.tezmotors.uz' …`.
+
+### 13.2 One-command deploy script
+
+Already in the repo at `deploy/selfhost/update.sh`. Atomic-ish: a failed `npm ci`
+or build leaves the running service untouched and resets the working tree.
+```bash
+# From your laptop, anywhere:
+ssh vostro 'cd ~/tez-motors && ./deploy/selfhost/update.sh'
+# Schema bump? add --migrate (runs `supabase db push` after a green build):
+ssh vostro 'cd ~/tez-motors && ./deploy/selfhost/update.sh --migrate'
+# Bad deploy? roll back to any previous commit:
+ssh vostro 'cd ~/tez-motors && ./deploy/selfhost/rollback.sh <sha>'
+```
+The script needs **passwordless `systemctl restart tez-motors`** for the unit
+user. One line in `sudoers` makes that safe:
+```bash
+sudo visudo
+# Add (replace YOUR_USER):
+YOUR_USER ALL=(root) NOPASSWD: /bin/systemctl restart tez-motors
+```
+
+### 13.3 Auto-deploy on `git push` — GitHub webhook
+
+Optional, but this is what makes Vostro feel like Cloudflare Pages.
+```bash
+# 1. Mint a strong webhook secret and put it in .env.local
+echo "UPDATE_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> .env.local
+echo "DEPLOY_BRANCH=main" >> .env.local
+
+# 2. Install the webhook listener as a systemd service
+sudo cp deploy/selfhost/tez-motors-webhook.service /etc/systemd/system/
+sudo nano /etc/systemd/system/tez-motors-webhook.service   # set YOUR_USER + paths
+sudo systemctl daemon-reload
+sudo systemctl enable --now tez-motors-webhook
+systemctl status tez-motors-webhook
+
+# 3. Expose 127.0.0.1:9090 → public HTTPS via the SAME cloudflared tunnel.
+#    Add this ingress rule to ~/.cloudflared/config.yml (above the http_status:404):
+#      - hostname: deploy.tezmotors.uz
+#        service: http://localhost:9090
+#    Route it: `cloudflared tunnel route dns tez-motors deploy.tezmotors.uz`,
+#    then `sudo systemctl restart cloudflared`.
+
+# 4. In GitHub: repo → Settings → Webhooks → Add webhook
+#      Payload URL:  https://deploy.tezmotors.uz/webhook
+#      Content type: application/json
+#      Secret:       (the value of UPDATE_WEBHOOK_SECRET)
+#      Events:       Just the push event
+#    Save → GitHub sends a `ping`; check `journalctl -u tez-motors-webhook -n 5`
+#    — you should see "pong".
+```
+Now every `git push origin main` triggers `update.sh` here. The dealer gets a
+Telegram ping on success/failure (uses the existing `TELEGRAM_BOT_TOKEN` +
+`TELEGRAM_CHAT_ID`). At most one deploy runs at a time; rapid pushes coalesce.
+
+## 14. Liveness check (alert if the box drops offline)
+
+`deploy/selfhost/healthcheck.sh` pings `/api/cars?limit=1` and sends a Telegram
+alert on UP→DOWN transitions (and another on the recovery), so a closed lid or
+ISP outage doesn't go unnoticed. Run it from cron:
+```bash
+crontab -e
+# Every 5 minutes; sources secrets from .env.local for the Telegram alert.
+*/5 * * * *  set -a; . ~/tez-motors/.env.local; set +a; ~/tez-motors/deploy/selfhost/healthcheck.sh >> ~/tez-motors/healthcheck.log 2>&1
+```
+
 ---
 
 ### Reality check
