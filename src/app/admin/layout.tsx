@@ -18,6 +18,7 @@ const navGroups = [
       { href: "/admin/operator", label: "AI Operator", icon: Sparkles },
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
       { href: "/admin/autopilot", label: "Autopilot", icon: Activity },
+      { href: "/admin/autopilot/settings", label: "Autopilot Rules", icon: Bot },
       { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
     ],
   },
