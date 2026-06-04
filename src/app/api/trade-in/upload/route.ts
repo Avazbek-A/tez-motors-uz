@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
+  // Pre-formData Content-Length check — public route, so an attacker could
+  // otherwise burn worker memory with a 100 MB body before per-file size
+  // checks ever ran. Max envelope = MAX_FILES × MAX_BYTES + 256 KB headroom
+  // for multipart boundaries / form fields.
+  const cl = Number(request.headers.get("content-length") || 0);
+  if (cl && cl > MAX_FILES * MAX_BYTES + 256 * 1024) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   let form: FormData;
   try {
     form = await request.formData();
