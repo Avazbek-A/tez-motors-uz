@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry } from "@/lib/notify";
 import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runtime";
+import { runCopilotTurn } from "@/lib/copilot/core";
 import { normalizePhone } from "@/lib/customer-auth";
 import { escapeHtml } from "@/lib/escape-html";
 import { timingSafeEqual } from "@/lib/timing-safe";
@@ -67,6 +68,13 @@ function appButton(locale: BotLocale): ReplyMarkup {
 
 function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
+}
+
+/** Dealer-only allow-list (TELEGRAM_OPERATOR_CHAT_IDS, comma-separated chat ids).
+ *  An operator chat runs the Dealer Copilot, NOT the customer recommender. */
+function isOperatorChat(chatId: number): boolean {
+  const ids = (process.env.TELEGRAM_OPERATOR_CHAT_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return ids.includes(String(chatId));
 }
 
 function botLocale(code?: string): BotLocale {
@@ -236,6 +244,21 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
   const chatId = message.chat.id;
   const from = message.from || {};
   const locale = botLocale(from.language_code);
+
+  // 0) OPERATOR (dealer) branch — gated to the allow-list. Runs the Dealer
+  //    Copilot (ask + confirm-gated actions), NOT the customer recommender.
+  if (isOperatorChat(chatId)) {
+    const opText = (message.text || "").trim().slice(0, 1000);
+    if (!opText) return;
+    if (opText === "/start" || opText.startsWith("/start")) {
+      await tgSend(chatId, "🔧 <b>Режим оператора.</b> Спросите: «сводка», «сколько денег», «спрос», «что залежалось», «новые заявки».\n\nКоманды (с подтверждением «да»): «снизь цену на Tank 300 на 5%», «переведи заказ TM-XXXXXXXX в таможню», «закажи 3 BYD Han у поставщика».");
+      return;
+    }
+    const supabaseOp = createServiceClient();
+    const turn = await runCopilotTurn({ supabase: supabaseOp, threadId: `tg:${chatId}`, message: opText });
+    await tgSend(chatId, escapeHtml(turn.reply));
+    return;
+  }
 
   // 1) Shared contact → qualified lead.
   if (message.contact && message.contact.phone_number) {
