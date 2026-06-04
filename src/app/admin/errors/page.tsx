@@ -9,9 +9,12 @@ interface ErrorEvent {
   detail: Record<string, unknown> | null;
   created_at: string;
 }
+interface EventAgg { event: string; last24h: number; last7d: number; total: number; lastSeen: string }
 interface Data {
   total: number;
   last24h: number;
+  last7d?: number;
+  byEvent?: EventAgg[];
   events: ErrorEvent[];
 }
 
@@ -57,6 +60,32 @@ export default function AdminErrorsPage() {
         Recent server errors. These are fail-open (they never break a request) and the dealer is
         alerted — this feed is for diagnosing them. {data && <span className="font-mono text-foreground">{data.last24h}</span>} in the last 24h.
       </p>
+
+      {/* SLO summary: error volume by event tag (24h / 7d) so spikes stand out. */}
+      {data && data.byEvent && data.byEvent.length > 0 && (
+        <div className="mb-6 bg-card border border-border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                <th className="px-4 py-2 font-medium">Event</th>
+                <th className="px-4 py-2 font-medium text-right">24h</th>
+                <th className="px-4 py-2 font-medium text-right">7d</th>
+                <th className="px-4 py-2 font-medium text-right">Last seen</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.byEvent.slice(0, 12).map((e) => (
+                <tr key={e.event} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2 font-mono text-foreground">{e.event}</td>
+                  <td className={`px-4 py-2 text-right font-mono ${e.last24h >= 5 ? "text-[var(--danger,#ef4444)]" : "text-muted-foreground"}`}>{e.last24h}</td>
+                  <td className="px-4 py-2 text-right font-mono text-muted-foreground">{e.last7d}</td>
+                  <td className="px-4 py-2 text-right text-muted-foreground">{ago(e.lastSeen)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>

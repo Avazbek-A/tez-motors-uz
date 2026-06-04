@@ -46,6 +46,7 @@ crons = [
   "0 8 * * 5",   # Fri 13:00 Tashkent — weekly market-price digest (OLX/Telegram intel)
   "0 7 * * 1",   # Mon 12:00 Tashkent — Autopilot: auto-markdown aged stock (opt-in)
   "30 7 * * 1",  # Mon 12:30 Tashkent — Autopilot: demand → draft purchase orders (opt-in)
+  "*/15 * * * *", # every 15 min — synthetic monitoring of critical paths
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.
