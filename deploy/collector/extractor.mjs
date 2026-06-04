@@ -109,13 +109,16 @@ async function captureSpec(url) {
   }
 }
 
-/** Render a page (with its print CSS) to a styled A4 PDF — used for spec sheets. */
-async function renderPdf(url) {
+/** Render a page (URL) OR raw HTML (with its print CSS) to a styled A4 PDF —
+ *  spec sheets pass a URL; admin-gated documents (Phase AF) pass `html` since the
+ *  extractor can't authenticate to fetch them. */
+async function renderPdf(url, html) {
   const b = await getBrowser();
   const ctx = await b.newContext({ userAgent: UA });
   const page = await ctx.newPage();
   try {
-    await page.goto(url, { waitUntil: "networkidle", timeout: NAV_TIMEOUT });
+    if (html) await page.setContent(html, { waitUntil: "networkidle", timeout: NAV_TIMEOUT });
+    else await page.goto(url, { waitUntil: "networkidle", timeout: NAV_TIMEOUT });
     await page.emulateMedia({ media: "print" });
     return await page.pdf({
       format: "A4",
@@ -137,22 +140,27 @@ const server = createServer((req, res) => {
     if (auth !== `Bearer ${SECRET}`) return json(401, { error: "unauthorized" });
   }
   let body = "";
-  req.on("data", (c) => { body += c; if (body.length > 8000) req.destroy(); });
+  // /render-pdf may carry a full HTML document (Phase AF) → allow a larger body.
+  const cap = route === "/render-pdf" ? 4_000_000 : 8000;
+  req.on("data", (c) => { body += c; if (body.length > cap) req.destroy(); });
   req.on("end", async () => {
-    let url;
-    try { url = JSON.parse(body).url; } catch { return json(400, { error: "invalid json" }); }
-    if (!url || !/^https?:\/\//.test(url)) return json(400, { error: "valid url required" });
+    let parsed;
+    try { parsed = JSON.parse(body); } catch { return json(400, { error: "invalid json" }); }
+    const url = parsed.url;
+    const html = typeof parsed.html === "string" ? parsed.html : null;
     if (route === "/render-pdf") {
+      if (!html && (!url || !/^https?:\/\//.test(url))) return json(400, { error: "url or html required" });
       try {
-        const pdf = await renderPdf(url);
+        const pdf = await renderPdf(url, html);
         res.writeHead(200, { "content-type": "application/pdf" });
         res.end(pdf);
       } catch (e) {
         console.error("render-pdf failed", e?.message || e);
-        json(502, { error: "render failed" }); // app falls back to raw-text PDF
+        json(502, { error: "render failed" }); // app falls back to printable HTML
       }
       return;
     }
+    if (!url || !/^https?:\/\//.test(url)) return json(400, { error: "valid url required" });
     if (route === "/spec") {
       try {
         json(200, await captureSpec(url));

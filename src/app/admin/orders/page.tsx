@@ -347,6 +347,31 @@ export default function AdminOrdersPage() {
                 </div>
               </div>
 
+              {/* Documents (Phase AF) — branded RU/UZ paperwork from this order. */}
+              <div>
+                <p className="text-sm font-medium mb-2">Документы</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {([
+                    ["sales_contract", "Договор"],
+                    ["proforma_invoice", "Проформа"],
+                    ["deposit_receipt", "Квитанция"],
+                    ["handover_act", "Акт п/п"],
+                    ["warranty_certificate", "Гарантия"],
+                  ] as const).map(([type, label]) => (
+                    <a
+                      key={type}
+                      href={`/api/admin/orders/${selected.id}/documents/${type}?locale=ru`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+                    >
+                      {label}
+                    </a>
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] text-white/40">Открывается для печати / сохранения в PDF. Черновик — проверьте перед подписанием.</p>
+              </div>
+
               {/* Event history */}
               <div>
                 <p className="text-sm font-medium mb-2">History</p>
