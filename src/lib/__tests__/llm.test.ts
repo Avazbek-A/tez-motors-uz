@@ -80,6 +80,19 @@ describe("buildVisionMessages", () => {
     expect(content.filter((c) => c.type === "image_url")).toHaveLength(8); // capped
     expect(content[1]).toEqual({ type: "image_url", image_url: { url: "data:image/png;base64,IMG0" } });
   });
+  it("drops unsafe URL schemes (file://, javascript:, gopher:) — defense in depth", () => {
+    const imgs = [
+      "https://ok.example/a.png",
+      "data:image/jpeg;base64,xyz",
+      "file:///etc/passwd",
+      "javascript:alert(1)",
+      "gopher://x/",
+      "http://ok.example/b.webp",
+    ];
+    const content = buildVisionMessages("S", "U", imgs)[1].content as { type: string; image_url?: { url: string } }[];
+    const urls = content.filter((c) => c.type === "image_url").map((c) => c.image_url!.url);
+    expect(urls).toEqual(["https://ok.example/a.png", "data:image/jpeg;base64,xyz", "http://ok.example/b.webp"]);
+  });
 });
 
 describe("parseChatResponse", () => {

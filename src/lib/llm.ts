@@ -197,15 +197,22 @@ export async function llmText(args: { system: string; user: string; maxTokens?: 
   return callChat({ system: args.system, messages: [{ role: "user", content: args.user }], maxTokens: args.maxTokens ?? 400 });
 }
 
-/** Pure: OpenAI-compatible multimodal messages (text + image parts). Unit-tested. */
+/**
+ * Pure: OpenAI-compatible multimodal messages (text + image parts). Unit-tested.
+ * Image URLs are restricted to http(s) and data: schemes — never file:// /
+ * javascript: / gopher:, etc. The LLM provider (e.g. local Ollama) does the
+ * fetching; without this filter, a malicious caller could ask the on-box model
+ * to read local files. Up to 8 images per call.
+ */
 export function buildVisionMessages(system: string, user: string, images: string[]) {
+  const safe = images.filter((u) => typeof u === "string" && /^(?:https?:|data:image\/(?:png|jpe?g|webp|gif);)/i.test(u)).slice(0, 8);
   return [
     { role: "system", content: system },
     {
       role: "user",
       content: [
         { type: "text", text: user },
-        ...images.slice(0, 8).map((url) => ({ type: "image_url", image_url: { url } })),
+        ...safe.map((url) => ({ type: "image_url", image_url: { url } })),
       ],
     },
   ];
