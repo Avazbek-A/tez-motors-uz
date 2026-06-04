@@ -59,6 +59,7 @@ const navGroups = [
     section: "Money",
     items: [
       { href: "/admin/money", label: "Money", icon: Banknote },
+      { href: "/admin/forecast", label: "Forecast", icon: TrendingUp },
       { href: "/admin/finance", label: "Finance", icon: Receipt },
       { href: "/admin/ledger", label: "Ledger", icon: Wallet },
     ],
