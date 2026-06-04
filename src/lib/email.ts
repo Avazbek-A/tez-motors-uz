@@ -82,7 +82,12 @@ function layout(bodyHtml: string): string {
 }
 
 function btn(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;margin-top:8px;padding:10px 18px;background:#0a0a0f;color:#ffffff;border-radius:8px;text-decoration:none;font-size:14px">${esc(label)}</a>`;
+  // Defense in depth: even though every current caller builds `href` from
+  // `siteUrl()` + an encodeURIComponent'd slug or a server-issued token,
+  // attribute-escape it anyway so a future caller that passes a less-clean
+  // string can't break out of the href quote (and so any stray `&` in a real
+  // URL renders as `&amp;` per the HTML spec).
+  return `<a href="${esc(href)}" style="display:inline-block;margin-top:8px;padding:10px 18px;background:#0a0a0f;color:#ffffff;border-radius:8px;text-decoration:none;font-size:14px">${esc(label)}</a>`;
 }
 
 type Template = { subject: string; html: string };
@@ -223,7 +228,7 @@ export function savedSearchAlertEmail(
       const url = `${siteUrl()}/${locale}/catalog/${encodeURIComponent(c.slug)}`;
       const price = `$${Math.round(c.price).toLocaleString("en-US")}`;
       return `<tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px">
-        <a href="${url}" style="color:#0a0a0f;text-decoration:none;font-weight:bold">${esc(c.name)}</a>
+        <a href="${esc(url)}" style="color:#0a0a0f;text-decoration:none;font-weight:bold">${esc(c.name)}</a>
         <span style="color:#71717a"> — ${price}</span>
       </td></tr>`;
     })
