@@ -9,6 +9,7 @@ import {
   normalizePhone,
 } from "@/lib/customer-auth";
 import { sha256Hex, generateOpaqueToken } from "@/lib/auth";
+import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent, reportServerError } from "@/lib/error-report";
 
 const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "otp-verify" });
@@ -63,7 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     const codeHash = await sha256Hex(`${phone}:${data.code}`);
-    if (codeHash !== otp.code_hash) {
+    // Constant-time comparison: never leak how many leading hex chars matched
+    // via response timing. SHA-256 hex strings are fixed length so the only
+    // signal worth hiding is per-position diffs. Mirrors the cron/webhook secret
+    // pattern (src/lib/timing-safe.ts) used elsewhere in the codebase.
+    if (!timingSafeEqual(codeHash, otp.code_hash || "")) {
       await supabase
         .from("otp_codes")
         .update({ attempts: otp.attempts + 1 })

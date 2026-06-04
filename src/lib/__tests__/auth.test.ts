@@ -45,16 +45,21 @@ describe("generateOpaqueToken", () => {
 });
 
 describe("password hashing (PBKDF2)", () => {
+  // PBKDF2 is intentionally slow (high iteration count = stronger). Under
+  // parallel-test CPU contention these can exceed the 5s default; give them a
+  // generous ceiling. Don't lower the iteration count — that weakens admin auth.
+  const PBKDF2_TIMEOUT = 30_000;
+
   it("verifies the correct password", async () => {
     const stored = await hashPassword("s3cret-pw");
     expect(stored.startsWith("pbkdf2$sha256$")).toBe(true);
     expect(await verifyPassword("s3cret-pw", stored)).toBe(true);
-  });
+  }, PBKDF2_TIMEOUT);
 
   it("rejects a wrong password", async () => {
     const stored = await hashPassword("s3cret-pw");
     expect(await verifyPassword("wrong", stored)).toBe(false);
-  });
+  }, PBKDF2_TIMEOUT);
 
   it("uses a random salt (same password → different hashes)", async () => {
     const a = await hashPassword("same");
@@ -62,7 +67,7 @@ describe("password hashing (PBKDF2)", () => {
     expect(a).not.toBe(b);
     expect(await verifyPassword("same", a)).toBe(true);
     expect(await verifyPassword("same", b)).toBe(true);
-  });
+  }, PBKDF2_TIMEOUT);
 
   it("rejects a malformed stored hash", async () => {
     expect(await verifyPassword("x", "garbage")).toBe(false);
