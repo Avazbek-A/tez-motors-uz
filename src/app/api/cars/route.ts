@@ -40,6 +40,9 @@ export async function GET(request: NextRequest) {
       ? Math.min(priceMaxRaw, priceCeilingFromMonthly)
       : priceMaxRaw ?? priceCeilingFromMonthly;
   const hotOnly = searchParams.get("hot_only");
+  const lt = searchParams.get("listing_type");
+  const listingType = lt === "new" || lt === "used" ? lt : null;
+  const mileageMax = parseIntSafe(searchParams.get("mileage_max"), 0, 2_000_000);
   const rawSearch = searchParams.get("search") ?? searchParams.get("q");
   const search = rawSearch ? sanitizeSearch(rawSearch) : null;
   const sort = searchParams.get("sort");
@@ -83,6 +86,8 @@ export async function GET(request: NextRequest) {
           fuelType,
           priceMin,
           priceMax,
+          listingType,
+          mileageMax,
           hotOnly: hotOnly === "true",
           search,
           searchIds,
@@ -112,6 +117,8 @@ export async function GET(request: NextRequest) {
     if (fuelType) query = query.eq("fuel_type", fuelType);
     if (priceMin !== null) query = query.gte("price_usd", priceMin);
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
+    if (listingType) query = query.eq("listing_type", listingType);
+    if (mileageMax !== null) query = query.lte("mileage", mileageMax);
     if (hotOnly === "true") query = query.eq("is_hot_offer", true);
     if (search) {
       if (searchIds && searchIds.length > 0) {
@@ -171,10 +178,17 @@ export async function POST(request: NextRequest) {
     const data = result.data;
     const supabase = createServiceClient();
 
-    const slug = `${data.brand}-${data.model}-${data.year}`
+    const baseSlug = `${data.brand}-${data.model}-${data.year}`
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
+    // Used cars repeat brand/model/year, so the base slug collides. Append a short
+    // suffix when taken (and always for a used unit, which is one specific car).
+    let slug = baseSlug;
+    const { data: existing } = await supabase.from("cars").select("id").eq("slug", baseSlug).maybeSingle();
+    if (existing || data.listing_type === "used") {
+      slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+    }
 
     const { data: car, error } = await supabase
       .from("cars")

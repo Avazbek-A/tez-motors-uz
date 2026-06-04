@@ -38,6 +38,10 @@ export interface CarsPageOpts {
   fuelType?: string | null;
   priceMin?: number | null;
   priceMax?: number | null;
+  /** 'new' | 'used' — the used-car section filters on this. */
+  listingType?: string | null;
+  /** Max mileage (km) — used-car filter. */
+  mileageMax?: number | null;
   hotOnly?: boolean;
   search?: string | null;
   /** Pre-resolved trigram match ids (caller runs the RPC once). */
@@ -68,6 +72,8 @@ export async function fetchCarsPage(
   if (opts.fuelType) query = query.eq("fuel_type", opts.fuelType);
   if (opts.priceMin != null) query = query.gte("price_usd", opts.priceMin);
   if (opts.priceMax != null) query = query.lte("price_usd", opts.priceMax);
+  if (opts.listingType === "new" || opts.listingType === "used") query = query.eq("listing_type", opts.listingType);
+  if (opts.mileageMax != null) query = query.lte("mileage", opts.mileageMax);
   if (opts.hotOnly) query = query.eq("is_hot_offer", true);
   if (opts.search) {
     if (opts.searchIds && opts.searchIds.length > 0) {

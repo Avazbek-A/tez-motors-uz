@@ -24,6 +24,11 @@ export interface Car {
   is_hot_offer: boolean;
   is_available: boolean;
   inventory_status?: "available" | "reserved" | "sold";
+  listing_type?: "new" | "used";
+  vin?: string | null;
+  owners_count?: number | null;
+  accident_free?: boolean | null;
+  condition_grade?: "excellent" | "good" | "fair" | null;
   order_position: number;
   specs: Record<string, string | number>;
   spec_data?: import("@/lib/autohome-spec").SpecData | null;
@@ -41,6 +46,10 @@ export interface CarFilters {
   monthly_max?: number;
   year_min?: number;
   year_max?: number;
+  /** 'new' | 'used' — the used-car section pins this to 'used'. */
+  listing_type?: string;
+  /** Max mileage (km) — used-car filter. */
+  mileage_max?: number;
   search?: string;
 }
 

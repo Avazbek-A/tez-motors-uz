@@ -15,6 +15,13 @@ export const carWriteSchema = z.object({
   transmission: z.enum(["automatic", "manual", "cvt", "dct", "robot"]).default("automatic"),
   drivetrain: z.enum(["fwd", "rwd", "awd", "4wd"]).optional().nullable(),
   mileage: z.number().int().min(0).default(0),
+  // Used-car section. 'new' = imported stock (default); 'used' = pre-owned listing
+  // with the extra disclosure fields below.
+  listing_type: z.enum(["new", "used"]).default("new"),
+  vin: z.string().max(32).optional().nullable(),
+  owners_count: z.number().int().min(0).max(20).optional().nullable(),
+  accident_free: z.boolean().optional().nullable(),
+  condition_grade: z.enum(["excellent", "good", "fair"]).optional().nullable(),
   color: z.string().max(100).optional().nullable(),
   description_ru: z.string().max(5000).optional().nullable(),
   description_uz: z.string().max(5000).optional().nullable(),
