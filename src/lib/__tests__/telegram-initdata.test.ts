@@ -75,6 +75,24 @@ describe("validateInitData", () => {
     expect((await validateInitData("", BOT_TOKEN)).valid).toBe(false);
     expect((await validateInitData("x=1&hash=abc", "")).valid).toBe(false);
   });
+
+  // A valid-hash payload with NO auth_date used to silently skip the
+  // freshness check — meaning a captured initData could replay forever if the
+  // attacker ever produced a no-auth_date variant with a matching hash. We
+  // now fail closed on missing/unparseable auth_date.
+  it("rejects a correctly-signed payload that omits auth_date", async () => {
+    const user = JSON.stringify({ id: 7, first_name: "X" });
+    const fields: Record<string, string> = { user };
+    const dcs = Object.keys(fields)
+      .sort()
+      .map((k) => `${k}=${fields[k]}`)
+      .join("\n");
+    const hash = sign(BOT_TOKEN, dcs);
+    const initData = new URLSearchParams({ ...fields, hash }).toString();
+    const r = await validateInitData(initData, BOT_TOKEN, { nowMs: now });
+    expect(r.valid).toBe(false);
+    expect(r.reason).toBe("no-auth-date");
+  });
 });
 
 describe("telegramLocale", () => {

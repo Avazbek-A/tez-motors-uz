@@ -87,13 +87,21 @@ export async function validateInitData(
   if (!timingSafeEqual(expectedHex, hash)) return { valid: false, reason: "bad-hash" };
 
   // Freshness — reject stale auth_date (default 24h) to blunt replay.
+  // Fail CLOSED when auth_date is missing or unparseable: every legitimate
+  // Telegram Mini App launch includes a valid auth_date (it's part of the data
+  // that the HMAC signs), so its absence here means either a malformed payload
+  // or a hand-crafted one trying to dodge the freshness window. Treating that
+  // as "no freshness check needed" — the pre-fix behavior — would let a stolen
+  // initData replay indefinitely if the attacker could ever construct a
+  // valid-hash payload with no auth_date.
   const maxAge = opts.maxAgeSeconds ?? 86_400;
   const params = new URLSearchParams(initData);
   const authDate = Number(params.get("auth_date"));
-  if (Number.isFinite(authDate) && authDate > 0) {
-    const nowSec = Math.floor((opts.nowMs ?? Date.now()) / 1000);
-    if (nowSec - authDate > maxAge) return { valid: false, reason: "expired" };
+  if (!Number.isFinite(authDate) || authDate <= 0) {
+    return { valid: false, reason: "no-auth-date" };
   }
+  const nowSec = Math.floor((opts.nowMs ?? Date.now()) / 1000);
+  if (nowSec - authDate > maxAge) return { valid: false, reason: "expired" };
 
   // Parse the user object (present for normal Mini App launches).
   let user: TelegramUser | undefined;
