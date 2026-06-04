@@ -154,6 +154,11 @@ export default function CarDetailPage() {
     { icon: Settings2, label: locale === "ru" ? "КПП" : "Transmission", value: dictionary.hotOffers.transmission[car.transmission] },
     ...(car.drivetrain ? [{ icon: CarFront, label: locale === "ru" ? "Привод" : "Drivetrain", value: car.drivetrain.toUpperCase() }] : []),
     ...(car.color ? [{ icon: Palette, label: locale === "ru" ? "Цвет" : "Color", value: car.color }] : []),
+    // Used-car disclosures (shown only for pre-owned listings).
+    ...(car.listing_type === "used" && car.mileage ? [{ icon: Gauge, label: locale === "ru" ? "Пробег" : "Mileage", value: `${car.mileage.toLocaleString("en-US")} ${locale === "ru" ? "км" : "km"}` }] : []),
+    ...(car.listing_type === "used" && car.owners_count != null ? [{ icon: CarFront, label: locale === "ru" ? "Владельцев" : "Owners", value: String(car.owners_count) }] : []),
+    ...(car.listing_type === "used" && car.condition_grade ? [{ icon: Settings2, label: locale === "ru" ? "Состояние" : "Condition", value: car.condition_grade }] : []),
+    ...(car.listing_type === "used" && car.accident_free ? [{ icon: Calendar, label: locale === "ru" ? "Без ДТП" : "Accident-free", value: locale === "ru" ? "Да" : "Yes" }] : []),
     ...(car.fuel_type === "electric" || car.fuel_type === "phev"
       ? [{ icon: Zap, label: locale === "ru" ? "Тип" : "Type", value: car.fuel_type === "electric" ? "Electric" : "PHEV" }]
       : []),
@@ -232,7 +237,7 @@ export default function CarDetailPage() {
             <div className="bg-card rounded-2xl border border-white/10 p-6 sticky top-24 animate-slide-in-right">
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
-                  {car.mileage === 0 && <Badge>New</Badge>}
+                  {car.listing_type === "used" ? <Badge variant="warning">{locale === "ru" ? "С пробегом" : locale === "uz" ? "Probegli" : "Used"}</Badge> : car.mileage === 0 && <Badge>New</Badge>}
                   {car.fuel_type === "electric" && <Badge variant="info">EV</Badge>}
                   {car.fuel_type === "phev" && <Badge variant="info">PHEV</Badge>}
                 </div>
