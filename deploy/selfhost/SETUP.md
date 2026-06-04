@@ -12,6 +12,33 @@ always-on server).
 
 ---
 
+## ⚡ Quick start — one command (recommended)
+
+Most of the steps below are automated by a single bootstrap script. On the
+Vostro:
+
+```bash
+# 1. Clone + enter
+git clone https://github.com/Avazbek-A/tez-motors-uz.git tez-motors && cd tez-motors
+
+# 2. First run creates .env.local from the template — fill the 4 required keys:
+bash deploy/selfhost/bootstrap.sh        # prints which keys to set, then exits
+nano .env.local                          # NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+                                         # SUPABASE_SERVICE_ROLE_KEY, ADMIN_PASSWORD
+
+# 3. Run it again — installs Node, builds, installs+starts the app and the
+#    auto-deploy webhook as systemd services, health-checks, prints what's left:
+bash deploy/selfhost/bootstrap.sh
+```
+
+That leaves only the **two human-only steps** the script prints at the end: the
+Cloudflare Tunnel login (§5) and pasting the webhook into GitHub (§13). After
+those, **every `git push` to `main` deploys live automatically.** The numbered
+sections below are the manual breakdown / reference if you want to do it by hand
+or troubleshoot.
+
+---
+
 ## 0. Prerequisites
 - Ubuntu 22.04, **plugged in** and on **wired Ethernet** (the RTL8821CE Wi-Fi
   driver is flaky for 24/7 use — use the Gigabit port).
