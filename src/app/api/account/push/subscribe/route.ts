@@ -13,8 +13,43 @@ import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 // an attacker can spam distinct endpoint URLs to bloat push_subscriptions. A
 // real user clicks "allow notifications" at most a couple of times.
 const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "push-sub" });
+
+// SECURITY: pin push endpoints to the four legitimate UA push services. The
+// generic `z.string().url()` accepts `javascript:`, `data:`, `file:`, `http:`
+// and even `https://internal-host/…`. Since this server later POSTs the push
+// payload to whatever URL is stored, an unrestricted endpoint is a stored
+// SSRF primitive: an attacker registers `https://10.0.0.1/…` (or a public URL
+// that 301s to a private one) and waits for the dealer to drop a price → the
+// app would fire a push and silently fetch the attacker target. Allowlisting
+// the suffixes the browser-vendored push services actually use is both the
+// tightest practical fix and a free way to drop garbage subscriptions.
+const PUSH_HOST_SUFFIXES = [
+  "fcm.googleapis.com",            // Chrome / Edge / Brave / Android
+  ".push.services.mozilla.com",    // Firefox (updates.push.services.mozilla.com)
+  ".notify.windows.com",           // Edge legacy / Windows
+  ".push.apple.com",               // Safari / iOS (web.push.apple.com)
+];
+
+function isValidPushEndpoint(value: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(value);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:") return false;
+  const host = u.hostname.toLowerCase();
+  if (!host) return false;
+  return PUSH_HOST_SUFFIXES.some((s) =>
+    s.startsWith(".") ? host.endsWith(s) : host === s,
+  );
+}
+
 const subscribeSchema = z.object({
-  endpoint: z.string().url().max(1000),
+  endpoint: z
+    .string()
+    .max(1000)
+    .refine(isValidPushEndpoint, "endpoint must be a recognized push-service URL"),
   keys: z.object({
     p256dh: z.string().min(1).max(200),
     auth: z.string().min(1).max(100),
