@@ -431,6 +431,28 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [fuelType, setFuelType] = useState<string>(car?.fuel_type || "petrol");
   const [engineVolume, setEngineVolume] = useState(car?.engine_volume?.toString() || "1.5");
   const [enginePower, setEnginePower] = useState(car?.engine_power?.toString() || "");
+  // AutoHome full-spec import (multi-trim spec sheet) — only when editing a saved car.
+  const [specUrl, setSpecUrl] = useState("");
+  const [specImporting, setSpecImporting] = useState(false);
+  const [specMsg, setSpecMsg] = useState<string | null>(null);
+  const importSpec = async () => {
+    if (!car?.id || !specUrl.trim()) return;
+    setSpecImporting(true);
+    setSpecMsg(null);
+    try {
+      const res = await fetch(`/api/admin/cars/${car.id}/import-spec`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: specUrl.trim() }),
+      });
+      const d = await res.json();
+      setSpecMsg(d.ok ? `✓ Imported ${d.spec.trims} trim(s), ${d.spec.paramCount} params (${d.spec.brand} ${d.spec.model}). View the spec sheet on the car page.` : `✗ ${d.message || d.error || "Import failed"}`);
+    } catch {
+      setSpecMsg("✗ Import failed.");
+    } finally {
+      setSpecImporting(false);
+    }
+  };
   const [transmission, setTransmission] = useState<string>(car?.transmission || "automatic");
   const [drivetrain] = useState<string>(car?.drivetrain || "fwd");
   const [color, setColor] = useState(car?.color || "");
@@ -718,6 +740,29 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                 }}
               />
             </div>
+            {isEditing && (
+              <div className="mb-3 rounded-[2px] border border-border bg-[var(--bg-3)]/50 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+                  Full spec sheet (AutoHome)
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={specUrl}
+                    onChange={(e) => setSpecUrl(e.target.value)}
+                    placeholder="Paste a global.autohome.com/en-hk/config/spec/… URL"
+                    className="flex-1 text-sm"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={importSpec} disabled={specImporting || !specUrl.trim()}>
+                    {specImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import spec"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Pulls all trims + parameters into a downloadable multi-trim spec sheet. Use the English global
+                  AutoHome site for clean data. Review before publishing — data is for reference.
+                </p>
+                {specMsg && <p className="text-xs text-primary">{specMsg}</p>}
+              </div>
+            )}
             <label
               className="flex items-center justify-center gap-2 border-2 border-dashed border-border rounded-xl py-6 cursor-pointer hover:border-lime/50 transition-colors text-sm text-muted-foreground"
               onDragOver={(e) => {
