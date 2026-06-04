@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendChannelMessage, sendChannelPhoto } from "@/lib/telegram";
+import { metaConfigured, postToFacebook, postToInstagram } from "@/lib/meta-publish";
 import { reportServerError, logEvent } from "@/lib/error-report";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
@@ -50,18 +51,33 @@ async function handle(request: NextRequest) {
         const firstImage = Array.isArray(car?.images) ? car!.images[0] : null;
         if (firstImage && body.length <= 1024) photoUrl = firstImage as string;
       }
-      const { ok } = photoUrl
-        ? await sendChannelPhoto(photoUrl, body, link)
-        : await sendChannelMessage(body, link);
+      // Route to the platform that matches the draft's kind when Meta is
+      // configured; otherwise fall back to the Telegram channel (today's
+      // behavior). IG needs an image; FB takes text + link.
+      const meta = metaConfigured();
+      let ok = false;
+      let channel = "telegram";
+      if (d.kind === "instagram" && meta.ig && photoUrl) {
+        ok = (await postToInstagram(photoUrl, body)).ok;
+        channel = "instagram";
+      } else if (d.kind === "facebook" && meta.fb) {
+        ok = (await postToFacebook(body, link.linkUrl)).ok;
+        channel = "facebook";
+      }
+      if (!ok) {
+        // Fall back to the Telegram channel (visual when we have a photo).
+        ok = (photoUrl ? await sendChannelPhoto(photoUrl, body, link) : await sendChannelMessage(body, link)).ok;
+        channel = "telegram";
+      }
       if (ok) {
         await supabase
           .from("content_drafts")
-          .update({ status: "published", published_channel: "telegram", published_at: new Date().toISOString() })
+          .update({ status: "published", published_channel: channel, published_at: new Date().toISOString() })
           .eq("id", d.id)
           .then(() => {}, () => {});
         posted += 1;
       } else {
-        // Channel not configured / failed — stop trying this run.
+        // No channel succeeded (nothing configured) — stop trying this run.
         break;
       }
     }
