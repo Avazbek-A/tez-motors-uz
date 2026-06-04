@@ -40,6 +40,7 @@ export const FOOTER_LINKS = [
   { href: "/order", label: { ru: "Заказ под импорт", uz: "Buyurtma asosida", en: "Order to import" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
   { href: "/services", label: { ru: "Услуги", uz: "Xizmatlar", en: "Services" } },
+  { href: "/delivered", label: { ru: "Доставленные авто", uz: "Yetkazilgan avtolar", en: "Delivered cars" } },
   { href: "/compare", label: { ru: "Сравнение", uz: "Solishtirish", en: "Compare" } },
   { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
   { href: "/tashkent", label: { ru: "Доставка по Ташкенту", uz: "Toshkent bo'ylab", en: "Tashkent" } },
