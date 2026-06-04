@@ -8,7 +8,8 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/server";
-import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 
@@ -16,11 +17,14 @@ const schema = z.object({
   email: z.string().email().max(200).optional().or(z.literal("")),
   password: z.string().min(1).max(200),
 });
-const checkAttempts = createRateLimiter({ max: 10, windowMs: 10 * 60 * 1000 });
+// KV-backed so the cap survives across Workers isolates (in-memory limiter
+// resets per isolate, so a distributed-isolate brute-force could bypass it).
+// Falls back to in-memory on local Node when no KV binding is configured.
+const checkAttempts = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "admin-login" });
 
 export async function POST(request: Request) {
   const ip = getClientIp(request);
-  if (!checkAttempts(ip)) {
+  if (!(await checkAttempts(ip))) {
     logEvent("auth.login.rate_limited", { ip }, "warn");
     return NextResponse.json(
       { error: "Too many attempts. Try again later." },
@@ -64,7 +68,10 @@ export async function POST(request: Request) {
     }
 
     if (!userId) {
-      if (!servicePassword || parsed.data.password !== servicePassword) {
+      // Constant-time compare on the bootstrap master password — never leak
+      // leading-byte matches via response timing. Same posture as the OTP and
+      // cron/HMAC paths elsewhere in the codebase.
+      if (!servicePassword || !timingSafeEqual(parsed.data.password, servicePassword)) {
         logEvent("auth.login.fail", { ip, email, reason: "bad_credentials" }, "warn");
         return NextResponse.json({ error: "Incorrect credentials" }, { status: 401 });
       }
