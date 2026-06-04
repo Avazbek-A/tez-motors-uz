@@ -10,6 +10,9 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: projectRoot,
+  // Suppress the `X-Powered-By: Next.js` response header — small info-disclosure
+  // hardening; tells less to fingerprinting scanners about our stack.
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
