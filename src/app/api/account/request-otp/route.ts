@@ -9,10 +9,14 @@ import { sha256Hex } from "@/lib/auth";
 import { sendSms, otpMessage } from "@/lib/sms";
 import { reportServerError } from "@/lib/error-report";
 
-// Per-IP and effectively per-phone (phone is in the key) abuse cap. KV-backed so
-// it holds across Worker isolates; the OTP attempt counter in the DB is the
-// second layer of defense against guessing.
+// Per-IP+phone limit: stops one IP from hammering one number.
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "otp-req" });
+
+// Per-PHONE-only limit: stops a distributed attack (many IPs against one phone)
+// from causing SMS-cost / harassment blow-up. A real user retrying a typo across
+// a couple of devices stays well under 8 / 10 min. Set deliberately tight — SMS
+// is metered $$.
+const checkPhoneRateLimit = createKvRateLimiter({ max: 8, windowMs: 10 * 60 * 1000, prefix: "otp-phone" });
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 
@@ -39,9 +43,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Invalid phone" }, { status: 400 });
     }
 
-    // Rate-limit by IP + phone so neither a single IP nor a single number can
-    // be hammered.
-    if (!(await checkRateLimit(`${ip}:${phone}`))) {
+    // Two layered limits:
+    //  - IP+phone: one IP can't hammer one number
+    //  - phone-only: a botnet (many IPs) can't blow up SMS cost / harass one number
+    // Both must pass; either limit returns the same 429 (no enumeration).
+    if (!(await checkRateLimit(`${ip}:${phone}`)) || !(await checkPhoneRateLimit(phone))) {
       return NextResponse.json(
         { success: false, error: "Too many requests. Please try again later." },
         { status: 429 },
