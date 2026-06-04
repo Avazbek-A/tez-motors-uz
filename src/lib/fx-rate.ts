@@ -70,21 +70,49 @@ export function cnyToUsd(amountCny: number, cnyUzs: number, usdUzs: number): num
   return (Number.isFinite(amountCny) ? amountCny : 0) * (cnyUzs / usdUzs);
 }
 
+/** How many CNY/USD samples to keep for the hedge-signal trend (Phase AK). */
+const FX_HISTORY_MAX = 30;
+
 /** Persist freshly-fetched rates. Merges so a partial update keeps the other. */
 export async function setFxRates(
   supabase: SupabaseClient,
   rates: { usd_uzs?: number; cny_uzs?: number },
 ): Promise<void> {
   const current = (await readFx(supabase)) ?? {};
+  const usd_uzs = rates.usd_uzs ?? current.usd_uzs;
+  const cny_uzs = rates.cny_uzs ?? current.cny_uzs;
+
+  // Append a CNY-per-USD sample (usd_uzs / cny_uzs ≈ 7.2) to a capped rolling
+  // history so fx-exposure's hedge signal can read a trend. Best-effort.
+  const prevHistory = Array.isArray((current as { cny_per_usd_history?: unknown }).cny_per_usd_history)
+    ? ((current as { cny_per_usd_history: number[] }).cny_per_usd_history)
+    : [];
+  const cnyPerUsd =
+    typeof usd_uzs === "number" && typeof cny_uzs === "number" && cny_uzs > 0
+      ? Math.round((usd_uzs / cny_uzs) * 1000) / 1000
+      : null;
+  const cny_per_usd_history = cnyPerUsd
+    ? [...prevHistory, cnyPerUsd].slice(-FX_HISTORY_MAX)
+    : prevHistory;
+
   await supabase.from("site_settings").upsert({
     id: FX_ROW_ID,
     values: {
-      usd_uzs: rates.usd_uzs ?? current.usd_uzs,
-      cny_uzs: rates.cny_uzs ?? current.cny_uzs,
+      usd_uzs,
+      cny_uzs,
+      cny_per_usd_history,
       updated_at: new Date().toISOString(),
     },
     updated_at: new Date().toISOString(),
   });
+}
+
+/** Read the rolling CNY-per-USD history (most recent last). Empty if none. */
+export async function getCnyPerUsdHistory(supabase: SupabaseClient): Promise<number[]> {
+  const v = (await readFx(supabase)) as { cny_per_usd_history?: unknown } | null;
+  return Array.isArray(v?.cny_per_usd_history)
+    ? (v!.cny_per_usd_history as unknown[]).filter((n): n is number => typeof n === "number" && n > 0)
+    : [];
 }
 
 /** Back-compat: persist just the USD→UZS rate. */

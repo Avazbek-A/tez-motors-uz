@@ -15,6 +15,7 @@ import {
 } from "@/lib/import-cost";
 import { demandScore, opportunityScore, verdict, recommendedQty } from "@/lib/buying-brain";
 import { aggregatePreorderDemand, modelKey } from "@/lib/procurement-demand";
+import { freightPerUnit } from "@/lib/freight";
 
 /**
  * Buying & pricing brain — fuses demand (inquiries/saved-searches/watches/
@@ -190,6 +191,9 @@ export async function GET(request: NextRequest) {
         verdict: verdict(score, marginPct),
         // Never recommend fewer than the units already paid for via deposits.
         recommendedQty: Math.max(recommendedQty(dScore, marginPct), pre.deposited),
+        // Advisory: per-unit freight if the recommended qty ships consolidated
+        // (vs the flat single-unit rate) — shows the consolidation upside.
+        freightPerUnitUsd: freightPerUnit(Math.max(recommendedQty(dScore, marginPct), pre.deposited, 1)).perUnitUsd,
       });
     }
 
