@@ -5,6 +5,7 @@
  * the LLM and falls back to a clean template so it never returns empty.
  */
 import { llmText } from "./llm";
+import { mergeHashtags, trendingTagBudget } from "./marketing-hashtags";
 
 export type ContentKind = "telegram" | "instagram" | "facebook" | "ad" | "blog" | "promo";
 export type ContentLocale = "ru" | "uz" | "en";
@@ -45,6 +46,8 @@ export interface ContentSubject {
   car?: ContentCar | null;
   topic?: string | null;
   tone?: string | null;
+  /** Real trending hashtags (from Instagram research) to blend into social copy. */
+  trendingHashtags?: string[] | null;
 }
 
 const LOCALE_NAME: Record<ContentLocale, string> = { ru: "Russian", uz: "Uzbek (Latin script)", en: "English" };
@@ -96,6 +99,8 @@ export async function generateMarketingContent(
     : `Write ${def.label} about: ${subj}.`;
 
   const out = await llmText({ system, user, maxTokens: def.maxTokens });
-  if (out) return { text: out.trim(), ai: true };
-  return { text: fallbackContent(kind, locale, subject), ai: false };
+  const base = out ? out.trim() : fallbackContent(kind, locale, subject);
+  // Blend in real trending hashtags (deduped) for the social kinds.
+  const text = mergeHashtags(base, subject.trendingHashtags, trendingTagBudget(kind));
+  return { text, ai: Boolean(out) };
 }

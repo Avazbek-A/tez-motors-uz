@@ -13,6 +13,8 @@ const schema = z.object({
   car_id: z.string().uuid().optional().nullable(),
   topic: z.string().max(400).optional().nullable(),
   tone: z.string().max(60).optional().nullable(),
+  // Real trending hashtags (from the Instagram research collector) to blend in.
+  hashtags: z.array(z.string().max(80)).max(30).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest) {
     car,
     topic: parsed.data.topic,
     tone: parsed.data.tone,
+    trendingHashtags: parsed.data.hashtags,
   });
 
   return NextResponse.json({ text, ai, kind: parsed.data.kind, label: CONTENT_KINDS.find((k) => k.key === parsed.data.kind)?.label });
