@@ -71,3 +71,21 @@ export function attributionLabel(a: Attribution | null): string {
   }
   return "direct";
 }
+
+/**
+ * Coarse channel bucket aligning lead/order attribution with the channels ad
+ * spend is tagged under (expenses.channel), so channel ROI can join the two.
+ * Pure + unit-tested. Returns 'direct' for organic/no-source, else a known
+ * channel, else the raw source label.
+ */
+export function channelKey(a: Attribution | null): string {
+  const s = attributionLabel(a);
+  if (s.includes("olx")) return "olx";
+  if (s.includes("avtoelon")) return "avtoelon";
+  if (s.includes("google")) return "google";
+  if (s.includes("instagram") || s === "ig") return "instagram";
+  if (s.includes("facebook") || s === "fb") return "facebook";
+  if (s.includes("meta")) return "meta";
+  if (s.includes("telegram") || s.includes("t.me")) return "telegram";
+  return s; // "direct" or a named source we don't bucket
+}

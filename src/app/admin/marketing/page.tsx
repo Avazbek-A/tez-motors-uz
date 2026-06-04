@@ -10,6 +10,7 @@ import { CONTENT_KINDS, contentKindLabel } from "@/lib/marketing-content";
 interface Car { id: string; brand: string; model: string; year: number | null }
 interface Draft { id: string; kind: string; locale: string; subject: string | null; body: string; status: string; scheduled_at: string | null; created_at: string }
 interface AttrRow { key: string; leads: number; conversions: number; convRate: number }
+interface RoiRow { channel: string; leads: number; orders: number; depositsUsd: number; marginUsd: number; spendUsd: number; cpaUsd: number | null; roas: number | null }
 
 const LOCALES = [{ k: "ru", l: "RU" }, { k: "uz", l: "UZ" }, { k: "en", l: "EN" }];
 const SOCIAL = new Set(["telegram", "instagram", "facebook", "promo", "ad"]);
@@ -30,6 +31,7 @@ export default function AdminMarketingPage() {
   const [copied, setCopied] = useState(false);
   const [scheduleAt, setScheduleAt] = useState("");
   const [attr, setAttr] = useState<{ bySource: AttrRow[]; byCampaign: AttrRow[]; byReferral: AttrRow[] } | null>(null);
+  const [roi, setRoi] = useState<RoiRow[] | null>(null);
 
   const loadDrafts = useCallback(() => {
     fetch("/api/admin/marketing/drafts").then((r) => r.json()).then((d) => setDrafts(d.drafts || []));
@@ -37,6 +39,7 @@ export default function AdminMarketingPage() {
   useEffect(() => {
     fetch("/api/cars?all=true&limit=200").then((r) => r.json()).then((d) => setCars(d.cars || [])).catch(() => {});
     fetch("/api/admin/stats/attribution").then((r) => r.json()).then((d) => { if (d?.ok) setAttr({ bySource: d.bySource || [], byCampaign: d.byCampaign || [], byReferral: d.byReferral || [] }); }).catch(() => {});
+    fetch("/api/admin/stats/channel-roi").then((r) => r.json()).then((d) => { if (d?.ok) setRoi(d.channels || []); }).catch(() => {});
     loadDrafts();
   }, [loadDrafts]);
 
@@ -226,6 +229,44 @@ export default function AdminMarketingPage() {
           <p className="text-[11px] text-muted-foreground mt-1">
             Tag links with <code className="text-foreground">?utm_source=…&amp;utm_campaign=…</code> for channels, or{" "}
             <code className="text-foreground">?ref=NAME</code> to track who referred a customer.
+          </p>
+        </div>
+      )}
+
+      {/* Channel ROI — spend vs deposits/margin, CPA, ROAS */}
+      {roi && roi.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-foreground mb-2">Channel ROI (spend → margin)</h2>
+          <div className="bg-card border border-border overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-4 py-2 font-medium">Channel</th>
+                  <th className="px-4 py-2 font-medium text-right">Orders</th>
+                  <th className="px-4 py-2 font-medium text-right">Deposits</th>
+                  <th className="px-4 py-2 font-medium text-right">Margin</th>
+                  <th className="px-4 py-2 font-medium text-right">Spend</th>
+                  <th className="px-4 py-2 font-medium text-right">CPA</th>
+                  <th className="px-4 py-2 font-medium text-right">ROAS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {roi.map((r) => (
+                  <tr key={r.channel} className="border-b border-border last:border-0">
+                    <td className="px-4 py-2 text-foreground">{r.channel}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">{r.orders}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">${r.depositsUsd.toLocaleString("en-US")}</td>
+                    <td className="px-4 py-2 text-right font-mono text-foreground">${r.marginUsd.toLocaleString("en-US")}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">{r.spendUsd ? `$${r.spendUsd.toLocaleString("en-US")}` : "—"}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground">{r.cpaUsd != null ? `$${r.cpaUsd.toLocaleString("en-US")}` : "—"}</td>
+                    <td className={`px-4 py-2 text-right font-mono ${r.roas != null && r.roas >= 1 ? "text-[var(--success)]" : r.roas != null ? "text-[var(--danger,#ef4444)]" : "text-muted-foreground"}`}>{r.roas != null ? `${r.roas}×` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            ROAS = realized margin ÷ ad spend. Tag marketing expenses with a channel (Finance → Expenses) to populate spend/CPA/ROAS.
           </p>
         </div>
       )}

@@ -6,6 +6,7 @@ import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { generateReferenceCode } from "@/lib/order-code";
+import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 
 const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "reservation" });
 
@@ -36,6 +37,10 @@ export async function POST(request: NextRequest) {
     if (!ok) {
       return NextResponse.json({ success: false, error: "Captcha verification failed" }, { status: 400 });
     }
+
+    // First-touch acquisition attribution (cookie) → stamped on the order so
+    // channel ROI can trace this deposit/sale back to its source (Phase AN).
+    const attribution = parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value);
 
     const supabase = createServiceClient();
 
@@ -79,6 +84,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           amount_usd: data.amount_usd ?? null,
           notes: data.notes ?? null,
+          ...(attribution ? { attribution } : {}),
         },
       })
       .select("id")
@@ -108,6 +114,7 @@ export async function POST(request: NextRequest) {
           locale: data.locale ?? "ru",
           amount_usd: data.amount_usd ? Number(data.amount_usd) || null : null,
           notes: data.notes ?? null,
+          attribution: attribution ?? null,
         })
         .select("id")
         .single();

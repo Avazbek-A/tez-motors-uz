@@ -19,6 +19,7 @@ import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { generateReferenceCode } from "@/lib/order-code";
+import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 
 const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "preorder" });
 
@@ -53,6 +54,9 @@ export async function POST(request: NextRequest) {
     if (!ok) {
       return NextResponse.json({ success: false, error: "Captcha verification failed" }, { status: 400 });
     }
+
+    // First-touch acquisition attribution → stamped on the order for channel ROI.
+    const attribution = parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value);
 
     const supabase = createServiceClient();
 
@@ -94,6 +98,7 @@ export async function POST(request: NextRequest) {
           model_id: model.id,
           config,
           quoted_lead_time_weeks: quotedLeadTime,
+          ...(attribution ? { attribution } : {}),
         },
       })
       .select("id")
@@ -124,6 +129,7 @@ export async function POST(request: NextRequest) {
           locale: data.locale ?? "ru",
           amount_usd: model.base_price_usd ?? null,
           notes: data.notes ?? null,
+          attribution: attribution ?? null,
         })
         .select("id")
         .single();

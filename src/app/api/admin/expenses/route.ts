@@ -26,6 +26,8 @@ const createSchema = z.object({
   purchase_order_id: z.string().uuid().optional().nullable(),
   shipment_id: z.string().uuid().optional().nullable(),
   spent_on: z.string().max(20).optional().nullable(),
+  // Channel tag for marketing spend → feeds per-channel CPA/ROAS (Phase AN).
+  channel: z.enum(["olx", "avtoelon", "google", "meta", "telegram", "instagram", "facebook", "other"]).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -57,6 +59,7 @@ export async function POST(request: NextRequest) {
       purchase_order_id: parsed.data.purchase_order_id ?? null,
       shipment_id: parsed.data.shipment_id ?? null,
       spent_on: parsed.data.spent_on ?? null,
+      channel: parsed.data.channel ?? null,
     })
     .select("id")
     .single();
