@@ -22,6 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/contacts", changeFrequency: "monthly" as const, priority: 0.8 },
     { path: "/blog", changeFrequency: "weekly" as const, priority: 0.7 },
     { path: "/parts", changeFrequency: "weekly" as const, priority: 0.7 },
+    { path: "/scooters", changeFrequency: "weekly" as const, priority: 0.7 },
     { path: "/favorites", changeFrequency: "monthly" as const, priority: 0.3 },
     { path: "/tashkent", changeFrequency: "monthly" as const, priority: 0.7 },
     { path: "/services", changeFrequency: "monthly" as const, priority: 0.6 },
@@ -96,6 +97,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
+    const { data: scooters } = await supabase
+      .from("scooters")
+      .select("slug, updated_at")
+      .eq("is_published", true);
+
+    const scooterPages = (scooters || []).flatMap((sc) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/scooters/${sc.slug}`,
+        lastModified: new Date(sc.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.5,
+        alternates: alternatesFor(`/scooters/${sc.slug}`),
+      })),
+    );
+
     const categoryPages = PART_CATEGORIES.flatMap((category) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/parts/category/${category}`,
@@ -146,6 +162,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...blogPages,
       ...partPages,
       ...categoryPages,
+      ...scooterPages,
     ];
   } catch {
     return staticPages;

@@ -21,6 +21,7 @@ export const NAV_LINKS = [
   { href: "/", label: { ru: "Главная", uz: "Bosh sahifa", en: "Home" } },
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
   { href: "/used", label: { ru: "С пробегом", uz: "Probegli", en: "Used" } },
+  { href: "/scooters", label: { ru: "Самокаты", uz: "Skuterlar", en: "Scooters" } },
   { href: "/deals", label: { ru: "Скидки", uz: "Chegirmalar", en: "Deals" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
   { href: "/calculator", label: { ru: "Калькулятор", uz: "Kalkulyator", en: "Calculator" } },
@@ -34,6 +35,7 @@ export const NAV_LINKS = [
 export const FOOTER_LINKS = [
   { href: "/catalog", label: { ru: "Каталог", uz: "Katalog", en: "Catalog" } },
   { href: "/used", label: { ru: "Авто с пробегом", uz: "Probegli avtolar", en: "Used cars" } },
+  { href: "/scooters", label: { ru: "Самокаты и e-bike", uz: "Skuter va e-bike", en: "Scooters & e-bikes" } },
   { href: "/deals", label: { ru: "Скидки", uz: "Chegirmalar", en: "Deals" } },
   { href: "/order", label: { ru: "Заказ под импорт", uz: "Buyurtma asosida", en: "Order to import" } },
   { href: "/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" } },
