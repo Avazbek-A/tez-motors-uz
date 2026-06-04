@@ -148,7 +148,12 @@ export async function POST(request: NextRequest) {
 
         const ext = extensionForMime(mime);
         const stamp = Date.now();
-        const rand = Math.random().toString(36).slice(2, 8);
+        // Web-Crypto random — Math.random has ~30 bits of state per call; at
+        // bulk-mirror scale (100 images per run × parts × runs) birthday
+        // collisions on a 6-char base36 path are plausible. Use a proper PRNG.
+        const randBytes = new Uint8Array(4);
+        crypto.getRandomValues(randBytes);
+        const rand = Array.from(randBytes, (b) => b.toString(16).padStart(2, "0")).join("");
         const path = `${part.slug}/${stamp}-${rand}.${ext}`;
 
         const upload = await supabase.storage
