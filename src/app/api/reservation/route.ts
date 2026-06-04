@@ -14,7 +14,10 @@ const schema = z.object({
   name: z.string().min(2).max(100),
   phone: z.string().min(5).max(20),
   email: z.string().email().max(200).optional().or(z.literal("")),
-  amount_usd: z.string().optional().nullable(),
+  // String here because the form field is free text; we coerce to a number
+  // below. Cap so it can't be used as a Telegram-message stuffing payload
+  // (it's interpolated into the dealer notification).
+  amount_usd: z.string().max(20).optional().nullable(),
   notes: z.string().max(1000).optional().nullable(),
   locale: z.enum(["ru", "uz", "en"]).optional(),
   turnstile_token: z.string().max(4096).optional(),

@@ -29,6 +29,12 @@ export interface AuditEntry {
   entity_id?: string | null;
   /** Changed fields only — keep this small; never store full rows. */
   diff?: Record<string, unknown> | null;
+  /**
+   * Explicit actor override for callers WITHOUT an admin session cookie — the
+   * Dealer Copilot's Telegram path and autonomous crons. When set, it wins over
+   * cookie resolution (which would find nothing). e.g. { email: "operator:telegram" }.
+   */
+  actor?: { id?: string | null; email?: string | null } | null;
 }
 
 /**
@@ -53,20 +59,21 @@ export function compactDiff(
 }
 
 export async function logAdminAction(
-  request: NextRequest | Request,
+  request: NextRequest | Request | null,
   entry: AuditEntry,
 ): Promise<void> {
   try {
-    const ctx = await getAdminSessionContext(request);
+    // Explicit actor wins (Telegram/cron have no cookie); else resolve from session.
+    const ctx = entry.actor ? null : request ? await getAdminSessionContext(request) : null;
     const supabase = createServiceClient();
     await supabase.from("admin_audit").insert({
-      actor_admin_id: ctx?.user?.id ?? null,
-      actor_email: ctx?.user?.email ?? null,
+      actor_admin_id: entry.actor?.id ?? ctx?.user?.id ?? null,
+      actor_email: entry.actor?.email ?? ctx?.user?.email ?? null,
       action: entry.action,
       entity: entry.entity,
       entity_id: entry.entity_id ?? null,
       diff: entry.diff ?? null,
-      ip: getClientIp(request),
+      ip: request ? getClientIp(request) : null,
     });
   } catch {
     // fail-open

@@ -12,7 +12,9 @@ const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 5 * 60 * 1000, pr
 const schema = z.object({
   email: z.string().email().max(200),
   locale: z.enum(["ru", "uz", "en"]).optional(),
-  source_page: z.string().optional(),
+  // Cap source_page so it can't be used to bloat the row (this string is
+  // attacker-controllable and stored as-is).
+  source_page: z.string().max(200).optional(),
   turnstile_token: z.string().max(4096).optional(),
 });
 
