@@ -20,6 +20,31 @@ export interface EnrollContact {
   tenantId?: string | null;
 }
 
+/**
+ * Exit a contact's active enrollments on conversion (e.g. they reserved/bought).
+ * At order-creation time the only active enrollments are pre-purchase nurture
+ * ones (post-delivery journeys haven't enrolled yet), so exiting all active
+ * enrollments for the phone is correct — don't keep nurturing a buyer. Marks
+ * them 'converted' for measurement. Fail-open.
+ */
+export async function exitActiveEnrollments(
+  supabase: SupabaseClient,
+  phone: string,
+): Promise<number> {
+  if (!phone || phone.trim().length < 3) return 0;
+  try {
+    const { data } = await supabase
+      .from("journey_enrollments")
+      .update({ status: "converted" })
+      .eq("status", "active")
+      .eq("contact_phone", phone)
+      .select("id");
+    return (data || []).length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Enroll a contact into all active journeys for `trigger`. Returns count enrolled. */
 export async function enrollInJourneys(
   supabase: SupabaseClient,

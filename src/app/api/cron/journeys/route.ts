@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendToCustomer } from "@/lib/customer-messaging";
-import { advanceEnrollment, renderTemplate, type JourneyStep } from "@/lib/automation/journey";
+import { advanceEnrollment, renderTemplate, isQuietHour, type JourneyStep } from "@/lib/automation/journey";
 import { isSuppressed, unsubscribeToken } from "@/lib/automation/suppression";
 import { logEvent, reportServerError } from "@/lib/error-report";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
+// Quiet hours in Tashkent local time (UTC+5). Defaults: no sends 21:00–08:59.
+const TASHKENT_OFFSET_H = 5;
+const QUIET_START = Number(process.env.MARKETING_QUIET_START ?? 21);
+const QUIET_END = Number(process.env.MARKETING_QUIET_END ?? 9);
 
 /**
  * Marketing-automation runner (Phase AW). Fires due journey steps: for each
@@ -22,7 +26,16 @@ async function handle(request: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const nowIso = new Date().toISOString();
+    const now = new Date();
+
+    // Quiet hours: don't send automated marketing at night. Due steps simply
+    // wait for the next allowed hourly run — no rescheduling needed.
+    const tashkentHour = (now.getUTCHours() + TASHKENT_OFFSET_H) % 24;
+    if (isQuietHour(tashkentHour, QUIET_START, QUIET_END)) {
+      logEvent("cron.journeys", { skipped: "quiet_hours", hour: tashkentHour });
+      return NextResponse.json({ ok: true, skipped: "quiet_hours" });
+    }
+    const nowIso = now.toISOString();
 
     const { data: due } = await supabase
       .from("journey_enrollments")
@@ -45,8 +58,24 @@ async function handle(request: NextRequest) {
       .in("id", journeyIds);
     const byId = new Map((journeys || []).map((j) => [j.id as string, j]));
 
+    // Frequency cap: at most one automated message per contact per run. A
+    // contact due in multiple journeys gets one now; the others are deferred an
+    // hour. With hourly runs + quiet hours this bounds messaging without a
+    // separate send-log table.
+    const messagedThisRun = new Set<string>();
+
     let sent = 0;
     for (const e of due) {
+      const contactKey = ((e.contact_phone as string) || "").trim();
+      if (contactKey && messagedThisRun.has(contactKey)) {
+        await supabase
+          .from("journey_enrollments")
+          .update({ next_run_at: new Date(Date.now() + 3_600_000).toISOString() })
+          .eq("id", e.id)
+          .then(() => {}, () => {});
+        continue;
+      }
+
       const journey = byId.get(e.journey_id as string);
       // Journey paused/deleted since enrollment → exit the enrollment quietly.
       if (!journey || journey.status !== "active") {
@@ -105,6 +134,7 @@ async function handle(request: NextRequest) {
         },
       );
       if (res.delivered) sent += 1;
+      if (contactKey) messagedThisRun.add(contactKey);
 
       // Advance regardless of delivery — a dead channel shouldn't wedge the drip.
       const nextState = advanceEnrollment(idx, steps, Date.now());

@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateReferenceCode } from "@/lib/order-code";
 import type { Attribution } from "@/lib/attribution";
+import { exitActiveEnrollments } from "@/lib/automation/enroll";
 
 export interface ReserveInput {
   carId: string;
@@ -113,6 +114,9 @@ export async function reserveCarAndCreateOrder(
       .eq("inventory_status", "reserved");
     return { ok: false, reason: "failed" };
   }
+
+  // Conversion: the lead reserved → stop any active nurture drips for them.
+  exitActiveEnrollments(supabase, input.phone).catch(() => {});
 
   return { ok: true, referenceCode, inquiryId: inquiry.id as string, car: { brand: car.brand, model: car.model, year: car.year } };
 }

@@ -65,6 +65,17 @@ export function isDue(enrollment: { status: string; next_run_at: string }, nowMs
   return enrollment.status === "active" && new Date(enrollment.next_run_at).getTime() <= nowMs;
 }
 
+/**
+ * Quiet hours — never send automated marketing in this window (local hour).
+ * Handles wrap-around (e.g. start 21, end 9 → quiet 21:00–08:59). Pure.
+ */
+export function isQuietHour(hour: number, startHour: number, endHour: number): boolean {
+  const h = ((hour % 24) + 24) % 24;
+  if (startHour === endHour) return false;
+  if (startHour < endHour) return h >= startHour && h < endHour;
+  return h >= startHour || h < endHour; // wraps past midnight
+}
+
 /** Validate a steps array before save (admin). Pure. */
 export function validateSteps(steps: unknown): { ok: boolean; error?: string } {
   if (!Array.isArray(steps)) return { ok: false, error: "steps must be an array" };

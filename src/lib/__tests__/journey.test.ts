@@ -4,6 +4,7 @@ import {
   initialEnrollment,
   advanceEnrollment,
   isDue,
+  isQuietHour,
   validateSteps,
   type JourneyStep,
 } from "../automation/journey";
@@ -54,6 +55,21 @@ describe("isDue", () => {
     expect(isDue({ status: "active", next_run_at: new Date(NOW - 1).toISOString() }, NOW)).toBe(true);
     expect(isDue({ status: "active", next_run_at: new Date(NOW + 1000).toISOString() }, NOW)).toBe(false);
     expect(isDue({ status: "completed", next_run_at: new Date(NOW - 1).toISOString() }, NOW)).toBe(false);
+  });
+});
+
+describe("isQuietHour", () => {
+  it("handles a window that wraps past midnight (21→9)", () => {
+    expect(isQuietHour(22, 21, 9)).toBe(true);
+    expect(isQuietHour(3, 21, 9)).toBe(true);
+    expect(isQuietHour(8, 21, 9)).toBe(true);
+    expect(isQuietHour(9, 21, 9)).toBe(false);
+    expect(isQuietHour(14, 21, 9)).toBe(false);
+    expect(isQuietHour(20, 21, 9)).toBe(false);
+  });
+  it("handles a same-day window (1→6)", () => {
+    expect(isQuietHour(3, 1, 6)).toBe(true);
+    expect(isQuietHour(7, 1, 6)).toBe(false);
   });
 });
 
