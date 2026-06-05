@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { sendToCustomer } from "@/lib/customer-messaging";
 import { advanceEnrollment, renderTemplate, isQuietHour, type JourneyStep } from "@/lib/automation/journey";
 import { isSuppressed, unsubscribeToken } from "@/lib/automation/suppression";
+import { llmText } from "@/lib/llm";
 import { logEvent, reportServerError } from "@/lib/error-report";
 
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
@@ -105,7 +106,19 @@ async function handle(request: NextRequest) {
         price: (ctx.price as string) || "",
         ref: (ctx.ref as string) || "",
       };
-      const body = renderTemplate(step.body, vars);
+      let body = renderTemplate(step.body, vars);
+      // AI-personalized copy (Phase AW Leap 3): generate per-contact, grounded on
+      // their car + the step intent. Fail-open to the rendered template body.
+      if (step.ai) {
+        const locale = (e.contact_locale as string) || "ru";
+        const langName = locale === "uz" ? "Uzbek (Latin)" : locale === "en" ? "English" : "Russian";
+        const out = await llmText({
+          system: `You are a friendly sales assistant for Tez Motors, a Chinese-car importer in Tashkent. Write in ${langName}. Output ONLY the message, 1–2 short sentences, warm and concrete, no preamble, never invent prices or specs.`,
+          user: `Write a follow-up to ${vars.name || "the customer"}${vars.car ? ` about the ${vars.car}` : ""}. Intent: ${step.aiPrompt || step.body}`,
+          maxTokens: 160,
+        }).catch(() => null);
+        if (out && out.trim()) body = out.trim();
+      }
 
       // One-click unsubscribe link for the email footer (compliance).
       const unsubContact = (e.contact_email as string) || (e.contact_phone as string);

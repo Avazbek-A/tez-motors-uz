@@ -10,6 +10,8 @@ interface Step {
   body: string;
   url?: string;
   buttonLabel?: string;
+  ai?: boolean;
+  aiPrompt?: string;
 }
 interface Journey {
   id: string;
@@ -146,11 +148,17 @@ export default function AdminAutomationPage() {
                   <button onClick={() => setSteps((st) => st.filter((_, j) => j !== i))} className="ml-auto text-red-400 hover:text-red-300"><Trash2 className="h-3.5 w-3.5" /></button>
                 )}
               </div>
-              <textarea value={s.body} onChange={(e) => setStep(i, { body: e.target.value })} placeholder="Message body (with {name}/{car}…)" rows={2} className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-sm" />
-              <div className="flex flex-wrap gap-2">
+              <textarea value={s.body} onChange={(e) => setStep(i, { body: e.target.value })} placeholder="Message body (with {name}/{car}…) — also the fallback if AI is on" rows={2} className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-sm" />
+              <div className="flex flex-wrap items-center gap-2">
                 <input value={s.url || ""} onChange={(e) => setStep(i, { url: e.target.value })} placeholder="link URL (optional)" className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
                 <input value={s.buttonLabel || ""} onChange={(e) => setStep(i, { buttonLabel: e.target.value })} placeholder="button label" className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
+                <label className="flex items-center gap-1 text-xs text-white/60">
+                  <input type="checkbox" checked={!!s.ai} onChange={(e) => setStep(i, { ai: e.target.checked })} /> AI personalize
+                </label>
               </div>
+              {s.ai && (
+                <input value={s.aiPrompt || ""} onChange={(e) => setStep(i, { aiPrompt: e.target.value })} placeholder="AI intent, e.g. 'gentle nudge to book a test drive'" className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
+              )}
             </div>
           ))}
           <div className="flex items-center gap-2">

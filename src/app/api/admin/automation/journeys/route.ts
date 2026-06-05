@@ -52,6 +52,8 @@ const stepSchema = z.object({
   body: z.string().min(1).max(2000),
   url: z.string().max(500).optional(),
   buttonLabel: z.string().max(60).optional(),
+  ai: z.boolean().optional(),
+  aiPrompt: z.string().max(300).optional(),
 });
 const createSchema = z.object({
   name: z.string().min(1).max(120),

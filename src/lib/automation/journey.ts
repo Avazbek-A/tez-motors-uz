@@ -32,11 +32,17 @@ export interface JourneyStep {
   channel?: string | null;
   /** Email subject (used only when the email channel sends). */
   subject?: string;
-  /** Message body. Supports {name} {car} {price} {ref} placeholders. */
+  /** Message body. Supports {name} {car} {price} {ref} placeholders. Also the
+   *  fail-open fallback when AI personalization is on but the LLM is unavailable. */
   body: string;
   /** Optional deep link → becomes the message button. */
   url?: string;
   buttonLabel?: string;
+  /** When true, generate per-contact copy with the LLM (grounded on the contact's
+   *  car), falling back to `body`. */
+  ai?: boolean;
+  /** The intent/instruction for the AI copy (e.g. "gentle nudge to book a test drive"). */
+  aiPrompt?: string;
 }
 
 export const MAX_STEPS = 12;
