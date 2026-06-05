@@ -66,3 +66,6 @@ deploy/collector/node_modules/
 # Crawlee scratch storage (request queues / datasets — ephemeral)
 deploy/collector/storage/
 deploy/collector/crawlee_storage/
+
+# LLM bake-off config (holds API keys)
+scripts/llm-bakeoff.config.json
