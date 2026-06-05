@@ -29,9 +29,29 @@ final flip. **Increment 1 (the foundation) is done; the rest is planned below.**
 - Pure resolution lib + server resolver + `scopeToTenant` no-op helper, unit-tested.
 - Flag + env documented. **Behavior unchanged.**
 
-## Increment 2 — scope the data plane (not started)
+## Increment 2 — scope the data plane (in progress)
 
-1. Add `tenant_id` (same pattern) to every remaining tenant-scoped table:
+Done (migration 067 + app wiring, flag still off → behavior unchanged):
+- `tenant_id` added to **every** tenant-scoped table (the loop in 067).
+- **Storefront reads scoped**: `cars-query.ts` + `/api/cars` + `/api/parts`
+  resolve the tenant from the request host and filter via `scopeToTenant`
+  (a no-op until the flag is on).
+- **Capture writes stamped**: car create + inquiry insert tag `tenant_id`.
+- Tenant management admin (`/admin/tenants` + `/api/admin/tenants`) — provision
+  / suspend dealers (the onboarding seam).
+
+Remaining for increment 2 (still flag-off-safe to add):
+1. Scope the rest of the back-office reads/writes (orders, payments, shipments,
+   expenses, analytics, etc.) through `scopeToTenant` + stamp `tenant_id` on
+   their inserts. Centralize in the query helpers, not per-route.
+2. Resolve the tenant once per request (middleware → `x-tenant-id`) so handlers
+   don't each re-resolve.
+3. Seed a second tenant, flip `MULTI_TENANT=1` in staging, verify isolation
+   (a subdomain sees only its own catalog + leads).
+
+### Reference: the full scoped-table list
+
+Add `tenant_id` (same pattern) to every remaining tenant-scoped table:
    `scooters, orders, order_events, inquiries, customers, reviews, faqs, posts,
    purchase_orders, shipments, expenses, invoices, payments, financing_applications,
    insurance_leads, service_bookings, referrals, calls, commissions, suppliers,
