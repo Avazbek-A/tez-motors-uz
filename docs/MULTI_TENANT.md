@@ -7,7 +7,7 @@ final flip. **Increment 1 (the foundation) is done; the rest is planned below.**
 
 ## Model
 
-- **`tenants`** registry (migration 065): `id, slug, name, primary_host, status,
+- **`tenants`** registry (migration 066): `id, slug, name, primary_host, status,
   settings, created_at`. Service-role only.
 - **Default tenant** — a fixed, well-known id `00000000-0000-0000-0000-000000000001`
   (`DEFAULT_TENANT_ID` in `src/lib/tenant.ts`) representing the existing dealer.

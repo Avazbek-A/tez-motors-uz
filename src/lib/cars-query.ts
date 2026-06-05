@@ -5,6 +5,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { scopeToTenant } from "@/lib/tenant-context";
 
 interface Sortable {
   price_usd: number;
@@ -51,6 +52,8 @@ export interface CarsPageOpts {
   sort?: string | null;
   /** Admin mode: include sold cars. */
   includeAll?: boolean;
+  /** Tenant to scope to (multi-tenant). No-op while MULTI_TENANT is off. */
+  tenantId?: string | null;
 }
 
 /** Fetch one page of cars with filters + sort. Returns the page and total count. */
@@ -66,6 +69,7 @@ export async function fetchCarsPage(
   // column added to `cars` doesn't leak through the catalog list.
   let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS, { count: "exact" });
 
+  if (opts.tenantId) query = scopeToTenant(query, opts.tenantId);
   if (!opts.includeAll) query = query.neq("inventory_status", "sold");
   if (opts.brand) query = query.eq("brand", opts.brand);
   if (opts.bodyType) query = query.eq("body_type", opts.bodyType);

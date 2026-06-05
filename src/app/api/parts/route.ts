@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { isAdminRequest } from "@/lib/auth";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
 import { reportServerError } from "@/lib/error-report";
+import { resolveTenantId, scopeToTenant } from "@/lib/tenant-context";
 
 const publicCacheHeaders = {
   "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase.from("parts").select("*", { count: "exact" });
 
+    query = scopeToTenant(query, await resolveTenantId(request.headers.get("host")));
     if (!all) query = query.eq("is_published", true);
     if (category && PART_CATEGORIES.includes(category as (typeof PART_CATEGORIES)[number])) {
       query = query.eq("category", category);

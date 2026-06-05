@@ -11,6 +11,7 @@ import { reportServerError } from "@/lib/error-report";
 import { fetchCarRatings } from "@/lib/reviews-aggregate";
 import { median } from "@/lib/market-intel";
 import { assessPrice } from "@/lib/fair-price";
+import { resolveTenantId, scopeToTenant } from "@/lib/tenant-context";
 
 // Attach per-car review aggregates (★ on listing tiles) without bloating the
 // base query. One batched reviews read for the page; fail-soft to no ratings.
@@ -116,6 +117,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = all ? createServiceClient() : await createClient();
+    // Which tenant's catalog is this? Resolves to the default tenant (no DB
+    // call) while MULTI_TENANT is off, so this is free in single-dealer mode.
+    const tenantId = await resolveTenantId(request.headers.get("host"));
 
     // If a search query is present, resolve matching IDs via the trigram
     // RPC and fall back to ILIKE on miss. This gives typo tolerance
@@ -154,6 +158,7 @@ export async function GET(request: NextRequest) {
           search,
           searchIds,
           ids: idList,
+          tenantId,
           sort,
           includeAll: !!all,
         });
@@ -172,6 +177,7 @@ export async function GET(request: NextRequest) {
     // Legacy mode (no pagination). Explicit column list (PUBLIC_CAR_COLUMNS) so
     // a future internal column added to `cars` doesn't silently leak.
     let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS);
+    query = scopeToTenant(query, tenantId);
 
     if (!all) {
       query = query.neq("inventory_status", "sold");
@@ -244,6 +250,8 @@ export async function POST(request: NextRequest) {
 
     const data = result.data;
     const supabase = createServiceClient();
+    // Stamp the owning tenant (defaults to the default tenant while single-mode).
+    const tenantId = await resolveTenantId(request.headers.get("host"));
 
     const baseSlug = `${data.brand}-${data.model}-${data.year}`
       .toLowerCase()
@@ -259,7 +267,7 @@ export async function POST(request: NextRequest) {
 
     const { data: car, error } = await supabase
       .from("cars")
-      .insert({ ...data, slug })
+      .insert({ ...data, slug, tenant_id: tenantId })
       .select()
       .single();
 

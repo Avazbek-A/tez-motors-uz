@@ -8,6 +8,7 @@ import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
+import { resolveTenantId } from "@/lib/tenant-context";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -59,6 +60,8 @@ export async function POST(request: NextRequest) {
     // Attach marketing attribution (first-touch UTM/referrer) captured in a cookie.
     const attribution = parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value);
     const metadata = { ...(data.metadata || {}), ...(attribution ? { attribution } : {}) };
+    // Which dealer's storefront produced this lead (default tenant in single mode).
+    const tenantId = await resolveTenantId(request.headers.get("host"));
 
     const { data: inquiry, error } = await supabase
       .from("inquiries")
@@ -72,6 +75,7 @@ export async function POST(request: NextRequest) {
         source_page: data.source_page || null,
         metadata,
         status: "new",
+        tenant_id: tenantId,
       })
       .select()
       .single();
