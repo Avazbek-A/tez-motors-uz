@@ -21,6 +21,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { generateReferenceCode } from "@/lib/order-code";
 import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 import { exitActiveEnrollments } from "@/lib/automation/enroll";
+import { markReferralConverted } from "@/lib/automation/referral";
 
 const checkRateLimit = createKvRateLimiter({ max: 3, windowMs: 10 * 60 * 1000, prefix: "preorder" });
 
@@ -156,8 +157,9 @@ export async function POST(request: NextRequest) {
       metadata: { preorder: true, config, quoted_lead_time_weeks: quotedLeadTime },
     }).catch(() => {});
     confirmToCustomer({ email: data.email || null, name: data.name, locale: data.locale }).catch(() => {});
-    // Conversion: pre-order placed → stop active nurture drips for this contact.
+    // Conversion: pre-order placed → stop active nurture drips + credit referral.
     exitActiveEnrollments(supabase, data.phone).catch(() => {});
+    markReferralConverted(supabase, data.phone).catch(() => {});
 
     return NextResponse.json({ success: true, reference_code: referenceCode }, { status: 201 });
   } catch (error) {

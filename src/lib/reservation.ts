@@ -13,6 +13,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateReferenceCode } from "@/lib/order-code";
 import type { Attribution } from "@/lib/attribution";
 import { exitActiveEnrollments } from "@/lib/automation/enroll";
+import { markReferralConverted } from "@/lib/automation/referral";
 
 export interface ReserveInput {
   carId: string;
@@ -115,8 +116,10 @@ export async function reserveCarAndCreateOrder(
     return { ok: false, reason: "failed" };
   }
 
-  // Conversion: the lead reserved → stop any active nurture drips for them.
+  // Conversion: the lead reserved → stop any active nurture drips for them and
+  // flip any referral that brought them in to 'converted'.
   exitActiveEnrollments(supabase, input.phone).catch(() => {});
+  markReferralConverted(supabase, input.phone).catch(() => {});
 
   return { ok: true, referenceCode, inquiryId: inquiry.id as string, car: { brand: car.brand, model: car.model, year: car.year } };
 }

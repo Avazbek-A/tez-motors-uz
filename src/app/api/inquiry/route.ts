@@ -10,6 +10,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 import { resolveTenantId } from "@/lib/tenant-context";
 import { enrollInJourneys } from "@/lib/automation/enroll";
+import { creditReferral } from "@/lib/automation/referral";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -61,6 +62,10 @@ export async function POST(request: NextRequest) {
     // Attach marketing attribution (first-touch UTM/referrer) captured in a cookie.
     const attribution = parseAttributionCookie(request.cookies.get(ATTRIBUTION_COOKIE)?.value);
     const metadata = { ...(data.metadata || {}), ...(attribution ? { attribution } : {}) };
+    // Referral credit: this lead arrived via someone's ?ref code.
+    if (attribution?.ref) {
+      void creditReferral(supabase, attribution.ref, data.phone).catch(() => {});
+    }
     // Which dealer's storefront produced this lead (default tenant in single mode).
     const tenantId = await resolveTenantId(request.headers.get("host"));
 
