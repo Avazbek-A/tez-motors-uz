@@ -1,9 +1,10 @@
 {
   "_comment": "Copy to scripts/llm-bakeoff.config.json (gitignored) and fill in keys. TIP: with ONE OpenRouter key you can compare many models — just add rows with the same url+key and different 'model' slugs. Endpoints/model names drift — verify in each provider's docs.",
+  "_decider": "Read the UZBEK outputs. All are pennies/month at this volume — quality (esp. Uzbek) + whether you want one model for text+vision is the real choice. Finalists: DeepSeek V4 Flash (text-only, proven) vs Qwen3.6 (multilingual leader + NATIVE vision = one model for everything).",
   "providers": [
-    { "name": "OpenRouter · DeepSeek V4 Flash", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "deepseek/deepseek-v4-flash" },
-    { "name": "OpenRouter · Gemini Flash", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "google/gemini-2.5-flash" },
-    { "name": "OpenRouter · Qwen", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "qwen/qwen-plus" },
-    { "name": "Anthropic Haiku 4.5", "provider": "anthropic", "key": "sk-ant-...", "model": "claude-haiku-4-5" }
+    { "name": "DeepSeek V4 Flash (text-only)", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "deepseek/deepseek-v4-flash" },
+    { "name": "Qwen3.6 35B (vision-capable)", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "qwen/qwen3.6-35b-a3b" },
+    { "name": "Gemini 2.5 Flash (safe, vision)", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "google/gemini-2.5-flash" },
+    { "name": "GLM-5 Turbo", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "z-ai/glm-5-turbo" }
   ]
 }
