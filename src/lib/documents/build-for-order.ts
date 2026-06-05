@@ -25,7 +25,9 @@ export async function buildOrderDocument(
   const depositUsd = usdUzs > 0 ? Math.round(depositUzs / usdUzs) : 0;
 
   const carRel = order.cars as { brand: string; model: string; year: number; color: string | null } | { brand: string; model: string; year: number; color: string | null }[] | null;
-  const car = Array.isArray(carRel) ? carRel[0] : carRel;
+  // Array branch can be empty (e.g. the car was deleted) — coalesce to null so a
+  // missing relation never surfaces as `undefined` downstream.
+  const car = Array.isArray(carRel) ? (carRel[0] ?? null) : carRel;
 
   const { title, html } = buildDocument(type, {
     number: documentNumber(type, order.reference_code),

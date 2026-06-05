@@ -1,0 +1,18 @@
+-- 065_admin_users_rls.sql
+--
+-- SECURITY FIX: admin_users was created in 009 but never had Row Level Security
+-- enabled, while every other PII/money table (orders, payments, customers,
+-- admin_sessions, otp_codes, ...) does. With RLS OFF, Supabase's default `anon`
+-- grant makes the table readable through PostgREST — i.e. a request with the
+-- public anon key to `/rest/v1/admin_users?select=*` would return every admin's
+-- email, role, and PBKDF2 password hash.
+--
+-- Lock it down to the service-role key only — RLS enabled, NO policies — exactly
+-- like orders/payments/customers/admin_sessions. The service-role key bypasses
+-- RLS, and every code path that touches admin_users already uses the service
+-- client behind requireAdmin (src/lib/auth.ts, api/admin/login, api/admin/{users,
+-- team,tasks}, api/admin/stats/funnel), so this is invisible to the app and only
+-- removes anon-key access.
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+-- No policies on purpose: only the service-role key (which bypasses RLS) may
+-- read or write this table.

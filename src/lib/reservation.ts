@@ -99,5 +99,20 @@ export async function reserveCarAndCreateOrder(
     }
   }
 
+  // If we reserved the car but could NOT create a trackable order (both code
+  // attempts failed), do not report success — that would leave the car stuck
+  // `reserved` forever with no order behind it. Roll the reservation back to
+  // `available` (guarded so we never clobber a car a concurrent request has
+  // since sold/re-reserved) and surface an honest failure. The inquiry row
+  // stays as a lead the dealer can still see.
+  if (!referenceCode) {
+    await supabase
+      .from("cars")
+      .update({ inventory_status: "available", updated_at: new Date().toISOString() })
+      .eq("id", input.carId)
+      .eq("inventory_status", "reserved");
+    return { ok: false, reason: "failed" };
+  }
+
   return { ok: true, referenceCode, inquiryId: inquiry.id as string, car: { brand: car.brand, model: car.model, year: car.year } };
 }

@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Validation failed" }, { status: 400 });
   }
 
-  const result = await validateInitData(parsed.data.initData, botToken);
+  // Reject initData older than 1h to keep the replay window tight (the validator
+  // defaults to 24h). A Mini App always carries fresh initData on open.
+  const result = await validateInitData(parsed.data.initData, botToken, { maxAgeSeconds: 3600 });
   if (!result.valid || !result.user) {
     logEvent("auth.tg.reject", { ip, reason: result.reason ?? "no-user" });
     return NextResponse.json({ success: false, error: "Invalid Telegram session" }, { status: 401 });
