@@ -11,6 +11,7 @@ import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 import { resolveTenantId } from "@/lib/tenant-context";
 import { enrollInJourneys } from "@/lib/automation/enroll";
 import { creditReferral } from "@/lib/automation/referral";
+import { scoreLead, leadTier } from "@/lib/lead-score";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -69,6 +70,20 @@ export async function POST(request: NextRequest) {
     // Which dealer's storefront produced this lead (default tenant in single mode).
     const tenantId = await resolveTenantId(request.headers.get("host"));
 
+    // Lead score (persisted) → the dealer works the hottest first, and a hot
+    // lead fires an instant alert below.
+    const amountUsd = typeof (metadata as { amount_usd?: unknown }).amount_usd === "number"
+      ? ((metadata as { amount_usd: number }).amount_usd)
+      : null;
+    const leadScore = scoreLead({
+      type: data.type,
+      hasEmail: !!data.email,
+      hasCarId: !!data.car_id,
+      messageLength: (data.message || "").length,
+      amountUsd,
+    });
+    const tier = leadTier(leadScore);
+
     const { data: inquiry, error } = await supabase
       .from("inquiries")
       .insert({
@@ -82,6 +97,7 @@ export async function POST(request: NextRequest) {
         metadata,
         status: "new",
         tenant_id: tenantId,
+        lead_score: leadScore,
       })
       .select()
       .single();
@@ -117,12 +133,14 @@ export async function POST(request: NextRequest) {
     })().catch(() => {});
 
     // Alert the dealer (Telegram + email fallback) and confirm to the customer.
-    // Both fail-open; neither blocks the response.
+    // Both fail-open; neither blocks the response. A HOT lead gets a 🔥 marker
+    // so the dealer can pounce — fast response is the biggest driver of close rate.
+    const hotPrefix = tier === "hot" ? `🔥 HOT LEAD (${leadScore}/100) — ` : "";
     notifyNewInquiry({
       name: data.name,
       phone: data.phone,
       email: data.email || null,
-      message: data.message,
+      message: `${hotPrefix}${data.message || ""}`,
       type: data.type,
       source_page: data.source_page,
       metadata: data.metadata,
