@@ -3,7 +3,10 @@ import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendToCustomer } from "@/lib/customer-messaging";
 import { advanceEnrollment, renderTemplate, type JourneyStep } from "@/lib/automation/journey";
+import { isSuppressed, unsubscribeToken } from "@/lib/automation/suppression";
 import { logEvent, reportServerError } from "@/lib/error-report";
+
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
 
 /**
  * Marketing-automation runner (Phase AW). Fires due journey steps: for each
@@ -59,6 +62,13 @@ async function handle(request: NextRequest) {
       }
 
       // Optional car context for placeholders.
+      // Honour the opt-out: a suppressed contact exits the journey, no send.
+      const contactForSuppression = (e.contact_email as string) || (e.contact_phone as string);
+      if (await isSuppressed(supabase, contactForSuppression, step.channel)) {
+        await supabase.from("journey_enrollments").update({ status: "exited" }).eq("id", e.id).then(() => {}, () => {});
+        continue;
+      }
+
       const ctx = (e.context as Record<string, unknown>) || {};
       const vars: Record<string, string | number | null | undefined> = {
         name: (e.contact_name as string) || "",
@@ -67,6 +77,14 @@ async function handle(request: NextRequest) {
         ref: (ctx.ref as string) || "",
       };
       const body = renderTemplate(step.body, vars);
+
+      // One-click unsubscribe link for the email footer (compliance).
+      const unsubContact = (e.contact_email as string) || (e.contact_phone as string);
+      const unsubLoc = (e.contact_locale as string) || "ru";
+      const unsubUrl = `${SITE}/${unsubLoc}/unsubscribe?c=${encodeURIComponent(unsubContact)}&t=${await unsubscribeToken(unsubContact)}`;
+      const emailHtml = step.subject && e.contact_email
+        ? `<p>${body}</p><hr/><p style="font-size:12px;color:#888">Не хотите получать эти сообщения? <a href="${unsubUrl}">Отписаться</a></p>`
+        : null;
 
       const res = await sendToCustomer(
         supabase,
@@ -82,7 +100,7 @@ async function handle(request: NextRequest) {
           body,
           url: step.url,
           buttonLabel: step.buttonLabel,
-          email: step.subject && e.contact_email ? { subject: renderTemplate(step.subject, vars), html: `<p>${body}</p>` } : null,
+          email: emailHtml ? { subject: renderTemplate(step.subject!, vars), html: emailHtml } : null,
           kind: `journey:${e.journey_id}`,
         },
       );
