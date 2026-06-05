@@ -9,6 +9,7 @@ import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { parseAttributionCookie, ATTRIBUTION_COOKIE } from "@/lib/attribution";
 import { resolveTenantId } from "@/lib/tenant-context";
+import { enrollInJourneys } from "@/lib/automation/enroll";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -88,6 +89,27 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Marketing automation: enroll this lead into any active "new_lead" journey
+    // (drip sequence). Fire-and-forget, fail-open — never blocks the response,
+    // never double-enrolls (DB partial-unique). Resolve the car name for
+    // {car} placeholders when the lead references one.
+    void (async () => {
+      let carName: string | undefined;
+      if (data.car_id) {
+        const { data: car } = await supabase.from("cars").select("brand, model, year").eq("id", data.car_id).maybeSingle();
+        if (car) carName = `${car.brand} ${car.model} ${car.year ?? ""}`.trim();
+      }
+      await enrollInJourneys(supabase, "new_lead", {
+        phone: data.phone,
+        name: data.name,
+        email: data.email || null,
+        locale: data.locale,
+        carId: data.car_id || null,
+        tenantId,
+        context: carName ? { car: carName } : {},
+      });
+    })().catch(() => {});
 
     // Alert the dealer (Telegram + email fallback) and confirm to the customer.
     // Both fail-open; neither blocks the response.

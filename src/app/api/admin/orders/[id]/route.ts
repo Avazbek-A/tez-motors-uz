@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { logEvent } from "@/lib/error-report";
 import { ORDER_STATUSES, notifyOrderStatus } from "@/lib/order-status";
 import { logAdminAction } from "@/lib/audit";
+import { enrollInJourneys } from "@/lib/automation/enroll";
 
 const updateSchema = z
   .object({
@@ -78,7 +79,7 @@ export async function PATCH(
     const { data: order, error: fetchError } = await supabase
       .from("orders")
       .select(
-        "id, reference_code, status, customer_email, customer_phone, locale, cars(brand, model, year)",
+        "id, reference_code, status, customer_email, customer_phone, locale, car_id, cars(brand, model, year)",
       )
       .eq("id", id)
       .single();
@@ -138,6 +139,17 @@ export async function PATCH(
         newStatus,
         note,
       ).catch(() => {});
+
+      // Marketing automation: on delivery, enroll the buyer into post-delivery
+      // journeys (review request, service reminders, parts-for-your-car, …).
+      if (newStatus === "delivered" && order.customer_phone) {
+        enrollInJourneys(supabase, "delivered", {
+          phone: order.customer_phone,
+          locale: order.locale,
+          carId: order.car_id ?? null,
+          context: { car: carName, ref: order.reference_code },
+        }).catch(() => {});
+      }
     }
 
     logAdminAction(request, {

@@ -38,6 +38,7 @@ const ROUTES = {
   "0 7 * * 1": "/api/cron/auto-markdown",
   "30 7 * * 1": "/api/cron/auto-source",
   "*/15 * * * *": "/api/cron/synthetic",
+  "20 * * * *": "/api/cron/journeys",
 };
 
 async function fire(path, env) {
