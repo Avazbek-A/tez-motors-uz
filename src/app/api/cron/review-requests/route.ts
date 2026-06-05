@@ -74,12 +74,15 @@ async function handle(request: NextRequest) {
       const locale = localeOf(order.locale);
       const car = order.car_id ? carById.get(order.car_id) : undefined;
 
-      // Prefilled review link: car_id flows to reviews.car_id; car name prefills
-      // the visible "which car" field.
+      // NPS-gated feedback link (Phase AW reputation loop): ask the rating first,
+      // then promoters → public review, detractors → privately to the dealer.
+      // car_id/car prefill the public-review path; ref ties a detractor's
+      // private feedback to their order.
       const params = new URLSearchParams();
       if (order.car_id) params.set("car_id", order.car_id);
       if (car?.name) params.set("car", car.name);
-      const reviewUrl = `${base}/${locale}/reviews${params.toString() ? `?${params.toString()}` : ""}`;
+      if (order.reference_code) params.set("ref", order.reference_code as string);
+      const reviewUrl = `${base}/${locale}/feedback${params.toString() ? `?${params.toString()}` : ""}`;
 
       const hasEmail = !!order.customer_email;
       let delivered = false;
