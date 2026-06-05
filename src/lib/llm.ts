@@ -25,7 +25,12 @@
  *   LLM_PROVIDER  openai | anthropic  (optional; auto-detected from URL)
  *   LLM_API_KEY   required for anthropic / hosted openai; omit for local Ollama
  *   LLM_API_URL   default per provider (anthropic messages / ollama chat)
- *   LLM_MODEL     default per provider (claude-3-5-haiku-latest / qwen2.5:7b-instruct)
+ *   LLM_MODEL     default per provider (claude-haiku-4-5 / qwen2.5:7b-instruct)
+ *
+ * NB: a HOSTED model (Anthropic Haiku 4.5, or Gemini Flash via the openai path)
+ * is the recommended primary — it's edge-reachable and needs no always-on box.
+ * Local Ollama is a dev/privacy fallback only; running it in production means a
+ * machine that must stay up AND cool to serve generation.
  */
 
 export interface AssistantCarLite {
@@ -121,7 +126,7 @@ export function buildChatRequest(
     url: args.url || ANTHROPIC_URL,
     headers: { "x-api-key": args.apiKey || "", "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({
-      model: args.model || "claude-3-5-haiku-latest",
+      model: args.model || "claude-haiku-4-5",
       max_tokens: args.maxTokens,
       system: args.system,
       messages: args.messages,

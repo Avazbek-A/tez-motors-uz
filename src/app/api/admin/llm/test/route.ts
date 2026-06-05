@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   const provider = resolveProvider();
-  const model = process.env.LLM_MODEL || (provider === "openai" ? "qwen2.5:7b-instruct" : "claude-3-5-haiku-latest");
+  const model = process.env.LLM_MODEL || (provider === "openai" ? "qwen2.5:7b-instruct" : "claude-haiku-4-5");
   const started = Date.now();
   const text = await llmText({ system: "You are a connectivity check. Reply with exactly: OK", user: "ping", maxTokens: 10 });
   const ms = Date.now() - started;

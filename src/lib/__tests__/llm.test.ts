@@ -60,13 +60,20 @@ describe("buildChatRequest", () => {
   });
 
   it("builds an Anthropic request (separate system, x-api-key header)", () => {
-    const r = buildChatRequest("anthropic", { ...base, apiKey: "sk-ant", model: "claude-3-5-haiku-latest" });
+    const r = buildChatRequest("anthropic", { ...base, apiKey: "sk-ant", model: "claude-haiku-4-5" });
     expect(r.url).toBe("https://api.anthropic.com/v1/messages");
     expect(r.headers["x-api-key"]).toBe("sk-ant");
     expect(r.headers["anthropic-version"]).toBe("2023-06-01");
     const body = JSON.parse(r.body);
     expect(body.system).toBe("SYS");
     expect(body.messages).toEqual([{ role: "user", content: "hi" }]);
+  });
+
+  it("defaults the Anthropic model to a current hosted Haiku (not a stale one)", () => {
+    const r = buildChatRequest("anthropic", { ...base, apiKey: "sk-ant" });
+    const body = JSON.parse(r.body);
+    expect(body.model).toBe("claude-haiku-4-5");
+    expect(body.model).not.toMatch(/claude-3/); // never regress to the old gen
   });
 });
 
