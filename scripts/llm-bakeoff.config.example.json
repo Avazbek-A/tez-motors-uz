@@ -1,10 +1,9 @@
 {
-  "_comment": "Copy to scripts/llm-bakeoff.config.json (gitignored) and fill in keys. Delete providers you don't want to test. Endpoints/model names drift — verify in each provider's docs.",
+  "_comment": "Copy to scripts/llm-bakeoff.config.json (gitignored) and fill in keys. TIP: with ONE OpenRouter key you can compare many models — just add rows with the same url+key and different 'model' slugs. Endpoints/model names drift — verify in each provider's docs.",
   "providers": [
-    { "name": "Anthropic Haiku 4.5", "provider": "anthropic", "key": "sk-ant-...", "model": "claude-haiku-4-5" },
-    { "name": "Gemini Flash", "provider": "openai", "url": "https://generativelanguage.googleapis.com/v1beta/openai", "key": "<gemini key>", "model": "gemini-2.5-flash" },
-    { "name": "NVIDIA NIM (free) Qwen", "provider": "openai", "url": "https://integrate.api.nvidia.com/v1", "key": "nvapi-...", "model": "qwen/qwen2.5-7b-instruct" },
-    { "name": "DeepSeek", "provider": "openai", "url": "https://api.deepseek.com", "key": "sk-...", "model": "deepseek-chat" },
-    { "name": "Qwen / DashScope", "provider": "openai", "url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "key": "sk-...", "model": "qwen-plus" }
+    { "name": "OpenRouter · DeepSeek V4 Flash", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "deepseek/deepseek-v4-flash" },
+    { "name": "OpenRouter · Gemini Flash", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "google/gemini-2.5-flash" },
+    { "name": "OpenRouter · Qwen", "provider": "openai", "url": "https://openrouter.ai/api/v1", "key": "sk-or-...", "model": "qwen/qwen-plus" },
+    { "name": "Anthropic Haiku 4.5", "provider": "anthropic", "key": "sk-ant-...", "model": "claude-haiku-4-5" }
   ]
 }
