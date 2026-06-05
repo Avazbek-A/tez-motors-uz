@@ -37,6 +37,13 @@ export interface Car {
   /** Per-car review aggregates (attached by /api/cars for ★ on tiles). */
   review_avg?: number;
   review_count?: number;
+  /** Buyer-facing fair-price signal vs the resale-market median (Phase AU). */
+  price_vs_market?: {
+    label: "below_market" | "fair" | null;
+    belowPct: number;
+    savingsUsd: number;
+    sample: number;
+  };
 }
 
 export interface CarFilters {

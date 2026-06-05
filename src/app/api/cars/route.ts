@@ -9,6 +9,8 @@ import { applySort, fetchCarsPage } from "@/lib/cars-query";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { reportServerError } from "@/lib/error-report";
 import { fetchCarRatings } from "@/lib/reviews-aggregate";
+import { median } from "@/lib/market-intel";
+import { assessPrice } from "@/lib/fair-price";
 
 // Attach per-car review aggregates (★ on listing tiles) without bloating the
 // base query. One batched reviews read for the page; fail-soft to no ratings.
@@ -23,6 +25,50 @@ async function enrichWithRatings<T extends { id: string }>(
     const r = ratings.get(c.id);
     return r ? { ...c, review_avg: r.avg, review_count: r.count } : c;
   });
+}
+
+interface CarLike { id: string; brand?: string; model?: string; price_usd?: number | string }
+const modelKey = (brand: string, model: string) => `${brand.toLowerCase().trim()}|${model.toLowerCase().trim()}`;
+
+// Attach a buyer-facing "below market" / "fair price" signal from the resale
+// market median (market_listings). One batched read for the page's brands,
+// grouped + median'd in memory. Fail-soft to no badge. Never labels "overpriced".
+async function enrichWithFairPrice<T extends CarLike>(
+  supabase: ReturnType<typeof createServiceClient>,
+  cars: T[],
+): Promise<T[]> {
+  if (!cars || cars.length === 0) return cars;
+  try {
+    const brands = Array.from(new Set(cars.map((c) => c.brand).filter(Boolean))) as string[];
+    if (brands.length === 0) return cars;
+    const since = new Date(Date.now() - 180 * 86_400_000).toISOString();
+    const { data } = await supabase
+      .from("market_listings")
+      .select("brand, model, price_usd")
+      .in("brand", brands)
+      .gte("observed_at", since)
+      .not("price_usd", "is", null)
+      .limit(3000);
+
+    const prices = new Map<string, number[]>();
+    for (const r of data || []) {
+      const usd = typeof r.price_usd === "number" ? r.price_usd : Number(r.price_usd);
+      if (!(usd > 0)) continue;
+      const k = modelKey(r.brand as string, r.model as string);
+      (prices.get(k) || prices.set(k, []).get(k)!).push(usd);
+    }
+    if (prices.size === 0) return cars;
+
+    return cars.map((c) => {
+      if (!c.brand || !c.model) return c;
+      const arr = prices.get(modelKey(c.brand, c.model)) || [];
+      const med = arr.length ? median(arr) : null;
+      const a = assessPrice(Number(c.price_usd) || 0, med, arr.length);
+      return a.label ? { ...c, price_vs_market: a } : c;
+    });
+  } catch {
+    return cars;
+  }
 }
 
 const publicCacheHeaders = {
@@ -111,7 +157,8 @@ export async function GET(request: NextRequest) {
           sort,
           includeAll: !!all,
         });
-        const enriched = await enrichWithRatings(supabase, cars as unknown as { id: string }[]);
+        const rated = await enrichWithRatings(supabase, cars as unknown as { id: string }[]);
+        const enriched = await enrichWithFairPrice(supabase as ReturnType<typeof createServiceClient>, rated as unknown as CarLike[]);
         return NextResponse.json(
           { cars: enriched, total, page: pageNum, page_size: size },
           { headers: all ? {} : publicCacheHeaders },
@@ -164,7 +211,8 @@ export async function GET(request: NextRequest) {
     }
 
     const sorted = applySort((cars || []) as unknown as Parameters<typeof applySort>[0], sort);
-    const enriched = await enrichWithRatings(supabase, sorted as unknown as { id: string }[]);
+    const rated = await enrichWithRatings(supabase, sorted as unknown as { id: string }[]);
+    const enriched = await enrichWithFairPrice(supabase as ReturnType<typeof createServiceClient>, rated as unknown as CarLike[]);
     return NextResponse.json(
       {
         cars: enriched,

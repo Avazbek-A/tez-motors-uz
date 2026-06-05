@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Fuel, Gauge, Zap, Settings2, CarFront, Star } from "lucide-react";
+import { Fuel, Gauge, Zap, Settings2, CarFront, Star, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
@@ -66,6 +66,12 @@ export function CarCard({ car }: CarCardProps) {
           {car.fuel_type === "electric" && (
             <Badge variant="outline" className="bg-background/80 backdrop-blur-md text-foreground font-medium rounded-none px-2 py-0.5 text-[10px] tracking-wider uppercase border-none">
               <Zap className="w-3 h-3 mr-1" /> EV
+            </Badge>
+          )}
+          {car.price_vs_market?.label === "below_market" && car.price_vs_market.belowPct >= 3 && (
+            <Badge variant="default" className="bg-emerald-600 text-white font-medium rounded-none px-2 py-0.5 shadow-sm text-[10px] tracking-wider uppercase">
+              <TrendingDown className="w-3 h-3 mr-1" />
+              {locale === "ru" ? "Ниже рынка" : locale === "uz" ? "Bozordan arzon" : "Below market"} −{car.price_vs_market.belowPct}%
             </Badge>
           )}
         </div>
