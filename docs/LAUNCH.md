@@ -33,7 +33,14 @@ Owner decisions you must make up front:
 - [ ] Add **recommended**: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`,
       `CRON_SECRET`, `RESEND_API_KEY` + `EMAIL_FROM` + `DEALER_EMAIL`,
       Turnstile keys.
-- [ ] `npm run check:env .env.local` → all required ✓ before deploying.
+- [ ] `npm run check:env .env.local` → all required ✓ **and the INTEGRITY
+      section clean** before deploying. It now fails on half-configured
+      integrations — e.g. a Payme/Click public merchant id set without its
+      secret (the deposit button renders but checkout 401s), a VAPID public key
+      with no signing keypair, a Resend key with no verified sender, or an
+      `LLM_API_URL` pointing at localhost (unreachable from the Workers edge).
+      A group either fully set ("live") or fully unset ("dark") is fine; the
+      half-set middle is what breaks for real users.
 
 ## 4. Deploy (pick ONE)
 **Path A — Workers (Paid plan required — free tier rejects the >3 MiB Worker):**
