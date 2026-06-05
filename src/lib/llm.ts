@@ -27,10 +27,11 @@
  *   LLM_API_URL   default per provider (anthropic messages / ollama chat)
  *   LLM_MODEL     default per provider (claude-haiku-4-5 / qwen2.5:7b-instruct)
  *
- * NB: a HOSTED model (Anthropic Haiku 4.5, or Gemini Flash via the openai path)
- * is the recommended primary — it's edge-reachable and needs no always-on box.
- * Local Ollama is a dev/privacy fallback only; running it in production means a
- * machine that must stay up AND cool to serve generation.
+ * CHOSEN PRIMARY: Qwen3.6-35B-A3B via OpenRouter (openai path) — multilingual
+ * (RU/UZ) + vision-capable, so one model does text AND spec-screenshots. It runs
+ * on OpenRouter's GPUs; nothing runs on local hardware. See .env.example for the
+ * exact vars. Local Ollama is a dev/offline fallback only (a box that must stay
+ * up AND cool — proven inadequate for production here).
  */
 
 export interface AssistantCarLite {
