@@ -48,6 +48,7 @@ crons = [
   "30 7 * * 1",  # Mon 12:30 Tashkent — Autopilot: demand → draft purchase orders (opt-in)
   "*/15 * * * *", # every 15 min — synthetic monitoring of critical paths
   "20 * * * *",   # hourly @:20 — marketing-automation journey runner (drip steps)
+  "40 * * * *",   # hourly @:40 — behavioral journey triggers (abandoned/browsed)
 ]
 
 # Base URL of the deployed Next app. Override per-environment if needed.

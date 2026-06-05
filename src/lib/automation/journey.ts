@@ -7,8 +7,22 @@
  * contact through them.
  */
 
-export type JourneyTrigger = "new_lead" | "reservation_abandoned" | "delivered" | "manual";
-export const JOURNEY_TRIGGERS: JourneyTrigger[] = ["new_lead", "reservation_abandoned", "delivered", "manual"];
+export type JourneyTrigger =
+  | "new_lead"
+  | "reservation_abandoned"
+  | "delivered"
+  | "manual"
+  | "browsed_no_inquiry";
+// Offered triggers. (price_drop is intentionally NOT offered — price-drop alerts
+// already go out directly via notifyPriceWatchers; a journey trigger would
+// double-notify. The migration CHECK still permits it for future use.)
+export const JOURNEY_TRIGGERS: JourneyTrigger[] = [
+  "new_lead",
+  "reservation_abandoned",
+  "delivered",
+  "browsed_no_inquiry",
+  "manual",
+];
 
 export interface JourneyStep {
   /** Wait before this step fires, measured from the previous step (or from
