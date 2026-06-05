@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone, Landmark, Building2, Workflow, Gift
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone, Landmark, Building2, Workflow, Gift, Users2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -76,6 +76,7 @@ const navGroups = [
       { href: "/admin/marketing", label: "Content Studio", icon: Megaphone },
       { href: "/admin/automation", label: "Automation", icon: Workflow },
       { href: "/admin/referrals", label: "Referrals", icon: Gift },
+      { href: "/admin/audiences", label: "Audiences", icon: Users2 },
       { href: "/admin/distribution", label: "Distribution", icon: Share2 },
       { href: "/admin/promotions", label: "Promotions", icon: Tag },
       { href: "/admin/segments", label: "Campaigns", icon: Send },
