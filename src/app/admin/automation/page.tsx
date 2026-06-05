@@ -1,0 +1,194 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Workflow, Loader2, Plus, Trash2, Play, Pause } from "lucide-react";
+
+interface Step {
+  delayHours: number;
+  channel?: string;
+  subject?: string;
+  body: string;
+  url?: string;
+  buttonLabel?: string;
+}
+interface Journey {
+  id: string;
+  name: string;
+  trigger_event: string;
+  status: string;
+  steps: Step[];
+  step_count: number;
+  enrolled_active: number;
+  enrolled_completed: number;
+}
+
+const TRIGGER_LABELS: Record<string, string> = {
+  new_lead: "New lead",
+  reservation_abandoned: "Reservation abandoned",
+  delivered: "Order delivered",
+  manual: "Manual",
+};
+
+export default function AdminAutomationPage() {
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [triggers, setTriggers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  // New-journey form
+  const [name, setName] = useState("");
+  const [trigger, setTrigger] = useState("new_lead");
+  const [steps, setSteps] = useState<Step[]>([{ delayHours: 0, body: "" }]);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/automation/journeys");
+      const data = await res.json();
+      setJourneys(data.journeys || []);
+      setTriggers(data.triggers || []);
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, []);
+
+  function setStep(i: number, patch: Partial<Step>) {
+    setSteps((s) => s.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  }
+
+  async function create() {
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/automation/journeys", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), trigger_event: trigger, status: "paused", steps }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErr(data.error || "Failed to create");
+        return;
+      }
+      setName("");
+      setSteps([{ delayHours: 0, body: "" }]);
+      setCreating(false);
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggle(j: Journey) {
+    await fetch("/api/admin/automation/journeys", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: j.id, status: j.status === "active" ? "paused" : "active" }),
+    });
+    setJourneys((js) => js.map((x) => (x.id === j.id ? { ...x, status: x.status === "active" ? "paused" : "active" } : x)));
+  }
+
+  async function remove(id: string) {
+    if (!confirm("Delete this journey and its enrollments?")) return;
+    await fetch(`/api/admin/automation/journeys?id=${id}`, { method: "DELETE" });
+    setJourneys((js) => js.filter((x) => x.id !== id));
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Workflow className="h-5 w-5 text-lime" />
+          <h1 className="text-xl font-bold">Marketing Automation</h1>
+        </div>
+        <button onClick={() => setCreating((v) => !v)} className="inline-flex items-center gap-1 rounded bg-lime px-3 py-2 text-sm font-medium text-navy">
+          <Plus className="h-4 w-4" /> New journey
+        </button>
+      </div>
+      <p className="text-sm text-white/50">
+        Trigger-based drip sequences. A contact entering a trigger is enrolled and walked through the steps; messages go out
+        Telegram-first, then push/email/SMS. New journeys start <strong>paused</strong> — activate when you’re happy with the copy.
+        Placeholders: <code className="text-white/70">{"{name} {car} {price} {ref}"}</code>.
+      </p>
+
+      {creating && (
+        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+          <div className="flex flex-wrap gap-2">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Journey name" className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
+            <select value={trigger} onChange={(e) => setTrigger(e.target.value)} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm">
+              {(triggers.length ? triggers : Object.keys(TRIGGER_LABELS)).map((t) => (
+                <option key={t} value={t}>{TRIGGER_LABELS[t] || t}</option>
+              ))}
+            </select>
+          </div>
+          {steps.map((s, i) => (
+            <div key={i} className="rounded border border-white/10 bg-black/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-white/50">
+                <span>Step {i + 1}</span>
+                <label className="flex items-center gap-1">
+                  wait
+                  <input type="number" min={0} value={s.delayHours} onChange={(e) => setStep(i, { delayHours: Number(e.target.value) })} className="w-20 rounded border border-white/15 bg-black/30 px-2 py-1" /> h
+                </label>
+                <select value={s.channel || "auto"} onChange={(e) => setStep(i, { channel: e.target.value })} className="rounded border border-white/15 bg-black/30 px-2 py-1">
+                  <option value="auto">auto</option>
+                  <option value="telegram">telegram</option>
+                  <option value="email">email</option>
+                  <option value="push">push</option>
+                </select>
+                {steps.length > 1 && (
+                  <button onClick={() => setSteps((st) => st.filter((_, j) => j !== i))} className="ml-auto text-red-400 hover:text-red-300"><Trash2 className="h-3.5 w-3.5" /></button>
+                )}
+              </div>
+              <textarea value={s.body} onChange={(e) => setStep(i, { body: e.target.value })} placeholder="Message body (with {name}/{car}…)" rows={2} className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-sm" />
+              <div className="flex flex-wrap gap-2">
+                <input value={s.url || ""} onChange={(e) => setStep(i, { url: e.target.value })} placeholder="link URL (optional)" className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
+                <input value={s.buttonLabel || ""} onChange={(e) => setStep(i, { buttonLabel: e.target.value })} placeholder="button label" className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
+              </div>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            {steps.length < 12 && (
+              <button onClick={() => setSteps((s) => [...s, { delayHours: 24, body: "" }])} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">+ step</button>
+            )}
+            <button onClick={create} disabled={saving || !name.trim() || steps.some((s) => !s.body.trim())} className="rounded bg-lime px-3 py-1.5 text-sm font-medium text-navy disabled:opacity-50">
+              {saving ? "Saving…" : "Create (paused)"}
+            </button>
+            {err && <span className="text-sm text-red-400">{err}</span>}
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+      ) : journeys.length === 0 ? (
+        <p className="text-white/50 text-sm">No journeys yet. Create one to start automating follow-ups.</p>
+      ) : (
+        <div className="space-y-2">
+          {journeys.map((j) => (
+            <div key={j.id} className="rounded-lg border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <span className="font-medium">{j.name}</span>
+                  <span className="ml-2 text-xs text-white/50">{TRIGGER_LABELS[j.trigger_event] || j.trigger_event} · {j.step_count} steps</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white/50">{j.enrolled_active} active · {j.enrolled_completed} done</span>
+                  <span className={`rounded px-2 py-0.5 text-xs ${j.status === "active" ? "bg-lime/20 text-lime" : "bg-white/10 text-white/60"}`}>{j.status}</span>
+                  <button onClick={() => toggle(j)} className="rounded border border-white/15 p-1.5 hover:bg-white/10" title={j.status === "active" ? "Pause" : "Activate"}>
+                    {j.status === "active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  </button>
+                  <button onClick={() => remove(j.id)} className="rounded border border-white/15 p-1.5 text-red-400 hover:bg-white/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
