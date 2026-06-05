@@ -20,6 +20,8 @@ interface Journey {
   step_count: number;
   enrolled_active: number;
   enrolled_completed: number;
+  enrolled_converted: number;
+  conversion_rate: number;
 }
 
 const TRIGGER_LABELS: Record<string, string> = {
@@ -177,7 +179,12 @@ export default function AdminAutomationPage() {
                   <span className="ml-2 text-xs text-white/50">{TRIGGER_LABELS[j.trigger_event] || j.trigger_event} · {j.step_count} steps</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50">{j.enrolled_active} active · {j.enrolled_completed} done</span>
+                  <span className="text-xs text-white/50">
+                    {j.enrolled_active} active · {j.enrolled_completed} done
+                    {j.enrolled_converted > 0 && (
+                      <span className="text-lime"> · {j.enrolled_converted} converted ({j.conversion_rate}%)</span>
+                    )}
+                  </span>
                   <span className={`rounded px-2 py-0.5 text-xs ${j.status === "active" ? "bg-lime/20 text-lime" : "bg-white/10 text-white/60"}`}>{j.status}</span>
                   <button onClick={() => toggle(j)} className="rounded border border-white/15 p-1.5 hover:bg-white/10" title={j.status === "active" ? "Pause" : "Activate"}>
                     {j.status === "active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}

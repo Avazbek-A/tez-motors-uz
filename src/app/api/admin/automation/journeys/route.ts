@@ -20,20 +20,28 @@ export async function GET(request: NextRequest) {
     supabase.from("journey_enrollments").select("journey_id, status").limit(20000),
   ]);
 
-  const counts = new Map<string, { active: number; completed: number }>();
+  const counts = new Map<string, { active: number; completed: number; converted: number; total: number }>();
   for (const e of eRes.data || []) {
     const id = e.journey_id as string;
-    const c = counts.get(id) || { active: 0, completed: 0 };
+    const c = counts.get(id) || { active: 0, completed: 0, converted: 0, total: 0 };
+    c.total += 1;
     if (e.status === "active") c.active += 1;
     else if (e.status === "completed") c.completed += 1;
+    else if (e.status === "converted") c.converted += 1;
     counts.set(id, c);
   }
-  const journeys = (jRes.data || []).map((j) => ({
-    ...j,
-    step_count: Array.isArray(j.steps) ? (j.steps as unknown[]).length : 0,
-    enrolled_active: counts.get(j.id as string)?.active ?? 0,
-    enrolled_completed: counts.get(j.id as string)?.completed ?? 0,
-  }));
+  const journeys = (jRes.data || []).map((j) => {
+    const c = counts.get(j.id as string) || { active: 0, completed: 0, converted: 0, total: 0 };
+    return {
+      ...j,
+      step_count: Array.isArray(j.steps) ? (j.steps as unknown[]).length : 0,
+      enrolled_active: c.active,
+      enrolled_completed: c.completed,
+      enrolled_converted: c.converted,
+      // Conversion rate over contacts that have left the active state.
+      conversion_rate: c.total > 0 ? Math.round((c.converted / c.total) * 1000) / 10 : 0,
+    };
+  });
   return NextResponse.json({ journeys, triggers: JOURNEY_TRIGGERS });
 }
 
