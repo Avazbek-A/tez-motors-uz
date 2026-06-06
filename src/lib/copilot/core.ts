@@ -20,9 +20,13 @@ import {
 } from "./actions";
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
-// Token-boundary (NOT \b — ASCII-only, fails after Cyrillic да/нет) + \p{L}* suffix.
-const AFFIRM = /^\s*(да|yes|ок|ok|подтверж[\p{L}]*|давай|go|confirm|✅|👍)(?:\s|$|[.!,])/iu;
-const NEGATE = /^\s*(нет|no|отмен[\p{L}]*|cancel|стоп|stop|❌)(?:\s|$|[.!,])/iu;
+// Confirm/cancel only when the WHOLE message is an affirmation/negation (modulo
+// trailing punctuation/space). A prior, looser version matched any message that
+// merely STARTED with an affirm token, so an unrelated command like "go, покажи
+// спрос" or "ок, сколько денег" would silently execute the pending WRITE instead
+// of being answered as a new question.
+const AFFIRM = /^\s*(да|yes|ок|ok|подтверж[\p{L}]*|давай|go|confirm|✅|👍)[\s.!,]*$/iu;
+const NEGATE = /^\s*(нет|no|отмен[\p{L}]*|cancel|стоп|stop|❌)[\s.!,]*$/iu;
 
 export interface CopilotTurn { reply: string; intent: string; proposed?: boolean; executed?: boolean; }
 
@@ -84,7 +88,15 @@ async function execute(supabase: SupabaseClient, intent: string, payload: Record
     if (intent === "markdown_car") {
       const { data: car } = await supabase.from("cars").select("id, slug, brand, model, year, price_usd, original_price_usd, inventory_status").eq("id", String(payload.carId)).maybeSingle();
       if (!car) return { ok: false, message: "Машина не найдена." };
-      return applyCarMarkdown(supabase, car as never, Number(payload.newPriceUsd));
+      // Re-validate the frozen price against the LIVE price: the car may have been
+      // re-priced between propose and confirm (TTL is 10 min), and a "markdown"
+      // must never RAISE the price. Reject instead of applying a stale number.
+      const newPrice = Number(payload.newPriceUsd);
+      const livePrice = Number((car as { price_usd: number }).price_usd);
+      if (!Number.isFinite(newPrice) || newPrice <= 0 || !(newPrice < livePrice)) {
+        return { ok: false, message: `Цена изменилась с момента предложения (сейчас $${livePrice.toLocaleString("en-US")}). Повторите команду.` };
+      }
+      return applyCarMarkdown(supabase, car as never, newPrice);
     }
     if (intent === "advance_order") {
       const order = await resolveOrder(supabase, String(payload.orderRef));
