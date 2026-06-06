@@ -30,8 +30,12 @@ export async function GET(request: Request) {
     since.setUTCDate(since.getUTCDate() - (days - 1));
 
     const [inqRes, ordersRes, paymentsRes] = await Promise.all([
-      supabase.from("inquiries").select("status, source_page, assigned_to").limit(10000),
-      supabase.from("orders").select("status").limit(10000),
+      // Paginate so the funnel counts (inquiriesTotal, reservations) + per-source
+      // and per-rep breakdowns are computed over the full tables, not the first page.
+      fetchAllRows<{ status: string; source_page: string | null; assigned_to: string | null }>((from, to) =>
+        supabase.from("inquiries").select("status, source_page, assigned_to").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ status: string }>((from, to) =>
+        supabase.from("orders").select("status").range(from, to)).then((data) => ({ data })),
       // Paginate so depositsPaid (distinct paid orders) and the chart see all rows.
       fetchAllRows<{ order_id: string; amount_tiyin: number; created_at: string; state: number }>((from, to) =>
         supabase.from("payments").select("order_id, amount_tiyin, created_at, state").eq("state", 2).range(from, to),
