@@ -46,7 +46,10 @@ export default function CarDetailPage() {
   const [financing, setFinancing] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/cars/${params.slug}`)
+    // Abort on slug change/unmount so a slow response for a previous car can't
+    // resolve last and render the wrong car (client-side nav between slugs).
+    const ctrl = new AbortController();
+    fetch(`/api/cars/${params.slug}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((data) => {
         if (data.car) {
@@ -55,7 +58,10 @@ export default function CarDetailPage() {
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e) => {
+        if (e?.name !== "AbortError") setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [params.slug]);
 
   if (loading) {
@@ -139,6 +145,9 @@ export default function CarDetailPage() {
       setIsSuccess(true);
       track(FUNNEL.inquirySubmit, { type: financing ? "financing" : "car_inquiry" });
       setForm({ name: "", phone: "", message: "" });
+      // Reset the financing flag so a subsequent plain inquiry from this same
+      // (still-mounted) page isn't mislabeled as a financing lead.
+      setFinancing(false);
       setTimeout(() => setIsSuccess(false), 5000);
     } catch {
       setFormError(locale === "ru" ? "Нет соединения. Проверьте интернет." : "No connection. Check your internet.");
