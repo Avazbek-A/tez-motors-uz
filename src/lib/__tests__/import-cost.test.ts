@@ -90,6 +90,17 @@ describe("resolveFuelKind", () => {
     expect(resolveFuelKind("gasoline")).toBe("petrol");
     expect(resolveFuelKind(null)).toBe("petrol");
   });
+  it("only treats EV/BEV as electric when standalone, not as a substring", () => {
+    // Regression: a bare "ev" substring used to misclassify these as electric,
+    // zeroing customs duty and quoting a below-cost price.
+    expect(resolveFuelKind("revised")).toBe("petrol");
+    expect(resolveFuelKind("level")).toBe("petrol");
+    expect(resolveFuelKind("seven-seat petrol")).toBe("petrol");
+    // …but genuine standalone EV/BEV still classify electric.
+    expect(resolveFuelKind("EV")).toBe("electric");
+    expect(resolveFuelKind("BEV")).toBe("electric");
+    expect(resolveFuelKind("battery ev")).toBe("electric");
+  });
 });
 
 describe("DEFAULT_IMPORT_CONFIG", () => {
