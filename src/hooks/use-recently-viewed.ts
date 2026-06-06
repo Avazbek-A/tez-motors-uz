@@ -11,7 +11,14 @@ export function useRecentlyViewed() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setViewedIds(JSON.parse(stored));
+      const parsed = stored ? JSON.parse(stored) : null;
+      // Guard the shape: corrupt/non-array/non-string localStorage (old schema,
+      // an extension, manual tamper) would otherwise be stored and then crash
+      // consumers that call viewedIds.join/.map/.filter. Mirrors favorites.ts.
+      if (Array.isArray(parsed)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (read a browser-only value)
+        setViewedIds(parsed.filter((id): id is string => typeof id === "string").slice(0, MAX_ITEMS));
+      }
     } catch {}
   }, []);
 
