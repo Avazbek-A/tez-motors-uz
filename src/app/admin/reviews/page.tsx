@@ -246,6 +246,7 @@ export default function AdminReviewsPage() {
 function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; onClose: () => void; onSaved: () => void }) {
   const isEditing = !!review;
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [clientName, setClientName] = useState(review?.client_name || "");
   const [carDescription, setCarDescription] = useState(review?.car_description || "");
   const [reviewTextRu, setReviewTextRu] = useState(review?.review_text_ru || "");
@@ -268,6 +269,7 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
     const payload = {
       client_name: clientName,
@@ -289,8 +291,13 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
       if (res.ok) {
         onSaved();
         onClose();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to save review. Please try again.");
       }
-    } catch {} finally {
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
       setSaving(false);
     }
   };
@@ -361,6 +368,7 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
             />
             <span className="text-sm">Published</span>
           </label>
+          {error && <p className="text-sm text-red-400">{error}</p>}
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={saving}>
