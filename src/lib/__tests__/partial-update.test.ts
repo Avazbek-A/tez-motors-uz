@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { partWriteSchema } from "../schemas/part";
+import { carWriteSchema } from "../schemas/car";
 
 /**
  * Regression: Zod 4's `.partial()` does NOT strip `.default()` — for keys the
@@ -32,5 +33,17 @@ describe("partial PUT must not persist injected defaults", () => {
     const parsed = partWriteSchema.partial().parse(body) as Record<string, unknown>;
     const update = Object.fromEntries(Object.entries(parsed).filter(([k]) => k in body));
     expect(update).toEqual({ images: [] });
+  });
+
+  it("cars: a price-only edit must not carry inventory_status/images defaults", () => {
+    // The worst case: editing only price would otherwise flip a sold car back to
+    // "available" (default) and erase its gallery.
+    const body = { price_usd: 25000 };
+    const parsed = carWriteSchema.partial().parse(body) as Record<string, unknown>;
+    expect(parsed.inventory_status).toBe("available"); // default injected by .partial()
+    const update = Object.fromEntries(Object.entries(parsed).filter(([k]) => k in body));
+    expect(update).toEqual({ price_usd: 25000 });
+    expect("inventory_status" in update).toBe(false);
+    expect("images" in update).toBe(false);
   });
 });
