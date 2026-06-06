@@ -21,11 +21,16 @@ export async function PUT(request: NextRequest, ctx: { params: Promise<{ id: str
   const parsed = scooterWriteSchema.partial().safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Validation failed", issues: parsed.error.issues }, { status: 400 });
 
+  // .partial() re-injects .default() values for omitted keys; writing them would
+  // reset images/stock_qty/is_published on a single-field edit. Keep only sent fields.
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const update = Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in raw));
+
   const supabase = createServiceClient();
-  const { data, error } = await supabase.from("scooters").update(parsed.data).eq("id", id).select().single();
+  const { data, error } = await supabase.from("scooters").update(update).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  logAdminAction(request, { action: "update", entity: "scooter", entity_id: id, diff: compactDiff(parsed.data as Record<string, unknown>) }).catch(() => {});
+  logAdminAction(request, { action: "update", entity: "scooter", entity_id: id, diff: compactDiff(update) }).catch(() => {});
   return NextResponse.json({ scooter: data });
 }
 
