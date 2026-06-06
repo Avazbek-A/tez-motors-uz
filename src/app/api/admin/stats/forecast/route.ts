@@ -41,7 +41,13 @@ export async function GET(request: NextRequest) {
   for (const p of payments) if (p.order_id) depositsByOrder.set(p.order_id, (depositsByOrder.get(p.order_id) || 0) + (fx.usd_uzs > 0 ? num(p.amount_tiyin) / 100 / fx.usd_uzs : 0));
 
   // Inflow run-rate: paid invoices over the last 30d. Outflow: expenses last 30d.
-  const inflow30 = invoices.filter((i) => i.status === "paid").reduce((a, i) => a + num(i.total_usd), 0); // gross approximation
+  // The `invoices` query is unfiltered by date (arAging needs all unpaid ones),
+  // so filter to the last 30 days HERE by issued_at — otherwise this sums ALL
+  // paid invoices ever as the "monthly" inflow, making net burn look positive
+  // and hiding a real cash crunch (runwayMonths → null/"not burning").
+  const inflow30 = invoices
+    .filter((i) => i.status === "paid" && i.issued_at && new Date(i.issued_at).getTime() >= now - 30 * 86_400_000)
+    .reduce((a, i) => a + num(i.total_usd), 0); // gross approximation
   const monthlyInflowUsd = Math.round(inflow30);
   const monthlyOutflowUsd = Math.round(expenses.reduce((a, e) => a + num(e.amount_usd), 0));
 
