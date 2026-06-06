@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { getFxRates } from "@/lib/fx-rate";
 
 /**
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     headCount(supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "ordered").lt("created_at", oneDayAgo)),
     headCount(supabase.from("inquiries").select("*", { count: "exact", head: true }).eq("status", "new")),
     headCount(supabase.from("warranties").select("*", { count: "exact", head: true }).gte("warranty_until", today).lte("warranty_until", in30)),
-    supabase.from("payments").select("amount_tiyin").eq("state", 2).limit(MAX).then((r) => r.data ?? [], () => []),
+    fetchAllRows<{ amount_tiyin: number }>((from, to) => supabase.from("payments").select("amount_tiyin").eq("state", 2).range(from, to)),
     supabase.from("purchase_orders").select("status, qty, unit_cost_usd").limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("cars").select("id, price_usd, inventory_status").limit(MAX).then((r) => r.data ?? [], () => []),
     supabase.from("car_costs").select("car_id, cost_usd").limit(MAX).then((r) => r.data ?? [], () => []),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { channelKey, type Attribution } from "@/lib/attribution";
 import { getFxRates } from "@/lib/fx-rate";
 import { contactKey } from "@/lib/crm";
@@ -36,7 +37,10 @@ export async function GET(request: NextRequest) {
     const [inqRes, ordRes, payRes, costRes, carRes, expRes, fx] = await Promise.all([
       supabase.from("inquiries").select("phone, metadata").limit(MAX),
       supabase.from("orders").select("id, customer_phone, attribution, car_id, status").limit(MAX),
-      supabase.from("payments").select("order_id, amount_tiyin, state").eq("state", 2).limit(MAX),
+      // Paginate the deposit rows so the per-channel deposit sum doesn't undercount past the cap.
+      fetchAllRows<{ order_id: string; amount_tiyin: number; state: number }>((from, to) =>
+        supabase.from("payments").select("order_id, amount_tiyin, state").eq("state", 2).range(from, to),
+      ).then((data) => ({ data })),
       supabase.from("car_costs").select("car_id, cost_usd").limit(MAX),
       supabase.from("cars").select("id, price_usd").limit(MAX),
       supabase.from("expenses").select("category, channel, amount_usd").eq("category", "marketing").limit(MAX),
