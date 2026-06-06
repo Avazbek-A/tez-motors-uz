@@ -28,7 +28,7 @@ export const carWriteSchema = z.object({
   description_en: z.string().max(5000).optional().nullable(),
   // safeHttpUrl: rejects javascript:/data:/file: — these end up rendered as
   // <img src>/<a href> on the storefront, so the URL scheme must be safe.
-  images: z.array(safeHttpUrl).default([]),
+  images: z.array(safeHttpUrl).max(40).default([]),
   thumbnail: safeHttpUrlNullable,
   video_url: safeHttpUrlNullable,
   is_hot_offer: z.boolean().default(false),

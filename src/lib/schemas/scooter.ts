@@ -26,7 +26,7 @@ export const scooterWriteSchema = z.object({
   color: z.string().max(100).optional().nullable(),
   // safeHttpUrl: rejects javascript:/data:/file: so a stored URL can't become a
   // DOM XSS when rendered as <img src> on the storefront.
-  images: z.array(safeHttpUrl).default([]),
+  images: z.array(safeHttpUrl).max(40).default([]),
   stock_qty: z.number().int().min(0).default(0),
   is_published: z.boolean().default(false),
   order_position: z.number().int().min(0).default(0),
