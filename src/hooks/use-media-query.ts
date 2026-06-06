@@ -7,6 +7,7 @@ export function useMediaQuery(query: string): boolean {
 
   useEffect(() => {
     const media = window.matchMedia(query);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setMatches(media.matches);
 
     const listener = (event: MediaQueryListEvent) => setMatches(event.matches);

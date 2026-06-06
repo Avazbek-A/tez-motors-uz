@@ -38,6 +38,7 @@ export default function FavoritesPage() {
 
   useEffect(() => {
     if (favoriteIds.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
       setCars([]);
       setLoading(false);
       return;
@@ -55,6 +56,7 @@ export default function FavoritesPage() {
   }, [favoriteIds]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     if (!selectedCarId && cars[0]) setSelectedCarId(cars[0].id);
   }, [cars, selectedCarId]);
 

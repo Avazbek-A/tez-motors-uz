@@ -25,6 +25,7 @@ export function TiltCard({
   const lastMoveRef = useRef(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setIsMobile(window.innerWidth < 768);
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (prefersReducedMotion) setIsMobile(true);

@@ -85,6 +85,7 @@ export default function AdminPipelinePage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     fetchInquiries();
     // Users are owner-only; a 403 just means we label by id and hide assignment.
     fetch("/api/admin/users")

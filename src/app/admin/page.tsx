@@ -90,6 +90,9 @@ export default function AdminDashboard() {
       color: "text-muted-foreground bg-white/[0.06]",
     },
   ];
+  // Date.now() drives a read-only "follow-up due by end of today" filter for
+  // display; a per-render evaluation is intentional and side-effect-free.
+  // eslint-disable-next-line react-hooks/purity
   const dueInquiries = inquiries.filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(23, 59, 59, 999) >= Date.now()).slice(0, 5);
 
   return (

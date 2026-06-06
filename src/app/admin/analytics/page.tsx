@@ -230,6 +230,7 @@ export default function AdminAnalyticsPage() {
       .catch(() => {});
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
   useEffect(() => { fetchStats(); }, []);
 
   if (loading && !stats) {
@@ -508,28 +509,27 @@ export default function AdminAnalyticsPage() {
             <div className="flex items-center gap-8">
               <div className="relative w-28 h-28 shrink-0">
                 <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  {(() => {
-                    let offset = 0;
-                    return fuelEntries.map(([type, count], i) => {
-                      const pct = (count / fuelTotal) * 100;
-                      const dashArray = `${pct} ${100 - pct}`;
-                      const el = (
-                        <circle
-                          key={i}
-                          cx="18"
-                          cy="18"
-                          r="15.9155"
-                          fill="none"
-                          stroke={fuelSvgColors[type] || "#6b7280"}
-                          strokeWidth="3.5"
-                          strokeDasharray={dashArray}
-                          strokeDashoffset={`-${offset}`}
-                        />
-                      );
-                      offset += pct;
-                      return el;
-                    });
-                  })()}
+                  {fuelEntries.map(([type, count], i) => {
+                    const pct = (count / fuelTotal) * 100;
+                    // Cumulative offset = sum of all prior segments' percentages,
+                    // computed immutably (no reassignment during render).
+                    const offset = fuelEntries
+                      .slice(0, i)
+                      .reduce((sum, [, c]) => sum + (c / fuelTotal) * 100, 0);
+                    return (
+                      <circle
+                        key={i}
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                        fill="none"
+                        stroke={fuelSvgColors[type] || "#6b7280"}
+                        strokeWidth="3.5"
+                        strokeDasharray={`${pct} ${100 - pct}`}
+                        strokeDashoffset={`-${offset}`}
+                      />
+                    );
+                  })}
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-lg font-bold">{stats.cars.total}</span>

@@ -23,6 +23,7 @@ export default function UnsubscribePage() {
     const p = new URLSearchParams(window.location.search);
     const c = p.get("c") || "";
     const tok = p.get("t") || "";
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setContact(c);
     setToken(tok);
     if (!c || !tok) setState("missing");

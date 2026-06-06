@@ -18,7 +18,6 @@ export function TawkChat() {
   useEffect(() => {
     if (!id || shouldLoad) return;
 
-    let timeoutId: number | undefined;
     let armed = true;
 
     const trigger = () => {
@@ -42,7 +41,7 @@ export function TawkChat() {
     window.addEventListener("touchstart", trigger, { passive: true, once: true });
     window.addEventListener("keydown", trigger, { once: true });
     window.addEventListener("mousemove", trigger, { passive: true, once: true });
-    timeoutId = window.setTimeout(trigger, 6000);
+    const timeoutId = window.setTimeout(trigger, 6000);
 
     return cleanup;
   }, [id, shouldLoad]);
