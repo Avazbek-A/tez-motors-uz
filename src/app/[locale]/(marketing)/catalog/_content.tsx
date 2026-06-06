@@ -124,6 +124,11 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
       return; // first render already has the server-rendered page
     }
     setLoading(true);
+    // Abort a superseded request so a slow earlier fetch (e.g. an older filter or
+    // keystroke) can't resolve last and overwrite the current grid with stale
+    // results. Without this, rapidly changing filters/search shows cars that
+    // don't match the active selection.
+    const ctrl = new AbortController();
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("page_size", String(PAGE_SIZE));
@@ -138,14 +143,18 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     if (filters.mileage_max) params.set("mileage_max", String(filters.mileage_max));
     if (sortBy !== "default") params.set("sort", sortBy);
 
-    fetch(`/api/cars?${params.toString()}`)
+    fetch(`/api/cars?${params.toString()}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((data) => {
         setCars(data.cars || []);
         setTotal(data.total || 0);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e) => {
+        // Ignore aborts (a newer request is in flight and owns the loading state).
+        if (e?.name !== "AbortError") setLoading(false);
+      });
+    return () => ctrl.abort();
   }, [page, filters, sortBy, debouncedSearch]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
