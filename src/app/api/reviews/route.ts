@@ -73,8 +73,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      // Public (unauthenticated) endpoint: log the DB detail server-side but
+      // return a generic message — a raw Postgres error.message leaks constraint/
+      // table/column names (e.g. an FK violation from a crafted car_id), letting
+      // an anon caller map the schema. Matches /api/posts and the catch below.
       console.error("Review insert error:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: "Failed to create review" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, review }, { status: 201 });
