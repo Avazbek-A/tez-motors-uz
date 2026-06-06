@@ -73,6 +73,12 @@ export async function applyCarMarkdown(
   car: CarRow,
   newPriceUsd: number,
 ): Promise<ActionResult> {
+  // Safety invariant: a markdown must be a finite, positive price strictly BELOW
+  // the current one. Guards against a caller (autopilot, a stale copilot payload)
+  // writing $0 or accidentally raising the price.
+  if (!Number.isFinite(newPriceUsd) || newPriceUsd <= 0 || newPriceUsd >= car.price_usd) {
+    return { ok: false, message: "Недопустимая цена уценки." };
+  }
   const original = car.original_price_usd && car.original_price_usd > newPriceUsd ? car.original_price_usd : car.price_usd;
   const { error } = await supabase
     .from("cars")
