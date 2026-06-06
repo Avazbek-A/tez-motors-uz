@@ -10,7 +10,6 @@ import { NAV_LINKS } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
-import { SocialLinks } from "@/components/shared/social-links";
 import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
 import { localizedPath } from "@/lib/locale-path";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -29,6 +28,8 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    // Close the mobile menu on navigation — a legitimate effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobileMenuOpen(false);
   }, [pathname]);
 

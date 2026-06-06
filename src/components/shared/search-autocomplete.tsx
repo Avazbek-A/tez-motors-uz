@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Search, CarFront, X, Loader2 } from "lucide-react";
+import { Search, CarFront, X } from "lucide-react";
 import { formatPrice, cn } from "@/lib/utils";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
