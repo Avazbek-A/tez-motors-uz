@@ -177,7 +177,10 @@ export async function generateMetadata(
   { params }: { params: Promise<{ filter: string }> },
 ): Promise<Metadata> {
   const { filter } = await params;
-  if (!FILTER_MAP[filter]) return { title: "Not found" };
+  // Guard COPY too, not just FILTER_MAP: the two tables are maintained
+  // separately, so a slug added to FILTER_MAP but missing from COPY would make
+  // COPY[filter][locale] throw (500) instead of yielding a clean "Not found".
+  if (!FILTER_MAP[filter] || !COPY[filter]) return { title: "Not found" };
 
   const requestHeaders = await headers();
   const cookieStore = await cookies();
