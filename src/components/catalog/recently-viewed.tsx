@@ -15,7 +15,10 @@ export function RecentlyViewed() {
 
   useEffect(() => {
     if (viewedIds.length === 0) return;
-    fetch(`/api/cars?ids=${viewedIds.join(",")}`)
+    // Abort a superseded/unmounted request so a slow earlier response can't
+    // overwrite a newer one (or setState after unmount).
+    const ctrl = new AbortController();
+    fetch(`/api/cars?ids=${viewedIds.join(",")}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((data) => {
         const fetched: Car[] = data.cars || [];
@@ -26,6 +29,7 @@ export function RecentlyViewed() {
         setRecentCars(ordered);
       })
       .catch(() => {});
+    return () => ctrl.abort();
   }, [viewedIds]);
 
   if (recentCars.length === 0) return null;

@@ -109,7 +109,9 @@ function moneyTable(d: DocData): string {
   const vatPct = d.vatPct ?? 12;
   const vat = Math.round((price * vatPct) / (100 + vatPct)); // VAT-inclusive
   const deposit = Number(d.depositUsd) || 0;
-  const due = price - deposit;
+  // Floor at 0: a deposit exceeding the (possibly unset/zero) price must never
+  // render a negative amount-due on a customer-facing contract/invoice.
+  const due = Math.max(0, price - deposit);
   const uzs = d.usdUzs ? ` (${new Intl.NumberFormat("ru-RU").format(Math.round(price * d.usdUzs))} so'm)` : "";
   return `<table class="totals">
     <tr><td>${t.price}</td><td style="text-align:right">${money(price)}${uzs}</td></tr>
