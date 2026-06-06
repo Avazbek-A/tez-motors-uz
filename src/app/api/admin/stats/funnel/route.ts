@@ -66,13 +66,18 @@ export async function GET(request: Request) {
       d.setUTCDate(since.getUTCDate() + i);
       buckets.set(d.toISOString().slice(0, 10), { count: 0, uzs: 0 });
     }
+    // depositsTotalUzs must match the per-day chart (the last-N-days window), so
+    // accumulate it INSIDE the window only. Summing every payment here made the
+    // headline an all-time figure presented next to (and contradicting) the
+    // N-day chart. (The unfiltered `payments` query is still needed for the
+    // lifetime depositsPaid funnel count above.)
     let depositsTotalUzs = 0;
     for (const p of payments) {
       const key = new Date(p.created_at as string).toISOString().slice(0, 10);
-      const uzs = Math.round(Number(p.amount_tiyin || 0) / 100);
-      depositsTotalUzs += uzs;
       const b = buckets.get(key);
       if (!b) continue;
+      const uzs = Math.round(Number(p.amount_tiyin || 0) / 100);
+      depositsTotalUzs += uzs;
       b.count += 1;
       b.uzs += uzs;
     }
