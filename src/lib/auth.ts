@@ -30,24 +30,12 @@ export async function requireAdmin(
 export async function isAdminRequest(
   request: NextRequest | Request,
 ): Promise<boolean> {
-  const token = extractToken(request);
-  if (!token) return false;
-
-  try {
-    const hash = await sha256Hex(token);
-    const supabase = createServiceClient();
-    const { data, error } = await supabase
-      .from("admin_sessions")
-      .select("expires_at")
-      .eq("token_hash", hash)
-      .maybeSingle();
-
-    if (error || !data) return false;
-    if (new Date(data.expires_at).getTime() <= Date.now()) return false;
-    return true;
-  } catch {
-    return false;
-  }
+  // Delegate to the full context resolver so this fast path ALSO honors the
+  // admin_users.disabled flag and the user-row existence check. Previously it
+  // only validated the admin_sessions expiry, so a DISABLED admin's still-
+  // unexpired session kept passing every requireAdmin-guarded route for up to
+  // the 24h TTL.
+  return (await getAdminSessionContext(request)) !== null;
 }
 
 export async function getAdminSessionContext(
