@@ -27,6 +27,25 @@ export async function requireAdmin(
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+/**
+ * Gate a route to specific admin roles (owner/manager/rep). Returns a 401 when
+ * not authenticated, a 403 when the admin lacks an allowed role, or null to
+ * proceed. A session with no user row is the env ADMIN_PASSWORD bootstrap
+ * super-admin and is always allowed.
+ */
+export async function requireRole(
+  request: NextRequest | Request,
+  roles: Array<"owner" | "manager" | "rep">,
+): Promise<NextResponse | null> {
+  const ctx = await getAdminSessionContext(request);
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!ctx.user) return null; // bootstrap super-admin
+  if (!roles.includes(ctx.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  return null;
+}
+
 export async function isAdminRequest(
   request: NextRequest | Request,
 ): Promise<boolean> {
