@@ -1,5 +1,15 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
+/** Split an array into chunks of at most `size`. Useful for `.in(col, ids)`
+ *  queries whose id list would otherwise make the GET URL exceed PostgREST's
+ *  length limit (HTTP 414). */
+export function chunk<T>(arr: readonly T[], size: number): T[][] {
+  const n = Math.max(1, size);
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
 /**
  * Fetch ALL rows of a Supabase query across pages, bypassing PostgREST's
  * `db-max-rows` cap. Aggregating routes that did `.select(col).limit(5000)` and

@@ -1,5 +1,18 @@
 import { describe, it, expect, vi } from "vitest";
-import { fetchAllRows } from "../supabase/paginate";
+import { fetchAllRows, chunk } from "../supabase/paginate";
+
+describe("chunk", () => {
+  it("splits into chunks of at most size, last chunk shorter", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+  });
+  it("returns [] for an empty array and never an empty inner chunk", () => {
+    expect(chunk([], 3)).toEqual([]);
+    expect(chunk([1, 2], 10)).toEqual([[1, 2]]);
+  });
+  it("treats size < 1 as 1 (no zero-step infinite loop)", () => {
+    expect(chunk([1, 2, 3], 0)).toEqual([[1], [2], [3]]);
+  });
+});
 
 // Build a fake `range` over an in-memory dataset, recording the page requests.
 function fakeRange(rows: number[], pageSize = 1000, errorAtFrom?: number) {
