@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { requireAdmin } from "@/lib/auth";
 
 /**
@@ -31,11 +32,10 @@ export async function GET(request: Request) {
     const [inqRes, ordersRes, paymentsRes] = await Promise.all([
       supabase.from("inquiries").select("status, source_page, assigned_to").limit(10000),
       supabase.from("orders").select("status").limit(10000),
-      supabase
-        .from("payments")
-        .select("order_id, amount_tiyin, created_at, state")
-        .eq("state", 2)
-        .limit(10000),
+      // Paginate so depositsPaid (distinct paid orders) and the chart see all rows.
+      fetchAllRows<{ order_id: string; amount_tiyin: number; created_at: string; state: number }>((from, to) =>
+        supabase.from("payments").select("order_id, amount_tiyin, created_at, state").eq("state", 2).range(from, to),
+      ).then((data) => ({ data })),
     ]);
 
     const inquiries = inqRes.data || [];
