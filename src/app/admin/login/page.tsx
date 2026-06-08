@@ -5,6 +5,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  title: string; subtitle: string; email: string; password: string;
+  passwordPlaceholder: string; signIn: string; incorrect: string; network: string;
+}> = {
+  ru: { title: "Админ-панель", subtitle: "Администрирование Tez Motors", email: "Эл. почта", password: "Пароль", passwordPlaceholder: "Введите пароль администратора", signIn: "Войти", incorrect: "Неверный пароль", network: "Ошибка сети" },
+  uz: { title: "Admin-panel", subtitle: "Tez Motors boshqaruvi", email: "Email", password: "Parol", passwordPlaceholder: "Administrator parolini kiriting", signIn: "Kirish", incorrect: "Parol noto'g'ri", network: "Tarmoq xatosi" },
+  en: { title: "Admin Panel", subtitle: "Tez Motors Administration", email: "Email", password: "Password", passwordPlaceholder: "Enter admin password", signIn: "Sign In", incorrect: "Incorrect password", network: "Network error" },
+};
 
 /**
  * Restrict the post-login redirect to SAME-ORIGIN relative paths. A phishing
@@ -30,6 +41,8 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = safeRedirect(searchParams.get("redirect"));
+  const { locale } = useLocale();
+  const t = COPY[locale];
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,9 +68,9 @@ export default function AdminLoginPage() {
       }
 
       const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Incorrect password");
+      setError(data.error ?? t.incorrect);
     } catch {
-      setError("Network error");
+      setError(t.network);
     } finally {
       setLoading(false);
     }
@@ -70,14 +83,14 @@ export default function AdminLoginPage() {
           <div className="w-16 h-16 rounded-2xl bg-lime flex items-center justify-center mx-auto mb-4">
             <span className="text-navy font-black text-2xl">TM</span>
           </div>
-          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-          <p className="text-white/50 text-sm mt-1">Tez Motors Administration</p>
+          <h1 className="text-2xl font-bold text-white">{t.title}</h1>
+          <p className="text-white/50 text-sm mt-1">{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleLogin} className="glass rounded-2xl p-8 space-y-5">
           <div>
             <label className="text-sm font-medium text-white/70 mb-2 block">
-              Email
+              {t.email}
             </label>
             <Input
               type="email"
@@ -88,7 +101,7 @@ export default function AdminLoginPage() {
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime mb-4"
             />
             <label className="text-sm font-medium text-white/70 mb-2 block">
-              Password
+              {t.password}
             </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
@@ -96,7 +109,7 @@ export default function AdminLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
+                placeholder={t.passwordPlaceholder}
                 required
                 autoComplete="current-password"
                 className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime"
@@ -115,7 +128,7 @@ export default function AdminLoginPage() {
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              "Sign In"
+              t.signIn
             )}
           </Button>
         </form>

@@ -8,103 +8,117 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import { locales, type Locale } from "@/i18n/config";
 
-const navGroups = [
+type Tri = Record<Locale, string>;
+interface NavItem { href: string; label: Tri; icon: React.ComponentType<{ className?: string }> }
+interface NavGroup { section: Tri; items: NavItem[] }
+
+const navGroups: NavGroup[] = [
   {
-    section: "Overview",
+    section: { ru: "Обзор", uz: "Umumiy", en: "Overview" },
     items: [
-      { href: "/admin/command", label: "Command", icon: Gauge },
-      { href: "/admin/copilot", label: "Copilot", icon: Bot },
-      { href: "/admin/operator", label: "AI Operator", icon: Sparkles },
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/admin/autopilot", label: "Autopilot", icon: Activity },
-      { href: "/admin/autopilot/settings", label: "Autopilot Rules", icon: Bot },
-      { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+      { href: "/admin/command", label: { ru: "Командный центр", uz: "Boshqaruv markazi", en: "Command" }, icon: Gauge },
+      { href: "/admin/copilot", label: { ru: "Копилот", uz: "Kopilot", en: "Copilot" }, icon: Bot },
+      { href: "/admin/operator", label: { ru: "AI-оператор", uz: "AI-operator", en: "AI Operator" }, icon: Sparkles },
+      { href: "/admin", label: { ru: "Панель", uz: "Boshqaruv paneli", en: "Dashboard" }, icon: LayoutDashboard },
+      { href: "/admin/autopilot", label: { ru: "Автопилот", uz: "Avtopilot", en: "Autopilot" }, icon: Activity },
+      { href: "/admin/autopilot/settings", label: { ru: "Правила автопилота", uz: "Avtopilot qoidalari", en: "Autopilot Rules" }, icon: Bot },
+      { href: "/admin/analytics", label: { ru: "Аналитика", uz: "Analitika", en: "Analytics" }, icon: BarChart3 },
     ],
   },
   {
-    section: "Sell",
+    section: { ru: "Продажи", uz: "Sotuv", en: "Sell" },
     items: [
-      { href: "/admin/customers", label: "Customers", icon: Contact },
-      { href: "/admin/conversations", label: "AI Sales", icon: Bot },
-      { href: "/admin/inquiries", label: "Inquiries", icon: MessageSquare },
-      { href: "/admin/calls", label: "Calls", icon: Phone },
-      { href: "/admin/pipeline", label: "Pipeline", icon: Columns3 },
-      { href: "/admin/tasks", label: "Tasks", icon: ListChecks },
-      { href: "/admin/orders", label: "Orders", icon: Package },
-      { href: "/admin/team", label: "Team", icon: Users },
-      { href: "/admin/after-sales", label: "After-sales", icon: ShieldCheck },
+      { href: "/admin/customers", label: { ru: "Клиенты", uz: "Mijozlar", en: "Customers" }, icon: Contact },
+      { href: "/admin/conversations", label: { ru: "AI-продажи", uz: "AI-sotuv", en: "AI Sales" }, icon: Bot },
+      { href: "/admin/inquiries", label: { ru: "Заявки", uz: "So'rovlar", en: "Inquiries" }, icon: MessageSquare },
+      { href: "/admin/calls", label: { ru: "Звонки", uz: "Qo'ng'iroqlar", en: "Calls" }, icon: Phone },
+      { href: "/admin/pipeline", label: { ru: "Воронка", uz: "Voronka", en: "Pipeline" }, icon: Columns3 },
+      { href: "/admin/tasks", label: { ru: "Задачи", uz: "Vazifalar", en: "Tasks" }, icon: ListChecks },
+      { href: "/admin/orders", label: { ru: "Заказы", uz: "Buyurtmalar", en: "Orders" }, icon: Package },
+      { href: "/admin/team", label: { ru: "Команда", uz: "Jamoa", en: "Team" }, icon: Users },
+      { href: "/admin/after-sales", label: { ru: "Постпродажа", uz: "Sotuvdan keyin", en: "After-sales" }, icon: ShieldCheck },
     ],
   },
   {
-    section: "Buy & import",
+    section: { ru: "Закупка и импорт", uz: "Xarid va import", en: "Buy & import" },
     items: [
-      { href: "/admin/buying", label: "Buying Brain", icon: Target },
-      { href: "/admin/demand", label: "Demand", icon: TrendingUp },
-      { href: "/admin/market", label: "Market Intel", icon: LineChart },
-      { href: "/admin/procurement", label: "Procurement", icon: Truck },
-      { href: "/admin/suppliers", label: "Suppliers", icon: Factory },
-      { href: "/admin/supplier-intel", label: "Supplier Intel", icon: LineChart },
-      { href: "/admin/shipments", label: "Shipments", icon: Container },
-      { href: "/admin/import-calculator", label: "Import Calc", icon: Ship },
-      { href: "/admin/pricing", label: "Pricing", icon: Calculator },
-      { href: "/admin/aging", label: "Aged Stock", icon: Hourglass },
+      { href: "/admin/buying", label: { ru: "Закупочный ИИ", uz: "Xarid AI", en: "Buying Brain" }, icon: Target },
+      { href: "/admin/demand", label: { ru: "Спрос", uz: "Talab", en: "Demand" }, icon: TrendingUp },
+      { href: "/admin/market", label: { ru: "Рынок", uz: "Bozor tahlili", en: "Market Intel" }, icon: LineChart },
+      { href: "/admin/procurement", label: { ru: "Снабжение", uz: "Ta'minot", en: "Procurement" }, icon: Truck },
+      { href: "/admin/suppliers", label: { ru: "Поставщики", uz: "Yetkazib beruvchilar", en: "Suppliers" }, icon: Factory },
+      { href: "/admin/supplier-intel", label: { ru: "Аналитика поставщиков", uz: "Yetkazuvchi tahlili", en: "Supplier Intel" }, icon: LineChart },
+      { href: "/admin/shipments", label: { ru: "Поставки", uz: "Yetkazib berishlar", en: "Shipments" }, icon: Container },
+      { href: "/admin/import-calculator", label: { ru: "Калькулятор импорта", uz: "Import kalkulyatori", en: "Import Calc" }, icon: Ship },
+      { href: "/admin/pricing", label: { ru: "Ценообразование", uz: "Narxlash", en: "Pricing" }, icon: Calculator },
+      { href: "/admin/aging", label: { ru: "Залежавшиеся", uz: "Eskirgan zaxira", en: "Aged Stock" }, icon: Hourglass },
     ],
   },
   {
-    section: "Catalog",
+    section: { ru: "Каталог", uz: "Katalog", en: "Catalog" },
     items: [
-      { href: "/admin/cars", label: "Cars", icon: Car },
-      { href: "/admin/models", label: "Pre-order Models", icon: Boxes },
-      { href: "/admin/parts", label: "Parts", icon: Wrench },
-      { href: "/admin/scooters", label: "Scooters", icon: Bike },
+      { href: "/admin/cars", label: { ru: "Автомобили", uz: "Avtomobillar", en: "Cars" }, icon: Car },
+      { href: "/admin/models", label: { ru: "Модели под заказ", uz: "Buyurtma modellari", en: "Pre-order Models" }, icon: Boxes },
+      { href: "/admin/parts", label: { ru: "Запчасти", uz: "Ehtiyot qismlar", en: "Parts" }, icon: Wrench },
+      { href: "/admin/scooters", label: { ru: "Самокаты", uz: "Skuterlar", en: "Scooters" }, icon: Bike },
     ],
   },
   {
-    section: "Money",
+    section: { ru: "Финансы", uz: "Moliya", en: "Money" },
     items: [
-      { href: "/admin/money", label: "Money", icon: Banknote },
-      { href: "/admin/forecast", label: "Forecast", icon: TrendingUp },
-      { href: "/admin/finance", label: "Finance", icon: Receipt },
-      { href: "/admin/financing", label: "Financing & Insurance", icon: Landmark },
-      { href: "/admin/ledger", label: "Ledger", icon: Wallet },
+      { href: "/admin/money", label: { ru: "Деньги", uz: "Pul", en: "Money" }, icon: Banknote },
+      { href: "/admin/forecast", label: { ru: "Прогноз", uz: "Prognoz", en: "Forecast" }, icon: TrendingUp },
+      { href: "/admin/finance", label: { ru: "Бухгалтерия", uz: "Buxgalteriya", en: "Finance" }, icon: Receipt },
+      { href: "/admin/financing", label: { ru: "Рассрочка и страховка", uz: "Bo'lib to'lash va sug'urta", en: "Financing & Insurance" }, icon: Landmark },
+      { href: "/admin/ledger", label: { ru: "Книга учёта", uz: "Hisob kitobi", en: "Ledger" }, icon: Wallet },
     ],
   },
   {
-    section: "Marketing",
+    section: { ru: "Маркетинг", uz: "Marketing", en: "Marketing" },
     items: [
-      { href: "/admin/marketing", label: "Content Studio", icon: Megaphone },
-      { href: "/admin/automation", label: "Automation", icon: Workflow },
-      { href: "/admin/referrals", label: "Referrals", icon: Gift },
-      { href: "/admin/audiences", label: "Audiences", icon: Users2 },
-      { href: "/admin/distribution", label: "Distribution", icon: Share2 },
-      { href: "/admin/promotions", label: "Promotions", icon: Tag },
-      { href: "/admin/segments", label: "Campaigns", icon: Send },
-      { href: "/admin/broadcast", label: "Broadcast", icon: Megaphone },
-      { href: "/admin/posts", label: "Blog", icon: FileText },
-      { href: "/admin/reviews", label: "Reviews", icon: Star },
-      { href: "/admin/faqs", label: "FAQ", icon: HelpCircle },
+      { href: "/admin/marketing", label: { ru: "Контент-студия", uz: "Kontent studiya", en: "Content Studio" }, icon: Megaphone },
+      { href: "/admin/automation", label: { ru: "Автоматизация", uz: "Avtomatlashtirish", en: "Automation" }, icon: Workflow },
+      { href: "/admin/referrals", label: { ru: "Рефералы", uz: "Tavsiyalar", en: "Referrals" }, icon: Gift },
+      { href: "/admin/audiences", label: { ru: "Аудитории", uz: "Auditoriyalar", en: "Audiences" }, icon: Users2 },
+      { href: "/admin/distribution", label: { ru: "Дистрибуция", uz: "Tarqatish", en: "Distribution" }, icon: Share2 },
+      { href: "/admin/promotions", label: { ru: "Акции", uz: "Aksiyalar", en: "Promotions" }, icon: Tag },
+      { href: "/admin/segments", label: { ru: "Кампании", uz: "Kampaniyalar", en: "Campaigns" }, icon: Send },
+      { href: "/admin/broadcast", label: { ru: "Рассылка", uz: "Tarqatma", en: "Broadcast" }, icon: Megaphone },
+      { href: "/admin/posts", label: { ru: "Блог", uz: "Blog", en: "Blog" }, icon: FileText },
+      { href: "/admin/reviews", label: { ru: "Отзывы", uz: "Sharhlar", en: "Reviews" }, icon: Star },
+      { href: "/admin/faqs", label: { ru: "FAQ", uz: "FAQ", en: "FAQ" }, icon: HelpCircle },
     ],
   },
   {
-    section: "System",
+    section: { ru: "Система", uz: "Tizim", en: "System" },
     items: [
-      { href: "/admin/setup", label: "Setup", icon: Cable },
-      { href: "/admin/tenants", label: "Tenants", icon: Building2 },
-      { href: "/admin/users", label: "Users", icon: Users },
-      { href: "/admin/export", label: "Export", icon: FileSpreadsheet },
-      { href: "/admin/audit", label: "Audit", icon: ScrollText },
-      { href: "/admin/errors", label: "Errors", icon: AlertTriangle },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
+      { href: "/admin/setup", label: { ru: "Настройка", uz: "Sozlash", en: "Setup" }, icon: Cable },
+      { href: "/admin/tenants", label: { ru: "Арендаторы", uz: "Ijarachilar", en: "Tenants" }, icon: Building2 },
+      { href: "/admin/users", label: { ru: "Пользователи", uz: "Foydalanuvchilar", en: "Users" }, icon: Users },
+      { href: "/admin/export", label: { ru: "Экспорт", uz: "Eksport", en: "Export" }, icon: FileSpreadsheet },
+      { href: "/admin/audit", label: { ru: "Аудит", uz: "Audit", en: "Audit" }, icon: ScrollText },
+      { href: "/admin/errors", label: { ru: "Ошибки", uz: "Xatolar", en: "Errors" }, icon: AlertTriangle },
+      { href: "/admin/settings", label: { ru: "Настройки", uz: "Sozlamalar", en: "Settings" }, icon: Settings },
     ],
   },
 ];
 
+const CHROME: Record<Locale, { admin: string; backToSite: string; logout: string }> = {
+  ru: { admin: "Админ", backToSite: "На сайт", logout: "Выйти" },
+  uz: { admin: "Admin", backToSite: "Saytga", logout: "Chiqish" },
+  en: { admin: "Admin", backToSite: "Back to Site", logout: "Log out" },
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { locale, setLocale } = useLocale();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const c = CHROME[locale];
 
   useEffect(() => {
     // Close the mobile drawer on navigation — a legitimate effect.
@@ -139,7 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
                 <span className="text-navy font-black text-sm">TM</span>
               </div>
-              <span className="font-bold text-white">Admin</span>
+              <span className="font-bold text-white">{c.admin}</span>
             </Link>
           )}
           <button
@@ -153,9 +167,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
           {navGroups.map((group) => (
-            <div key={group.section} className="space-y-1">
+            <div key={group.section.en} className="space-y-1">
               {!collapsed && (
-                <p className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-white/30">{group.section}</p>
+                <p className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-white/30">{group.section[locale]}</p>
               )}
               {group.items.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
@@ -164,7 +178,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? item.label[locale] : undefined}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all",
                       isActive
@@ -173,7 +187,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )}
                   >
                     <item.icon className="w-5 h-5 shrink-0" />
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && <span>{item.label[locale]}</span>}
                   </Link>
                 );
               })}
@@ -188,14 +202,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
           >
             <ExternalLink className="w-5 h-5 shrink-0" />
-            {!collapsed && <span>Back to Site</span>}
+            {!collapsed && <span>{c.backToSite}</span>}
           </Link>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-red-300 hover:bg-red-500/10 transition-all"
           >
             <LogOut className="w-5 h-5 shrink-0" />
-            {!collapsed && <span>Log out</span>}
+            {!collapsed && <span>{c.logout}</span>}
           </button>
         </div>
       </aside>
@@ -222,6 +236,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-4">
+            {/* Language switcher (RU / UZ / EN) — shared NEXT_LOCALE cookie */}
+            <div className="flex items-center rounded-lg border border-border overflow-hidden text-xs font-medium">
+              {locales.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={cn(
+                    "px-2.5 py-1 uppercase transition-colors",
+                    locale === l ? "bg-navy text-white" : "text-muted-foreground hover:bg-muted",
+                  )}
+                  aria-pressed={locale === l}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
             <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center">
               <span className="text-white text-xs font-bold">A</span>
             </div>
