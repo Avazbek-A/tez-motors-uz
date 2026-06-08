@@ -11,6 +11,7 @@
  * conservative round numbers, NOT tax advice — the engine's job is consistent,
  * transparent arithmetic, not to be the customs authority.
  */
+import type { Locale } from "@/i18n/config";
 
 export interface PricingParams {
   /** Ocean/rail freight + inland delivery, flat USD. */
@@ -128,6 +129,68 @@ export function computeLandedPrice(
       { key: "margin", label: `Margin (${p.marginPct}%)`, amountUsd: margin },
     ],
   };
+}
+
+/**
+ * Localized labels for the breakdown rows, keyed by the stable PricingLine.key.
+ * Display-only — the English `label` returned by computeLandedPrice() stays the
+ * canonical value for server-side callers. `duty`/`vat`/`margin` carry a `%`
+ * placeholder that landedLabel() fills in, mirroring the English labels.
+ * Also covers the final `landed`/`price` keys in case those rows surface.
+ */
+export const LANDED_LABELS: Record<Locale, Record<string, string>> = {
+  ru: {
+    cost: "Закупочная стоимость",
+    freight: "Фрахт",
+    clearance: "Растаможка",
+    duty: "Таможенная пошлина",
+    excise: "Акциз",
+    recycling: "Утилизационный сбор",
+    vat: "НДС",
+    margin: "Маржа",
+    landed: "Полная себестоимость",
+    price: "Рекомендованная розничная цена",
+  },
+  uz: {
+    cost: "Xarid qiymati",
+    freight: "Fraxt",
+    clearance: "Bojxona rasmiylashtiruvi",
+    duty: "Bojxona boji",
+    excise: "Aksiz",
+    recycling: "Utilizatsiya yig'imi",
+    vat: "QQS",
+    margin: "Marja",
+    landed: "To'liq tannarx",
+    price: "Tavsiya etilgan chakana narx",
+  },
+  en: {
+    cost: "Purchase cost",
+    freight: "Freight",
+    clearance: "Clearance",
+    duty: "Customs duty",
+    excise: "Excise",
+    recycling: "Recycling fee",
+    vat: "VAT",
+    margin: "Margin",
+    landed: "Landed cost",
+    price: "Suggested list price",
+  },
+};
+
+/** Keys whose English label embeds a percentage, e.g. "Customs duty (10%)". */
+const PCT_KEYS = new Set(["duty", "vat", "margin"]);
+
+/**
+ * Localized label for a breakdown row, by its stable key. For the percentage
+ * rows (duty/vat/margin) the `pct` is appended as " (X%)" exactly where the
+ * English label had it. Falls back to the key itself for unknown keys.
+ */
+export function landedLabel(key: string, locale: Locale, pct?: number): string {
+  const base = LANDED_LABELS[locale]?.[key] ?? key;
+  if (PCT_KEYS.has(key) && pct != null && Number.isFinite(pct)) {
+    return `${base} (${pct}%)`;
+  }
+  return base;
 }
 
 /** Convert a USD price to UZS at the given rate, rounded to the nearest `roundTo` sum. */

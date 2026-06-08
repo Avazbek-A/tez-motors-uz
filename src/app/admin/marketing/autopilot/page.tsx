@@ -172,7 +172,7 @@ export default function MarketingAutopilotPage() {
             <div key={s.key} className="bg-card border border-border p-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 text-xs mb-1">
-                  <span className="font-mono uppercase text-[var(--accent)]">{contentKindLabel(s.kind)}</span>
+                  <span className="font-mono uppercase text-[var(--accent)]">{contentKindLabel(s.kind, locale)}</span>
                   <span className="text-foreground font-medium truncate">{s.subjectLabel}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">{s.reason}</p>

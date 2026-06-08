@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   computeLandedPrice,
   priceUsdToUzs,
+  landedLabel,
   PRICING_DEFAULTS,
   type PricingParams,
 } from "@/lib/pricing";
@@ -130,6 +131,13 @@ export default function AdminPricingPage() {
     marginPct: num(margin),
   };
 
+  // Per-key percentages for the localized labels (duty/vat/margin embed a %).
+  const pctFor: Record<string, number | undefined> = {
+    duty: num(duty),
+    vat: num(vat),
+    margin: num(margin),
+  };
+
   const result = useMemo(
     () => computeLandedPrice(num(cost), params),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,7 +189,7 @@ export default function AdminPricingPage() {
           <div className="p-5 space-y-2">
             {result.lines.map((l) => (
               <div key={l.key} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
-                <span className="text-muted-foreground">{l.label}</span>
+                <span className="text-muted-foreground">{landedLabel(l.key, locale, pctFor[l.key])}</span>
                 <span className="font-mono text-foreground">{usd(l.amountUsd)}</span>
               </div>
             ))}

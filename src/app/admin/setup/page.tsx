@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCw, CheckCircle2, Circle, Settings, ShieldCheck, ShieldAlert, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, type SetupSummary, type IntegrationCategory } from "@/lib/setup-status";
+import { categoryLabel, setupItemText, type SetupSummary, type IntegrationCategory } from "@/lib/setup-status";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 
@@ -185,20 +185,22 @@ export default function AdminSetupPage() {
             if (items.length === 0) return null;
             return (
               <div key={cat} className="mb-5">
-                <p className="px-1 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{CATEGORY_LABELS[cat]}</p>
+                <p className="px-1 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{categoryLabel(cat, locale)}</p>
                 <div className="space-y-2">
-                  {items.map((i) => (
+                  {items.map((i) => {
+                    const text = setupItemText(i.key, locale);
+                    return (
                     <div key={i.key} className="bg-card border border-border p-3 flex items-start gap-3">
                       {i.active
                         ? <CheckCircle2 className="w-5 h-5 text-[var(--success)] shrink-0 mt-0.5" />
                         : <Circle className="w-5 h-5 text-muted-foreground/50 shrink-0 mt-0.5" />}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-foreground">{i.label}</p>
+                          <p className="text-sm font-medium text-foreground">{text.label}</p>
                           {i.required && <span className="text-[9px] font-mono uppercase tracking-wider text-[var(--danger)] border border-[var(--danger)]/40 rounded px-1">{t.required}</span>}
                           <span className={`text-[10px] font-mono uppercase ${i.active ? "text-[var(--success)]" : "text-muted-foreground"}`}>{i.active ? t.connected : t.notSet}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{i.unlocks}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{text.unlocks}</p>
                         {!i.active && (
                           <p className="text-[11px] text-muted-foreground/80 mt-1">
                             {t.setPrefix} {i.missing.map((v) => <code key={v} className="text-foreground bg-[var(--bg-3)] px-1 rounded mr-1">{v}</code>)}
@@ -232,7 +234,8 @@ export default function AdminSetupPage() {
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

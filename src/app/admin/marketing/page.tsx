@@ -391,7 +391,7 @@ export default function AdminMarketingPage() {
             <div key={d.id} className="bg-card border border-border p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="font-mono uppercase text-muted-foreground">{contentKindLabel(d.kind)} · {d.locale}</span>
+                  <span className="font-mono uppercase text-muted-foreground">{contentKindLabel(d.kind, uiLocale)} · {d.locale}</span>
                   {d.subject && <span className="text-foreground truncate">{d.subject}</span>}
                   {d.status === "published" && <span className="text-[10px] font-mono uppercase text-[var(--success)]">{t.published}</span>}
                   {d.status === "draft" && d.scheduled_at && <span className="inline-flex items-center gap-0.5 text-[10px] font-mono uppercase text-[var(--warning)]"><Clock className="w-3 h-3" />{new Date(d.scheduled_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}

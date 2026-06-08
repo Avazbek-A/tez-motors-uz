@@ -4,6 +4,7 @@
  * Pure prompt/fallback helpers are unit-tested; generateMarketingContent wraps
  * the LLM and falls back to a clean template so it never returns empty.
  */
+import type { Locale } from "@/i18n/config";
 import { llmText } from "./llm";
 import { mergeHashtags, trendingTagBudget } from "./marketing-hashtags";
 
@@ -26,7 +27,48 @@ export const CONTENT_KINDS: ContentKindDef[] = [
   { key: "promo", label: "Promo announcement", maxTokens: 300, guidance: "A time-limited offer announcement: urgency, the deal, and a clear call to action. Keep it honest — do not invent discounts not provided." },
 ];
 
-export function contentKindLabel(k: string): string {
+/**
+ * Localized content-kind names for display. `en` mirrors the canonical
+ * CONTENT_KINDS[].label — DO NOT diverge it: that English label is also used to
+ * build the LLM prompt server-side (`Write ${def.label} about...`). Same key
+ * set across every locale.
+ */
+const CONTENT_KIND_LABELS_I18N: Record<Locale, Record<ContentKind, string>> = {
+  ru: {
+    telegram: "Пост в Telegram",
+    instagram: "Подпись в Instagram",
+    facebook: "Пост в Facebook",
+    ad: "Рекламный текст",
+    blog: "Статья в блог",
+    promo: "Промо-анонс",
+  },
+  uz: {
+    telegram: "Telegram posti",
+    instagram: "Instagram sarlavhasi",
+    facebook: "Facebook posti",
+    ad: "Reklama matni",
+    blog: "Blog maqolasi",
+    promo: "Aksiya e'loni",
+  },
+  en: {
+    telegram: "Telegram post",
+    instagram: "Instagram caption",
+    facebook: "Facebook post",
+    ad: "Ad copy",
+    blog: "Blog article",
+    promo: "Promo announcement",
+  },
+};
+
+/**
+ * Human label for a content kind. When `locale` is omitted, returns the
+ * canonical English label from CONTENT_KINDS (stable for any non-display
+ * callers); pass a locale to localize for display only.
+ */
+export function contentKindLabel(k: string, locale?: Locale): string {
+  if (locale) {
+    return CONTENT_KIND_LABELS_I18N[locale]?.[k as ContentKind] ?? contentKindLabel(k);
+  }
   return CONTENT_KINDS.find((c) => c.key === k)?.label ?? k;
 }
 export function isContentKind(k: string): k is ContentKind {

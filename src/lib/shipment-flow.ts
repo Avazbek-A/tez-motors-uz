@@ -3,6 +3,8 @@
  * milestones an imported batch passes through, plus progress + next-step math
  * shared by the shipments API and UI.
  */
+import type { Locale } from "@/i18n/config";
+
 export const SHIPMENT_MILESTONES = [
   "created",
   "supplier_paid",
@@ -29,7 +31,46 @@ const LABELS: Record<ShipmentMilestone, string> = {
   delivered: "Delivered",
 };
 
-export function milestoneLabel(m: string): string {
+/**
+ * Localized milestone names for display. `en` mirrors the canonical LABELS map
+ * (the value returned when no locale is passed), keeping server-side callers
+ * stable. Same key set across every locale.
+ */
+const LABELS_I18N: Record<Locale, Record<ShipmentMilestone, string>> = {
+  ru: {
+    created: "Создана",
+    supplier_paid: "Оплачено поставщику",
+    in_production: "В производстве",
+    shipped: "Отгружено",
+    in_transit: "В пути",
+    at_customs: "На таможне",
+    cleared: "Таможня пройдена",
+    arrived: "Прибыло",
+    delivered: "Выдано",
+  },
+  uz: {
+    created: "Yaratilgan",
+    supplier_paid: "Yetkazib beruvchiga to'langan",
+    in_production: "Ishlab chiqarishda",
+    shipped: "Jo'natilgan",
+    in_transit: "Yo'lda",
+    at_customs: "Bojxonada",
+    cleared: "Bojxonadan o'tgan",
+    arrived: "Yetib keldi",
+    delivered: "Topshirilgan",
+  },
+  en: { ...LABELS },
+};
+
+/**
+ * Human label for a milestone. When `locale` is omitted, returns the canonical
+ * English label (server callers rely on this stable value); pass a locale to
+ * localize for display. Unknown milestones fall back to the raw string.
+ */
+export function milestoneLabel(m: string, locale?: Locale): string {
+  if (locale) {
+    return LABELS_I18N[locale]?.[m as ShipmentMilestone] ?? LABELS[m as ShipmentMilestone] ?? m;
+  }
   return LABELS[m as ShipmentMilestone] ?? m;
 }
 

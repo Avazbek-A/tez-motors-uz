@@ -227,7 +227,7 @@ export default function AdminShipmentsPage() {
                     <Icon className="w-4 h-4 text-primary shrink-0" />
                     <span className="text-sm text-foreground truncate">{s.title}</span>
                   </div>
-                  <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{milestoneLabel(s.status)}</span>
+                  <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">{milestoneLabel(s.status, locale)}</span>
                 </div>
                 <div className="mt-2 h-1.5 bg-[var(--bg-3)] rounded-full overflow-hidden">
                   <div className="h-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
@@ -267,7 +267,7 @@ export default function AdminShipmentsPage() {
                         <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${st === "done" ? "bg-[var(--success)]/20 text-[var(--success)]" : st === "current" ? "bg-[var(--accent)]/20 text-[var(--accent)]" : "border border-border"}`}>
                           {st === "done" ? <Check className="w-3 h-3" /> : null}
                         </span>
-                        <span className={st === "pending" ? "text-muted-foreground" : "text-foreground"}>{milestoneLabel(m)}</span>
+                        <span className={st === "pending" ? "text-muted-foreground" : "text-foreground"}>{milestoneLabel(m, locale)}</span>
                       </div>
                     );
                   })}
@@ -275,7 +275,7 @@ export default function AdminShipmentsPage() {
                 <div className="flex gap-2 mb-4">
                   {nextMilestone(open.shipment.status) && (
                     <Button size="sm" onClick={() => advance(open.shipment)}>
-                      <ArrowRight className="w-4 h-4" /> {t.advanceTo} {milestoneLabel(nextMilestone(open.shipment.status) as string)}
+                      <ArrowRight className="w-4 h-4" /> {t.advanceTo} {milestoneLabel(nextMilestone(open.shipment.status) as string, locale)}
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => remove(open.shipment.id)} className="ml-auto text-[var(--danger)]"><Trash2 className="w-4 h-4" /></Button>
