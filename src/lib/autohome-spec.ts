@@ -21,6 +21,12 @@ export interface SpecTrim {
   params: Record<string, Record<string, string>>;
 }
 
+/** A localized projection of a spec: translated group names + trims (same params shape). */
+export interface LocalizedSpecView {
+  groups: string[];
+  trims: SpecTrim[];
+}
+
 export interface SpecData {
   source: "global" | "cn";
   source_url: string;
@@ -34,6 +40,22 @@ export interface SpecData {
   trims: SpecTrim[];
   gallery?: string[];
   colors?: string[];
+  /**
+   * Per-locale translated views (ru/uz/en). Present for CN-sourced specs whose
+   * base groups/trims are Chinese — produced by the collector's CN→RU/UZ/EN
+   * dictionary (deploy/collector/cn-spec-dict.mjs). Absent for global-EN specs.
+   */
+  i18n?: Partial<Record<"ru" | "uz" | "en", LocalizedSpecView>>;
+}
+
+/**
+ * The right {groups, trims} to display for a locale: the translated `i18n[locale]`
+ * view when present (CN specs), else the base fields (global-EN specs). Pure.
+ */
+export function localizedSpecView(spec: SpecData, locale: "ru" | "uz" | "en"): LocalizedSpecView {
+  const v = spec.i18n?.[locale];
+  if (v && Array.isArray(v.groups) && Array.isArray(v.trims) && v.trims.length) return v;
+  return { groups: spec.groups, trims: spec.trims };
 }
 
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";

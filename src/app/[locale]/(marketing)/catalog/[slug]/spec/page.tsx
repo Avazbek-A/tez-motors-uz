@@ -8,7 +8,7 @@ import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { localizedPath } from "@/lib/locale-path";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
-import type { SpecData } from "@/lib/autohome-spec";
+import { localizedSpecView, type SpecData } from "@/lib/autohome-spec";
 
 /**
  * Public, shareable, print-friendly spec sheet — the full multi-trim parameter
@@ -66,7 +66,10 @@ export default async function SpecSheetPage({ params }: { params: Promise<{ slug
   const spec = (car.spec_data || null) as SpecData | null;
   const name = `${car.brand} ${car.model}${car.year ? ` ${car.year}` : ""}`;
   const gallery: string[] = (spec?.gallery?.length ? spec.gallery : (car.images as string[] | null) || []).slice(0, 4);
-  const trims = spec?.trims ?? [];
+  // CN specs carry translated i18n[locale] views (Chinese base); global specs render their EN base.
+  const view = spec ? localizedSpecView(spec, locale) : null;
+  const groups = view?.groups ?? [];
+  const trims = view?.trims ?? [];
 
   return (
     <div className="pt-24 pb-20">
@@ -114,7 +117,7 @@ export default async function SpecSheetPage({ params }: { params: Promise<{ slug
           <p className="text-muted-foreground">{t.noData}</p>
         ) : (
           <div className="space-y-8">
-            {spec.groups.map((group) => {
+            {groups.map((group) => {
               // Params that appear in this group for at least one trim.
               const paramNames = Array.from(new Set(trims.flatMap((tr) => Object.keys(tr.params[group] || {}))));
               if (paramNames.length === 0) return null;

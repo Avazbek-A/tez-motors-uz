@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseGlobalAutohome, parseVisionSpec, extractGlobalSeriesId, isAutohomeGlobalUrl, isAutohomeCnConfigUrl } from "../autohome-spec";
+import { parseGlobalAutohome, parseVisionSpec, extractGlobalSeriesId, isAutohomeGlobalUrl, isAutohomeCnConfigUrl, localizedSpecView, type SpecData } from "../autohome-spec";
 
 // Mirrors the real global.autohome.com __NEXT_DATA__ shape (titlelist groups with
 // per-trim values[], datalist trims with paramconfList fallback).
@@ -109,6 +109,30 @@ describe("extractGlobalSeriesId", () => {
   });
   it("returns null when absent", () => {
     expect(extractGlobalSeriesId("<html>nope</html>")).toBeNull();
+  });
+});
+
+describe("localizedSpecView (CN i18n projection)", () => {
+  const cn: SpecData = {
+    source: "cn", source_url: "https://car.autohome.com.cn/config/series/5769.html", captured_at: "2026-06-08",
+    groups: ["基本参数"],
+    trims: [{ name: "Model Y", price_raw: "26.35万", params: { 基本参数: { 厂商: "特斯拉中国", 能源类型: "纯电动" } } }],
+    i18n: {
+      ru: { groups: ["Основные параметры"], trims: [{ name: "Model Y", price_raw: "26.35万", params: { "Основные параметры": { Производитель: "特斯拉中国", "Тип топлива/энергии": "Электро" } } }] },
+      en: { groups: ["Basics"], trims: [{ name: "Model Y", price_raw: "26.35万", params: { Basics: { Manufacturer: "特斯拉中国", "Energy type": "Electric" } } }] },
+    },
+  };
+
+  it("returns the locale's translated view when present", () => {
+    expect(localizedSpecView(cn, "ru").groups).toEqual(["Основные параметры"]);
+    expect(localizedSpecView(cn, "en").trims[0].params["Basics"]["Energy type"]).toBe("Electric");
+  });
+  it("falls back to the base (Chinese) view when that locale is missing", () => {
+    expect(localizedSpecView(cn, "uz").groups).toEqual(["基本参数"]); // no uz in i18n → base
+  });
+  it("falls back to base when there is no i18n at all (global-EN spec)", () => {
+    const global: SpecData = { source: "global", source_url: "x", captured_at: "x", groups: ["Body"], trims: [{ name: "T", price_raw: null, params: { Body: { Length: "4797" } } }] };
+    expect(localizedSpecView(global, "ru").groups).toEqual(["Body"]);
   });
 });
 

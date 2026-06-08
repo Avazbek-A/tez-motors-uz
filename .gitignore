@@ -66,6 +66,12 @@ deploy/collector/node_modules/
 # Crawlee scratch storage (request queues / datasets — ephemeral)
 deploy/collector/storage/
 deploy/collector/crawlee_storage/
+# AutoHome crawler outputs (regenerated each run; review-only)
+deploy/collector/autohome-specs.json
+deploy/collector/recon-out/
+# Gonzo discovery scraper outputs (competitor list; review-only, do not republish)
+deploy/collector/gonzo-discovery.json
+deploy/collector/gonzo-discovery.csv
 
 # LLM bake-off config (holds API keys)
 scripts/llm-bakeoff.config.json
