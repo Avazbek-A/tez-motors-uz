@@ -13,6 +13,7 @@
     "autohome": "node autohome-crawlee.mjs",
     "autohome:recon": "node autohome-recon.mjs",
     "gonzo": "node gonzo-crawlee.mjs",
+    "enrich": "node enrich-from-discovery.mjs",
     "proxy:check": "node proxy-check.mjs",
     "instagram": "node instagram-collector.mjs",
     "telegram": "node telegram-collector.mjs",

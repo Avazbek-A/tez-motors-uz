@@ -72,6 +72,10 @@ deploy/collector/recon-out/
 # Gonzo discovery scraper outputs (competitor list; review-only, do not republish)
 deploy/collector/gonzo-discovery.json
 deploy/collector/gonzo-discovery.csv
+# Enrichment-orchestration outputs (regenerated; review-only)
+deploy/collector/autohome-index.json
+deploy/collector/gonzo-autohome-matches.csv
+deploy/collector/autohome-targets.json
 
 # LLM bake-off config (holds API keys)
 scripts/llm-bakeoff.config.json

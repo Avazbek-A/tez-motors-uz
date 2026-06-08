@@ -1,0 +1,143 @@
+/**
+ * Enrichment orchestration (Phase GONZO) — match the competitor discovery list to
+ * AutoHome series, DRY-RUN by default (no DB writes).
+ *
+ * Flow: gonzo-discovery.json (cars) + autohome-index.json (537 brands / 5693 series)
+ *   → brand alias (Latin→Chinese) + model-token match → confidence-scored matches
+ *   → match report (CSV + JSON) for review. Confident matches → autohome-targets.json
+ *     ({ url: config/series/{id}, gonzoName, gonzoPrice }) to feed autohome-crawlee.mjs.
+ *
+ * With --validate=N: actually decode the top N confident matches (autohome-extract.mjs)
+ * to prove the end-to-end chain. NO DB writes here — publishing is a later, gated step.
+ *
+ * Usage:
+ *   node enrich-from-discovery.mjs                 # build/refresh index if needed + match report
+ *   node enrich-from-discovery.mjs --validate=3    # + decode the top 3 to prove the chain
+ *   node enrich-from-discovery.mjs --refresh-index # rebuild the AutoHome index first
+ */
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { loadAutohomeIndex } from "./autohome-index.mjs";
+import { extractAutohomeSpec, openBrowser } from "./autohome-extract.mjs";
+import { log } from "./crawlee-shared.mjs";
+
+const ARGS = process.argv.slice(2);
+const VALIDATE = Number((ARGS.find((a) => a.startsWith("--validate=")) || "").split("=")[1] || 0);
+const REFRESH = ARGS.includes("--refresh-index");
+const DISCOVERY = process.env.GONZO_DISCOVERY || "./gonzo-discovery.json";
+
+// Latin brand → Chinese brand name(s) as they appear in the AutoHome index.
+const BRAND_ALIAS = {
+  zeekr: ["极氪"], xiaomi: ["小米"], byd: ["比亚迪"], nio: ["蔚来"], xpeng: ["小鹏"],
+  li: ["理想"], lixiang: ["理想"], liauto: ["理想"], aito: ["问界"], avatr: ["阿维塔"],
+  mg: ["MG", "名爵"], bmw: ["宝马"], porsche: ["保时捷"], audi: ["奥迪"], "mercedes": ["奔驰"],
+  "mercedes-benz": ["奔驰"], benz: ["奔驰"], ferrari: ["法拉利"], tesla: ["特斯拉"], lexus: ["雷克萨斯"],
+  toyota: ["丰田"], honda: ["本田"], volkswagen: ["大众"], vw: ["大众"], volvo: ["沃尔沃"],
+  geely: ["吉利", "吉利银河"], chery: ["奇瑞"], changan: ["长安"], hongqi: ["红旗"], gac: ["广汽", "埃安"],
+  aion: ["埃安"], bentley: ["宾利"], lamborghini: ["兰博基尼"], maserati: ["玛莎拉蒂"],
+  rolls: ["劳斯莱斯"], "rolls-royce": ["劳斯莱斯"], landrover: ["路虎"], jaguar: ["捷豹"],
+  cadillac: ["凯迪拉克"], lynkco: ["领克"], "lynk": ["领克"], hyundai: ["现代"], kia: ["起亚"],
+  jetour: ["捷途"], haval: ["哈弗"], tank: ["坦克"], wuling: ["五菱"], denza: ["腾势"],
+  smart: ["smart"], voyah: ["岚图"], polestar: ["极星"], "rising": ["飞凡"], im: ["智己"],
+  jishi: ["极石"], leapmotor: ["零跑"], neta: ["哪吒"], baojun: ["宝骏"],
+};
+// Latin model → Chinese (for fully-Chinese model names, esp. BYD dynasty line).
+const MODEL_ALIAS = {
+  han: "汉", tang: "唐", song: "宋", qin: "秦", yuan: "元", seal: "海豹", dolphin: "海豚",
+  destroyer: "驱逐舰", frigate: "护卫舰", leopard: "豹", "sea lion": "海狮", e: "e",
+};
+
+const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+const modelKey = (s) => norm(s).replace(/[\s\-_/]+/g, "").replace(/20\d\d款?/g, "").replace(/(款|新款|改款)/g, "");
+
+function parseGonzo(name) {
+  const n = norm(name);
+  // Longest-matching known brand prefix.
+  let brand = null, rest = n;
+  const aliases = Object.keys(BRAND_ALIAS).sort((a, b) => b.length - a.length);
+  for (const a of aliases) { if (n === a || n.startsWith(a + " ") || n.startsWith(a)) { brand = a; rest = n.slice(a.length).trim(); break; } }
+  if (!brand) { const t = n.split(" "); brand = t[0]; rest = t.slice(1).join(" "); }
+  return { brand, model: rest };
+}
+
+function findBrand(index, gonzoBrand) {
+  const cands = BRAND_ALIAS[gonzoBrand] || [gonzoBrand];
+  return index.brands.filter((b) =>
+    cands.some((c) => b.brand.includes(c) || (/^[a-z]/i.test(c) && b.brand.toLowerCase().includes(c.toLowerCase()))),
+  );
+}
+
+function scoreSeries(gonzoModel, seriesName, brandCn) {
+  // strip the Chinese brand prefix from the series name → the model part.
+  let m = seriesName;
+  if (brandCn) for (const part of brandCn) m = m.replace(part, "");
+  const gm = modelKey(gonzoModel);
+  // include CN alias of the gonzo model (BYD Han → 汉)
+  const gmCn = MODEL_ALIAS[norm(gonzoModel).replace(/20\d\d.*$/, "").trim()];
+  const sm = modelKey(m);
+  if (!gm && !gmCn) return 0;
+  if (sm && gm && sm === gm) return 1.0;                 // exact model token
+  if (gmCn && m.includes(gmCn)) return 0.9;              // CN-aliased exact
+  if (sm && gm && (sm.includes(gm) || gm.includes(sm))) return 0.7; // containment
+  // token overlap (e.g. "su7" appears in "su7ultra")
+  if (gm && sm && (sm.startsWith(gm) || gm.startsWith(sm))) return 0.6;
+  return 0;
+}
+
+function matchCar(index, car) {
+  const { brand, model } = parseGonzo(car.name);
+  const brandHits = findBrand(index, brand);
+  if (!brandHits.length) return { ...car, parsed_brand: brand, parsed_model: model, confidence: 0, reason: "brand_not_found" };
+  const strips = [...new Set([...brandHits.map((b) => b.brand), ...(BRAND_ALIAS[brand] || []), "汽车", "新能源"])];
+  let best = null;
+  for (const b of brandHits) for (const s of b.series) {
+    const score = scoreSeries(model, s.name, strips);
+    if (score > 0 && (!best || score > best.score)) best = { score, id: s.id, name: s.name, price: s.price, brandCn: b.brand };
+  }
+  if (!best) return { ...car, parsed_brand: brand, parsed_model: model, confidence: 0, reason: "no_model_match" };
+  return {
+    name: car.name, gonzo_price: car.price, parsed_brand: brand, parsed_model: model,
+    confidence: best.score, autohome_brand: best.brandCn, autohome_id: best.id,
+    autohome_name: best.name, autohome_price: best.price,
+    config_url: `https://car.autohome.com.cn/config/series/${best.id}.html`,
+  };
+}
+
+const csvEsc = (v) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+
+async function main() {
+  if (!existsSync(DISCOVERY)) { log.error(`missing ${DISCOVERY} — run \`npm run gonzo\` first`); process.exit(1); }
+  const cars = (JSON.parse(readFileSync(DISCOVERY, "utf8")).cars || []);
+  const index = await loadAutohomeIndex({ refresh: REFRESH, log: (m) => log.info(m) });
+  log.info(`matching ${cars.length} Gonzo cars against ${index.brands.length} brands / ${index.brands.reduce((a, b) => a + b.series.length, 0)} series\n`);
+
+  const matched = cars.map((c) => matchCar(index, c));
+  const tiers = { high: matched.filter((m) => m.confidence >= 0.9), med: matched.filter((m) => m.confidence >= 0.6 && m.confidence < 0.9), none: matched.filter((m) => !m.confidence) };
+
+  // Report
+  const headers = ["name", "gonzo_price", "parsed_brand", "parsed_model", "confidence", "autohome_id", "autohome_name", "autohome_price", "config_url", "reason"];
+  const lines = [headers.join(",")];
+  for (const m of matched.sort((a, b) => (b.confidence || 0) - (a.confidence || 0))) lines.push(headers.map((h) => csvEsc(m[h])).join(","));
+  writeFileSync("./gonzo-autohome-matches.csv", lines.join("\n"));
+  const targets = tiers.high.concat(tiers.med).map((m) => ({ url: m.config_url, seriesId: m.autohome_id, gonzoName: m.name, gonzoPrice: m.gonzo_price, autohomeName: m.autohome_name, confidence: m.confidence }));
+  writeFileSync("./autohome-targets.json", JSON.stringify(targets, null, 2));
+
+  log.info(`── match report ──`);
+  log.info(`HIGH (auto-ok): ${tiers.high.length} | MEDIUM (review): ${tiers.med.length} | NO MATCH: ${tiers.none.length}`);
+  log.info(`wrote gonzo-autohome-matches.csv + autohome-targets.json (${targets.length} targets)\n`);
+  log.info("Top matches:");
+  for (const m of tiers.high.slice(0, 12)) log.info(`  ✓ ${m.name}  →  ${m.autohome_id}:${m.autohome_name}  (${m.confidence})`);
+  log.info("\nSample NO-MATCH (need manual series id or CN alias):");
+  for (const m of tiers.none.slice(0, 8)) log.info(`  · ${m.name}  [${m.reason}]`);
+
+  if (VALIDATE > 0) {
+    log.info(`\n── validating top ${VALIDATE} by decoding live ──`);
+    const browser = await openBrowser();
+    for (const t of targets.slice(0, VALIDATE)) {
+      const r = await extractAutohomeSpec(t.url, { browser });
+      log.info(r.ok ? `  ✓ ${t.gonzoName} → series ${t.seriesId}: ${r.spec.trims.length} trims, ${r.spec.groups.length} groups` : `  ✗ ${t.gonzoName} → ${r.reason || (r.blocked ? "blocked" : "fail")}`);
+    }
+    await browser.close();
+  }
+}
+
+main().catch((e) => { log.error(e?.stack || String(e)); process.exit(1); });
