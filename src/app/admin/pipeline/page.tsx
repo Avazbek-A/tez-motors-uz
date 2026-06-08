@@ -7,6 +7,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Inquiry pipeline kanban (Phase Y1).
@@ -41,27 +43,111 @@ interface AdminUser {
 }
 
 const COLUMNS = [
-  { key: "new", label: "New", icon: Clock, accent: "border-t-blue-500" },
-  { key: "contacted", label: "Contacted", icon: Phone, accent: "border-t-yellow-500" },
-  { key: "in_progress", label: "In Progress", icon: ArrowRight, accent: "border-t-purple-500" },
-  { key: "closed", label: "Closed", icon: CheckCircle, accent: "border-t-green-500" },
+  { key: "new", icon: Clock, accent: "border-t-blue-500" },
+  { key: "contacted", icon: Phone, accent: "border-t-yellow-500" },
+  { key: "in_progress", icon: ArrowRight, accent: "border-t-purple-500" },
+  { key: "closed", icon: CheckCircle, accent: "border-t-green-500" },
 ] as const;
 
-const typeLabels: Record<string, string> = {
-  general: "General",
-  car_inquiry: "Car Inquiry",
-  callback: "Callback",
-  calculator: "Calculator",
-  reservation: "Reservation",
-  test_drive: "Test Drive",
-  trade_in: "Trade-in",
-  newsletter: "Newsletter",
-  price_drop: "Price Drop",
-  service: "Service",
-  part_inquiry: "Part Inquiry",
+type ColumnKey = (typeof COLUMNS)[number]["key"];
+
+const COPY: Record<Locale, {
+  columnLabels: Record<ColumnKey, string>;
+  typeLabels: Record<string, string>;
+  unassigned: string;
+  failedToMove: string;
+  movedTo: string;
+  title: string;
+  subtitle: string;
+  allSalespeople: string;
+  unassignedFilter: string;
+  call: string;
+  email: string;
+  noInquiries: string;
+}> = {
+  ru: {
+    columnLabels: { new: "Новый", contacted: "Связались", in_progress: "В работе", closed: "Закрыт" },
+    typeLabels: {
+      general: "Общий",
+      car_inquiry: "Запрос по авто",
+      callback: "Обратный звонок",
+      calculator: "Калькулятор",
+      reservation: "Бронирование",
+      test_drive: "Тест-драйв",
+      trade_in: "Трейд-ин",
+      newsletter: "Рассылка",
+      price_drop: "Снижение цены",
+      service: "Сервис",
+      part_inquiry: "Запрос по запчасти",
+    },
+    unassigned: "Не назначен",
+    failedToMove: "Не удалось переместить карточку",
+    movedTo: "Перемещено в",
+    title: "Воронка",
+    subtitle: "Перетаскивайте запросы между этапами.",
+    allSalespeople: "Все менеджеры",
+    unassignedFilter: "Не назначен",
+    call: "Позвонить",
+    email: "Email",
+    noInquiries: "Нет запросов",
+  },
+  uz: {
+    columnLabels: { new: "Yangi", contacted: "Bog‘lanildi", in_progress: "Jarayonda", closed: "Yopildi" },
+    typeLabels: {
+      general: "Umumiy",
+      car_inquiry: "Avto so‘rovi",
+      callback: "Qayta qo‘ng‘iroq",
+      calculator: "Kalkulyator",
+      reservation: "Bron qilish",
+      test_drive: "Sinov haydovi",
+      trade_in: "Treyd-in",
+      newsletter: "Axborotnoma",
+      price_drop: "Narx tushishi",
+      service: "Servis",
+      part_inquiry: "Ehtiyot qism so‘rovi",
+    },
+    unassigned: "Tayinlanmagan",
+    failedToMove: "Kartochkani ko‘chirib bo‘lmadi",
+    movedTo: "Ko‘chirildi:",
+    title: "Voronka",
+    subtitle: "So‘rovlarni bosqichlar orasida torting.",
+    allSalespeople: "Barcha menejerlar",
+    unassignedFilter: "Tayinlanmagan",
+    call: "Qo‘ng‘iroq",
+    email: "Email",
+    noInquiries: "So‘rovlar yo‘q",
+  },
+  en: {
+    columnLabels: { new: "New", contacted: "Contacted", in_progress: "In Progress", closed: "Closed" },
+    typeLabels: {
+      general: "General",
+      car_inquiry: "Car Inquiry",
+      callback: "Callback",
+      calculator: "Calculator",
+      reservation: "Reservation",
+      test_drive: "Test Drive",
+      trade_in: "Trade-in",
+      newsletter: "Newsletter",
+      price_drop: "Price Drop",
+      service: "Service",
+      part_inquiry: "Part Inquiry",
+    },
+    unassigned: "Unassigned",
+    failedToMove: "Failed to move card",
+    movedTo: "Moved to",
+    title: "Pipeline",
+    subtitle: "Drag inquiries between stages.",
+    allSalespeople: "All salespeople",
+    unassignedFilter: "Unassigned",
+    call: "Call",
+    email: "Email",
+    noInquiries: "No inquiries",
+  },
 };
 
 export default function AdminPipelinePage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +186,7 @@ export default function AdminPipelinePage() {
   }, [users]);
 
   const repLabel = (id?: string | null) => {
-    if (!id) return "Unassigned";
+    if (!id) return t.unassigned;
     return emailById.get(id) || `${id.slice(0, 8)}…`;
   };
 
@@ -135,9 +221,9 @@ export default function AdminPipelinePage() {
     }).catch(() => null);
     if (!res || !res.ok) {
       setInquiries((list) => list.map((i) => (i.id === inquiry.id ? { ...i, status: prev } : i)));
-      showFeedback("error", "Failed to move card");
+      showFeedback("error", t.failedToMove);
     } else {
-      showFeedback("success", `Moved to ${COLUMNS.find((c) => c.key === status)?.label}`);
+      showFeedback("success", `${t.movedTo} ${t.columnLabels[status as ColumnKey] ?? status}`);
     }
   };
 
@@ -154,8 +240,8 @@ export default function AdminPipelinePage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Pipeline</h1>
-          <p className="text-muted-foreground text-sm">Drag inquiries between stages.</p>
+          <h1 className="text-2xl font-bold">{t.title}</h1>
+          <p className="text-muted-foreground text-sm">{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -163,8 +249,8 @@ export default function AdminPipelinePage() {
             onChange={(e) => setRepFilter(e.target.value)}
             className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
           >
-            <option value="all">All salespeople</option>
-            <option value="__unassigned__">Unassigned</option>
+            <option value="all">{t.allSalespeople}</option>
+            <option value="__unassigned__">{t.unassignedFilter}</option>
             {repOptions.map((id) => (
               <option key={id} value={id}>{repLabel(id)}</option>
             ))}
@@ -205,7 +291,7 @@ export default function AdminPipelinePage() {
               <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
                   <col.icon className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-semibold text-sm">{col.label}</span>
+                  <span className="font-semibold text-sm">{t.columnLabels[col.key]}</span>
                 </div>
                 <Badge variant="secondary">{cards.length}</Badge>
               </div>
@@ -227,7 +313,7 @@ export default function AdminPipelinePage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm truncate">{inq.name}</p>
-                          <Badge variant="secondary" className="text-[10px]">{typeLabels[inq.type] || inq.type}</Badge>
+                          <Badge variant="secondary" className="text-[10px]">{t.typeLabels[inq.type] || inq.type}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">{inq.phone}</p>
                         {inq.message && (
@@ -251,7 +337,7 @@ export default function AdminPipelinePage() {
                             className="inline-flex items-center gap-1 text-[11px] text-lime hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Phone className="w-3 h-3" /> Call
+                            <Phone className="w-3 h-3" /> {t.call}
                           </a>
                           {inq.email && (
                             <a
@@ -259,7 +345,7 @@ export default function AdminPipelinePage() {
                               className="inline-flex items-center gap-1 text-[11px] text-lime hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <Mail className="w-3 h-3" /> Email
+                              <Mail className="w-3 h-3" /> {t.email}
                             </a>
                           )}
                         </div>
@@ -268,7 +354,7 @@ export default function AdminPipelinePage() {
                   </div>
                 ))}
                 {cards.length === 0 && !loading && (
-                  <p className="text-xs text-muted-foreground text-center py-6">No inquiries</p>
+                  <p className="text-xs text-muted-foreground text-center py-6">{t.noInquiries}</p>
                 )}
               </div>
             </div>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Share2, Loader2, Copy, Check, ExternalLink } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Car {
   id: string;
@@ -30,7 +32,43 @@ const FEEDS = [
   { label: "OLX autoload (XML)", href: "/api/feed/olx.xml" },
 ];
 
+const COPY: Record<Locale, {
+  title: string;
+  feedsHint: string;
+  loading: string;
+  copy: string;
+  markPublished: string;
+  publishedUrlPrompt: string;
+}> = {
+  ru: {
+    title: "Дистрибуция",
+    feedsHint: "Автоматические фиды — укажите каждой платформе её URL (обновляются по их расписанию):",
+    loading: "Загрузка…",
+    copy: "Копировать",
+    markPublished: "Отметить опубликованным",
+    publishedUrlPrompt: "URL публикации (необязательно, для атрибуции):",
+  },
+  uz: {
+    title: "Distributsiya",
+    feedsHint: "Avtomatik fidlar — har bir platformaga uning URL manzilini ko'rsating (ular o'z jadvali bo'yicha yangilanadi):",
+    loading: "Yuklanmoqda…",
+    copy: "Nusxalash",
+    markPublished: "Chop etilgan deb belgilash",
+    publishedUrlPrompt: "Chop etilgan URL (ixtiyoriy, atribut uchun):",
+  },
+  en: {
+    title: "Distribution",
+    feedsHint: "Automatic feeds — point each platform at its URL (refreshes on their schedule):",
+    loading: "Loading…",
+    copy: "Copy",
+    markPublished: "Mark published",
+    publishedUrlPrompt: "Published URL (optional, for attribution):",
+  },
+};
+
 export default function AdminDistributionPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [cars, setCars] = useState<Car[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +106,7 @@ export default function AdminDistributionPage() {
   }
 
   async function markPublished(id: string) {
-    const url = window.prompt("Published URL (optional, for attribution):") || null;
+    const url = window.prompt(t.publishedUrlPrompt) || null;
     await fetch("/api/admin/distribution", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -91,12 +129,12 @@ export default function AdminDistributionPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Share2 className="h-5 w-5 text-lime" />
-        <h1 className="text-xl font-bold">Distribution</h1>
+        <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
       <div className="rounded-lg border border-white/10 bg-white/5 p-4">
         <p className="text-sm text-white/60 mb-2">
-          Automatic feeds — point each platform at its URL (refreshes on their schedule):
+          {t.feedsHint}
         </p>
         <div className="flex flex-wrap gap-2">
           {FEEDS.map((f) => (
@@ -115,7 +153,7 @@ export default function AdminDistributionPage() {
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/60">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : (
         <div className="space-y-4">
@@ -157,14 +195,14 @@ export default function AdminDistributionPage() {
                               onClick={() => copy(l.id, l.body || "")}
                               className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
                             >
-                              {copied === l.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} Copy
+                              {copied === l.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {t.copy}
                             </button>
                             {l.status === "draft" && (
                               <button
                                 onClick={() => markPublished(l.id)}
                                 className="rounded bg-lime/20 px-2 py-1 text-xs text-lime hover:bg-lime/30"
                               >
-                                Mark published
+                                {t.markPublished}
                               </button>
                             )}
                             {l.external_url && (

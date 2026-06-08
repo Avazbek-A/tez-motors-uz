@@ -5,6 +5,8 @@ import { Tag, Loader2, Plus, X, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { discountPct } from "@/lib/promotions";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Car { id: string; brand: string; model: string; year: number | null; price_usd: number }
 interface Promo {
@@ -19,7 +21,134 @@ const STATUS_TONE: Record<string, string> = {
 };
 const fmt = (s: string | null) => { if (!s) return "—"; try { return new Date(s).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); } catch { return s; } };
 
+const COPY: Record<Locale, {
+  title: string;
+  newPromo: string;
+  intro: string;
+  newPromotion: string;
+  selectCar: string;
+  pctOff: string;
+  fixedPrice: string;
+  pctPlaceholder: string;
+  salePricePlaceholder: string;
+  offSuffix: string;
+  labelPlaceholder: string;
+  starts: string;
+  ends: string;
+  cronHint: string;
+  create: string;
+  pickCar: string;
+  couldNotCreate: string;
+  cancelConfirm: string;
+  noPromos: string;
+  thCar: string;
+  thSale: string;
+  thOff: string;
+  thWindow: string;
+  thStatus: string;
+  status: Record<string, string>;
+}> = {
+  ru: {
+    title: "Акции",
+    newPromo: "Новая акция",
+    intro: "Ограниченные по времени снижения цены. При старте они снижают цену (показывается зачёркнутой на сайте) и автоматически анонсируются в ваш Telegram-канал; по окончании цена возвращается автоматически.",
+    newPromotion: "Новая акция",
+    selectCar: "Выберите автомобиль…",
+    pctOff: "% скидки",
+    fixedPrice: "Фикс. цена",
+    pctPlaceholder: "% скидки",
+    salePricePlaceholder: "Цена со скидкой $",
+    offSuffix: "скидка",
+    labelPlaceholder: "Метка (необязательно, напр. «Весенняя распродажа»)",
+    starts: "Начало",
+    ends: "Окончание",
+    cronHint: "Оставьте «Начало» пустым, чтобы начать при следующем ежечасном запуске. Акции применяются/отменяются через cron.",
+    create: "Создать",
+    pickCar: "Выберите автомобиль.",
+    couldNotCreate: "Не удалось создать.",
+    cancelConfirm: "Отменить эту акцию? (активная вернёт цену)",
+    noPromos: "Акций пока нет.",
+    thCar: "Авто",
+    thSale: "Цена",
+    thOff: "Скидка",
+    thWindow: "Период",
+    thStatus: "Статус",
+    status: {
+      scheduled: "запланирована",
+      active: "активна",
+      ended: "завершена",
+      cancelled: "отменена",
+    },
+  },
+  uz: {
+    title: "Aksiyalar",
+    newPromo: "Yangi aksiya",
+    intro: "Vaqt bilan cheklangan narx tushishlari. Boshlanganda narxni tushiradi (saytda chizilgan holda ko'rsatiladi) va Telegram kanalingizga avtomatik e'lon qiladi; tugaganda narx avtomatik qaytariladi.",
+    newPromotion: "Yangi aksiya",
+    selectCar: "Avtomobilni tanlang…",
+    pctOff: "% chegirma",
+    fixedPrice: "Belgilangan narx",
+    pctPlaceholder: "% chegirma",
+    salePricePlaceholder: "Chegirma narxi $",
+    offSuffix: "chegirma",
+    labelPlaceholder: "Yorliq (ixtiyoriy, masalan «Bahorgi chegirma»)",
+    starts: "Boshlanishi",
+    ends: "Tugashi",
+    cronHint: "Keyingi soatlik ishga tushirishda boshlash uchun «Boshlanishi» ni bo'sh qoldiring. Aksiyalar cron orqali qo'llanadi/bekor qilinadi.",
+    create: "Yaratish",
+    pickCar: "Avtomobilni tanlang.",
+    couldNotCreate: "Yaratib bo'lmadi.",
+    cancelConfirm: "Ushbu aksiyani bekor qilasizmi? (faol aksiya narxni qaytaradi)",
+    noPromos: "Hozircha aksiyalar yo'q.",
+    thCar: "Avto",
+    thSale: "Narx",
+    thOff: "Chegirma",
+    thWindow: "Davr",
+    thStatus: "Holat",
+    status: {
+      scheduled: "rejalashtirilgan",
+      active: "faol",
+      ended: "tugagan",
+      cancelled: "bekor qilingan",
+    },
+  },
+  en: {
+    title: "Promotions",
+    newPromo: "New promo",
+    intro: "Time-limited price drops. On start they lower the price (shown as a strikethrough on the site) and auto-announce to your Telegram channel; on end they revert automatically.",
+    newPromotion: "New promotion",
+    selectCar: "Select a car…",
+    pctOff: "% off",
+    fixedPrice: "Fixed price",
+    pctPlaceholder: "% off",
+    salePricePlaceholder: "Sale price $",
+    offSuffix: "off",
+    labelPlaceholder: "Label (optional, e.g. 'Весенняя распродажа')",
+    starts: "Starts",
+    ends: "Ends",
+    cronHint: "Leave “Starts” empty to begin at the next hourly run. Promos apply/revert via cron.",
+    create: "Create",
+    pickCar: "Pick a car.",
+    couldNotCreate: "Could not create.",
+    cancelConfirm: "Cancel this promotion? (an active one reverts the price)",
+    noPromos: "No promotions yet.",
+    thCar: "Car",
+    thSale: "Sale",
+    thOff: "Off",
+    thWindow: "Window",
+    thStatus: "Status",
+    status: {
+      scheduled: "scheduled",
+      active: "active",
+      ended: "ended",
+      cancelled: "cancelled",
+    },
+  },
+};
+
 export default function AdminPromotionsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [promos, setPromos] = useState<Promo[]>([]);
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +170,7 @@ export default function AdminPromotionsPage() {
   const previewSale = car ? (form.mode === "pct" ? Math.round((car.price_usd * (1 - (Number(form.pct) || 0) / 100)) / 100) * 100 : Number(form.fixed) || 0) : 0;
 
   const create = async () => {
-    if (!form.carId) { setNote("Pick a car."); return; }
+    if (!form.carId) { setNote(t.pickCar); return; }
     setSaving(true); setNote(null);
     try {
       const res = await fetch("/api/admin/promotions", {
@@ -56,46 +185,45 @@ export default function AdminPromotionsPage() {
       });
       const d = await res.json();
       if (res.ok) { setShowNew(false); setForm({ carId: "", mode: "pct", pct: "10", fixed: "", label: "", starts: "", ends: "" }); load(); }
-      else setNote(d.error || "Could not create.");
+      else setNote(d.error || t.couldNotCreate);
     } finally { setSaving(false); }
   };
 
-  const cancel = async (id: string) => { if (!confirm("Cancel this promotion? (an active one reverts the price)")) return; await fetch(`/api/admin/promotions/${id}`, { method: "DELETE" }); load(); };
+  const cancel = async (id: string) => { if (!confirm(t.cancelConfirm)) return; await fetch(`/api/admin/promotions/${id}`, { method: "DELETE" }); load(); };
 
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-3"><Tag className="w-6 h-6 text-primary" /><h1 className="text-2xl font-semibold text-foreground">Promotions</h1></div>
-        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> New promo</Button>
+        <div className="flex items-center gap-3"><Tag className="w-6 h-6 text-primary" /><h1 className="text-2xl font-semibold text-foreground">{t.title}</h1></div>
+        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> {t.newPromo}</Button>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Time-limited price drops. On start they lower the price (shown as a strikethrough on the site) and
-        auto-announce to your Telegram channel; on end they revert automatically.
+        {t.intro}
       </p>
 
       {showNew && (
         <div className="bg-card border border-border p-4 mb-4 space-y-3">
-          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-foreground">New promotion</h2><button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
+          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-foreground">{t.newPromotion}</h2><button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
           <select value={form.carId} onChange={(e) => setForm({ ...form, carId: e.target.value })} className="w-full h-11 rounded-[2px] border border-border bg-[var(--bg-3)] px-3 text-sm text-foreground">
-            <option value="">Select a car…</option>
+            <option value="">{t.selectCar}</option>
             {cars.map((c) => <option key={c.id} value={c.id}>{c.brand} {c.model}{c.year ? ` ${c.year}` : ""} — {usd(c.price_usd)}</option>)}
           </select>
           <div className="flex gap-2">
             {(["pct", "fixed"] as const).map((m) => (
-              <button key={m} onClick={() => setForm({ ...form, mode: m })} className={`px-3 py-1 text-xs font-mono uppercase rounded-[2px] border ${form.mode === m ? "border-[var(--accent)] text-primary" : "border-border text-muted-foreground"}`}>{m === "pct" ? "% off" : "Fixed price"}</button>
+              <button key={m} onClick={() => setForm({ ...form, mode: m })} className={`px-3 py-1 text-xs font-mono uppercase rounded-[2px] border ${form.mode === m ? "border-[var(--accent)] text-primary" : "border-border text-muted-foreground"}`}>{m === "pct" ? t.pctOff : t.fixedPrice}</button>
             ))}
             {form.mode === "pct"
-              ? <Input type="number" value={form.pct} onChange={(e) => setForm({ ...form, pct: e.target.value })} className="w-24 text-sm" placeholder="% off" />
-              : <Input type="number" value={form.fixed} onChange={(e) => setForm({ ...form, fixed: e.target.value })} className="w-32 text-sm" placeholder="Sale price $" />}
-            {car && previewSale > 0 && <span className="text-xs text-muted-foreground self-center">→ {usd(previewSale)} ({discountPct(car.price_usd, previewSale)}% off)</span>}
+              ? <Input type="number" value={form.pct} onChange={(e) => setForm({ ...form, pct: e.target.value })} className="w-24 text-sm" placeholder={t.pctPlaceholder} />
+              : <Input type="number" value={form.fixed} onChange={(e) => setForm({ ...form, fixed: e.target.value })} className="w-32 text-sm" placeholder={t.salePricePlaceholder} />}
+            {car && previewSale > 0 && <span className="text-xs text-muted-foreground self-center">→ {usd(previewSale)} ({discountPct(car.price_usd, previewSale)}% {t.offSuffix})</span>}
           </div>
-          <Input placeholder="Label (optional, e.g. 'Весенняя распродажа')" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="text-sm" />
+          <Input placeholder={t.labelPlaceholder} value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs text-muted-foreground">Starts<Input type="datetime-local" value={form.starts} onChange={(e) => setForm({ ...form, starts: e.target.value })} className="text-sm mt-0.5" /></label>
-            <label className="text-xs text-muted-foreground">Ends<Input type="datetime-local" value={form.ends} onChange={(e) => setForm({ ...form, ends: e.target.value })} className="text-sm mt-0.5" /></label>
+            <label className="text-xs text-muted-foreground">{t.starts}<Input type="datetime-local" value={form.starts} onChange={(e) => setForm({ ...form, starts: e.target.value })} className="text-sm mt-0.5" /></label>
+            <label className="text-xs text-muted-foreground">{t.ends}<Input type="datetime-local" value={form.ends} onChange={(e) => setForm({ ...form, ends: e.target.value })} className="text-sm mt-0.5" /></label>
           </div>
-          <p className="text-[11px] text-muted-foreground">Leave &ldquo;Starts&rdquo; empty to begin at the next hourly run. Promos apply/revert via cron.</p>
-          <div className="flex justify-end"><Button size="sm" onClick={create} disabled={saving || !form.carId}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}</Button></div>
+          <p className="text-[11px] text-muted-foreground">{t.cronHint}</p>
+          <div className="flex justify-end"><Button size="sm" onClick={create} disabled={saving || !form.carId}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.create}</Button></div>
           {note && <p className="text-xs text-[var(--danger)]">{note}</p>}
         </div>
       )}
@@ -103,14 +231,14 @@ export default function AdminPromotionsPage() {
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : promos.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No promotions yet.</p>
+        <p className="text-sm text-muted-foreground">{t.noPromos}</p>
       ) : (
         <div className="bg-card border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-              <th className="px-4 py-2 font-medium">Car</th><th className="px-4 py-2 font-medium text-right">Sale</th>
-              <th className="px-4 py-2 font-medium text-right">Off</th><th className="px-4 py-2 font-medium">Window</th>
-              <th className="px-4 py-2 font-medium">Status</th><th className="px-4 py-2"></th>
+              <th className="px-4 py-2 font-medium">{t.thCar}</th><th className="px-4 py-2 font-medium text-right">{t.thSale}</th>
+              <th className="px-4 py-2 font-medium text-right">{t.thOff}</th><th className="px-4 py-2 font-medium">{t.thWindow}</th>
+              <th className="px-4 py-2 font-medium">{t.thStatus}</th><th className="px-4 py-2"></th>
             </tr></thead>
             <tbody>
               {promos.map((p) => {
@@ -121,7 +249,7 @@ export default function AdminPromotionsPage() {
                     <td className="px-4 py-2.5 text-right font-mono text-foreground">{usd(p.sale_price_usd)}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-[var(--success)]">{orig ? `${discountPct(orig, p.sale_price_usd)}%` : "—"}</td>
                     <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">{fmt(p.starts_at)} → {fmt(p.ends_at)}</td>
-                    <td className="px-4 py-2.5"><span className={`text-[10px] font-mono uppercase ${STATUS_TONE[p.status] || "text-muted-foreground"}`}>{p.status}</span></td>
+                    <td className="px-4 py-2.5"><span className={`text-[10px] font-mono uppercase ${STATUS_TONE[p.status] || "text-muted-foreground"}`}>{t.status[p.status] || p.status}</span></td>
                     <td className="px-4 py-2.5 text-right">{(p.status === "scheduled" || p.status === "active") && <button onClick={() => cancel(p.id)} className="text-muted-foreground hover:text-[var(--danger)]"><Trash2 className="w-3.5 h-3.5" /></button>}</td>
                   </tr>
                 );

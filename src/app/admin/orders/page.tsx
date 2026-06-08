@@ -9,6 +9,174 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  title: string;
+  ordersCount: (n: number) => string;
+  refresh: string;
+  statusUpdated: string;
+  noteAdded: string;
+  updateFailed: string;
+  all: string;
+  searchPlaceholder: string;
+  loading: string;
+  noOrdersFound: string;
+  noOrdersHint: string;
+  deposit: string;
+  orderHeading: (ref: string) => string;
+  customer: string;
+  phone: string;
+  car: string;
+  email: string;
+  advanceStatus: string;
+  addNoteToStatus: string;
+  notePlaceholder: string;
+  addNote: string;
+  documents: string;
+  docContract: string;
+  docProforma: string;
+  docReceipt: string;
+  docHandover: string;
+  docWarranty: string;
+  documentsHint: string;
+  history: string;
+  noEvents: string;
+  close: string;
+  call: string;
+  status: Record<string, string>;
+}> = {
+  ru: {
+    title: "Заказы",
+    ordersCount: (n) => `${n} импортных заказов`,
+    refresh: "Обновить",
+    statusUpdated: "Статус обновлён — клиент уведомлён",
+    noteAdded: "Заметка добавлена",
+    updateFailed: "Не удалось обновить заказ",
+    all: "Все",
+    searchPlaceholder: "Поиск по номеру, имени или телефону...",
+    loading: "Загрузка...",
+    noOrdersFound: "Заказы не найдены.",
+    noOrdersHint: "Заказы создаются автоматически, когда клиент бронирует автомобиль.",
+    deposit: "Депозит",
+    orderHeading: (ref) => `Заказ ${ref}`,
+    customer: "Клиент",
+    phone: "Телефон",
+    car: "Автомобиль",
+    email: "Эл. почта",
+    advanceStatus: "Изменить статус (клиенту уйдёт письмо)",
+    addNoteToStatus: "Добавить заметку к текущему статусу",
+    notePlaceholder: "напр. Авто прошло таможню, прибытие через 3 дня",
+    addNote: "Добавить заметку",
+    documents: "Документы",
+    docContract: "Договор",
+    docProforma: "Проформа",
+    docReceipt: "Квитанция",
+    docHandover: "Акт п/п",
+    docWarranty: "Гарантия",
+    documentsHint: "Открывается для печати / сохранения в PDF. Черновик — проверьте перед подписанием.",
+    history: "История",
+    noEvents: "Событий пока нет.",
+    close: "Закрыть",
+    call: "Позвонить",
+    status: {
+      ordered: "Заказан",
+      deposit_paid: "Депозит оплачен",
+      sourcing: "Поиск",
+      in_transit: "В пути",
+      at_customs: "На таможне",
+      ready_for_pickup: "Готов к выдаче",
+      delivered: "Доставлен",
+    },
+  },
+  uz: {
+    title: "Buyurtmalar",
+    ordersCount: (n) => `${n} ta import buyurtma`,
+    refresh: "Yangilash",
+    statusUpdated: "Holat yangilandi — mijoz xabardor qilindi",
+    noteAdded: "Izoh qoʻshildi",
+    updateFailed: "Buyurtmani yangilab boʻlmadi",
+    all: "Hammasi",
+    searchPlaceholder: "Raqam, ism yoki telefon boʻyicha qidirish...",
+    loading: "Yuklanmoqda...",
+    noOrdersFound: "Buyurtmalar topilmadi.",
+    noOrdersHint: "Buyurtmalar mijoz avtomobilni band qilganda avtomatik yaratiladi.",
+    deposit: "Depozit",
+    orderHeading: (ref) => `Buyurtma ${ref}`,
+    customer: "Mijoz",
+    phone: "Telefon",
+    car: "Avtomobil",
+    email: "Email",
+    advanceStatus: "Holatni oʻzgartirish (mijozga xat yuboriladi)",
+    addNoteToStatus: "Joriy holatga izoh qoʻshish",
+    notePlaceholder: "masalan: Avto bojxonadan oʻtdi, yetib kelishi 3 kun",
+    addNote: "Izoh qoʻshish",
+    documents: "Hujjatlar",
+    docContract: "Shartnoma",
+    docProforma: "Proforma",
+    docReceipt: "Kvitansiya",
+    docHandover: "Topshirish dalolatnomasi",
+    docWarranty: "Kafolat",
+    documentsHint: "Chop etish / PDFga saqlash uchun ochiladi. Qoralama — imzolashdan oldin tekshiring.",
+    history: "Tarix",
+    noEvents: "Hozircha hodisalar yoʻq.",
+    close: "Yopish",
+    call: "Qoʻngʻiroq",
+    status: {
+      ordered: "Buyurtma qilindi",
+      deposit_paid: "Depozit toʻlandi",
+      sourcing: "Qidirilmoqda",
+      in_transit: "Yoʻlda",
+      at_customs: "Bojxonada",
+      ready_for_pickup: "Olib ketishga tayyor",
+      delivered: "Yetkazildi",
+    },
+  },
+  en: {
+    title: "Orders",
+    ordersCount: (n) => `${n} import orders`,
+    refresh: "Refresh",
+    statusUpdated: "Status updated — customer notified",
+    noteAdded: "Note added",
+    updateFailed: "Failed to update order",
+    all: "All",
+    searchPlaceholder: "Search by reference, name, or phone...",
+    loading: "Loading...",
+    noOrdersFound: "No orders found.",
+    noOrdersHint: "Orders are created automatically when a customer reserves a car.",
+    deposit: "Deposit",
+    orderHeading: (ref) => `Order ${ref}`,
+    customer: "Customer",
+    phone: "Phone",
+    car: "Car",
+    email: "Email",
+    advanceStatus: "Advance status (emails the customer)",
+    addNoteToStatus: "Add a note to the current status",
+    notePlaceholder: "e.g. Vehicle cleared customs, ETA 3 days",
+    addNote: "Add note",
+    documents: "Documents",
+    docContract: "Contract",
+    docProforma: "Proforma",
+    docReceipt: "Receipt",
+    docHandover: "Handover act",
+    docWarranty: "Warranty",
+    documentsHint: "Opens for printing / saving as PDF. Draft — check before signing.",
+    history: "History",
+    noEvents: "No events yet.",
+    close: "Close",
+    call: "Call",
+    status: {
+      ordered: "Ordered",
+      deposit_paid: "Deposit paid",
+      sourcing: "Sourcing",
+      in_transit: "In transit",
+      at_customs: "At customs",
+      ready_for_pickup: "Ready for pickup",
+      delivered: "Delivered",
+    },
+  },
+};
 
 interface CarRel {
   brand: string;
@@ -51,16 +219,6 @@ const STATUS_OPTIONS = [
   "delivered",
 ] as const;
 
-const statusLabel: Record<string, string> = {
-  ordered: "Ordered",
-  deposit_paid: "Deposit paid",
-  sourcing: "Sourcing",
-  in_transit: "In transit",
-  at_customs: "At customs",
-  ready_for_pickup: "Ready for pickup",
-  delivered: "Delivered",
-};
-
 const statusVariant: Record<string, "warning" | "info" | "default" | "success"> = {
   ordered: "warning",
   deposit_paid: "info",
@@ -78,6 +236,8 @@ function carOf(order: Order): CarRel | null {
 }
 
 export default function AdminOrdersPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -140,9 +300,9 @@ export default function AdminOrdersPage() {
         setEvents(data.events || []);
       }
       setNote("");
-      showFeedback("success", newStatus ? "Status updated — customer notified" : "Note added");
+      showFeedback("success", newStatus ? t.statusUpdated : t.noteAdded);
     } else {
-      showFeedback("error", "Failed to update order");
+      showFeedback("error", t.updateFailed);
     }
   };
 
@@ -166,12 +326,12 @@ export default function AdminOrdersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Orders</h1>
-          <p className="text-muted-foreground">{orders.length} import orders</p>
+          <h1 className="text-2xl font-bold">{t.title}</h1>
+          <p className="text-muted-foreground">{t.ordersCount(orders.length)}</p>
         </div>
         <Button variant="outline" onClick={fetchOrders}>
           <RefreshCw className="w-4 h-4" />
-          Refresh
+          {t.refresh}
         </Button>
       </div>
 
@@ -197,7 +357,7 @@ export default function AdminOrdersPage() {
               statusFilter === status ? "bg-navy text-white" : "bg-muted text-muted-foreground hover:bg-muted/80",
             )}
           >
-            {status === "all" ? "All" : statusLabel[status]}
+            {status === "all" ? t.all : t.status[status]}
             <span className="ml-2 text-xs opacity-70">({counts[status]})</span>
           </button>
         ))}
@@ -207,7 +367,7 @@ export default function AdminOrdersPage() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search by reference, name, or phone..."
+          placeholder={t.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -217,13 +377,13 @@ export default function AdminOrdersPage() {
       {/* Orders list */}
       <div className="space-y-3">
         {loading ? (
-          <Card><CardContent className="p-12 text-center text-muted-foreground">Loading...</CardContent></Card>
+          <Card><CardContent className="p-12 text-center text-muted-foreground">{t.loading}</CardContent></Card>
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center text-muted-foreground">
               <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>No orders found.</p>
-              <p className="text-sm mt-1">Orders are created automatically when a customer reserves a car.</p>
+              <p>{t.noOrdersFound}</p>
+              <p className="text-sm mt-1">{t.noOrdersHint}</p>
             </CardContent>
           </Card>
         ) : (
@@ -242,7 +402,7 @@ export default function AdminOrdersPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-semibold text-sm">{order.reference_code}</span>
                             <Badge variant={statusVariant[order.status] || "default"}>
-                              {statusLabel[order.status] || order.status}
+                              {t.status[order.status] || order.status}
                             </Badge>
                           </div>
                           <p className="font-semibold mt-1">
@@ -258,7 +418,7 @@ export default function AdminOrdersPage() {
                           {new Date(order.created_at).toLocaleDateString()}
                         </p>
                         {order.amount_usd != null && (
-                          <p className="text-xs text-muted-foreground mt-1">Deposit: <span className="font-mono">${order.amount_usd}</span></p>
+                          <p className="text-xs text-muted-foreground mt-1">{t.deposit}: <span className="font-mono">${order.amount_usd}</span></p>
                         )}
                       </div>
                     </div>
@@ -276,37 +436,37 @@ export default function AdminOrdersPage() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
           <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Order {selected.reference_code}</h2>
+              <h2 className="text-xl font-bold">{t.orderHeading(selected.reference_code)}</h2>
               <Badge variant={statusVariant[selected.status] || "default"}>
-                {statusLabel[selected.status] || selected.status}
+                {t.status[selected.status] || selected.status}
               </Badge>
             </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">Customer</p>
+                  <p className="text-white/40 text-xs">{t.customer}</p>
                   <p className="font-medium text-white">{selected.customer_name}</p>
                 </div>
                 <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">Phone</p>
+                  <p className="text-white/40 text-xs">{t.phone}</p>
                   <p className="font-medium text-white">{selected.customer_phone}</p>
                 </div>
                 <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">Car</p>
+                  <p className="text-white/40 text-xs">{t.car}</p>
                   <p className="font-medium text-white">
                     {carOf(selected) ? `${carOf(selected)!.brand} ${carOf(selected)!.model} ${carOf(selected)!.year}` : "—"}
                   </p>
                 </div>
                 <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">Email</p>
+                  <p className="text-white/40 text-xs">{t.email}</p>
                   <p className="font-medium text-white break-all">{selected.customer_email || "—"}</p>
                 </div>
               </div>
 
               {/* Status changer */}
               <div>
-                <p className="text-sm font-medium mb-2">Advance status (emails the customer)</p>
+                <p className="text-sm font-medium mb-2">{t.advanceStatus}</p>
                 <div className="flex gap-2 flex-wrap">
                   {STATUS_OPTIONS.map((status) => (
                     <button
@@ -320,7 +480,7 @@ export default function AdminOrdersPage() {
                           : "border-border text-muted-foreground hover:bg-muted",
                       )}
                     >
-                      {statusLabel[status]}
+                      {t.status[status]}
                     </button>
                   ))}
                 </div>
@@ -328,12 +488,12 @@ export default function AdminOrdersPage() {
 
               {/* Add a note */}
               <div>
-                <p className="text-sm font-medium mb-2">Add a note to the current status</p>
+                <p className="text-sm font-medium mb-2">{t.addNoteToStatus}</p>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   className="w-full min-h-[72px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
-                  placeholder="e.g. Vehicle cleared customs, ETA 3 days"
+                  placeholder={t.notePlaceholder}
                 />
                 <div className="flex justify-end mt-2">
                   <Button
@@ -342,21 +502,21 @@ export default function AdminOrdersPage() {
                     disabled={saving || !note.trim()}
                     onClick={() => patchOrder(selected.id, { note: note.trim() })}
                   >
-                    Add note
+                    {t.addNote}
                   </Button>
                 </div>
               </div>
 
               {/* Documents (Phase AF) — branded RU/UZ paperwork from this order. */}
               <div>
-                <p className="text-sm font-medium mb-2">Документы</p>
+                <p className="text-sm font-medium mb-2">{t.documents}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {([
-                    ["sales_contract", "Договор"],
-                    ["proforma_invoice", "Проформа"],
-                    ["deposit_receipt", "Квитанция"],
-                    ["handover_act", "Акт п/п"],
-                    ["warranty_certificate", "Гарантия"],
+                    ["sales_contract", t.docContract],
+                    ["proforma_invoice", t.docProforma],
+                    ["deposit_receipt", t.docReceipt],
+                    ["handover_act", t.docHandover],
+                    ["warranty_certificate", t.docWarranty],
                   ] as const).map(([type, label]) => (
                     <a
                       key={type}
@@ -369,21 +529,21 @@ export default function AdminOrdersPage() {
                     </a>
                   ))}
                 </div>
-                <p className="mt-1 text-[10px] text-white/40">Открывается для печати / сохранения в PDF. Черновик — проверьте перед подписанием.</p>
+                <p className="mt-1 text-[10px] text-white/40">{t.documentsHint}</p>
               </div>
 
               {/* Event history */}
               <div>
-                <p className="text-sm font-medium mb-2">History</p>
+                <p className="text-sm font-medium mb-2">{t.history}</p>
                 {events.length === 0 ? (
-                  <p className="text-xs text-white/40">No events yet.</p>
+                  <p className="text-xs text-white/40">{t.noEvents}</p>
                 ) : (
                   <div className="space-y-2">
                     {events.map((ev) => (
                       <div key={ev.id} className="flex items-start gap-2 text-sm bg-white/[0.03] rounded-lg p-3">
                         <Clock className="w-3.5 h-3.5 text-white/40 mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-white/80">{statusLabel[ev.status] || ev.status}</p>
+                          <p className="text-white/80">{t.status[ev.status] || ev.status}</p>
                           {ev.note && (
                             <p className="text-xs text-white/50 mt-0.5 flex items-start gap-1">
                               <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
@@ -399,11 +559,11 @@ export default function AdminOrdersPage() {
               </div>
 
               <div className="flex justify-between pt-4 border-t border-white/10">
-                <Button variant="outline" onClick={() => setSelected(null)}>Close</Button>
+                <Button variant="outline" onClick={() => setSelected(null)}>{t.close}</Button>
                 <Button asChild>
                   <a href={`tel:${selected.customer_phone}`}>
                     <Phone className="w-4 h-4" />
-                    Call
+                    {t.call}
                   </a>
                 </Button>
               </div>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Factory, Loader2, Plus } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Supplier {
   id: string;
@@ -19,7 +21,71 @@ interface Supplier {
   shipments_tracked: number;
 }
 
+const COPY: Record<Locale, {
+  title: string;
+  supplierNamePlaceholder: string;
+  whatsappPlaceholder: string;
+  add: string;
+  loading: string;
+  noSuppliers: string;
+  thSupplier: string;
+  thCountry: string;
+  thOrders: string;
+  thAvgCost: string;
+  thOnTime: string;
+  thLeadMoq: string;
+  thWhatsapp: string;
+}> = {
+  ru: {
+    title: "Поставщики",
+    supplierNamePlaceholder: "Название поставщика",
+    whatsappPlaceholder: "WhatsApp (необязательно)",
+    add: "Добавить",
+    loading: "Загрузка…",
+    noSuppliers: "Пока нет поставщиков. Добавьте одного выше, или они появятся по мере регистрации заказов на закупку.",
+    thSupplier: "Поставщик",
+    thCountry: "Страна",
+    thOrders: "Заказы",
+    thAvgCost: "Сред. цена",
+    thOnTime: "В срок",
+    thLeadMoq: "Срок / MOQ",
+    thWhatsapp: "WhatsApp",
+  },
+  uz: {
+    title: "Yetkazib beruvchilar",
+    supplierNamePlaceholder: "Yetkazib beruvchi nomi",
+    whatsappPlaceholder: "WhatsApp (ixtiyoriy)",
+    add: "Qo'shish",
+    loading: "Yuklanmoqda…",
+    noSuppliers: "Hozircha yetkazib beruvchilar yo'q. Yuqorida bittasini qo'shing yoki ular xarid buyurtmalarini qayd etganingizda paydo bo'ladi.",
+    thSupplier: "Yetkazib beruvchi",
+    thCountry: "Davlat",
+    thOrders: "Buyurtmalar",
+    thAvgCost: "O'rt. narx",
+    thOnTime: "O'z vaqtida",
+    thLeadMoq: "Muddat / MOQ",
+    thWhatsapp: "WhatsApp",
+  },
+  en: {
+    title: "Suppliers",
+    supplierNamePlaceholder: "Supplier name",
+    whatsappPlaceholder: "WhatsApp (optional)",
+    add: "Add",
+    loading: "Loading…",
+    noSuppliers: "No suppliers yet. Add one above, or they’ll appear as you log purchase orders.",
+    thSupplier: "Supplier",
+    thCountry: "Country",
+    thOrders: "Orders",
+    thAvgCost: "Avg cost",
+    thOnTime: "On-time",
+    thLeadMoq: "Lead / MOQ",
+    thWhatsapp: "WhatsApp",
+  },
+};
+
 export default function AdminSuppliersPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -61,20 +127,20 @@ export default function AdminSuppliersPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Factory className="h-5 w-5 text-lime" />
-        <h1 className="text-xl font-bold">Suppliers</h1>
+        <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
       <div className="flex flex-wrap items-end gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Supplier name"
+          placeholder={t.supplierNamePlaceholder}
           className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm"
         />
         <input
           value={whatsapp}
           onChange={(e) => setWhatsapp(e.target.value)}
-          placeholder="WhatsApp (optional)"
+          placeholder={t.whatsappPlaceholder}
           className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm"
         />
         <button
@@ -82,28 +148,28 @@ export default function AdminSuppliersPage() {
           disabled={adding || !name.trim()}
           className="inline-flex items-center gap-1 rounded bg-lime px-3 py-2 text-sm font-medium text-navy disabled:opacity-50"
         >
-          <Plus className="h-4 w-4" /> Add
+          <Plus className="h-4 w-4" /> {t.add}
         </button>
       </div>
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/60">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-white/50 text-sm">No suppliers yet. Add one above, or they’ll appear as you log purchase orders.</p>
+        <p className="text-white/50 text-sm">{t.noSuppliers}</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
           <table className="w-full text-sm">
             <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
               <tr>
-                <th className="px-3 py-2">Supplier</th>
-                <th className="px-3 py-2">Country</th>
-                <th className="px-3 py-2">Orders</th>
-                <th className="px-3 py-2">Avg cost</th>
-                <th className="px-3 py-2">On-time</th>
-                <th className="px-3 py-2">Lead / MOQ</th>
-                <th className="px-3 py-2">WhatsApp</th>
+                <th className="px-3 py-2">{t.thSupplier}</th>
+                <th className="px-3 py-2">{t.thCountry}</th>
+                <th className="px-3 py-2">{t.thOrders}</th>
+                <th className="px-3 py-2">{t.thAvgCost}</th>
+                <th className="px-3 py-2">{t.thOnTime}</th>
+                <th className="px-3 py-2">{t.thLeadMoq}</th>
+                <th className="px-3 py-2">{t.thWhatsapp}</th>
               </tr>
             </thead>
             <tbody>

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { LineChart, Loader2, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface ModelRow {
   brand: string;
@@ -29,7 +31,81 @@ interface Data {
 
 const usd = (n: number) => "$" + Math.round(n).toLocaleString("en-US");
 
+const COPY: Record<Locale, {
+  title: string; intro: string; noData: string; noOrders: string;
+  costsRising: string; latest: string; vsAvg: string; costHistoryByModel: string;
+  bySupplier: string; model: string; pos: string; min: string; avg: string;
+  max: string; latestCol: string; trend: string; supplier: string; models: string;
+  avgUnitCost: string;
+}> = {
+  ru: {
+    title: "Аналитика поставщиков",
+    intro: "Динамика затрат по вашим заказам на закупку — выявляйте рост цен и самые выгодные источники. Накапливается по мере учёта закупок.",
+    noData: "Нет данных по поставщикам.",
+    noOrders: "Пока нет заказов на закупку с указанной себестоимостью — добавьте их в разделе «Закупки».",
+    costsRising: "Затраты растут",
+    latest: "последняя",
+    vsAvg: "против средней",
+    costHistoryByModel: "История затрат по моделям",
+    bySupplier: "По поставщикам",
+    model: "Модель",
+    pos: "Заказы",
+    min: "Мин",
+    avg: "Сред",
+    max: "Макс",
+    latestCol: "Последняя",
+    trend: "Динамика",
+    supplier: "Поставщик",
+    models: "Модели",
+    avgUnitCost: "Сред. себестоимость",
+  },
+  uz: {
+    title: "Yetkazib beruvchilar tahlili",
+    intro: "Xarid buyurtmalaringiz bo'yicha xarajatlar dinamikasi — narx o'sishini va eng arzon manbalarni aniqlang. Xaridlarni hisobga olgan sari to'planadi.",
+    noData: "Yetkazib beruvchilar bo'yicha ma'lumot yo'q.",
+    noOrders: "Hozircha tannarxi ko'rsatilgan xarid buyurtmalari yo'q — ularni «Xaridlar» bo'limida qo'shing.",
+    costsRising: "Xarajatlar oshmoqda",
+    latest: "oxirgi",
+    vsAvg: "o'rtachaga nisbatan",
+    costHistoryByModel: "Modellar bo'yicha xarajatlar tarixi",
+    bySupplier: "Yetkazib beruvchilar bo'yicha",
+    model: "Model",
+    pos: "Buyurtmalar",
+    min: "Min",
+    avg: "O'rtacha",
+    max: "Maks",
+    latestCol: "Oxirgi",
+    trend: "Dinamika",
+    supplier: "Yetkazib beruvchi",
+    models: "Modellar",
+    avgUnitCost: "O'rt. tannarx",
+  },
+  en: {
+    title: "Supplier intelligence",
+    intro: "Cost trends from your purchase orders — spot rising prices and your cheapest sources. Builds as you log more procurement.",
+    noData: "No supplier data.",
+    noOrders: "No purchase orders with a unit cost yet — add some in Procurement.",
+    costsRising: "Costs rising",
+    latest: "latest",
+    vsAvg: "vs avg",
+    costHistoryByModel: "Cost history by model",
+    bySupplier: "By supplier",
+    model: "Model",
+    pos: "POs",
+    min: "Min",
+    avg: "Avg",
+    max: "Max",
+    latestCol: "Latest",
+    trend: "Trend",
+    supplier: "Supplier",
+    models: "Models",
+    avgUnitCost: "Avg unit cost",
+  },
+};
+
 export default function AdminSupplierIntelPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,31 +121,30 @@ export default function AdminSupplierIntelPage() {
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-1">
         <LineChart className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-foreground">Supplier intelligence</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        Cost trends from your purchase orders — spot rising prices and your cheapest sources.
-        Builds as you log more procurement.
+        {t.intro}
       </p>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : !data ? (
-        <p className="text-sm text-muted-foreground">No supplier data.</p>
+        <p className="text-sm text-muted-foreground">{t.noData}</p>
       ) : data.totalOrders === 0 ? (
-        <p className="text-sm text-muted-foreground">No purchase orders with a unit cost yet — add some in Procurement.</p>
+        <p className="text-sm text-muted-foreground">{t.noOrders}</p>
       ) : (
         <div className="space-y-8">
           {/* Rising-cost alerts */}
           {data.alerts.length > 0 && (
             <div className="bg-[rgba(192,106,92,0.10)] border border-[var(--danger)] p-4">
               <p className="text-sm font-medium text-[var(--danger)] flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4" /> Costs rising
+                <AlertTriangle className="w-4 h-4" /> {t.costsRising}
               </p>
               <ul className="space-y-1 text-sm text-foreground">
                 {data.alerts.map((m) => (
                   <li key={`${m.brand}-${m.model}`} className="font-mono">
-                    {m.brand} {m.model}: latest {usd(m.latestCost)} vs avg {usd(m.avgCost)} (+{m.trendPct}%)
+                    {m.brand} {m.model}: {t.latest} {usd(m.latestCost)} {t.vsAvg} {usd(m.avgCost)} (+{m.trendPct}%)
                   </li>
                 ))}
               </ul>
@@ -78,17 +153,17 @@ export default function AdminSupplierIntelPage() {
 
           {/* Per-model cost history */}
           <div className="bg-card border border-border overflow-x-auto">
-            <div className="px-4 py-3 border-b border-border"><h2 className="font-semibold text-foreground">Cost history by model</h2></div>
+            <div className="px-4 py-3 border-b border-border"><h2 className="font-semibold text-foreground">{t.costHistoryByModel}</h2></div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="px-4 py-2 font-medium">Model</th>
-                  <th className="px-4 py-2 font-medium text-right">POs</th>
-                  <th className="px-4 py-2 font-medium text-right">Min</th>
-                  <th className="px-4 py-2 font-medium text-right">Avg</th>
-                  <th className="px-4 py-2 font-medium text-right">Max</th>
-                  <th className="px-4 py-2 font-medium text-right">Latest</th>
-                  <th className="px-4 py-2 font-medium text-right">Trend</th>
+                  <th className="px-4 py-2 font-medium">{t.model}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.pos}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.min}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.avg}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.max}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.latestCol}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.trend}</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,14 +189,14 @@ export default function AdminSupplierIntelPage() {
 
           {/* Per-supplier */}
           <div className="bg-card border border-border overflow-x-auto">
-            <div className="px-4 py-3 border-b border-border"><h2 className="font-semibold text-foreground">By supplier</h2></div>
+            <div className="px-4 py-3 border-b border-border"><h2 className="font-semibold text-foreground">{t.bySupplier}</h2></div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="px-4 py-2 font-medium">Supplier</th>
-                  <th className="px-4 py-2 font-medium text-right">POs</th>
-                  <th className="px-4 py-2 font-medium text-right">Models</th>
-                  <th className="px-4 py-2 font-medium text-right">Avg unit cost</th>
+                  <th className="px-4 py-2 font-medium">{t.supplier}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.pos}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.models}</th>
+                  <th className="px-4 py-2 font-medium text-right">{t.avgUnitCost}</th>
                 </tr>
               </thead>
               <tbody>

@@ -2,6 +2,54 @@
 
 import { useEffect, useState } from "react";
 import { Users, Loader2 } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  title: string;
+  loading: string;
+  empty: string;
+  colRep: string;
+  colRole: string;
+  colAssigned: string;
+  colClosed: string;
+  colCloseRate: string;
+  colCommission: string;
+}> = {
+  ru: {
+    title: "Команда",
+    loading: "Загрузка…",
+    empty: "Пока нет сотрудников с назначенными лидами.",
+    colRep: "Менеджер",
+    colRole: "Роль",
+    colAssigned: "Назначено",
+    colClosed: "Закрыто",
+    colCloseRate: "Конверсия",
+    colCommission: "Комиссия (начислено / выплачено)",
+  },
+  uz: {
+    title: "Jamoa",
+    loading: "Yuklanmoqda…",
+    empty: "Hozircha tayinlangan lidlarga ega xodimlar yoʻq.",
+    colRep: "Menejer",
+    colRole: "Rol",
+    colAssigned: "Tayinlangan",
+    colClosed: "Yopilgan",
+    colCloseRate: "Konversiya",
+    colCommission: "Komissiya (hisoblangan / toʻlangan)",
+  },
+  en: {
+    title: "Team",
+    loading: "Loading…",
+    empty: "No team members with assigned leads yet.",
+    colRep: "Rep",
+    colRole: "Role",
+    colAssigned: "Assigned",
+    colClosed: "Closed",
+    colCloseRate: "Close rate",
+    colCommission: "Commission (accrued / paid)",
+  },
+};
 
 interface TeamRow {
   id: string;
@@ -15,6 +63,8 @@ interface TeamRow {
 }
 
 export default function AdminTeamPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,26 +84,26 @@ export default function AdminTeamPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Users className="h-5 w-5 text-lime" />
-        <h1 className="text-xl font-bold">Team</h1>
+        <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/60">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-white/50 text-sm">No team members with assigned leads yet.</p>
+        <p className="text-white/50 text-sm">{t.empty}</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-white/10">
           <table className="w-full text-sm">
             <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
               <tr>
-                <th className="px-3 py-2">Rep</th>
-                <th className="px-3 py-2">Role</th>
-                <th className="px-3 py-2">Assigned</th>
-                <th className="px-3 py-2">Closed</th>
-                <th className="px-3 py-2">Close rate</th>
-                <th className="px-3 py-2">Commission (accrued / paid)</th>
+                <th className="px-3 py-2">{t.colRep}</th>
+                <th className="px-3 py-2">{t.colRole}</th>
+                <th className="px-3 py-2">{t.colAssigned}</th>
+                <th className="px-3 py-2">{t.colClosed}</th>
+                <th className="px-3 py-2">{t.colCloseRate}</th>
+                <th className="px-3 py-2">{t.colCommission}</th>
               </tr>
             </thead>
             <tbody>

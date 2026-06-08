@@ -6,6 +6,202 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  analytics: string;
+  lastUpdated: string;
+  inventoryInsights: string;
+  refresh: string;
+  loadingStats: string;
+  statusNew: string;
+  statusContacted: string;
+  statusInProgress: string;
+  statusClosed: string;
+  funnelInquiries: string;
+  funnelReservations: string;
+  funnelDepositsPaid: string;
+  funnelDelivered: string;
+  ofPrev: string;
+  uzsSuffix: string;
+  totalCars: string;
+  available: string;
+  hotOffers: string;
+  inquiries: string;
+  new: string;
+  reviews: string;
+  pending: string;
+  faqs: string;
+  inquiriesLast30: string;
+  total: string;
+  closedConverted: string;
+  revenueFunnel: string;
+  lastNDays: string;
+  depositsCollected: string;
+  totalNd: string;
+  leadsBySource: string;
+  noLeadData: string;
+  salespersonCloseRate: string;
+  noAssignedInquiries: string;
+  rep: string;
+  closed: string;
+  rate: string;
+  averagePrice: string;
+  lowestPrice: string;
+  highestPrice: string;
+  carsByBrand: string;
+  carsByBodyType: string;
+  fuelTypeDistribution: string;
+  inquiryFunnel: string;
+  conversionRate: string;
+  dailyInquiries: string;
+}> = {
+  ru: {
+    analytics: "Аналитика",
+    lastUpdated: "Обновлено",
+    inventoryInsights: "Аналитика по складу и заявкам",
+    refresh: "Обновить",
+    loadingStats: "Загрузка статистики...",
+    statusNew: "Новая",
+    statusContacted: "Связались",
+    statusInProgress: "В работе",
+    statusClosed: "Закрыта",
+    funnelInquiries: "Заявки",
+    funnelReservations: "Брони",
+    funnelDepositsPaid: "Депозиты внесены",
+    funnelDelivered: "Доставлено",
+    ofPrev: "от пред.",
+    uzsSuffix: "сум",
+    totalCars: "Всего авто",
+    available: "В наличии",
+    hotOffers: "Горячие предложения",
+    inquiries: "Заявки",
+    new: "новых",
+    reviews: "Отзывы",
+    pending: "на модерации",
+    faqs: "FAQ",
+    inquiriesLast30: "Заявки — последние 30 дней",
+    total: "Всего",
+    closedConverted: "Закрыто (конверсия)",
+    revenueFunnel: "Воронка выручки — последние",
+    lastNDays: "дн.",
+    depositsCollected: "Собрано депозитов",
+    totalNd: "Всего",
+    leadsBySource: "Лиды по источникам",
+    noLeadData: "Данных по лидам пока нет.",
+    salespersonCloseRate: "Конверсия по менеджерам",
+    noAssignedInquiries: "Назначенных заявок пока нет.",
+    rep: "Менеджер",
+    closed: "Закрыто",
+    rate: "Конв.",
+    averagePrice: "Средняя цена",
+    lowestPrice: "Минимальная цена",
+    highestPrice: "Максимальная цена",
+    carsByBrand: "Авто по маркам",
+    carsByBodyType: "Авто по типу кузова",
+    fuelTypeDistribution: "Распределение по типу топлива",
+    inquiryFunnel: "Воронка заявок",
+    conversionRate: "Конверсия",
+    dailyInquiries: "Заявки по дням",
+  },
+  uz: {
+    analytics: "Analitika",
+    lastUpdated: "Yangilangan",
+    inventoryInsights: "Ombor va so'rovlar bo'yicha tahlil",
+    refresh: "Yangilash",
+    loadingStats: "Statistika yuklanmoqda...",
+    statusNew: "Yangi",
+    statusContacted: "Bog'lanildi",
+    statusInProgress: "Jarayonda",
+    statusClosed: "Yopilgan",
+    funnelInquiries: "So'rovlar",
+    funnelReservations: "Bronlar",
+    funnelDepositsPaid: "Depozitlar to'langan",
+    funnelDelivered: "Yetkazilgan",
+    ofPrev: "oldingidan",
+    uzsSuffix: "so'm",
+    totalCars: "Jami avtomobillar",
+    available: "Mavjud",
+    hotOffers: "Issiq takliflar",
+    inquiries: "So'rovlar",
+    new: "yangi",
+    reviews: "Sharhlar",
+    pending: "moderatsiyada",
+    faqs: "FAQ",
+    inquiriesLast30: "So'rovlar — so'nggi 30 kun",
+    total: "Jami",
+    closedConverted: "Yopilgan (konversiya)",
+    revenueFunnel: "Daromad voronkasi — so'nggi",
+    lastNDays: "kun",
+    depositsCollected: "Yig'ilgan depozitlar",
+    totalNd: "Jami",
+    leadsBySource: "Lidlar manba bo'yicha",
+    noLeadData: "Hozircha lid ma'lumotlari yo'q.",
+    salespersonCloseRate: "Menejerlar bo'yicha konversiya",
+    noAssignedInquiries: "Hozircha biriktirilgan so'rovlar yo'q.",
+    rep: "Menejer",
+    closed: "Yopilgan",
+    rate: "Konv.",
+    averagePrice: "O'rtacha narx",
+    lowestPrice: "Eng past narx",
+    highestPrice: "Eng yuqori narx",
+    carsByBrand: "Avtomobillar markalar bo'yicha",
+    carsByBodyType: "Avtomobillar kuzov turi bo'yicha",
+    fuelTypeDistribution: "Yoqilg'i turi bo'yicha taqsimot",
+    inquiryFunnel: "So'rovlar voronkasi",
+    conversionRate: "Konversiya",
+    dailyInquiries: "Kunlik so'rovlar",
+  },
+  en: {
+    analytics: "Analytics",
+    lastUpdated: "Last updated",
+    inventoryInsights: "Inventory and inquiry insights",
+    refresh: "Refresh",
+    loadingStats: "Loading stats...",
+    statusNew: "New",
+    statusContacted: "Contacted",
+    statusInProgress: "In Progress",
+    statusClosed: "Closed",
+    funnelInquiries: "Inquiries",
+    funnelReservations: "Reservations",
+    funnelDepositsPaid: "Deposits Paid",
+    funnelDelivered: "Delivered",
+    ofPrev: "of prev",
+    uzsSuffix: "сум",
+    totalCars: "Total Cars",
+    available: "Available",
+    hotOffers: "Hot Offers",
+    inquiries: "Inquiries",
+    new: "new",
+    reviews: "Reviews",
+    pending: "pending",
+    faqs: "FAQs",
+    inquiriesLast30: "Inquiries — last 30 days",
+    total: "Total",
+    closedConverted: "Closed (converted)",
+    revenueFunnel: "Revenue Funnel — last",
+    lastNDays: "days",
+    depositsCollected: "Deposits Collected",
+    totalNd: "Total",
+    leadsBySource: "Leads by Source",
+    noLeadData: "No lead data yet.",
+    salespersonCloseRate: "Salesperson Close Rate",
+    noAssignedInquiries: "No assigned inquiries yet.",
+    rep: "Rep",
+    closed: "Closed",
+    rate: "Rate",
+    averagePrice: "Average Price",
+    lowestPrice: "Lowest Price",
+    highestPrice: "Highest Price",
+    carsByBrand: "Cars by Brand",
+    carsByBodyType: "Cars by Body Type",
+    fuelTypeDistribution: "Fuel Type Distribution",
+    inquiryFunnel: "Inquiry Funnel",
+    conversionRate: "Conversion Rate",
+    dailyInquiries: "Daily inquiries",
+  },
+};
 
 interface StatsData {
   cars: {
@@ -47,11 +243,11 @@ const fuelSvgColors: Record<string, string> = {
   diesel: "#f97316",
 };
 
-const inquiryStatusConfig = [
-  { key: "new", label: "New", color: "bg-neon-blue/20 text-neon-blue border-neon-blue/30" },
-  { key: "contacted", label: "Contacted", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  { key: "in_progress", label: "In Progress", color: "bg-neon-purple/20 text-neon-purple border-neon-purple/30" },
-  { key: "closed", label: "Closed", color: "bg-green-500/20 text-green-400 border-green-500/30" },
+const inquiryStatusConfig: { key: string; labelKey: "statusNew" | "statusContacted" | "statusInProgress" | "statusClosed"; color: string }[] = [
+  { key: "new", labelKey: "statusNew", color: "bg-neon-blue/20 text-neon-blue border-neon-blue/30" },
+  { key: "contacted", labelKey: "statusContacted", color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
+  { key: "in_progress", labelKey: "statusInProgress", color: "bg-neon-purple/20 text-neon-purple border-neon-purple/30" },
+  { key: "closed", labelKey: "statusClosed", color: "bg-green-500/20 text-green-400 border-green-500/30" },
 ];
 
 function StatCard({ icon: Icon, label, value, sub, color }: {
@@ -88,17 +284,17 @@ interface FunnelData {
   bySalesperson: Array<{ id: string; label: string; total: number; closed: number; closeRate: number }>;
 }
 
-function formatUzs(n: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " сум";
+function formatUzs(n: number, suffix = "сум"): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n)) + " " + suffix;
 }
 
 /** Revenue + conversion funnel: inquiries → reservations → deposits → delivered. */
-function FunnelBars({ funnel }: { funnel: FunnelData["funnel"] }) {
+function FunnelBars({ funnel, t }: { funnel: FunnelData["funnel"]; t: (typeof COPY)[Locale] }) {
   const stages = [
-    { key: "inquiries", label: "Inquiries", value: funnel.inquiries, color: "from-neon-blue to-neon-blue" },
-    { key: "reservations", label: "Reservations", value: funnel.reservations, color: "from-neon-blue to-neon-blue" },
-    { key: "depositsPaid", label: "Deposits Paid", value: funnel.depositsPaid, color: "from-neon-purple to-neon-purple" },
-    { key: "delivered", label: "Delivered", value: funnel.delivered, color: "from-green-600 to-green-400" },
+    { key: "inquiries", label: t.funnelInquiries, value: funnel.inquiries, color: "from-neon-blue to-neon-blue" },
+    { key: "reservations", label: t.funnelReservations, value: funnel.reservations, color: "from-neon-blue to-neon-blue" },
+    { key: "depositsPaid", label: t.funnelDepositsPaid, value: funnel.depositsPaid, color: "from-neon-purple to-neon-purple" },
+    { key: "delivered", label: t.funnelDelivered, value: funnel.delivered, color: "from-green-600 to-green-400" },
   ];
   const top = Math.max(1, funnel.inquiries);
   return (
@@ -113,7 +309,7 @@ function FunnelBars({ funnel }: { funnel: FunnelData["funnel"] }) {
               <span className="font-medium">{s.label}</span>
               <span className="font-bold">
                 {s.value}
-                {i > 0 && <span className="text-muted-foreground font-normal text-xs ml-2">{stepPct}% of prev</span>}
+                {i > 0 && <span className="text-muted-foreground font-normal text-xs ml-2">{stepPct}% {t.ofPrev}</span>}
               </span>
             </div>
             <div className="h-3 bg-white/[0.04] rounded-full overflow-hidden">
@@ -130,14 +326,14 @@ function FunnelBars({ funnel }: { funnel: FunnelData["funnel"] }) {
 }
 
 /** Daily deposit volume (UZS) over the window — simple bar chart. */
-function DepositsChart({ points }: { points: FunnelData["deposits"] }) {
+function DepositsChart({ points, uzsSuffix }: { points: FunnelData["deposits"]; uzsSuffix: string }) {
   if (points.length === 0) return null;
   const maxUzs = Math.max(1, ...points.map((p) => p.uzs));
   return (
     <div>
       <div className="flex items-end gap-0.5 h-32">
         {points.map((p) => (
-          <div key={p.date} className="flex-1 flex flex-col justify-end group relative" title={`${p.date}: ${formatUzs(p.uzs)} (${p.count})`}>
+          <div key={p.date} className="flex-1 flex flex-col justify-end group relative" title={`${p.date}: ${formatUzs(p.uzs, uzsSuffix)} (${p.count})`}>
             <div
               className="w-full bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t transition-all"
               style={{ height: `${(p.uzs / maxUzs) * 100}%`, minHeight: p.uzs > 0 ? "2px" : "0" }}
@@ -153,7 +349,7 @@ function DepositsChart({ points }: { points: FunnelData["deposits"] }) {
   );
 }
 
-function InquiriesTimeseriesChart({ points }: { points: TimeseriesPoint[] }) {
+function InquiriesTimeseriesChart({ points, ariaLabel }: { points: TimeseriesPoint[]; ariaLabel: string }) {
   if (points.length === 0) return null;
   const width = 640;
   const height = 180;
@@ -179,7 +375,7 @@ function InquiriesTimeseriesChart({ points }: { points: TimeseriesPoint[] }) {
       className="w-full h-auto"
       preserveAspectRatio="none"
       role="img"
-      aria-label="Daily inquiries"
+      aria-label={ariaLabel}
     >
       {/* gridlines */}
       {[0, 0.5, 1].map((t) => (
@@ -209,6 +405,8 @@ function InquiriesTimeseriesChart({ points }: { points: TimeseriesPoint[] }) {
 }
 
 export default function AdminAnalyticsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeseries, setTimeseries] = useState<TimeseriesPoint[]>([]);
@@ -235,7 +433,7 @@ export default function AdminAnalyticsPage() {
   if (loading && !stats) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Analytics</h1>
+        <h1 className="text-2xl font-bold">{t.analytics}</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-32 bg-muted rounded-2xl animate-pulse" />
@@ -243,7 +441,7 @@ export default function AdminAnalyticsPage() {
         </div>
         <div className="flex items-center justify-center py-8 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Loading stats...
+          {t.loadingStats}
         </div>
       </div>
     );
@@ -269,27 +467,27 @@ export default function AdminAnalyticsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Analytics</h1>
+          <h1 className="text-2xl font-bold">{t.analytics}</h1>
           <p className="text-muted-foreground text-sm">
             {stats.generatedAt
-              ? `Last updated: ${new Date(stats.generatedAt).toLocaleString()}`
-              : "Inventory and inquiry insights"}
+              ? `${t.lastUpdated}: ${new Date(stats.generatedAt).toLocaleString()}`
+              : t.inventoryInsights}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchStats} disabled={loading}>
           <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-          Refresh
+          {t.refresh}
         </Button>
       </div>
 
       {/* Top KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard icon={BarChart3} label="Total Cars" value={stats.cars.total} color="bg-neon-blue/20 text-neon-blue" />
-        <StatCard icon={TrendingUp} label="Available" value={stats.cars.available} sub={`${Math.round((stats.cars.available / stats.cars.total) * 100)}%`} color="bg-green-500/20 text-green-400" />
-        <StatCard icon={DollarSign} label="Hot Offers" value={stats.cars.hotOffers} color="bg-orange-500/20 text-orange-400" />
-        <StatCard icon={MessageSquare} label="Inquiries" value={inquiryTotal} sub={`${stats.inquiries.new} new`} color="bg-neon-purple/20 text-neon-purple" />
-        <StatCard icon={Star} label="Reviews" value={stats.reviews.total} sub={stats.reviews.pending > 0 ? `${stats.reviews.pending} pending` : undefined} color="bg-yellow-500/20 text-yellow-400" />
-        <StatCard icon={HelpCircle} label="FAQs" value={stats.faqs.total} color="bg-teal-500/20 text-teal-400" />
+        <StatCard icon={BarChart3} label={t.totalCars} value={stats.cars.total} color="bg-neon-blue/20 text-neon-blue" />
+        <StatCard icon={TrendingUp} label={t.available} value={stats.cars.available} sub={`${Math.round((stats.cars.available / stats.cars.total) * 100)}%`} color="bg-green-500/20 text-green-400" />
+        <StatCard icon={DollarSign} label={t.hotOffers} value={stats.cars.hotOffers} color="bg-orange-500/20 text-orange-400" />
+        <StatCard icon={MessageSquare} label={t.inquiries} value={inquiryTotal} sub={`${stats.inquiries.new} ${t.new}`} color="bg-neon-purple/20 text-neon-purple" />
+        <StatCard icon={Star} label={t.reviews} value={stats.reviews.total} sub={stats.reviews.pending > 0 ? `${stats.reviews.pending} ${t.pending}` : undefined} color="bg-yellow-500/20 text-yellow-400" />
+        <StatCard icon={HelpCircle} label={t.faqs} value={stats.faqs.total} color="bg-teal-500/20 text-teal-400" />
       </div>
 
       {/* 30-day inquiry timeseries */}
@@ -298,14 +496,14 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="w-4 h-4" />
-              Inquiries — last 30 days
+              {t.inquiriesLast30}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <InquiriesTimeseriesChart points={timeseries} />
+            <InquiriesTimeseriesChart points={timeseries} ariaLabel={t.dailyInquiries} />
             <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neon-blue inline-block" /> Total</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Closed (converted)</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-neon-blue inline-block" /> {t.total}</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> {t.closedConverted}</span>
             </div>
           </CardContent>
         </Card>
@@ -320,11 +518,11 @@ export default function AdminAnalyticsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <TrendingUp className="w-4 h-4" />
-                  Revenue Funnel — last {funnel.days} days
+                  {t.revenueFunnel} {funnel.days} {t.lastNDays}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <FunnelBars funnel={funnel.funnel} />
+                <FunnelBars funnel={funnel.funnel} t={t} />
               </CardContent>
             </Card>
 
@@ -333,14 +531,14 @@ export default function AdminAnalyticsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Wallet className="w-4 h-4" />
-                  Deposits Collected
+                  {t.depositsCollected}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <DepositsChart points={funnel.deposits} />
+                <DepositsChart points={funnel.deposits} uzsSuffix={t.uzsSuffix} />
                 <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Total ({funnel.days}d)</span>
-                  <span className="font-bold text-emerald-400">{formatUzs(funnel.depositsTotalUzs)}</span>
+                  <span className="text-muted-foreground">{t.totalNd} ({funnel.days}d)</span>
+                  <span className="font-bold text-emerald-400">{formatUzs(funnel.depositsTotalUzs, t.uzsSuffix)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -352,12 +550,12 @@ export default function AdminAnalyticsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Filter className="w-4 h-4" />
-                  Leads by Source
+                  {t.leadsBySource}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {funnel.bySource.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No lead data yet.</p>
+                  <p className="text-sm text-muted-foreground py-4 text-center">{t.noLeadData}</p>
                 ) : (
                   <div className="space-y-2.5">
                     {(() => {
@@ -386,19 +584,19 @@ export default function AdminAnalyticsPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Users className="w-4 h-4" />
-                  Salesperson Close Rate
+                  {t.salespersonCloseRate}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {funnel.bySalesperson.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No assigned inquiries yet.</p>
+                  <p className="text-sm text-muted-foreground py-4 text-center">{t.noAssignedInquiries}</p>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex items-center text-xs text-muted-foreground px-1">
-                      <span className="flex-1">Rep</span>
-                      <span className="w-16 text-right">Total</span>
-                      <span className="w-16 text-right">Closed</span>
-                      <span className="w-16 text-right">Rate</span>
+                      <span className="flex-1">{t.rep}</span>
+                      <span className="w-16 text-right">{t.total}</span>
+                      <span className="w-16 text-right">{t.closed}</span>
+                      <span className="w-16 text-right">{t.rate}</span>
                     </div>
                     {funnel.bySalesperson.map((rep) => (
                       <div key={rep.id} className="flex items-center text-sm py-1.5 border-t border-white/5">
@@ -423,19 +621,19 @@ export default function AdminAnalyticsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground mb-1">Average Price</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.averagePrice}</p>
             <p className="text-xl font-bold">{formatPrice(stats.cars.avgPrice)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground mb-1">Lowest Price</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.lowestPrice}</p>
             <p className="text-xl font-bold text-green-400">{formatPrice(stats.cars.minPrice)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-5">
-            <p className="text-xs text-muted-foreground mb-1">Highest Price</p>
+            <p className="text-xs text-muted-foreground mb-1">{t.highestPrice}</p>
             <p className="text-xl font-bold text-neon-purple">{formatPrice(stats.cars.maxPrice)}</p>
           </CardContent>
         </Card>
@@ -447,7 +645,7 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="w-4 h-4" />
-              Cars by Brand
+              {t.carsByBrand}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -474,7 +672,7 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <BarChart3 className="w-4 h-4" />
-              Cars by Body Type
+              {t.carsByBodyType}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -501,7 +699,7 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <PieChart className="w-4 h-4" />
-              Fuel Type Distribution
+              {t.fuelTypeDistribution}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -555,18 +753,18 @@ export default function AdminAnalyticsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <MessageSquare className="w-4 h-4" />
-              Inquiry Funnel
+              {t.inquiryFunnel}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {inquiryStatusConfig.map(({ key, label, color }) => {
+              {inquiryStatusConfig.map(({ key, labelKey, color }) => {
                 const count = stats.inquiries[key as keyof typeof stats.inquiries] as number || 0;
                 const pct = inquiryTotal > 0 ? Math.round((count / inquiryTotal) * 100) : 0;
                 return (
                   <div key={key}>
                     <div className="flex items-center justify-between text-sm mb-1">
-                      <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", color)}>{label}</span>
+                      <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", color)}>{t[labelKey]}</span>
                       <span className="font-bold">{count} <span className="text-muted-foreground font-normal text-xs">({pct}%)</span></span>
                     </div>
                     <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
@@ -579,7 +777,7 @@ export default function AdminAnalyticsPage() {
                 );
               })}
               <div className="pt-2 border-t border-white/10 flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Conversion Rate</span>
+                <span className="text-muted-foreground">{t.conversionRate}</span>
                 <span className="font-bold text-green-400">{conversionRate}%</span>
               </div>
             </div>

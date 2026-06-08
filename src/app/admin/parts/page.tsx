@@ -10,7 +10,317 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MediaImporter } from "@/components/admin/media-importer";
 import { cn } from "@/lib/utils";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 import type { Part, PartCategory } from "@/types/part";
+
+const COPY: Record<Locale, {
+  mirrorConfirm: string;
+  mirrorFailed: string;
+  mirrorReport: (scanned: number, mirrored: number, unchanged: number, failed: number) => string;
+  importFailed: string;
+  importPreviewPrefix: string;
+  importedPrefix: string;
+  importReportLine: (verb: string, inserted: number, updated: number, skipped: number) => string;
+  saveFailed: string;
+  partCreated: string;
+  partUpdated: string;
+  deleteConfirm: string;
+  partDeleted: string;
+  deleteFailed: string;
+  toggleFailed: string;
+  heading: string;
+  subtitle: string;
+  reorder: string;
+  reorderTitle: string;
+  templateBtn: string;
+  templateTitle: string;
+  exportCsv: string;
+  exportTitle: string;
+  mirrorImages: string;
+  mirrorTitle: string;
+  previewCsv: string;
+  previewTitle: string;
+  importCsv: string;
+  addPart: string;
+  rowsSkipped: (n: number) => string;
+  rowLabel: string;
+  andMore: (n: number) => string;
+  searchPlaceholder: string;
+  allCategories: string;
+  loading: string;
+  emptyState: string;
+  live: string;
+  draft: string;
+  oem: string;
+  stock: string;
+  edit: string;
+  unpub: string;
+  publish: string;
+  editPart: string;
+  newPart: string;
+  nameRu: string;
+  slug: string;
+  slugPlaceholder: string;
+  nameUz: string;
+  nameEn: string;
+  oemNumber: string;
+  oemPlaceholder: string;
+  partBrand: string;
+  partBrandPlaceholder: string;
+  category: string;
+  stockQty: string;
+  priceUsd: string;
+  originalPriceUsd: string;
+  wholesalePriceUsd: string;
+  wholesalePlaceholder: string;
+  minOrderQty: string;
+  descriptionRu: string;
+  fitsBrands: string;
+  fitsBrandsPlaceholder: string;
+  fitsModels: string;
+  fitsModelsPlaceholder: string;
+  yearFrom: string;
+  yearTo: string;
+  orderPos: string;
+  images: string;
+  published: string;
+  uploadFailed: string;
+  cancel: string;
+  save: string;
+}> = {
+  ru: {
+    mirrorConfirm: "Скачать все внешние URL изображений и разместить на этом сайте? Это может занять минуту.",
+    mirrorFailed: "Не удалось зеркалировать",
+    mirrorReport: (scanned, mirrored, unchanged, failed) =>
+      `Просканировано ${scanned} изображений — зеркалировано ${mirrored}, уже размещено ${unchanged}, с ошибкой ${failed}`,
+    importFailed: "Не удалось импортировать",
+    importPreviewPrefix: "Предпросмотр: будет",
+    importedPrefix: "Импортировано",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} добавлено ${inserted}, обновлено ${updated}, пропущено ${skipped}`,
+    saveFailed: "Не удалось сохранить",
+    partCreated: "Запчасть создана",
+    partUpdated: "Запчасть обновлена",
+    deleteConfirm: "Удалить эту запчасть?",
+    partDeleted: "Запчасть удалена",
+    deleteFailed: "Не удалось удалить",
+    toggleFailed: "Не удалось переключить",
+    heading: "Каталог запчастей",
+    subtitle: "Управление складом запчастей.",
+    reorder: "Дозаказ",
+    reorderTitle: "Список дозаказа по низкому остатку",
+    templateBtn: "Шаблон",
+    templateTitle: "Скачать CSV-шаблон",
+    exportCsv: "Экспорт CSV",
+    exportTitle: "Скачать весь каталог в CSV (для редактирования)",
+    mirrorImages: "Зеркалировать изображения",
+    mirrorTitle: "Скачать внешние URL изображений и разместить на этом сайте",
+    previewCsv: "Предпросмотр CSV",
+    previewTitle: "Проверить CSV без записи в БД",
+    importCsv: "Импорт CSV",
+    addPart: "Добавить запчасть",
+    rowsSkipped: (n) => `${n} ${n === 1 ? "строка пропущена" : "строк(и) пропущено"}`,
+    rowLabel: "строка",
+    andMore: (n) => `…и ещё ${n}`,
+    searchPlaceholder: "Поиск по названию, OEM, бренду...",
+    allCategories: "Все категории",
+    loading: "Загрузка запчастей...",
+    emptyState: "Пока нет запчастей. Нажмите «Добавить запчасть», чтобы создать.",
+    live: "Опубликовано",
+    draft: "Черновик",
+    oem: "OEM",
+    stock: "Остаток",
+    edit: "Редактировать",
+    unpub: "Снять",
+    publish: "Опубликовать",
+    editPart: "Редактировать запчасть",
+    newPart: "Новая запчасть",
+    nameRu: "Название (RU) *",
+    slug: "Slug *",
+    slugPlaceholder: "kebab-case",
+    nameUz: "Название (UZ)",
+    nameEn: "Название (EN)",
+    oemNumber: "OEM-номер",
+    oemPlaceholder: "напр. 1234-ABC",
+    partBrand: "Бренд запчасти",
+    partBrandPlaceholder: "Bosch, Denso, OEM...",
+    category: "Категория *",
+    stockQty: "Остаток на складе",
+    priceUsd: "Цена (USD)",
+    originalPriceUsd: "Старая цена (USD)",
+    wholesalePriceUsd: "Оптовая цена (USD)",
+    wholesalePlaceholder: "Показывается оптовым покупателям",
+    minOrderQty: "Мин. заказ (опт)",
+    descriptionRu: "Описание (RU)",
+    fitsBrands: "Подходит к брендам (через запятую)",
+    fitsBrandsPlaceholder: "BYD, Chery, Haval",
+    fitsModels: "Подходит к моделям (через запятую)",
+    fitsModelsPlaceholder: "Song Plus, Tiggo 8 Pro",
+    yearFrom: "Год с",
+    yearTo: "Год по",
+    orderPos: "Позиция",
+    images: "Изображения",
+    published: "Опубликовано",
+    uploadFailed: "Не удалось загрузить",
+    cancel: "Отмена",
+    save: "Сохранить",
+  },
+  uz: {
+    mirrorConfirm: "Barcha tashqi rasm URL’larini yuklab olib, shu saytda joylashtirilsinmi? Bu bir daqiqa olishi mumkin.",
+    mirrorFailed: "Nusxalab boʻlmadi",
+    mirrorReport: (scanned, mirrored, unchanged, failed) =>
+      `${scanned} ta rasm skanerlandi — ${mirrored} ta nusxalandi, ${unchanged} ta allaqachon joylashtirilgan, ${failed} ta xatolik`,
+    importFailed: "Import qilib boʻlmadi",
+    importPreviewPrefix: "Koʻrib chiqish: boʻladi",
+    importedPrefix: "Import qilindi",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} ${inserted} qoʻshildi, ${updated} yangilandi, ${skipped} oʻtkazib yuborildi`,
+    saveFailed: "Saqlab boʻlmadi",
+    partCreated: "Ehtiyot qism yaratildi",
+    partUpdated: "Ehtiyot qism yangilandi",
+    deleteConfirm: "Ushbu ehtiyot qism oʻchirilsinmi?",
+    partDeleted: "Ehtiyot qism oʻchirildi",
+    deleteFailed: "Oʻchirib boʻlmadi",
+    toggleFailed: "Almashtirib boʻlmadi",
+    heading: "Ehtiyot qismlar katalogi",
+    subtitle: "Ehtiyot qismlar zaxirasini boshqarish.",
+    reorder: "Qayta buyurtma",
+    reorderTitle: "Past qoldiq boʻyicha qayta buyurtma roʻyxati",
+    templateBtn: "Shablon",
+    templateTitle: "CSV shablonini yuklab olish",
+    exportCsv: "CSV eksport",
+    exportTitle: "Butun katalogni CSV sifatida yuklab olish (tahrirlash uchun)",
+    mirrorImages: "Rasmlarni nusxalash",
+    mirrorTitle: "Tashqi rasm URL’larini yuklab olib, shu saytda joylashtirish",
+    previewCsv: "CSV koʻrib chiqish",
+    previewTitle: "CSV’ni bazaga yozmasdan tekshirish",
+    importCsv: "CSV import",
+    addPart: "Ehtiyot qism qoʻshish",
+    rowsSkipped: (n) => `${n} ta qator oʻtkazib yuborildi`,
+    rowLabel: "qator",
+    andMore: (n) => `…va yana ${n} ta`,
+    searchPlaceholder: "Nomi, OEM, brend boʻyicha qidirish...",
+    allCategories: "Barcha kategoriyalar",
+    loading: "Ehtiyot qismlar yuklanmoqda...",
+    emptyState: "Hozircha ehtiyot qismlar yoʻq. Yaratish uchun «Ehtiyot qism qoʻshish» tugmasini bosing.",
+    live: "Eʼlon qilingan",
+    draft: "Qoralama",
+    oem: "OEM",
+    stock: "Qoldiq",
+    edit: "Tahrirlash",
+    unpub: "Yashirish",
+    publish: "Eʼlon qilish",
+    editPart: "Ehtiyot qismni tahrirlash",
+    newPart: "Yangi ehtiyot qism",
+    nameRu: "Nomi (RU) *",
+    slug: "Slug *",
+    slugPlaceholder: "kebab-case",
+    nameUz: "Nomi (UZ)",
+    nameEn: "Nomi (EN)",
+    oemNumber: "OEM raqami",
+    oemPlaceholder: "masalan 1234-ABC",
+    partBrand: "Ehtiyot qism brendi",
+    partBrandPlaceholder: "Bosch, Denso, OEM...",
+    category: "Kategoriya *",
+    stockQty: "Ombordagi qoldiq",
+    priceUsd: "Narx (USD)",
+    originalPriceUsd: "Eski narx (USD)",
+    wholesalePriceUsd: "Ulgurji narx (USD)",
+    wholesalePlaceholder: "Ulgurji xaridorlarga koʻrsatiladi",
+    minOrderQty: "Min. buyurtma (ulgurji)",
+    descriptionRu: "Tavsif (RU)",
+    fitsBrands: "Mos brendlar (vergul bilan)",
+    fitsBrandsPlaceholder: "BYD, Chery, Haval",
+    fitsModels: "Mos modellar (vergul bilan)",
+    fitsModelsPlaceholder: "Song Plus, Tiggo 8 Pro",
+    yearFrom: "Yildan",
+    yearTo: "Yilgacha",
+    orderPos: "Pozitsiya",
+    images: "Rasmlar",
+    published: "Eʼlon qilingan",
+    uploadFailed: "Yuklab boʻlmadi",
+    cancel: "Bekor qilish",
+    save: "Saqlash",
+  },
+  en: {
+    mirrorConfirm: "Download all external image URLs and rehost on this site? This may take a minute.",
+    mirrorFailed: "Mirror failed",
+    mirrorReport: (scanned, mirrored, unchanged, failed) =>
+      `Scanned ${scanned} images — mirrored ${mirrored}, already hosted ${unchanged}, failed ${failed}`,
+    importFailed: "Import failed",
+    importPreviewPrefix: "Preview: would",
+    importedPrefix: "Imported",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} insert ${inserted}, update ${updated}, skip ${skipped}`,
+    saveFailed: "Save failed",
+    partCreated: "Part created",
+    partUpdated: "Part updated",
+    deleteConfirm: "Delete this part?",
+    partDeleted: "Part deleted",
+    deleteFailed: "Delete failed",
+    toggleFailed: "Failed to toggle",
+    heading: "Parts Catalog",
+    subtitle: "Manage spare parts inventory.",
+    reorder: "Reorder",
+    reorderTitle: "Low-stock reorder list",
+    templateBtn: "Template",
+    templateTitle: "Download CSV template",
+    exportCsv: "Export CSV",
+    exportTitle: "Download the full catalog as CSV (round-trip for editing)",
+    mirrorImages: "Mirror Images",
+    mirrorTitle: "Download external image URLs and rehost on this site",
+    previewCsv: "Preview CSV",
+    previewTitle: "Validate CSV without writing to DB",
+    importCsv: "Import CSV",
+    addPart: "Add Part",
+    rowsSkipped: (n) => `${n} row${n === 1 ? "" : "s"} skipped`,
+    rowLabel: "row",
+    andMore: (n) => `…and ${n} more`,
+    searchPlaceholder: "Search by name, OEM, brand...",
+    allCategories: "All categories",
+    loading: "Loading parts...",
+    emptyState: "No parts yet. Click “Add Part” to create one.",
+    live: "Live",
+    draft: "Draft",
+    oem: "OEM",
+    stock: "Stock",
+    edit: "Edit",
+    unpub: "Unpub",
+    publish: "Publish",
+    editPart: "Edit Part",
+    newPart: "New Part",
+    nameRu: "Name (RU) *",
+    slug: "Slug *",
+    slugPlaceholder: "kebab-case",
+    nameUz: "Name (UZ)",
+    nameEn: "Name (EN)",
+    oemNumber: "OEM Number",
+    oemPlaceholder: "e.g. 1234-ABC",
+    partBrand: "Part Brand",
+    partBrandPlaceholder: "Bosch, Denso, OEM...",
+    category: "Category *",
+    stockQty: "Stock Qty",
+    priceUsd: "Price (USD)",
+    originalPriceUsd: "Original Price (USD)",
+    wholesalePriceUsd: "Wholesale Price (USD)",
+    wholesalePlaceholder: "Shown to bulk buyers",
+    minOrderQty: "Min Order Qty (wholesale)",
+    descriptionRu: "Description (RU)",
+    fitsBrands: "Fits Brands (comma-separated)",
+    fitsBrandsPlaceholder: "BYD, Chery, Haval",
+    fitsModels: "Fits Models (comma-separated)",
+    fitsModelsPlaceholder: "Song Plus, Tiggo 8 Pro",
+    yearFrom: "Year from",
+    yearTo: "Year to",
+    orderPos: "Order Pos",
+    images: "Images",
+    published: "Published",
+    uploadFailed: "Upload failed",
+    cancel: "Cancel",
+    save: "Save",
+  },
+};
 
 const emptyPart = (): Partial<Part> => ({
   slug: "",
@@ -34,6 +344,8 @@ const emptyPart = (): Partial<Part> => ({
 });
 
 export default function AdminPartsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -69,7 +381,7 @@ export default function AdminPartsPage() {
   }, [fetchParts]);
 
   const handleMirror = async () => {
-    if (!confirm("Download all external image URLs and rehost on this site? This may take a minute.")) {
+    if (!confirm(t.mirrorConfirm)) {
       return;
     }
     setImporting(true);
@@ -81,17 +393,17 @@ export default function AdminPartsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showFeedback("error", data.error || "Mirror failed");
+        showFeedback("error", data.error || t.mirrorFailed);
         return;
       }
       const { scanned = 0, mirrored = 0, unchanged = 0, errors = [] } = data;
       showFeedback(
         errors.length > 0 ? "error" : "success",
-        `Scanned ${scanned} images — mirrored ${mirrored}, already hosted ${unchanged}, failed ${errors.length}`,
+        t.mirrorReport(scanned, mirrored, unchanged, errors.length),
       );
       fetchParts();
     } catch (e) {
-      showFeedback("error", e instanceof Error ? e.message : "Mirror failed");
+      showFeedback("error", e instanceof Error ? e.message : t.mirrorFailed);
     } finally {
       setImporting(false);
     }
@@ -109,19 +421,19 @@ export default function AdminPartsPage() {
       );
       const data = await res.json();
       if (!res.ok) {
-        showFeedback("error", data.error || "Import failed");
+        showFeedback("error", data.error || t.importFailed);
         return;
       }
       setImportReport(data);
       const { inserted = 0, updated = 0, skipped = 0 } = data;
-      const prefix = dry ? "Preview: would" : "Imported";
+      const prefix = dry ? t.importPreviewPrefix : t.importedPrefix;
       showFeedback(
         skipped > 0 ? "error" : "success",
-        `${prefix} insert ${inserted}, update ${updated}, skip ${skipped}`,
+        t.importReportLine(prefix, inserted, updated, skipped),
       );
       if (!dry) fetchParts();
     } catch (e) {
-      showFeedback("error", e instanceof Error ? e.message : "Import failed");
+      showFeedback("error", e instanceof Error ? e.message : t.importFailed);
     } finally {
       setImporting(false);
     }
@@ -154,22 +466,22 @@ export default function AdminPartsPage() {
     const body = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) {
-      showFeedback("error", body.error || "Save failed");
+      showFeedback("error", body.error || t.saveFailed);
       return;
     }
-    showFeedback("success", isNew ? "Part created" : "Part updated");
+    showFeedback("success", isNew ? t.partCreated : t.partUpdated);
     setEditing(null);
     fetchParts();
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this part?")) return;
+    if (!confirm(t.deleteConfirm)) return;
     const res = await fetch(`/api/admin/parts/${id}`, { method: "DELETE" });
     if (res.ok) {
       setParts((prev) => prev.filter((p) => p.id !== id));
-      showFeedback("success", "Part deleted");
+      showFeedback("success", t.partDeleted);
     } else {
-      showFeedback("error", "Delete failed");
+      showFeedback("error", t.deleteFailed);
     }
   };
 
@@ -182,7 +494,7 @@ export default function AdminPartsPage() {
     if (res.ok) {
       setParts((prev) => prev.map((p) => (p.id === part.id ? { ...p, is_published: !p.is_published } : p)));
     } else {
-      showFeedback("error", "Failed to toggle");
+      showFeedback("error", t.toggleFailed);
     }
   };
 
@@ -190,16 +502,16 @@ export default function AdminPartsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Parts Catalog</h1>
-          <p className="text-muted-foreground text-sm">Manage spare parts inventory.</p>
+          <h1 className="text-2xl font-bold">{t.heading}</h1>
+          <p className="text-muted-foreground text-sm">{t.subtitle}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={fetchParts} disabled={loading}>
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
           </Button>
-          <Button variant="outline" size="sm" asChild title="Low-stock reorder list">
+          <Button variant="outline" size="sm" asChild title={t.reorderTitle}>
             <Link href="/admin/parts/reorder">
-              <PackagePlus className="w-4 h-4 mr-1" /> Reorder
+              <PackagePlus className="w-4 h-4 mr-1" /> {t.reorder}
             </Link>
           </Button>
           <Button
@@ -208,9 +520,9 @@ export default function AdminPartsPage() {
             onClick={() => {
               window.location.href = "/api/admin/parts/template";
             }}
-            title="Download CSV template"
+            title={t.templateTitle}
           >
-            <FileDown className="w-4 h-4 mr-1" /> Template
+            <FileDown className="w-4 h-4 mr-1" /> {t.templateBtn}
           </Button>
           <Button
             variant="outline"
@@ -218,18 +530,18 @@ export default function AdminPartsPage() {
             onClick={() => {
               window.location.href = "/api/admin/parts/export";
             }}
-            title="Download the full catalog as CSV (round-trip for editing)"
+            title={t.exportTitle}
           >
-            <FileDown className="w-4 h-4 mr-1" /> Export CSV
+            <FileDown className="w-4 h-4 mr-1" /> {t.exportCsv}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleMirror}
             disabled={importing}
-            title="Download external image URLs and rehost on this site"
+            title={t.mirrorTitle}
           >
-            <CloudDownload className="w-4 h-4 mr-1" /> Mirror Images
+            <CloudDownload className="w-4 h-4 mr-1" /> {t.mirrorImages}
           </Button>
           <label className="inline-flex">
             <input
@@ -248,9 +560,9 @@ export default function AdminPartsPage() {
                 "inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 h-8 text-sm font-medium cursor-pointer hover:bg-accent",
                 importing && "opacity-60 cursor-not-allowed",
               )}
-              title="Validate CSV without writing to DB"
+              title={t.previewTitle}
             >
-              <FileUp className="w-4 h-4" /> Preview CSV
+              <FileUp className="w-4 h-4" /> {t.previewCsv}
             </span>
           </label>
           <label className="inline-flex">
@@ -276,11 +588,11 @@ export default function AdminPartsPage() {
               ) : (
                 <FileUp className="w-4 h-4" />
               )}
-              Import CSV
+              {t.importCsv}
             </span>
           </label>
           <Button size="sm" onClick={() => setEditing(emptyPart())}>
-            <Plus className="w-4 h-4 mr-1" /> Add Part
+            <Plus className="w-4 h-4 mr-1" /> {t.addPart}
           </Button>
         </div>
       </div>
@@ -302,7 +614,7 @@ export default function AdminPartsPage() {
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
           <div className="flex items-center justify-between mb-2">
             <p className="font-medium text-amber-500">
-              {importReport.errors.length} row{importReport.errors.length === 1 ? "" : "s"} skipped
+              {t.rowsSkipped(importReport.errors.length)}
             </p>
             <button
               type="button"
@@ -315,13 +627,13 @@ export default function AdminPartsPage() {
           <ul className="max-h-48 overflow-auto space-y-1 text-xs text-muted-foreground">
             {importReport.errors.slice(0, 50).map((err, idx) => (
               <li key={idx}>
-                <span className="font-mono text-amber-500/80">row {err.row}</span>
+                <span className="font-mono text-amber-500/80">{t.rowLabel} {err.row}</span>
                 {err.slug ? <span className="text-muted-foreground"> ({err.slug})</span> : null}
                 : {err.message}
               </li>
             ))}
             {importReport.errors.length > 50 && (
-              <li className="italic">…and {importReport.errors.length - 50} more</li>
+              <li className="italic">{t.andMore(importReport.errors.length - 50)}</li>
             )}
           </ul>
         </div>
@@ -331,7 +643,7 @@ export default function AdminPartsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, OEM, brand..."
+            placeholder={t.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -342,7 +654,7 @@ export default function AdminPartsPage() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="px-3 py-2 rounded-lg bg-background border border-border text-sm"
         >
-          <option value="">All categories</option>
+          <option value="">{t.allCategories}</option>
           {PART_CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
@@ -352,13 +664,13 @@ export default function AdminPartsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          Loading parts...
+          {t.loading}
         </div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Wrench className="w-10 h-10 mx-auto mb-2 opacity-40" />
-            No parts yet. Click “Add Part” to create one.
+            {t.emptyState}
           </CardContent>
         </Card>
       ) : (
@@ -376,7 +688,7 @@ export default function AdminPartsPage() {
                 )}
                 <div className="absolute top-2 right-2 flex gap-1">
                   <Badge variant={p.is_published ? "success" : "secondary"}>
-                    {p.is_published ? "Live" : "Draft"}
+                    {p.is_published ? t.live : t.draft}
                   </Badge>
                 </div>
               </div>
@@ -385,7 +697,7 @@ export default function AdminPartsPage() {
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{p.name_ru}</p>
                     {p.oem_number && (
-                      <p className="text-xs text-muted-foreground font-mono truncate">OEM: {p.oem_number}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{t.oem}: {p.oem_number}</p>
                     )}
                   </div>
                   <span className="text-sm font-semibold font-mono whitespace-nowrap">
@@ -395,14 +707,14 @@ export default function AdminPartsPage() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Badge variant="outline" className="capitalize">{p.category}</Badge>
                   {p.brand && <span className="truncate">{p.brand}</span>}
-                  <span className="ml-auto">Stock: <span className="font-mono">{p.stock_qty}</span></span>
+                  <span className="ml-auto">{t.stock}: <span className="font-mono">{p.stock_qty}</span></span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border">
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditing(p)}>
-                    <Edit className="w-3.5 h-3.5 mr-1" /> Edit
+                    <Edit className="w-3.5 h-3.5 mr-1" /> {t.edit}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => togglePublish(p)}>
-                    {p.is_published ? "Unpub" : "Publish"}
+                    {p.is_published ? t.unpub : t.publish}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => remove(p.id)}>
                     <Trash2 className="w-3.5 h-3.5 text-destructive" />
@@ -440,6 +752,8 @@ function PartFormModal({
   onClose: () => void;
   saving: boolean;
 }) {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [uploading, setUploading] = useState(false);
 
   const setField = <K extends keyof Part>(key: K, value: Part[K] | null) => {
@@ -457,7 +771,7 @@ function PartFormModal({
       if (res.ok && body.url) {
         onChange({ ...part, images: [...(part.images || []), body.url] });
       } else {
-        alert(body.error || "Upload failed");
+        alert(body.error || t.uploadFailed);
       }
     } finally {
       setUploading(false);
@@ -479,7 +793,7 @@ function PartFormModal({
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-background rounded-2xl border border-border max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-5 border-b border-border flex items-center justify-between">
-          <h2 className="text-lg font-bold">{part.id ? "Edit Part" : "New Part"}</h2>
+          <h2 className="text-lg font-bold">{part.id ? t.editPart : t.newPart}</h2>
           <Button size="sm" variant="ghost" onClick={onClose}>
             <X className="w-4 h-4" />
           </Button>
@@ -487,7 +801,7 @@ function PartFormModal({
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Name (RU) *</span>
+              <span className="text-xs font-medium block mb-1">{t.nameRu}</span>
               <Input
                 value={part.name_ru || ""}
                 onChange={(e) => {
@@ -497,39 +811,39 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Slug *</span>
+              <span className="text-xs font-medium block mb-1">{t.slug}</span>
               <Input
                 value={part.slug || ""}
                 onChange={(e) => setField("slug", slugify(e.target.value))}
-                placeholder="kebab-case"
+                placeholder={t.slugPlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Name (UZ)</span>
+              <span className="text-xs font-medium block mb-1">{t.nameUz}</span>
               <Input value={part.name_uz || ""} onChange={(e) => setField("name_uz", e.target.value)} />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Name (EN)</span>
+              <span className="text-xs font-medium block mb-1">{t.nameEn}</span>
               <Input value={part.name_en || ""} onChange={(e) => setField("name_en", e.target.value)} />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">OEM Number</span>
+              <span className="text-xs font-medium block mb-1">{t.oemNumber}</span>
               <Input
                 value={part.oem_number || ""}
                 onChange={(e) => setField("oem_number", e.target.value)}
-                placeholder="e.g. 1234-ABC"
+                placeholder={t.oemPlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Part Brand</span>
+              <span className="text-xs font-medium block mb-1">{t.partBrand}</span>
               <Input
                 value={part.brand || ""}
                 onChange={(e) => setField("brand", e.target.value)}
-                placeholder="Bosch, Denso, OEM..."
+                placeholder={t.partBrandPlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Category *</span>
+              <span className="text-xs font-medium block mb-1">{t.category}</span>
               <select
                 value={part.category || "other"}
                 onChange={(e) => setField("category", e.target.value as PartCategory)}
@@ -541,7 +855,7 @@ function PartFormModal({
               </select>
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Stock Qty</span>
+              <span className="text-xs font-medium block mb-1">{t.stockQty}</span>
               <Input
                 type="number"
                 min={0}
@@ -550,7 +864,7 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Price (USD)</span>
+              <span className="text-xs font-medium block mb-1">{t.priceUsd}</span>
               <Input
                 type="number"
                 min={0}
@@ -560,7 +874,7 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Original Price (USD)</span>
+              <span className="text-xs font-medium block mb-1">{t.originalPriceUsd}</span>
               <Input
                 type="number"
                 min={0}
@@ -570,18 +884,18 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Wholesale Price (USD)</span>
+              <span className="text-xs font-medium block mb-1">{t.wholesalePriceUsd}</span>
               <Input
                 type="number"
                 min={0}
                 step="0.01"
                 value={part.wholesale_price_usd ?? ""}
                 onChange={(e) => setField("wholesale_price_usd", e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="Shown to bulk buyers"
+                placeholder={t.wholesalePlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Min Order Qty (wholesale)</span>
+              <span className="text-xs font-medium block mb-1">{t.minOrderQty}</span>
               <Input
                 type="number"
                 min={1}
@@ -592,7 +906,7 @@ function PartFormModal({
           </div>
 
           <label className="block">
-            <span className="text-xs font-medium block mb-1">Description (RU)</span>
+            <span className="text-xs font-medium block mb-1">{t.descriptionRu}</span>
             <textarea
               className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm min-h-[80px]"
               value={part.description_ru || ""}
@@ -602,7 +916,7 @@ function PartFormModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="block sm:col-span-3">
-              <span className="text-xs font-medium block mb-1">Fits Brands (comma-separated)</span>
+              <span className="text-xs font-medium block mb-1">{t.fitsBrands}</span>
               <Input
                 value={(part.fits_brands || []).join(", ")}
                 onChange={(e) =>
@@ -611,11 +925,11 @@ function PartFormModal({
                     e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                   )
                 }
-                placeholder="BYD, Chery, Haval"
+                placeholder={t.fitsBrandsPlaceholder}
               />
             </label>
             <label className="block sm:col-span-3">
-              <span className="text-xs font-medium block mb-1">Fits Models (comma-separated)</span>
+              <span className="text-xs font-medium block mb-1">{t.fitsModels}</span>
               <Input
                 value={(part.fits_models || []).join(", ")}
                 onChange={(e) =>
@@ -624,11 +938,11 @@ function PartFormModal({
                     e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
                   )
                 }
-                placeholder="Song Plus, Tiggo 8 Pro"
+                placeholder={t.fitsModelsPlaceholder}
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Year from</span>
+              <span className="text-xs font-medium block mb-1">{t.yearFrom}</span>
               <Input
                 type="number"
                 min={1990}
@@ -638,7 +952,7 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Year to</span>
+              <span className="text-xs font-medium block mb-1">{t.yearTo}</span>
               <Input
                 type="number"
                 min={1990}
@@ -648,7 +962,7 @@ function PartFormModal({
               />
             </label>
             <label className="block">
-              <span className="text-xs font-medium block mb-1">Order Pos</span>
+              <span className="text-xs font-medium block mb-1">{t.orderPos}</span>
               <Input
                 type="number"
                 min={0}
@@ -659,7 +973,7 @@ function PartFormModal({
           </div>
 
           <div>
-            <span className="text-xs font-medium block mb-2">Images</span>
+            <span className="text-xs font-medium block mb-2">{t.images}</span>
             <div className="mb-3">
               <MediaImporter
                 bucket="part-images"
@@ -706,14 +1020,14 @@ function PartFormModal({
               checked={!!part.is_published}
               onChange={(e) => setField("is_published", e.target.checked)}
             />
-            <span className="text-sm">Published</span>
+            <span className="text-sm">{t.published}</span>
           </label>
         </div>
         <div className="p-5 border-t border-border flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>{t.cancel}</Button>
           <Button onClick={onSave} disabled={saving || !part.name_ru || !part.slug}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-            Save
+            {t.save}
           </Button>
         </div>
       </div>

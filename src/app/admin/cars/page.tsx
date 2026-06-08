@@ -13,7 +13,441 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MediaImporter } from "@/components/admin/media-importer";
 import { cn, formatPrice } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 import type { Car as CarType } from "@/types/car";
+
+const COPY: Record<Locale, {
+  importFailed: string;
+  importPreviewPrefix: string;
+  importedPrefix: string;
+  importReportLine: (verb: string, inserted: number, updated: number, skipped: number) => string;
+  deleteConfirm: string;
+  carDeleted: string;
+  deleteFailed: string;
+  bulkDeleteConfirm: (n: number) => string;
+  heading: string;
+  carsInInventory: (n: number) => string;
+  templateBtn: string;
+  templateTitle: string;
+  exportCsv: string;
+  previewTitle: string;
+  previewCsv: string;
+  importCsv: string;
+  addCar: string;
+  rowsSkipped: (n: number) => string;
+  rowLabel: string;
+  andMore: (n: number) => string;
+  searchPlaceholder: string;
+  selected: (n: number) => string;
+  deleteBtn: string;
+  cancel: string;
+  thCar: string;
+  thPrice: string;
+  thType: string;
+  thStatus: string;
+  thActions: string;
+  available: string;
+  reserved: string;
+  sold: string;
+  hot: string;
+  noCarsFound: string;
+  editCarPrefix: string;
+  addNewCar: string;
+  brand: string;
+  model: string;
+  year: string;
+  priceUsd: string;
+  color: string;
+  listingType: string;
+  listingNew: string;
+  listingUsed: string;
+  mileageKm: string;
+  vin: string;
+  vinPlaceholder: string;
+  owners: string;
+  ownersPlaceholder: string;
+  condition: string;
+  condExcellent: string;
+  condGood: string;
+  condFair: string;
+  accidentFree: string;
+  originalPriceUsd: string;
+  optional: string;
+  videoUrl: string;
+  bodyType: string;
+  bodySedan: string;
+  bodySuv: string;
+  bodyCrossover: string;
+  bodyHatchback: string;
+  bodyMinivan: string;
+  bodyCoupe: string;
+  fuelType: string;
+  fuelPetrol: string;
+  fuelElectric: string;
+  fuelHybrid: string;
+  fuelPhev: string;
+  transmission: string;
+  transAutomatic: string;
+  transManual: string;
+  transCvt: string;
+  transRobot: string;
+  engineVolume: string;
+  enginePower: string;
+  descriptionRu: string;
+  generating: string;
+  generateAi: string;
+  images: string;
+  fullSpecSheet: string;
+  specUrlPlaceholder: string;
+  importSpec: string;
+  specHelp: string;
+  uploadFailedFor: (name: string) => string;
+  networkErrorUploading: (name: string) => string;
+  uploading: (n: number) => string;
+  uploadHint: string;
+  cover: string;
+  moveLeft: string;
+  remove: string;
+  moveRight: string;
+  hotOffer: string;
+  inventoryStatus: string;
+  invAvailable: string;
+  invReserved: string;
+  invSold: string;
+  invalidValue: string;
+  failedToSave: string;
+  networkError: string;
+  updateCar: string;
+  specImportedOk: (trims: number, params: number, brand: string, model: string) => string;
+  specImportFailedPrefix: string;
+  specImportFailed: string;
+}> = {
+  ru: {
+    importFailed: "Не удалось импортировать",
+    importPreviewPrefix: "Предпросмотр: будет",
+    importedPrefix: "Импортировано",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} добавлено ${inserted}, обновлено ${updated}, пропущено ${skipped}`,
+    deleteConfirm: "Вы уверены, что хотите удалить этот автомобиль?",
+    carDeleted: "Автомобиль успешно удалён",
+    deleteFailed: "Не удалось удалить автомобиль",
+    bulkDeleteConfirm: (n) => `Удалить ${n} авто?`,
+    heading: "Управление автомобилями",
+    carsInInventory: (n) => `${n} авто в наличии`,
+    templateBtn: "Шаблон",
+    templateTitle: "Скачать импортируемый CSV-шаблон",
+    exportCsv: "Экспорт CSV",
+    previewTitle: "Проверить CSV без записи в базу данных",
+    previewCsv: "Предпросмотр CSV",
+    importCsv: "Импорт CSV",
+    addCar: "Добавить авто",
+    rowsSkipped: (n) => `${n} ${n === 1 ? "строка пропущена" : "строк(и) пропущено"}`,
+    rowLabel: "строка",
+    andMore: (n) => `…и ещё ${n}`,
+    searchPlaceholder: "Поиск авто...",
+    selected: (n) => `Выбрано: ${n}`,
+    deleteBtn: "Удалить",
+    cancel: "Отмена",
+    thCar: "Авто",
+    thPrice: "Цена",
+    thType: "Тип",
+    thStatus: "Статус",
+    thActions: "Действия",
+    available: "В наличии",
+    reserved: "Забронировано",
+    sold: "Продано",
+    hot: "Хит",
+    noCarsFound: "Авто по вашему запросу не найдены.",
+    editCarPrefix: "Редактировать",
+    addNewCar: "Добавить новый автомобиль",
+    brand: "Бренд",
+    model: "Модель",
+    year: "Год",
+    priceUsd: "Цена (USD)",
+    color: "Цвет",
+    listingType: "Тип объявления",
+    listingNew: "Новый (импорт)",
+    listingUsed: "Б/у (с пробегом)",
+    mileageKm: "Пробег (км)",
+    vin: "VIN",
+    vinPlaceholder: "Необязательно",
+    owners: "Владельцев",
+    ownersPlaceholder: "напр. 1",
+    condition: "Состояние",
+    condExcellent: "Отличное",
+    condGood: "Хорошее",
+    condFair: "Удовлетворительное",
+    accidentFree: "Без ДТП",
+    originalPriceUsd: "Старая цена (USD)",
+    optional: "Необязательно",
+    videoUrl: "URL видео",
+    bodyType: "Тип кузова",
+    bodySedan: "Седан",
+    bodySuv: "Внедорожник",
+    bodyCrossover: "Кроссовер",
+    bodyHatchback: "Хэтчбек",
+    bodyMinivan: "Минивэн",
+    bodyCoupe: "Купе",
+    fuelType: "Тип топлива",
+    fuelPetrol: "Бензин",
+    fuelElectric: "Электро",
+    fuelHybrid: "Гибрид",
+    fuelPhev: "Плагин-гибрид",
+    transmission: "Коробка передач",
+    transAutomatic: "Автомат",
+    transManual: "Механика",
+    transCvt: "Вариатор",
+    transRobot: "Робот",
+    engineVolume: "Объём двигателя (л)",
+    enginePower: "Мощность двигателя (л.с.)",
+    descriptionRu: "Описание (RU)",
+    generating: "Генерация…",
+    generateAi: "✨ Сгенерировать RU/UZ/EN с ИИ",
+    images: "Изображения",
+    fullSpecSheet: "Полный лист характеристик (AutoHome)",
+    specUrlPlaceholder: "Вставьте URL вида global.autohome.com/en-hk/config/spec/…",
+    importSpec: "Импорт характеристик",
+    specHelp: "Загружает все комплектации и параметры в скачиваемый лист характеристик. Используйте англоязычный глобальный сайт AutoHome для чистых данных. Проверьте перед публикацией — данные для справки.",
+    uploadFailedFor: (name) => `Не удалось загрузить ${name}`,
+    networkErrorUploading: (name) => `Сетевая ошибка при загрузке ${name}`,
+    uploading: (n) => `Загрузка ${n}…`,
+    uploadHint: "Нажмите, чтобы загрузить JPG / PNG / WebP (макс. 5 МБ каждый)",
+    cover: "ОБЛОЖКА",
+    moveLeft: "Влево",
+    remove: "Удалить",
+    moveRight: "Вправо",
+    hotOffer: "Горячее предложение",
+    inventoryStatus: "Статус наличия",
+    invAvailable: "В наличии",
+    invReserved: "Забронировано",
+    invSold: "Продано",
+    invalidValue: "Недопустимое значение",
+    failedToSave: "Не удалось сохранить авто",
+    networkError: "Сетевая ошибка",
+    updateCar: "Обновить авто",
+    specImportedOk: (trims, params, brand, model) =>
+      `✓ Импортировано ${trims} комплектаций, ${params} параметров (${brand} ${model}). Смотрите лист характеристик на странице авто.`,
+    specImportFailedPrefix: "✗",
+    specImportFailed: "✗ Не удалось импортировать.",
+  },
+  uz: {
+    importFailed: "Import qilib boʻlmadi",
+    importPreviewPrefix: "Koʻrib chiqish: boʻladi",
+    importedPrefix: "Import qilindi",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} ${inserted} qoʻshildi, ${updated} yangilandi, ${skipped} oʻtkazib yuborildi`,
+    deleteConfirm: "Ushbu avtomobil oʻchirilsinmi?",
+    carDeleted: "Avtomobil muvaffaqiyatli oʻchirildi",
+    deleteFailed: "Avtomobilni oʻchirib boʻlmadi",
+    bulkDeleteConfirm: (n) => `${n} ta avto oʻchirilsinmi?`,
+    heading: "Avtomobillarni boshqarish",
+    carsInInventory: (n) => `Omborda ${n} ta avto`,
+    templateBtn: "Shablon",
+    templateTitle: "Import qilinadigan CSV shablonini yuklab olish",
+    exportCsv: "CSV eksport",
+    previewTitle: "CSV’ni bazaga yozmasdan tekshirish",
+    previewCsv: "CSV koʻrib chiqish",
+    importCsv: "CSV import",
+    addCar: "Avto qoʻshish",
+    rowsSkipped: (n) => `${n} ta qator oʻtkazib yuborildi`,
+    rowLabel: "qator",
+    andMore: (n) => `…va yana ${n} ta`,
+    searchPlaceholder: "Avto qidirish...",
+    selected: (n) => `Tanlangan: ${n}`,
+    deleteBtn: "Oʻchirish",
+    cancel: "Bekor qilish",
+    thCar: "Avto",
+    thPrice: "Narx",
+    thType: "Turi",
+    thStatus: "Holat",
+    thActions: "Amallar",
+    available: "Mavjud",
+    reserved: "Band qilingan",
+    sold: "Sotilgan",
+    hot: "Hit",
+    noCarsFound: "Soʻrovingiz boʻyicha avto topilmadi.",
+    editCarPrefix: "Tahrirlash",
+    addNewCar: "Yangi avtomobil qoʻshish",
+    brand: "Brend",
+    model: "Model",
+    year: "Yil",
+    priceUsd: "Narx (USD)",
+    color: "Rang",
+    listingType: "Eʼlon turi",
+    listingNew: "Yangi (import)",
+    listingUsed: "Ishlatilgan",
+    mileageKm: "Yurgan masofa (km)",
+    vin: "VIN",
+    vinPlaceholder: "Ixtiyoriy",
+    owners: "Egalari",
+    ownersPlaceholder: "masalan 1",
+    condition: "Holati",
+    condExcellent: "Aʼlo",
+    condGood: "Yaxshi",
+    condFair: "Qoniqarli",
+    accidentFree: "Avariyasiz",
+    originalPriceUsd: "Eski narx (USD)",
+    optional: "Ixtiyoriy",
+    videoUrl: "Video URL",
+    bodyType: "Kuzov turi",
+    bodySedan: "Sedan",
+    bodySuv: "SUV",
+    bodyCrossover: "Krossover",
+    bodyHatchback: "Xetchbek",
+    bodyMinivan: "Miniven",
+    bodyCoupe: "Kupe",
+    fuelType: "Yoqilgʻi turi",
+    fuelPetrol: "Benzin",
+    fuelElectric: "Elektr",
+    fuelHybrid: "Gibrid",
+    fuelPhev: "Plagin-gibrid",
+    transmission: "Uzatmalar qutisi",
+    transAutomatic: "Avtomat",
+    transManual: "Mexanika",
+    transCvt: "Variator",
+    transRobot: "Robot",
+    engineVolume: "Dvigatel hajmi (l)",
+    enginePower: "Dvigatel quvvati (o.k.)",
+    descriptionRu: "Tavsif (RU)",
+    generating: "Generatsiya…",
+    generateAi: "✨ RU/UZ/EN’ni AI bilan yaratish",
+    images: "Rasmlar",
+    fullSpecSheet: "Toʻliq xususiyatlar varagʻi (AutoHome)",
+    specUrlPlaceholder: "global.autohome.com/en-hk/config/spec/… koʻrinishidagi URL’ni joylashtiring",
+    importSpec: "Xususiyatlarni import qilish",
+    specHelp: "Barcha komplektatsiyalar va parametrlarni yuklab olinadigan xususiyatlar varagʻiga yuklaydi. Toza maʼlumotlar uchun inglizcha global AutoHome saytidan foydalaning. Eʼlon qilishdan oldin tekshiring — maʼlumotlar maʼlumot uchun.",
+    uploadFailedFor: (name) => `${name} yuklab boʻlmadi`,
+    networkErrorUploading: (name) => `${name} yuklashda tarmoq xatosi`,
+    uploading: (n) => `Yuklanmoqda ${n}…`,
+    uploadHint: "JPG / PNG / WebP yuklash uchun bosing (har biri maks. 5 MB)",
+    cover: "MUQOVA",
+    moveLeft: "Chapga",
+    remove: "Oʻchirish",
+    moveRight: "Oʻngga",
+    hotOffer: "Issiq taklif",
+    inventoryStatus: "Mavjudlik holati",
+    invAvailable: "Mavjud",
+    invReserved: "Band qilingan",
+    invSold: "Sotilgan",
+    invalidValue: "Yaroqsiz qiymat",
+    failedToSave: "Avtoni saqlab boʻlmadi",
+    networkError: "Tarmoq xatosi",
+    updateCar: "Avtoni yangilash",
+    specImportedOk: (trims, params, brand, model) =>
+      `✓ ${trims} ta komplektatsiya, ${params} ta parametr import qilindi (${brand} ${model}). Xususiyatlar varagʻini avto sahifasida koʻring.`,
+    specImportFailedPrefix: "✗",
+    specImportFailed: "✗ Import qilib boʻlmadi.",
+  },
+  en: {
+    importFailed: "Import failed",
+    importPreviewPrefix: "Preview: would",
+    importedPrefix: "Imported",
+    importReportLine: (verb, inserted, updated, skipped) =>
+      `${verb} insert ${inserted}, update ${updated}, skip ${skipped}`,
+    deleteConfirm: "Are you sure you want to delete this car?",
+    carDeleted: "Car deleted successfully",
+    deleteFailed: "Failed to delete car",
+    bulkDeleteConfirm: (n) => `Delete ${n} cars?`,
+    heading: "Cars Management",
+    carsInInventory: (n) => `${n} cars in inventory`,
+    templateBtn: "Template",
+    templateTitle: "Download an importable CSV template",
+    exportCsv: "Export CSV",
+    previewTitle: "Validate CSV without writing to the database",
+    previewCsv: "Preview CSV",
+    importCsv: "Import CSV",
+    addCar: "Add Car",
+    rowsSkipped: (n) => `${n} row${n === 1 ? "" : "s"} skipped`,
+    rowLabel: "row",
+    andMore: (n) => `…and ${n} more`,
+    searchPlaceholder: "Search cars...",
+    selected: (n) => `${n} selected`,
+    deleteBtn: "Delete",
+    cancel: "Cancel",
+    thCar: "Car",
+    thPrice: "Price",
+    thType: "Type",
+    thStatus: "Status",
+    thActions: "Actions",
+    available: "Available",
+    reserved: "Reserved",
+    sold: "Sold",
+    hot: "Hot",
+    noCarsFound: "No cars found matching your search.",
+    editCarPrefix: "Edit",
+    addNewCar: "Add New Car",
+    brand: "Brand",
+    model: "Model",
+    year: "Year",
+    priceUsd: "Price (USD)",
+    color: "Color",
+    listingType: "Listing type",
+    listingNew: "New (import)",
+    listingUsed: "Used (pre-owned)",
+    mileageKm: "Mileage (km)",
+    vin: "VIN",
+    vinPlaceholder: "Optional",
+    owners: "Owners",
+    ownersPlaceholder: "e.g. 1",
+    condition: "Condition",
+    condExcellent: "Excellent",
+    condGood: "Good",
+    condFair: "Fair",
+    accidentFree: "Accident-free",
+    originalPriceUsd: "Original Price (USD)",
+    optional: "Optional",
+    videoUrl: "Video URL",
+    bodyType: "Body Type",
+    bodySedan: "Sedan",
+    bodySuv: "SUV",
+    bodyCrossover: "Crossover",
+    bodyHatchback: "Hatchback",
+    bodyMinivan: "Minivan",
+    bodyCoupe: "Coupe",
+    fuelType: "Fuel Type",
+    fuelPetrol: "Petrol",
+    fuelElectric: "Electric",
+    fuelHybrid: "Hybrid",
+    fuelPhev: "PHEV",
+    transmission: "Transmission",
+    transAutomatic: "Automatic",
+    transManual: "Manual",
+    transCvt: "CVT",
+    transRobot: "Robot",
+    engineVolume: "Engine Volume (L)",
+    enginePower: "Engine Power (hp)",
+    descriptionRu: "Description (RU)",
+    generating: "Generating…",
+    generateAi: "✨ Generate RU/UZ/EN with AI",
+    images: "Images",
+    fullSpecSheet: "Full spec sheet (AutoHome)",
+    specUrlPlaceholder: "Paste a global.autohome.com/en-hk/config/spec/… URL",
+    importSpec: "Import spec",
+    specHelp: "Pulls all trims + parameters into a downloadable multi-trim spec sheet. Use the English global AutoHome site for clean data. Review before publishing — data is for reference.",
+    uploadFailedFor: (name) => `Upload failed for ${name}`,
+    networkErrorUploading: (name) => `Network error uploading ${name}`,
+    uploading: (n) => `Uploading ${n}…`,
+    uploadHint: "Click to upload JPG / PNG / WebP (max 5 MB each)",
+    cover: "COVER",
+    moveLeft: "Move left",
+    remove: "Remove",
+    moveRight: "Move right",
+    hotOffer: "Hot Offer",
+    inventoryStatus: "Inventory Status",
+    invAvailable: "Available",
+    invReserved: "Reserved",
+    invSold: "Sold",
+    invalidValue: "Invalid value",
+    failedToSave: "Failed to save car",
+    networkError: "Network error",
+    updateCar: "Update Car",
+    specImportedOk: (trims, params, brand, model) =>
+      `✓ Imported ${trims} trim(s), ${params} params (${brand} ${model}). View the spec sheet on the car page.`,
+    specImportFailedPrefix: "✗",
+    specImportFailed: "✗ Import failed.",
+  },
+};
 
 const CAR_CSV_HEADERS = [
   "slug", "brand", "model", "year", "price_usd", "original_price_usd", "price_uzs",
@@ -32,6 +466,8 @@ const CAR_CSV_EXAMPLE = [
 ];
 
 export default function AdminCarsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [cars, setCars] = useState<CarType[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -92,19 +528,19 @@ export default function AdminCarsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showFeedback("error", data.error || "Import failed");
+        showFeedback("error", data.error || t.importFailed);
         return;
       }
       setImportReport(data);
       const { inserted = 0, updated = 0, skipped = 0 } = data;
-      const prefix = dry ? "Preview: would" : "Imported";
+      const prefix = dry ? t.importPreviewPrefix : t.importedPrefix;
       showFeedback(
         skipped > 0 ? "error" : "success",
-        `${prefix} insert ${inserted}, update ${updated}, skip ${skipped}`,
+        t.importReportLine(prefix, inserted, updated, skipped),
       );
       if (!dry) fetchCars();
     } catch (e) {
-      showFeedback("error", e instanceof Error ? e.message : "Import failed");
+      showFeedback("error", e instanceof Error ? e.message : t.importFailed);
     } finally {
       setImporting(false);
     }
@@ -123,18 +559,18 @@ export default function AdminCarsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this car?")) return;
+    if (!confirm(t.deleteConfirm)) return;
     const res = await fetch(`/api/cars/${id}`, { method: "DELETE" });
     if (res.ok) {
       setCars(cars.filter((c) => c.id !== id));
-      showFeedback("success", "Car deleted successfully");
+      showFeedback("success", t.carDeleted);
     } else {
-      showFeedback("error", "Failed to delete car");
+      showFeedback("error", t.deleteFailed);
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedCars.length} cars?`)) return;
+    if (!confirm(t.bulkDeleteConfirm(selectedCars.length))) return;
     await Promise.all(selectedCars.map((id) => fetch(`/api/cars/${id}`, { method: "DELETE" })));
     setSelectedCars([]);
     fetchCars();
@@ -144,21 +580,21 @@ export default function AdminCarsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Cars Management</h1>
-          <p className="text-muted-foreground">{cars.length} cars in inventory</p>
+          <h1 className="text-2xl font-bold">{t.heading}</h1>
+          <p className="text-muted-foreground">{t.carsInInventory(cars.length)}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={fetchCars}>
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button variant="outline" onClick={downloadTemplate} title="Download an importable CSV template">
+          <Button variant="outline" onClick={downloadTemplate} title={t.templateTitle}>
             <FileDown className="w-4 h-4" />
-            Template
+            {t.templateBtn}
           </Button>
           <Button variant="outline" asChild>
             <a href="/api/admin/export?type=cars" download>
               <Download className="w-4 h-4" />
-              Export CSV
+              {t.exportCsv}
             </a>
           </Button>
           <label className="inline-flex">
@@ -178,9 +614,9 @@ export default function AdminCarsPage() {
                 "inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium cursor-pointer hover:bg-accent",
                 importing && "opacity-60 cursor-not-allowed",
               )}
-              title="Validate CSV without writing to the database"
+              title={t.previewTitle}
             >
-              <FileUp className="w-4 h-4" /> Preview CSV
+              <FileUp className="w-4 h-4" /> {t.previewCsv}
             </span>
           </label>
           <label className="inline-flex">
@@ -202,12 +638,12 @@ export default function AdminCarsPage() {
               )}
             >
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
-              Import CSV
+              {t.importCsv}
             </span>
           </label>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="w-4 h-4" />
-            Add Car
+            {t.addCar}
           </Button>
         </div>
       </div>
@@ -227,7 +663,7 @@ export default function AdminCarsPage() {
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
           <div className="flex items-center justify-between mb-2">
             <p className="font-medium text-amber-500">
-              {importReport.errors.length} row{importReport.errors.length === 1 ? "" : "s"} skipped
+              {t.rowsSkipped(importReport.errors.length)}
             </p>
             <button
               type="button"
@@ -240,13 +676,13 @@ export default function AdminCarsPage() {
           <ul className="max-h-48 overflow-auto space-y-1 text-xs text-muted-foreground">
             {importReport.errors.slice(0, 50).map((err, idx) => (
               <li key={idx}>
-                <span className="font-mono text-amber-500/80">row {err.row}</span>
+                <span className="font-mono text-amber-500/80">{t.rowLabel} {err.row}</span>
                 {err.slug ? <span className="text-muted-foreground"> ({err.slug})</span> : null}
                 : {err.message}
               </li>
             ))}
             {importReport.errors.length > 50 && (
-              <li className="italic">…and {importReport.errors.length - 50} more</li>
+              <li className="italic">{t.andMore(importReport.errors.length - 50)}</li>
             )}
           </ul>
         </div>
@@ -259,7 +695,7 @@ export default function AdminCarsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search cars..."
+                placeholder={t.searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
@@ -272,13 +708,13 @@ export default function AdminCarsPage() {
       {/* Bulk actions */}
       {selectedCars.length > 0 && (
         <div className="flex items-center gap-3 p-3 bg-lime/10 rounded-xl border border-lime/20">
-          <span className="text-sm font-medium">{selectedCars.length} selected</span>
+          <span className="text-sm font-medium">{t.selected(selectedCars.length)}</span>
           <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
             <Trash2 className="w-4 h-4" />
-            Delete
+            {t.deleteBtn}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setSelectedCars([])}>
-            Cancel
+            {t.cancel}
           </Button>
         </div>
       )}
@@ -309,11 +745,11 @@ export default function AdminCarsPage() {
                         className="rounded"
                       />
                     </th>
-                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Car</th>
-                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Price</th>
-                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Type</th>
-                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Status</th>
-                    <th className="p-4 text-right text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">{t.thCar}</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">{t.thPrice}</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">{t.thType}</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">{t.thStatus}</th>
+                    <th className="p-4 text-right text-xs font-semibold text-muted-foreground uppercase">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -351,13 +787,13 @@ export default function AdminCarsPage() {
                       <td className="p-4">
                         <div className="flex gap-1">
                           {car.inventory_status === "available" ? (
-                            <Badge variant="success">Available</Badge>
+                            <Badge variant="success">{t.available}</Badge>
                           ) : car.inventory_status === "reserved" ? (
-                            <Badge variant="secondary">Reserved</Badge>
+                            <Badge variant="secondary">{t.reserved}</Badge>
                           ) : (
-                            <Badge variant="destructive">Sold</Badge>
+                            <Badge variant="destructive">{t.sold}</Badge>
                           )}
-                          {car.is_hot_offer && <Badge variant="default">Hot</Badge>}
+                          {car.is_hot_offer && <Badge variant="default">{t.hot}</Badge>}
                           {car.original_price_usd && car.original_price_usd > car.price_usd && (
                             <Badge variant="outline">-{Math.round((1 - car.price_usd / car.original_price_usd) * 100)}%</Badge>
                           )}
@@ -397,7 +833,7 @@ export default function AdminCarsPage() {
 
           {!loading && filteredCars.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              No cars found matching your search.
+              {t.noCarsFound}
             </div>
           )}
         </CardContent>
@@ -419,6 +855,8 @@ export default function AdminCarsPage() {
 }
 
 function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose: () => void; onSaved: () => void }) {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const isEditing = !!car;
   const [saving, setSaving] = useState(false);
   const [genCopy, setGenCopy] = useState(false);
@@ -446,9 +884,9 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
         body: JSON.stringify({ url: specUrl.trim() }),
       });
       const d = await res.json();
-      setSpecMsg(d.ok ? `✓ Imported ${d.spec.trims} trim(s), ${d.spec.paramCount} params (${d.spec.brand} ${d.spec.model}). View the spec sheet on the car page.` : `✗ ${d.message || d.error || "Import failed"}`);
+      setSpecMsg(d.ok ? t.specImportedOk(d.spec.trims, d.spec.paramCount, d.spec.brand, d.spec.model) : `${t.specImportFailedPrefix} ${d.message || d.error || t.importFailed}`);
     } catch {
-      setSpecMsg("✗ Import failed.");
+      setSpecMsg(t.specImportFailed);
     } finally {
       setSpecImporting(false);
     }
@@ -486,12 +924,12 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
         const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setUploadError(data?.error || `Upload failed for ${file.name}`);
+          setUploadError(data?.error || t.uploadFailedFor(file.name));
         } else if (data.url) {
           newUrls.push(data.url);
         }
       } catch {
-        setUploadError(`Network error uploading ${file.name}`);
+        setUploadError(t.networkErrorUploading(file.name));
       } finally {
         setUploadingCount((c) => c - 1);
       }
@@ -579,13 +1017,13 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           data?.errors ?? data?.issues ?? [];
         for (const issue of issues) {
           const key = Array.isArray(issue.path) ? String(issue.path[0] ?? "") : "";
-          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message || "Invalid value";
+          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message || t.invalidValue;
         }
         setFieldErrors(nextFieldErrors);
-        setFormError(data.error || "Failed to save car");
+        setFormError(data.error || t.failedToSave);
       }
     } catch {
-      setFormError("Network error");
+      setFormError(t.networkError);
     } finally {
       setSaving(false);
     }
@@ -601,18 +1039,18 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
         className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 shadow-2xl"
       >
         <h2 className="text-xl font-bold mb-6">
-          {isEditing ? `Edit ${car.brand} ${car.model}` : "Add New Car"}
+          {isEditing ? `${t.editCarPrefix} ${car.brand} ${car.model}` : t.addNewCar}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Brand</label>
+              <label className="text-sm font-medium mb-1 block">{t.brand}</label>
               <Input value={brand} onChange={(e) => setBrand(e.target.value)} required />
               {err("brand")}
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Model</label>
+              <label className="text-sm font-medium mb-1 block">{t.model}</label>
               <Input value={model} onChange={(e) => setModel(e.target.value)} required />
               {err("model")}
             </div>
@@ -620,15 +1058,15 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Year</label>
+              <label className="text-sm font-medium mb-1 block">{t.year}</label>
               <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Price (USD)</label>
+              <label className="text-sm font-medium mb-1 block">{t.priceUsd}</label>
               <Input type="number" value={priceUsd} onChange={(e) => setPriceUsd(e.target.value)} required />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Color</label>
+              <label className="text-sm font-medium mb-1 block">{t.color}</label>
               <Input value={color} onChange={(e) => setColor(e.target.value)} />
             </div>
           </div>
@@ -636,18 +1074,18 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           {/* Listing type (New / Used) + mileage. Used reveals disclosure fields. */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Listing type</label>
+              <label className="text-sm font-medium mb-1 block">{t.listingType}</label>
               <select
                 value={listingType}
                 onChange={(e) => setListingType(e.target.value)}
                 className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm"
               >
-                <option value="new">New (import)</option>
-                <option value="used">Used (pre-owned)</option>
+                <option value="new">{t.listingNew}</option>
+                <option value="used">{t.listingUsed}</option>
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Mileage (km)</label>
+              <label className="text-sm font-medium mb-1 block">{t.mileageKm}</label>
               <Input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} />
             </div>
           </div>
@@ -655,26 +1093,26 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           {listingType === "used" && (
             <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-muted/20 p-3">
               <div>
-                <label className="text-sm font-medium mb-1 block">VIN</label>
-                <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder="Optional" />
+                <label className="text-sm font-medium mb-1 block">{t.vin}</label>
+                <Input value={vin} onChange={(e) => setVin(e.target.value)} placeholder={t.vinPlaceholder} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Owners</label>
-                <Input type="number" value={ownersCount} onChange={(e) => setOwnersCount(e.target.value)} placeholder="e.g. 1" />
+                <label className="text-sm font-medium mb-1 block">{t.owners}</label>
+                <Input type="number" value={ownersCount} onChange={(e) => setOwnersCount(e.target.value)} placeholder={t.ownersPlaceholder} />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Condition</label>
+                <label className="text-sm font-medium mb-1 block">{t.condition}</label>
                 <select value={conditionGrade} onChange={(e) => setConditionGrade(e.target.value)} className="w-full h-10 rounded-md border border-border bg-background px-3 text-sm">
                   <option value="">—</option>
-                  <option value="excellent">Excellent</option>
-                  <option value="good">Good</option>
-                  <option value="fair">Fair</option>
+                  <option value="excellent">{t.condExcellent}</option>
+                  <option value="good">{t.condGood}</option>
+                  <option value="fair">{t.condFair}</option>
                 </select>
               </div>
               <div className="flex items-end pb-2">
                 <label className="flex items-center gap-2 text-sm font-medium">
                   <input type="checkbox" checked={accidentFree} onChange={(e) => setAccidentFree(e.target.checked)} />
-                  Accident-free
+                  {t.accidentFree}
                 </label>
               </div>
             </div>
@@ -682,73 +1120,73 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Original Price (USD)</label>
-              <Input type="number" value={originalPriceUsd} onChange={(e) => setOriginalPriceUsd(e.target.value)} placeholder="Optional" />
+              <label className="text-sm font-medium mb-1 block">{t.originalPriceUsd}</label>
+              <Input type="number" value={originalPriceUsd} onChange={(e) => setOriginalPriceUsd(e.target.value)} placeholder={t.optional} />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Video URL</label>
+              <label className="text-sm font-medium mb-1 block">{t.videoUrl}</label>
               <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/embed/..." />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Body Type</label>
+              <label className="text-sm font-medium mb-1 block">{t.bodyType}</label>
               <select
                 value={bodyType}
                 onChange={(e) => setBodyType(e.target.value)}
                 className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
-                <option value="sedan">Sedan</option>
-                <option value="suv">SUV</option>
-                <option value="crossover">Crossover</option>
-                <option value="hatchback">Hatchback</option>
-                <option value="minivan">Minivan</option>
-                <option value="coupe">Coupe</option>
+                <option value="sedan">{t.bodySedan}</option>
+                <option value="suv">{t.bodySuv}</option>
+                <option value="crossover">{t.bodyCrossover}</option>
+                <option value="hatchback">{t.bodyHatchback}</option>
+                <option value="minivan">{t.bodyMinivan}</option>
+                <option value="coupe">{t.bodyCoupe}</option>
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Fuel Type</label>
+              <label className="text-sm font-medium mb-1 block">{t.fuelType}</label>
               <select
                 value={fuelType}
                 onChange={(e) => setFuelType(e.target.value)}
                 className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
-                <option value="petrol">Petrol</option>
-                <option value="electric">Electric</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="phev">PHEV</option>
+                <option value="petrol">{t.fuelPetrol}</option>
+                <option value="electric">{t.fuelElectric}</option>
+                <option value="hybrid">{t.fuelHybrid}</option>
+                <option value="phev">{t.fuelPhev}</option>
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Transmission</label>
+              <label className="text-sm font-medium mb-1 block">{t.transmission}</label>
               <select
                 value={transmission}
                 onChange={(e) => setTransmission(e.target.value)}
                 className="w-full h-11 rounded-xl border border-border bg-card text-foreground px-3 text-sm"
               >
-                <option value="automatic">Automatic</option>
-                <option value="manual">Manual</option>
-                <option value="cvt">CVT</option>
-                <option value="robot">Robot</option>
+                <option value="automatic">{t.transAutomatic}</option>
+                <option value="manual">{t.transManual}</option>
+                <option value="cvt">{t.transCvt}</option>
+                <option value="robot">{t.transRobot}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Engine Volume (L)</label>
+              <label className="text-sm font-medium mb-1 block">{t.engineVolume}</label>
               <Input type="number" step="0.1" value={engineVolume} onChange={(e) => setEngineVolume(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Engine Power (hp)</label>
+              <label className="text-sm font-medium mb-1 block">{t.enginePower}</label>
               <Input type="number" value={enginePower} onChange={(e) => setEnginePower(e.target.value)} />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-sm font-medium">Description (RU)</label>
+              <label className="text-sm font-medium">{t.descriptionRu}</label>
               {car?.id && (
                 <button
                   type="button"
@@ -765,7 +1203,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                   }}
                   className="text-xs text-primary hover:underline disabled:opacity-50"
                 >
-                  {genCopy ? "Generating…" : "✨ Generate RU/UZ/EN with AI"}
+                  {genCopy ? t.generating : t.generateAi}
                 </button>
               )}
             </div>
@@ -778,7 +1216,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-2 block">Images</label>
+            <label className="text-sm font-medium mb-2 block">{t.images}</label>
             <div className="mb-3">
               <MediaImporter
                 bucket="car-images"
@@ -801,22 +1239,21 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             {isEditing && (
               <div className="mb-3 rounded-[2px] border border-border bg-[var(--bg-3)]/50 p-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                  Full spec sheet (AutoHome)
+                  {t.fullSpecSheet}
                 </div>
                 <div className="flex gap-2">
                   <Input
                     value={specUrl}
                     onChange={(e) => setSpecUrl(e.target.value)}
-                    placeholder="Paste a global.autohome.com/en-hk/config/spec/… URL"
+                    placeholder={t.specUrlPlaceholder}
                     className="flex-1 text-sm"
                   />
                   <Button type="button" variant="outline" size="sm" onClick={importSpec} disabled={specImporting || !specUrl.trim()}>
-                    {specImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Import spec"}
+                    {specImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : t.importSpec}
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Pulls all trims + parameters into a downloadable multi-trim spec sheet. Use the English global
-                  AutoHome site for clean data. Review before publishing — data is for reference.
+                  {t.specHelp}
                 </p>
                 {specMsg && <p className="text-xs text-primary">{specMsg}</p>}
               </div>
@@ -834,8 +1271,8 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             >
               <Upload className="w-4 h-4" />
               {uploadingCount > 0
-                ? `Uploading ${uploadingCount}…`
-                : "Click to upload JPG / PNG / WebP (max 5 MB each)"}
+                ? t.uploading(uploadingCount)
+                : t.uploadHint}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
@@ -865,7 +1302,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt="" className="w-full h-24 object-cover" />
                     {idx === 0 && (
-                      <span className="absolute top-1 left-1 bg-lime text-navy text-[10px] font-bold px-1.5 py-0.5 rounded">COVER</span>
+                      <span className="absolute top-1 left-1 bg-lime text-navy text-[10px] font-bold px-1.5 py-0.5 rounded">{t.cover}</span>
                     )}
                     <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/60 px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -873,7 +1310,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                         onClick={() => moveImage(idx, -1)}
                         disabled={idx === 0}
                         className="text-white disabled:opacity-30 p-1"
-                        title="Move left"
+                        title={t.moveLeft}
                       >
                         <ArrowLeft className="w-3.5 h-3.5" />
                       </button>
@@ -881,7 +1318,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                         type="button"
                         onClick={() => removeImage(idx)}
                         className="text-red-300 hover:text-red-200 p-1"
-                        title="Remove"
+                        title={t.remove}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -890,7 +1327,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                         onClick={() => moveImage(idx, 1)}
                         disabled={idx === images.length - 1}
                         className="text-white disabled:opacity-30 p-1"
-                        title="Move right"
+                        title={t.moveRight}
                       >
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
@@ -909,20 +1346,20 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                 onChange={(e) => setIsHotOffer(e.target.checked)}
                 className="rounded"
               />
-              <span className="text-sm">Hot Offer</span>
+              <span className="text-sm">{t.hotOffer}</span>
             </label>
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block">Inventory Status</label>
+            <label className="text-sm font-medium mb-1 block">{t.inventoryStatus}</label>
             <select
               value={inventoryStatus}
               onChange={(e) => setInventoryStatus(e.target.value)}
               className="w-full h-11 rounded-xl border border-border px-3 text-sm"
             >
-              <option value="available">Available</option>
-              <option value="reserved">Reserved</option>
-              <option value="sold">Sold</option>
+              <option value="available">{t.invAvailable}</option>
+              <option value="reserved">{t.invReserved}</option>
+              <option value="sold">{t.invSold}</option>
             </select>
           </div>
 
@@ -933,9 +1370,9 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
           )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t.cancel}</Button>
             <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Update Car" : "Add Car"}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? t.updateCar : t.addCar}
             </Button>
           </div>
         </form>

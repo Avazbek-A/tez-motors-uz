@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 /**
  * Parts reorder workflow (Phase Y3).
@@ -18,6 +20,104 @@ import { cn } from "@/lib/utils";
  * list to CSV (for sending to a supplier), and record a restock inline — which
  * bumps stock_qty server-side and writes an audit row.
  */
+
+const COPY: Record<Locale, {
+  csvOem: string;
+  csvName: string;
+  csvCategory: string;
+  csvInStock: string;
+  csvMinOrderQty: string;
+  csvSuggestedReorder: string;
+  enterQty: string;
+  restockFailed: string;
+  restockedPrefix: string;
+  title: string;
+  subtitle: string;
+  threshold: string;
+  exportCsv: string;
+  wellStocked: string;
+  noLowStock: (n: number) => string;
+  thPart: string;
+  thOem: string;
+  thCategory: string;
+  thStock: string;
+  thMinOrder: string;
+  thRestock: string;
+  qtyPlaceholder: string;
+}> = {
+  ru: {
+    csvOem: "OEM",
+    csvName: "Название",
+    csvCategory: "Категория",
+    csvInStock: "В наличии",
+    csvMinOrderQty: "Мин. заказ",
+    csvSuggestedReorder: "Рекомендуемый дозаказ",
+    enterQty: "Введите количество для добавления",
+    restockFailed: "Не удалось пополнить",
+    restockedPrefix: "Пополнено",
+    title: "Список дозаказа",
+    subtitle: "Запчасти на уровне или ниже порога запаса.",
+    threshold: "Порог ≤",
+    exportCsv: "Экспорт CSV",
+    wellStocked: "Всё в достаточном количестве.",
+    noLowStock: (n) => `Нет опубликованных запчастей с остатком ${n} или меньше.`,
+    thPart: "Запчасть",
+    thOem: "OEM",
+    thCategory: "Категория",
+    thStock: "Остаток",
+    thMinOrder: "Мин. заказ",
+    thRestock: "Пополнить",
+    qtyPlaceholder: "+ кол-во",
+  },
+  uz: {
+    csvOem: "OEM",
+    csvName: "Nomi",
+    csvCategory: "Kategoriya",
+    csvInStock: "Mavjud",
+    csvMinOrderQty: "Min. buyurtma",
+    csvSuggestedReorder: "Tavsiya etilgan qayta buyurtma",
+    enterQty: "Qoʻshish uchun miqdorni kiriting",
+    restockFailed: "Toʻldirib boʻlmadi",
+    restockedPrefix: "Toʻldirildi",
+    title: "Qayta buyurtma roʻyxati",
+    subtitle: "Zaxira chegarasida yoki undan past ehtiyot qismlar.",
+    threshold: "Chegara ≤",
+    exportCsv: "CSV eksport",
+    wellStocked: "Hammasi yetarli miqdorda.",
+    noLowStock: (n) => `Qoldigʻi ${n} yoki undan kam eʼlon qilingan ehtiyot qismlar yoʻq.`,
+    thPart: "Ehtiyot qism",
+    thOem: "OEM",
+    thCategory: "Kategoriya",
+    thStock: "Qoldiq",
+    thMinOrder: "Min. buyurtma",
+    thRestock: "Toʻldirish",
+    qtyPlaceholder: "+ miqdor",
+  },
+  en: {
+    csvOem: "OEM",
+    csvName: "Name",
+    csvCategory: "Category",
+    csvInStock: "In Stock",
+    csvMinOrderQty: "Min Order Qty",
+    csvSuggestedReorder: "Suggested Reorder",
+    enterQty: "Enter a quantity to add",
+    restockFailed: "Restock failed",
+    restockedPrefix: "Restocked",
+    title: "Reorder List",
+    subtitle: "Parts at or below the stock threshold.",
+    threshold: "Threshold ≤",
+    exportCsv: "Export CSV",
+    wellStocked: "Everything is well stocked.",
+    noLowStock: (n) => `No published parts at or below ${n} in stock.`,
+    thPart: "Part",
+    thOem: "OEM",
+    thCategory: "Category",
+    thStock: "Stock",
+    thMinOrder: "Min Order",
+    thRestock: "Restock",
+    qtyPlaceholder: "+ qty",
+  },
+};
 
 interface LowStockPart {
   id: string;
@@ -30,6 +130,8 @@ interface LowStockPart {
 }
 
 export default function PartsReorderPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [parts, setParts] = useState<LowStockPart[]>([]);
   const [threshold, setThreshold] = useState(5);
   const [loading, setLoading] = useState(true);
@@ -56,7 +158,7 @@ export default function PartsReorderPage() {
   }, [fetchLowStock]);
 
   const exportCsv = () => {
-    const header = ["OEM", "Name", "Category", "In Stock", "Min Order Qty", "Suggested Reorder"];
+    const header = [t.csvOem, t.csvName, t.csvCategory, t.csvInStock, t.csvMinOrderQty, t.csvSuggestedReorder];
     const rows = parts.map((p) => {
       const minOrder = p.min_order_qty ?? 1;
       const suggested = Math.max(minOrder, minOrder - p.stock_qty);
@@ -85,7 +187,7 @@ export default function PartsReorderPage() {
     const raw = addQty[part.id];
     const add = Number.parseInt(raw ?? "", 10);
     if (!Number.isFinite(add) || add < 1) {
-      showFeedback("error", "Enter a quantity to add");
+      showFeedback("error", t.enterQty);
       return;
     }
     setRestocking(part.id);
@@ -97,15 +199,15 @@ export default function PartsReorderPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showFeedback("error", data.error || "Restock failed");
+        showFeedback("error", data.error || t.restockFailed);
         return;
       }
-      showFeedback("success", `Restocked ${part.name_ru} → ${data.stock_qty}`);
+      showFeedback("success", `${t.restockedPrefix} ${part.name_ru} → ${data.stock_qty}`);
       setAddQty((m) => ({ ...m, [part.id]: "" }));
       // Refresh so anything now above threshold drops off the list.
       fetchLowStock();
     } catch {
-      showFeedback("error", "Restock failed");
+      showFeedback("error", t.restockFailed);
     } finally {
       setRestocking(null);
     }
@@ -119,13 +221,13 @@ export default function PartsReorderPage() {
             <Link href="/admin/parts" className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="text-2xl font-bold">Reorder List</h1>
+            <h1 className="text-2xl font-bold">{t.title}</h1>
           </div>
-          <p className="text-muted-foreground text-sm">Parts at or below the stock threshold.</p>
+          <p className="text-muted-foreground text-sm">{t.subtitle}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Threshold ≤</span>
+            <span className="text-sm text-muted-foreground">{t.threshold}</span>
             <Input
               type="number"
               min={0}
@@ -138,7 +240,7 @@ export default function PartsReorderPage() {
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={parts.length === 0}>
-            <FileDown className="w-4 h-4 mr-1" /> Export CSV
+            <FileDown className="w-4 h-4 mr-1" /> {t.exportCsv}
           </Button>
         </div>
       </div>
@@ -165,8 +267,8 @@ export default function PartsReorderPage() {
         <Card>
           <CardContent className="p-12 text-center text-muted-foreground">
             <Boxes className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Everything is well stocked.</p>
-            <p className="text-sm mt-1">No published parts at or below {threshold} in stock.</p>
+            <p>{t.wellStocked}</p>
+            <p className="text-sm mt-1">{t.noLowStock(threshold)}</p>
           </CardContent>
         </Card>
       ) : (
@@ -176,12 +278,12 @@ export default function PartsReorderPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground bg-muted/30">
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Part</th>
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">OEM</th>
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">Category</th>
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Stock</th>
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Min Order</th>
-                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">Restock</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">{t.thPart}</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">{t.thOem}</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide">{t.thCategory}</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">{t.thStock}</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">{t.thMinOrder}</th>
+                    <th className="px-4 py-3 font-medium text-xs uppercase tracking-wide text-right">{t.thRestock}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -206,7 +308,7 @@ export default function PartsReorderPage() {
                           <Input
                             type="number"
                             min={1}
-                            placeholder="+ qty"
+                            placeholder={t.qtyPlaceholder}
                             value={addQty[p.id] ?? ""}
                             onChange={(e) => setAddQty((m) => ({ ...m, [p.id]: e.target.value }))}
                             className="w-24"

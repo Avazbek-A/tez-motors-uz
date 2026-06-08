@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Contact, Loader2, X, Search, Phone, Mail, Flame } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Row {
   key: string;
@@ -23,12 +25,12 @@ interface Row {
 
 type Tier = "vip" | "buyer" | "active" | "lead" | "dormant";
 
-const TIER_META: Record<Tier, { label: string; tone: string }> = {
-  vip: { label: "VIP", tone: "text-[var(--accent)] border-[var(--accent)]" },
-  buyer: { label: "Buyer", tone: "text-[var(--success)] border-[var(--success)]" },
-  active: { label: "Active", tone: "text-[var(--info)] border-[var(--info)]" },
-  lead: { label: "Lead", tone: "text-muted-foreground border-border" },
-  dormant: { label: "Dormant", tone: "text-[var(--danger)] border-[var(--danger)]" },
+const TIER_TONE: Record<Tier, string> = {
+  vip: "text-[var(--accent)] border-[var(--accent)]",
+  buyer: "text-[var(--success)] border-[var(--success)]",
+  active: "text-[var(--info)] border-[var(--info)]",
+  lead: "text-muted-foreground border-border",
+  dormant: "text-[var(--danger)] border-[var(--danger)]",
 };
 const TIER_ORDER: Tier[] = ["vip", "buyer", "active", "lead", "dormant"];
 
@@ -90,7 +92,123 @@ const EV_TONE: Record<string, string> = {
   account: "border-border",
 };
 
+const COPY: Record<Locale, {
+  title: string;
+  subtitlePrefix: string;
+  subtitleSuffix: string;
+  tierLabels: Record<Tier, string>;
+  all: string;
+  searchPlaceholder: string;
+  noContacts: string;
+  thCustomer: string;
+  thTier: string;
+  thInq: string;
+  thOrd: string;
+  thAi: string;
+  thScore: string;
+  thDeposits: string;
+  thLast: string;
+  accountBadge: string;
+  unknown: string;
+  statInquiries: string;
+  statOrders: string;
+  statAiChats: string;
+  statFavorites: string;
+  statDeposits: string;
+  statLeadScore: string;
+  watching: string;
+  activityTimeline: string;
+  noActivity: string;
+}> = {
+  ru: {
+    title: "Клиенты",
+    subtitlePrefix: "Единая запись по каждому человеку — все запросы, заказы, AI-чаты, депозиты и избранное, связанные по телефону.",
+    subtitleSuffix: "контактов.",
+    tierLabels: { vip: "VIP", buyer: "Покупатель", active: "Активный", lead: "Лид", dormant: "Спящий" },
+    all: "Все",
+    searchPlaceholder: "Поиск по имени или телефону…",
+    noContacts: "Контакты не найдены.",
+    thCustomer: "Клиент",
+    thTier: "Уровень",
+    thInq: "Зап",
+    thOrd: "Зак",
+    thAi: "AI",
+    thScore: "Балл",
+    thDeposits: "Депозиты",
+    thLast: "Посл.",
+    accountBadge: "аккаунт",
+    unknown: "Неизвестно",
+    statInquiries: "Запросы",
+    statOrders: "Заказы",
+    statAiChats: "AI-чаты",
+    statFavorites: "Избранное",
+    statDeposits: "Депозиты",
+    statLeadScore: "Балл лида",
+    watching: "Следит за:",
+    activityTimeline: "Лента активности",
+    noActivity: "Нет активности.",
+  },
+  uz: {
+    title: "Mijozlar",
+    subtitlePrefix: "Har bir shaxs uchun yagona yozuv — barcha so‘rovlar, buyurtmalar, AI-suhbatlar, depozitlar va sevimlilar telefon orqali bog‘langan.",
+    subtitleSuffix: "ta kontakt.",
+    tierLabels: { vip: "VIP", buyer: "Xaridor", active: "Faol", lead: "Lid", dormant: "Uxlayotgan" },
+    all: "Hammasi",
+    searchPlaceholder: "Ism yoki telefon bo‘yicha qidirish…",
+    noContacts: "Kontaktlar topilmadi.",
+    thCustomer: "Mijoz",
+    thTier: "Daraja",
+    thInq: "So‘r",
+    thOrd: "Buy",
+    thAi: "AI",
+    thScore: "Ball",
+    thDeposits: "Depozitlar",
+    thLast: "Oxirgi",
+    accountBadge: "akkaunt",
+    unknown: "Noma’lum",
+    statInquiries: "So‘rovlar",
+    statOrders: "Buyurtmalar",
+    statAiChats: "AI-suhbatlar",
+    statFavorites: "Sevimlilar",
+    statDeposits: "Depozitlar",
+    statLeadScore: "Lid bali",
+    watching: "Kuzatmoqda:",
+    activityTimeline: "Faollik tasmasi",
+    noActivity: "Faollik yo‘q.",
+  },
+  en: {
+    title: "Customers",
+    subtitlePrefix: "One unified record per person — every inquiry, order, AI chat, deposit and favorite stitched together by phone.",
+    subtitleSuffix: "contacts.",
+    tierLabels: { vip: "VIP", buyer: "Buyer", active: "Active", lead: "Lead", dormant: "Dormant" },
+    all: "All",
+    searchPlaceholder: "Search name or phone…",
+    noContacts: "No contacts found.",
+    thCustomer: "Customer",
+    thTier: "Tier",
+    thInq: "Inq",
+    thOrd: "Ord",
+    thAi: "AI",
+    thScore: "Score",
+    thDeposits: "Deposits",
+    thLast: "Last",
+    accountBadge: "account",
+    unknown: "Unknown",
+    statInquiries: "Inquiries",
+    statOrders: "Orders",
+    statAiChats: "AI chats",
+    statFavorites: "Favorites",
+    statDeposits: "Deposits",
+    statLeadScore: "Lead score",
+    watching: "Watching:",
+    activityTimeline: "Activity timeline",
+    noActivity: "No activity.",
+  },
+};
+
 export default function AdminCustomersPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({});
@@ -140,11 +258,10 @@ export default function AdminCustomersPage() {
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-1">
         <Contact className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        One unified record per person — every inquiry, order, AI chat, deposit and favorite stitched
-        together by phone. {total} contacts.
+        {t.subtitlePrefix} {total} {t.subtitleSuffix}
       </p>
 
       {/* Value-tier summary + filter */}
@@ -153,54 +270,54 @@ export default function AdminCustomersPage() {
           onClick={() => setTier(null)}
           className={`px-2.5 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${tier === null ? "border-[var(--accent)] text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
         >
-          All
+          {t.all}
         </button>
-        {TIER_ORDER.map((t) => (
+        {TIER_ORDER.map((tk) => (
           <button
-            key={t}
-            onClick={() => setTier(tier === t ? null : t)}
-            className={`px-2.5 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${tier === t ? TIER_META[t].tone : "border-border text-muted-foreground hover:text-foreground"}`}
+            key={tk}
+            onClick={() => setTier(tier === tk ? null : tk)}
+            className={`px-2.5 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${tier === tk ? TIER_TONE[tk] : "border-border text-muted-foreground hover:text-foreground"}`}
           >
-            {TIER_META[t].label} {tierCounts[t] ? <span className="opacity-70">{tierCounts[t]}</span> : null}
+            {t.tierLabels[tk]} {tierCounts[tk] ? <span className="opacity-70">{tierCounts[tk]}</span> : null}
           </button>
         ))}
       </div>
 
       <div className="relative mb-4 max-w-sm">
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or phone…" className="pl-9 text-sm" />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t.searchPlaceholder} className="pl-9 text-sm" />
       </div>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No contacts found.</p>
+        <p className="text-sm text-muted-foreground">{t.noContacts}</p>
       ) : (
         <div className="bg-card border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="px-4 py-2 font-medium">Customer</th>
-                <th className="px-4 py-2 font-medium">Tier</th>
-                <th className="px-4 py-2 font-medium text-right">Inq</th>
-                <th className="px-4 py-2 font-medium text-right">Ord</th>
-                <th className="px-4 py-2 font-medium text-right">AI</th>
-                <th className="px-4 py-2 font-medium text-right">Score</th>
-                <th className="px-4 py-2 font-medium text-right">Deposits</th>
-                <th className="px-4 py-2 font-medium">Last</th>
+                <th className="px-4 py-2 font-medium">{t.thCustomer}</th>
+                <th className="px-4 py-2 font-medium">{t.thTier}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thInq}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thOrd}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thAi}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thScore}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thDeposits}</th>
+                <th className="px-4 py-2 font-medium">{t.thLast}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.key} onClick={() => openProfile(r.key)} className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/40">
                   <td className="px-4 py-2.5">
-                    <div className="text-foreground">{r.name || "—"}{r.hasAccount && <span className="ml-2 text-[10px] font-mono uppercase text-[var(--success)]">account</span>}</div>
+                    <div className="text-foreground">{r.name || "—"}{r.hasAccount && <span className="ml-2 text-[10px] font-mono uppercase text-[var(--success)]">{t.accountBadge}</span>}</div>
                     <div className="text-xs text-muted-foreground font-mono">{r.phone}</div>
                   </td>
                   <td className="px-4 py-2.5">
-                    {TIER_META[r.tier as Tier] && (
-                      <span className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_META[r.tier as Tier].tone}`}>
-                        {TIER_META[r.tier as Tier].label}
+                    {TIER_TONE[r.tier as Tier] && (
+                      <span className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_TONE[r.tier as Tier]}`}>
+                        {t.tierLabels[r.tier as Tier]}
                       </span>
                     )}
                   </td>
@@ -230,10 +347,10 @@ export default function AdminCustomersPage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold text-foreground">{open.profile.name || "Unknown"}</h2>
-                      {open.profile.tier && TIER_META[open.profile.tier as Tier] && (
-                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_META[open.profile.tier as Tier].tone}`}>
-                          {TIER_META[open.profile.tier as Tier].label}
+                      <h2 className="text-lg font-semibold text-foreground">{open.profile.name || t.unknown}</h2>
+                      {open.profile.tier && TIER_TONE[open.profile.tier as Tier] && (
+                        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${TIER_TONE[open.profile.tier as Tier]}`}>
+                          {t.tierLabels[open.profile.tier as Tier]}
                         </span>
                       )}
                     </div>
@@ -248,12 +365,12 @@ export default function AdminCustomersPage() {
                 {/* Stats */}
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
                   {[
-                    { label: "Inquiries", value: String(open.profile.stats.inquiries) },
-                    { label: "Orders", value: String(open.profile.stats.orders) },
-                    { label: "AI chats", value: String(open.profile.stats.conversations) },
-                    { label: "Favorites", value: String(open.profile.stats.favorites) },
-                    { label: "Deposits", value: open.profile.stats.depositsUsd > 0 ? usd(open.profile.stats.depositsUsd) : "—" },
-                    { label: "Lead score", value: String(open.profile.leadScore) },
+                    { label: t.statInquiries, value: String(open.profile.stats.inquiries) },
+                    { label: t.statOrders, value: String(open.profile.stats.orders) },
+                    { label: t.statAiChats, value: String(open.profile.stats.conversations) },
+                    { label: t.statFavorites, value: String(open.profile.stats.favorites) },
+                    { label: t.statDeposits, value: open.profile.stats.depositsUsd > 0 ? usd(open.profile.stats.depositsUsd) : "—" },
+                    { label: t.statLeadScore, value: String(open.profile.leadScore) },
                   ].map((s) => (
                     <div key={s.label} className="bg-[var(--bg-3)] border border-border p-2 rounded-[2px]">
                       <p className="font-mono text-base font-semibold text-foreground">{s.value}</p>
@@ -264,12 +381,12 @@ export default function AdminCustomersPage() {
 
                 {open.favorites.length > 0 && (
                   <p className="text-xs text-muted-foreground mb-4">
-                    ❤ Watching: {open.favorites.map((f) => f.name).join(", ")}
+                    ❤ {t.watching} {open.favorites.map((f) => f.name).join(", ")}
                   </p>
                 )}
 
                 {/* Timeline */}
-                <h3 className="text-sm font-semibold text-foreground mb-2">Activity timeline</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">{t.activityTimeline}</h3>
                 <div className="space-y-2">
                   {open.timeline.map((e, i) => (
                     <div key={i} className={`border-l-2 pl-3 py-0.5 ${EV_TONE[e.type] || "border-border"}`}>
@@ -282,7 +399,7 @@ export default function AdminCustomersPage() {
                       {e.detail && <p className="text-xs text-muted-foreground">{e.detail}</p>}
                     </div>
                   ))}
-                  {open.timeline.length === 0 && <p className="text-sm text-muted-foreground">No activity.</p>}
+                  {open.timeline.length === 0 && <p className="text-sm text-muted-foreground">{t.noActivity}</p>}
                 </div>
               </>
             )}

@@ -5,6 +5,147 @@ import { useCallback, useEffect, useState } from "react";
 import { ListChecks, Loader2, Plus, Check, Clock, Trash2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  title: string;
+  newTask: string;
+  intro: string;
+  tabOpen: string;
+  tabSnoozed: string;
+  tabDone: string;
+  tabAll: string;
+  newTaskHeading: string;
+  titlePlaceholder: string;
+  customerPhonePlaceholder: string;
+  customerNamePlaceholder: string;
+  unassigned: string;
+  create: string;
+  emptyAll: string;
+  emptyStatus: (status: string) => string;
+  confirmDelete: string;
+  markDone: string;
+  snoozeTitle: string;
+  delete: string;
+  assign: string;
+  due: string;
+  overdue: string;
+  kindHandoff: string;
+  kindAbandonedDeposit: string;
+  kindStaleLead: string;
+  kindFollowUp: string;
+  kindManual: string;
+}> = {
+  ru: {
+    title: "Задачи",
+    newTask: "Новая задача",
+    intro:
+      "Ваша очередь напоминаний — генерируется автоматически из неактивных лидов, неоплаченных депозитов и горячих передач от ИИ, плюс всё, что вы добавите. Просроченные элементы отмечены.",
+    tabOpen: "Открытые",
+    tabSnoozed: "Отложенные",
+    tabDone: "Выполненные",
+    tabAll: "Все",
+    newTaskHeading: "Новая задача",
+    titlePlaceholder: "Название *",
+    customerPhonePlaceholder: "Телефон клиента",
+    customerNamePlaceholder: "Имя клиента",
+    unassigned: "Без исполнителя",
+    create: "Создать",
+    emptyAll: "Нет задач. 🎉",
+    emptyStatus: (status) => `Нет задач (${status}). 🎉`,
+    confirmDelete: "Удалить эту задачу?",
+    markDone: "Отметить выполненной",
+    snoozeTitle: "Отложить на 3 дня",
+    delete: "Удалить",
+    assign: "Назначить",
+    due: "срок",
+    overdue: "просрочено",
+    kindHandoff: "передача",
+    kindAbandonedDeposit: "брошенный депозит",
+    kindStaleLead: "неактивный лид",
+    kindFollowUp: "напоминание",
+    kindManual: "вручную",
+  },
+  uz: {
+    title: "Vazifalar",
+    newTask: "Yangi vazifa",
+    intro:
+      "Sizning kuzatuv navbatingiz — nofaol lidlar, toʻlanmagan depozitlar va qaynoq AI uzatmalaridan avtomatik yaratiladi, hamda siz qoʻshgan har qanday narsa. Muddati oʻtgan elementlar belgilanadi.",
+    tabOpen: "Ochiq",
+    tabSnoozed: "Kechiktirilgan",
+    tabDone: "Bajarilgan",
+    tabAll: "Hammasi",
+    newTaskHeading: "Yangi vazifa",
+    titlePlaceholder: "Nomi *",
+    customerPhonePlaceholder: "Mijoz telefoni",
+    customerNamePlaceholder: "Mijoz ismi",
+    unassigned: "Tayinlanmagan",
+    create: "Yaratish",
+    emptyAll: "Vazifalar yoʻq. 🎉",
+    emptyStatus: (status) => `Vazifalar yoʻq (${status}). 🎉`,
+    confirmDelete: "Bu vazifa oʻchirilsinmi?",
+    markDone: "Bajarildi deb belgilash",
+    snoozeTitle: "3 kunga kechiktirish",
+    delete: "Oʻchirish",
+    assign: "Tayinlash",
+    due: "muddat",
+    overdue: "muddati oʻtgan",
+    kindHandoff: "uzatma",
+    kindAbandonedDeposit: "tashlab ketilgan depozit",
+    kindStaleLead: "nofaol lid",
+    kindFollowUp: "kuzatuv",
+    kindManual: "qoʻlda",
+  },
+  en: {
+    title: "Tasks",
+    newTask: "New task",
+    intro:
+      "Your follow-up queue — auto-generated from stale leads, unpaid deposits and hot AI handoffs, plus anything you add. Overdue items are flagged.",
+    tabOpen: "open",
+    tabSnoozed: "snoozed",
+    tabDone: "done",
+    tabAll: "all",
+    newTaskHeading: "New task",
+    titlePlaceholder: "Title *",
+    customerPhonePlaceholder: "Customer phone",
+    customerNamePlaceholder: "Customer name",
+    unassigned: "Unassigned",
+    create: "Create",
+    emptyAll: "No tasks. 🎉",
+    emptyStatus: (status) => `No ${status} tasks. 🎉`,
+    confirmDelete: "Delete this task?",
+    markDone: "Mark done",
+    snoozeTitle: "Snooze 3 days",
+    delete: "Delete",
+    assign: "Assign",
+    due: "due",
+    overdue: "overdue",
+    kindHandoff: "handoff",
+    kindAbandonedDeposit: "abandoned deposit",
+    kindStaleLead: "stale lead",
+    kindFollowUp: "follow up",
+    kindManual: "manual",
+  },
+};
+
+type KindLabelKey = "kindHandoff" | "kindAbandonedDeposit" | "kindStaleLead" | "kindFollowUp" | "kindManual";
+type TabLabelKey = "tabOpen" | "tabSnoozed" | "tabDone" | "tabAll";
+
+const KIND_LABEL_KEY: Record<string, KindLabelKey> = {
+  handoff: "kindHandoff",
+  abandoned_deposit: "kindAbandonedDeposit",
+  stale_lead: "kindStaleLead",
+  follow_up: "kindFollowUp",
+  manual: "kindManual",
+};
+
+const TAB_LABEL_KEY: Record<string, TabLabelKey> = {
+  open: "tabOpen",
+  snoozed: "tabSnoozed",
+  done: "tabDone",
+  all: "tabAll",
+};
 
 interface Task {
   id: string;
@@ -43,6 +184,8 @@ const fmtDue = (s: string | null) => {
 };
 
 export default function AdminTasksPage() {
+  const { locale } = useLocale();
+  const tr = COPY[locale];
   const [tasks, setTasks] = useState<Task[]>([]);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +219,7 @@ export default function AdminTasksPage() {
   const reassign = (id: string, assigned_to: string) => patch(id, { assigned_to: assigned_to || null });
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this task?")) return;
+    if (!confirm(tr.confirmDelete)) return;
     await fetch(`/api/admin/tasks/${id}`, { method: "DELETE" });
     load(status);
   };
@@ -107,7 +250,7 @@ export default function AdminTasksPage() {
   };
 
   const assigneeName = (id: string | null) => {
-    if (!id) return "Unassigned";
+    if (!id) return tr.unassigned;
     const a = assignees.find((x) => x.id === id);
     return a ? a.name || a.email : "—";
   };
@@ -118,13 +261,12 @@ export default function AdminTasksPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <ListChecks className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">Tasks</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{tr.title}</h1>
         </div>
-        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> New task</Button>
+        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> {tr.newTask}</Button>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Your follow-up queue — auto-generated from stale leads, unpaid deposits and hot AI handoffs, plus
-        anything you add. Overdue items are flagged.
+        {tr.intro}
       </p>
 
       <div className="flex gap-1 mb-4">
@@ -134,7 +276,7 @@ export default function AdminTasksPage() {
             onClick={() => setStatus(s)}
             className={`px-3 py-1 text-xs font-mono uppercase tracking-wider rounded-[2px] border ${status === s ? "border-[var(--accent)] text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
           >
-            {s}
+            {tr[TAB_LABEL_KEY[s]]}
           </button>
         ))}
       </div>
@@ -142,22 +284,22 @@ export default function AdminTasksPage() {
       {showNew && (
         <div className="bg-card border border-border p-4 mb-4 space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground">New task</h2>
+            <h2 className="text-sm font-semibold text-foreground">{tr.newTaskHeading}</h2>
             <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
-          <Input placeholder="Title *" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-sm" />
+          <Input placeholder={tr.titlePlaceholder} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Customer phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} className="text-sm" />
-            <Input placeholder="Customer name" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} className="text-sm" />
+            <Input placeholder={tr.customerPhonePlaceholder} value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} className="text-sm" />
+            <Input placeholder={tr.customerNamePlaceholder} value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} className="text-sm" />
             <Input type="datetime-local" value={form.due_at} onChange={(e) => setForm({ ...form, due_at: e.target.value })} className="text-sm" />
             <select value={form.assigned_to} onChange={(e) => setForm({ ...form, assigned_to: e.target.value })} className="h-11 rounded-[2px] border border-border bg-[var(--bg-3)] px-2 text-sm text-foreground">
-              <option value="">Unassigned</option>
+              <option value="">{tr.unassigned}</option>
               {assignees.map((a) => <option key={a.id} value={a.id}>{a.name || a.email}</option>)}
             </select>
           </div>
           <div className="flex justify-end">
             <Button size="sm" onClick={create} disabled={saving || form.title.trim().length < 2}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : tr.create}
             </Button>
           </div>
         </div>
@@ -166,7 +308,7 @@ export default function AdminTasksPage() {
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : tasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No {status === "all" ? "" : status} tasks. 🎉</p>
+        <p className="text-sm text-muted-foreground">{status === "all" ? tr.emptyAll : tr.emptyStatus(tr[TAB_LABEL_KEY[status]])}</p>
       ) : (
         <div className="space-y-2">
           {tasks.map((t) => {
@@ -174,7 +316,7 @@ export default function AdminTasksPage() {
             return (
               <div key={t.id} className="bg-card border border-border p-3 flex items-start gap-3">
                 {t.status !== "done" ? (
-                  <button onClick={() => complete(t.id)} title="Mark done" className="mt-0.5 w-5 h-5 shrink-0 rounded-[2px] border border-border hover:border-[var(--success)] hover:text-[var(--success)] flex items-center justify-center">
+                  <button onClick={() => complete(t.id)} title={tr.markDone} className="mt-0.5 w-5 h-5 shrink-0 rounded-[2px] border border-border hover:border-[var(--success)] hover:text-[var(--success)] flex items-center justify-center">
                     <Check className="w-3.5 h-3.5 opacity-0 hover:opacity-100" />
                   </button>
                 ) : (
@@ -182,12 +324,12 @@ export default function AdminTasksPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${KIND_TONE[t.kind] || KIND_TONE.manual}`}>{t.kind.replace("_", " ")}</span>
+                    <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${KIND_TONE[t.kind] || KIND_TONE.manual}`}>{tr[KIND_LABEL_KEY[t.kind] || "kindManual"]}</span>
                     <span className={`text-sm ${t.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>{t.title}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                     {t.customer_key && <Link href={`/admin/customers`} className="hover:text-primary font-mono">{t.customer_phone}</Link>}
-                    {t.due_at && <span className={overdue ? "text-[var(--danger)]" : ""}>due {fmtDue(t.due_at)}{overdue ? " · overdue" : ""}</span>}
+                    {t.due_at && <span className={overdue ? "text-[var(--danger)]" : ""}>{tr.due} {fmtDue(t.due_at)}{overdue ? ` · ${tr.overdue}` : ""}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -195,15 +337,15 @@ export default function AdminTasksPage() {
                     value={t.assigned_to || ""}
                     onChange={(e) => reassign(t.id, e.target.value)}
                     className="h-8 max-w-[120px] rounded-[2px] border border-border bg-[var(--bg-3)] px-1.5 text-xs text-foreground"
-                    title="Assign"
+                    title={tr.assign}
                   >
                     <option value="">{assigneeName(null)}</option>
                     {assignees.map((a) => <option key={a.id} value={a.id}>{a.name || a.email}</option>)}
                   </select>
                   {t.status === "open" && (
-                    <button onClick={() => snooze(t.id)} title="Snooze 3 days" className="text-muted-foreground hover:text-[var(--warning)] p-1"><Clock className="w-4 h-4" /></button>
+                    <button onClick={() => snooze(t.id)} title={tr.snoozeTitle} className="text-muted-foreground hover:text-[var(--warning)] p-1"><Clock className="w-4 h-4" /></button>
                   )}
-                  <button onClick={() => remove(t.id)} title="Delete" className="text-muted-foreground hover:text-[var(--danger)] p-1"><Trash2 className="w-4 h-4" /></button>
+                  <button onClick={() => remove(t.id)} title={tr.delete} className="text-muted-foreground hover:text-[var(--danger)] p-1"><Trash2 className="w-4 h-4" /></button>
                 </div>
               </div>
             );

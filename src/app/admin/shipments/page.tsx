@@ -5,6 +5,8 @@ import { Container, Loader2, Plus, X, Check, ArrowRight, FileText, Trash2, Plane
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SHIPMENT_MILESTONES, milestoneLabel, nextMilestone, progressPct, milestoneStatus } from "@/lib/shipment-flow";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Shipment {
   id: string;
@@ -30,7 +32,81 @@ const fmt = (s: string | null) => {
   try { return new Date(s).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" }); } catch { return s; }
 };
 
+const COPY: Record<Locale, {
+  title: string; newShipment: string; intro: string; titlePlaceholder: string;
+  supplier: string; qty: string; containerNo: string; create: string;
+  noShipments: string; units: string; eta: string; overdue: string;
+  advanceTo: string; documents: string; noDocuments: string; documentUrl: string;
+  add: string; docHint: string; confirmDelete: string;
+}> = {
+  ru: {
+    title: "Поставки",
+    newShipment: "Новая поставка",
+    intro: "Отслеживайте каждый импорт от оплаты поставщику → доставка → таможня → прибытие → выдача, с документами и сроками (ETA).",
+    titlePlaceholder: "Название * (напр. 3× BYD Song Plus из Шэньчжэня)",
+    supplier: "Поставщик",
+    qty: "Кол-во",
+    containerNo: "Номер контейнера / вагона",
+    create: "Создать",
+    noShipments: "Поставок пока нет.",
+    units: "ед.",
+    eta: "ETA",
+    overdue: "просрочено",
+    advanceTo: "Перейти к этапу",
+    documents: "Документы",
+    noDocuments: "Документы не прикреплены.",
+    documentUrl: "URL документа",
+    add: "Добавить",
+    docHint: "Вставьте ссылку (Supabase Storage, Drive и т. п.) на инвойс / таможенную декларацию / сертификат.",
+    confirmDelete: "Удалить эту поставку?",
+  },
+  uz: {
+    title: "Yetkazib berishlar",
+    newShipment: "Yangi yetkazib berish",
+    intro: "Har bir importni yetkazib beruvchiga to'lovdan → yetkazib berish → bojxona → yetib kelish → topshirishgacha hujjatlar va muddatlar (ETA) bilan kuzatib boring.",
+    titlePlaceholder: "Nomi * (masalan, Shenchjendan 3× BYD Song Plus)",
+    supplier: "Yetkazib beruvchi",
+    qty: "Soni",
+    containerNo: "Konteyner / vagon raqami",
+    create: "Yaratish",
+    noShipments: "Hozircha yetkazib berishlar yo'q.",
+    units: "dona",
+    eta: "ETA",
+    overdue: "muddati o'tgan",
+    advanceTo: "Bosqichga o'tish",
+    documents: "Hujjatlar",
+    noDocuments: "Hujjatlar biriktirilmagan.",
+    documentUrl: "Hujjat URL manzili",
+    add: "Qo'shish",
+    docHint: "Invoys / bojxona deklaratsiyasi / sertifikatga havola (Supabase Storage, Drive va h.k.) joylashtiring.",
+    confirmDelete: "Ushbu yetkazib berish o'chirilsinmi?",
+  },
+  en: {
+    title: "Shipments",
+    newShipment: "New shipment",
+    intro: "Track each import from supplier payment → shipping → customs → arrival → delivery, with documents and ETAs.",
+    titlePlaceholder: "Title * (e.g. 3× BYD Song Plus from Shenzhen)",
+    supplier: "Supplier",
+    qty: "Qty",
+    containerNo: "Container / wagon no.",
+    create: "Create",
+    noShipments: "No shipments yet.",
+    units: "units",
+    eta: "ETA",
+    overdue: "overdue",
+    advanceTo: "Advance to",
+    documents: "Documents",
+    noDocuments: "No documents attached.",
+    documentUrl: "Document URL",
+    add: "Add",
+    docHint: "Paste a link (Supabase Storage, Drive, etc.) to the invoice / customs declaration / certificate.",
+    confirmDelete: "Delete this shipment?",
+  },
+};
+
 export default function AdminShipmentsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -99,7 +175,7 @@ export default function AdminShipmentsPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this shipment?")) return;
+    if (!confirm(t.confirmDelete)) return;
     await fetch(`/api/admin/shipments/${id}`, { method: "DELETE" });
     setOpen(null); load();
   };
@@ -109,35 +185,35 @@ export default function AdminShipmentsPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <Container className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">Shipments</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
         </div>
-        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> New shipment</Button>
+        <Button size="sm" onClick={() => setShowNew((s) => !s)}><Plus className="w-4 h-4" /> {t.newShipment}</Button>
       </div>
       <p className="text-sm text-muted-foreground mb-4">
-        Track each import from supplier payment → shipping → customs → arrival → delivery, with documents and ETAs.
+        {t.intro}
       </p>
 
       {showNew && (
         <div className="bg-card border border-border p-4 mb-4 space-y-2">
-          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-foreground">New shipment</h2><button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
-          <Input placeholder="Title * (e.g. 3× BYD Song Plus from Shenzhen)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-sm" />
+          <div className="flex items-center justify-between"><h2 className="text-sm font-semibold text-foreground">{t.newShipment}</h2><button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
+          <Input placeholder={t.titlePlaceholder} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Supplier" value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} className="text-sm" />
+            <Input placeholder={t.supplier} value={form.supplier} onChange={(e) => setForm({ ...form, supplier: e.target.value })} className="text-sm" />
             <select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })} className="h-11 rounded-[2px] border border-border bg-[var(--bg-3)] px-2 text-sm text-foreground">
               {["rail", "sea", "road", "air", "multimodal"].map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
-            <Input type="number" placeholder="Qty" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="text-sm" />
+            <Input type="number" placeholder={t.qty} value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} className="text-sm" />
             <Input type="date" value={form.eta_date} onChange={(e) => setForm({ ...form, eta_date: e.target.value })} className="text-sm" />
-            <Input placeholder="Container / wagon no." value={form.container_no} onChange={(e) => setForm({ ...form, container_no: e.target.value })} className="text-sm col-span-2" />
+            <Input placeholder={t.containerNo} value={form.container_no} onChange={(e) => setForm({ ...form, container_no: e.target.value })} className="text-sm col-span-2" />
           </div>
-          <div className="flex justify-end"><Button size="sm" onClick={create} disabled={saving || form.title.trim().length < 2}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}</Button></div>
+          <div className="flex justify-end"><Button size="sm" onClick={create} disabled={saving || form.title.trim().length < 2}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.create}</Button></div>
         </div>
       )}
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No shipments yet.</p>
+        <p className="text-sm text-muted-foreground">{t.noShipments}</p>
       ) : (
         <div className="space-y-2">
           {rows.map((s) => {
@@ -157,8 +233,8 @@ export default function AdminShipmentsPage() {
                   <div className="h-full bg-[var(--accent)]" style={{ width: `${pct}%` }} />
                 </div>
                 <div className="flex items-center justify-between mt-1.5 text-[11px] text-muted-foreground">
-                  <span>{s.supplier || "—"}{s.qty ? ` · ${s.qty} units` : ""}</span>
-                  <span className={overdue ? "text-[var(--danger)]" : ""}>ETA {fmt(s.eta_date)}{overdue ? " · overdue" : ""}</span>
+                  <span>{s.supplier || "—"}{s.qty ? ` · ${s.qty} ${t.units}` : ""}</span>
+                  <span className={overdue ? "text-[var(--danger)]" : ""}>{t.eta} {fmt(s.eta_date)}{overdue ? ` · ${t.overdue}` : ""}</span>
                 </div>
               </div>
             );
@@ -177,7 +253,7 @@ export default function AdminShipmentsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h2 className="font-semibold text-foreground">{open.shipment.title}</h2>
-                    <p className="text-xs text-muted-foreground">{open.shipment.supplier || "—"} · {open.shipment.mode}{open.shipment.container_no ? ` · ${open.shipment.container_no}` : ""} · ETA {fmt(open.shipment.eta_date)}</p>
+                    <p className="text-xs text-muted-foreground">{open.shipment.supplier || "—"} · {open.shipment.mode}{open.shipment.container_no ? ` · ${open.shipment.container_no}` : ""} · {t.eta} {fmt(open.shipment.eta_date)}</p>
                   </div>
                   <button onClick={() => setOpen(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
                 </div>
@@ -199,14 +275,14 @@ export default function AdminShipmentsPage() {
                 <div className="flex gap-2 mb-4">
                   {nextMilestone(open.shipment.status) && (
                     <Button size="sm" onClick={() => advance(open.shipment)}>
-                      <ArrowRight className="w-4 h-4" /> Advance to {milestoneLabel(nextMilestone(open.shipment.status) as string)}
+                      <ArrowRight className="w-4 h-4" /> {t.advanceTo} {milestoneLabel(nextMilestone(open.shipment.status) as string)}
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={() => remove(open.shipment.id)} className="ml-auto text-[var(--danger)]"><Trash2 className="w-4 h-4" /></Button>
                 </div>
 
                 {/* Documents */}
-                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5"><FileText className="w-4 h-4" /> Documents</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5"><FileText className="w-4 h-4" /> {t.documents}</h3>
                 <div className="space-y-1 mb-2">
                   {open.documents.map((d) => (
                     <div key={d.id} className="flex items-center justify-between text-sm">
@@ -214,16 +290,16 @@ export default function AdminShipmentsPage() {
                       <button onClick={() => delDoc(open.shipment.id, d.id)} className="text-muted-foreground hover:text-[var(--danger)] shrink-0 ml-2"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   ))}
-                  {open.documents.length === 0 && <p className="text-xs text-muted-foreground">No documents attached.</p>}
+                  {open.documents.length === 0 && <p className="text-xs text-muted-foreground">{t.noDocuments}</p>}
                 </div>
                 <div className="flex gap-2">
                   <select value={doc.kind} onChange={(e) => setDoc({ ...doc, kind: e.target.value })} className="h-9 rounded-[2px] border border-border bg-[var(--bg-3)] px-1.5 text-xs text-foreground">
                     {DOC_KINDS.map((k) => <option key={k} value={k}>{k.replace("_", " ")}</option>)}
                   </select>
-                  <Input placeholder="Document URL" value={doc.url} onChange={(e) => setDoc({ ...doc, url: e.target.value })} className="text-xs h-9 flex-1" />
-                  <Button size="sm" variant="outline" onClick={() => addDoc(open.shipment.id)} disabled={!doc.url.trim()}>Add</Button>
+                  <Input placeholder={t.documentUrl} value={doc.url} onChange={(e) => setDoc({ ...doc, url: e.target.value })} className="text-xs h-9 flex-1" />
+                  <Button size="sm" variant="outline" onClick={() => addDoc(open.shipment.id)} disabled={!doc.url.trim()}>{t.add}</Button>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Paste a link (Supabase Storage, Drive, etc.) to the invoice / customs declaration / certificate.</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{t.docHint}</p>
               </>
             )}
           </div>

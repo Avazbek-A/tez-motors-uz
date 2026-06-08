@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import { Wallet, Loader2, Check, Ship } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface LedgerRow {
   car_id: string;
@@ -38,7 +40,87 @@ const STATUS_TONE: Record<string, string> = {
   sold: "text-muted-foreground",
 };
 
+const COPY: Record<Locale, {
+  title: string;
+  intro: string;
+  noData: string;
+  trackedCars: string;
+  inventoryAtCost: string;
+  inventoryListValue: string;
+  potentialMarginOnLot: string;
+  realizedMarginSold: string;
+  depositsCollected: string;
+  colCar: string;
+  colListPrice: string;
+  colCost: string;
+  colMargin: string;
+  colMarginPct: string;
+  calc: string;
+  calcTooltip: string;
+  inventoryStatus: Record<string, string>;
+}> = {
+  ru: {
+    title: "Журнал прибыли",
+    intro: "Введите закупочную стоимость каждого авто, чтобы видеть валовую маржу и экономику запасов. Себестоимость — внутренняя: хранится отдельно и никогда не показывается клиентам.",
+    noData: "Данных журнала нет.",
+    trackedCars: "Отслеживаемые авто",
+    inventoryAtCost: "Запасы по себестоимости",
+    inventoryListValue: "Стоимость запасов по прайсу",
+    potentialMarginOnLot: "Потенциальная маржа (на складе)",
+    realizedMarginSold: "Реализованная маржа (продано)",
+    depositsCollected: "Собрано депозитов",
+    colCar: "Авто",
+    colListPrice: "Прайсовая цена",
+    colCost: "Себест. (USD)",
+    colMargin: "Маржа",
+    colMarginPct: "Маржа %",
+    calc: "калькул.",
+    calcTooltip: "Рассчитать итоговую стоимость в импорт-калькуляторе",
+    inventoryStatus: { available: "в наличии", reserved: "забронировано", sold: "продано" },
+  },
+  uz: {
+    title: "Foyda jurnali",
+    intro: "Yalpi marja va zaxiralar iqtisodini ko'rish uchun har bir avtomobilning xarid narxini kiriting. Tannarx ichki ma'lumot — alohida saqlanadi va mijozlarga hech qachon ko'rsatilmaydi.",
+    noData: "Jurnal ma'lumotlari yo'q.",
+    trackedCars: "Kuzatilayotgan avtomobillar",
+    inventoryAtCost: "Zaxiralar tannarxi bo'yicha",
+    inventoryListValue: "Zaxiralar narxlar bo'yicha qiymati",
+    potentialMarginOnLot: "Potentsial marja (omborda)",
+    realizedMarginSold: "Amalga oshirilgan marja (sotilgan)",
+    depositsCollected: "Yig'ilgan depozitlar",
+    colCar: "Avto",
+    colListPrice: "Narxnoma narxi",
+    colCost: "Tannarx (USD)",
+    colMargin: "Marja",
+    colMarginPct: "Marja %",
+    calc: "hisobla",
+    calcTooltip: "Import kalkulyatorida yakuniy qiymatni hisoblang",
+    inventoryStatus: { available: "mavjud", reserved: "band qilingan", sold: "sotilgan" },
+  },
+  en: {
+    title: "Profit ledger",
+    intro: "Enter each car's purchase cost to see gross margin and your inventory economics. Costs are internal — stored separately and never shown to customers.",
+    noData: "No ledger data.",
+    trackedCars: "Tracked cars",
+    inventoryAtCost: "Inventory at cost",
+    inventoryListValue: "Inventory list value",
+    potentialMarginOnLot: "Potential margin (on lot)",
+    realizedMarginSold: "Realized margin (sold)",
+    depositsCollected: "Deposits collected",
+    colCar: "Car",
+    colListPrice: "List price",
+    colCost: "Cost (USD)",
+    colMargin: "Margin",
+    colMarginPct: "Margin %",
+    calc: "calc",
+    calcTooltip: "Compute landed cost in the import calculator",
+    inventoryStatus: { available: "available", reserved: "reserved", sold: "sold" },
+  },
+};
+
 export default function AdminLedgerPage() {
+  const { locale } = useLocale();
+  const tr = COPY[locale];
   const [data, setData] = useState<LedgerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -83,28 +165,27 @@ export default function AdminLedgerPage() {
     <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-1">
         <Wallet className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-foreground">Profit ledger</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{tr.title}</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        Enter each car&apos;s purchase cost to see gross margin and your inventory economics.
-        Costs are internal — stored separately and never shown to customers.
+        {tr.intro}
       </p>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : !data ? (
-        <p className="text-sm text-muted-foreground">No ledger data.</p>
+        <p className="text-sm text-muted-foreground">{tr.noData}</p>
       ) : (
         <>
           {/* Totals */}
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
             {[
-              { label: "Tracked cars", value: String(t!.trackedCars) },
-              { label: "Inventory at cost", value: usd(t!.inventoryAtCostUsd) },
-              { label: "Inventory list value", value: usd(t!.inventoryListUsd) },
-              { label: "Potential margin (on lot)", value: usd(t!.potentialMarginUsd), accent: true },
-              { label: "Realized margin (sold)", value: usd(t!.realizedMarginUsd), accent: true },
-              { label: "Deposits collected", value: uzs(t!.depositsCollectedUzs) },
+              { label: tr.trackedCars, value: String(t!.trackedCars) },
+              { label: tr.inventoryAtCost, value: usd(t!.inventoryAtCostUsd) },
+              { label: tr.inventoryListValue, value: usd(t!.inventoryListUsd) },
+              { label: tr.potentialMarginOnLot, value: usd(t!.potentialMarginUsd), accent: true },
+              { label: tr.realizedMarginSold, value: usd(t!.realizedMarginUsd), accent: true },
+              { label: tr.depositsCollected, value: uzs(t!.depositsCollectedUzs) },
             ].map((s) => (
               <div key={s.label} className="bg-card border border-border p-4">
                 <p className={`font-mono text-2xl font-semibold ${s.accent ? "text-primary" : "text-foreground"}`}>{s.value}</p>
@@ -118,11 +199,11 @@ export default function AdminLedgerPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="px-4 py-2 font-medium">Car</th>
-                  <th className="px-4 py-2 font-medium text-right">List price</th>
-                  <th className="px-4 py-2 font-medium text-right">Cost (USD)</th>
-                  <th className="px-4 py-2 font-medium text-right">Margin</th>
-                  <th className="px-4 py-2 font-medium text-right">Margin %</th>
+                  <th className="px-4 py-2 font-medium">{tr.colCar}</th>
+                  <th className="px-4 py-2 font-medium text-right">{tr.colListPrice}</th>
+                  <th className="px-4 py-2 font-medium text-right">{tr.colCost}</th>
+                  <th className="px-4 py-2 font-medium text-right">{tr.colMargin}</th>
+                  <th className="px-4 py-2 font-medium text-right">{tr.colMarginPct}</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,14 +213,14 @@ export default function AdminLedgerPage() {
                       <span className="text-foreground">{r.brand} {r.model}</span>
                       {r.year ? <span className="text-muted-foreground"> {r.year}</span> : null}
                       <span className={`ml-2 text-xs font-mono uppercase ${STATUS_TONE[r.inventory_status] || "text-muted-foreground"}`}>
-                        {r.inventory_status}
+                        {tr.inventoryStatus[r.inventory_status] ?? r.inventory_status}
                       </span>
                       <Link
                         href={`/admin/import-calculator?car_id=${r.car_id}&car_label=${encodeURIComponent(`${r.brand} ${r.model}`)}`}
                         className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-primary align-middle"
-                        title="Compute landed cost in the import calculator"
+                        title={tr.calcTooltip}
                       >
-                        <Ship className="w-3 h-3" /> calc
+                        <Ship className="w-3 h-3" /> {tr.calc}
                       </Link>
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-foreground">{usd(r.price_usd)}</td>

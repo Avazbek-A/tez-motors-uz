@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Bot, Loader2, X, Flame, ExternalLink } from "lucide-react";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface Convo {
   thread_id: string;
@@ -42,7 +44,79 @@ const fmt = (s: string) => {
   }
 };
 
+const COPY: Record<Locale, {
+  title: string;
+  handoffOnly: string;
+  subtitle: string;
+  noConversations: string;
+  thStage: string;
+  thScore: string;
+  thLookingFor: string;
+  thContact: string;
+  thMsgs: string;
+  thLast: string;
+  conversation: string;
+  score: string;
+  msgs: string;
+  viewLead: string;
+  noMessages: string;
+}> = {
+  ru: {
+    title: "AI-диалоги продаж",
+    handoffOnly: "Только передачи",
+    subtitle: "Кого ассистент квалифицирует прямо сейчас. Горячие лиды, готовые к менеджеру, помечены — нажмите на строку, чтобы прочитать переписку и связаться.",
+    noConversations: "Диалогов пока нет.",
+    thStage: "Этап",
+    thScore: "Балл",
+    thLookingFor: "Ищет",
+    thContact: "Контакт",
+    thMsgs: "Сообщ.",
+    thLast: "Посл.",
+    conversation: "Диалог",
+    score: "балл",
+    msgs: "сообщ.",
+    viewLead: "Открыть лид в запросах",
+    noMessages: "Сообщения не сохранены.",
+  },
+  uz: {
+    title: "AI sotuv suhbatlari",
+    handoffOnly: "Faqat topshiriqlar",
+    subtitle: "Assistent hozir kimni baholayotgani. Menejerga tayyor qaynoq lidlar belgilangan — yozishmani o‘qish va bog‘lanish uchun qatorga bosing.",
+    noConversations: "Hozircha suhbatlar yo‘q.",
+    thStage: "Bosqich",
+    thScore: "Ball",
+    thLookingFor: "Qidirmoqda",
+    thContact: "Kontakt",
+    thMsgs: "Xabar.",
+    thLast: "Oxirgi",
+    conversation: "Suhbat",
+    score: "ball",
+    msgs: "xabar",
+    viewLead: "Lidni so‘rovlarda ochish",
+    noMessages: "Xabarlar saqlanmagan.",
+  },
+  en: {
+    title: "AI sales conversations",
+    handoffOnly: "Handoff only",
+    subtitle: "What the assistant is qualifying right now. Hot leads ready for a human are flagged — click any row to read the transcript and follow up.",
+    noConversations: "No conversations yet.",
+    thStage: "Stage",
+    thScore: "Score",
+    thLookingFor: "Looking for",
+    thContact: "Contact",
+    thMsgs: "Msgs",
+    thLast: "Last",
+    conversation: "Conversation",
+    score: "score",
+    msgs: "msgs",
+    viewLead: "View lead in inquiries",
+    noMessages: "No messages stored.",
+  },
+};
+
 export default function AdminConversationsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<Convo[]>([]);
   const [loading, setLoading] = useState(true);
   const [handoffOnly, setHandoffOnly] = useState(false);
@@ -80,33 +154,32 @@ export default function AdminConversationsPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <Bot className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">AI sales conversations</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
         </div>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <input type="checkbox" checked={handoffOnly} onChange={(e) => setHandoffOnly(e.target.checked)} />
-          Handoff only
+          {t.handoffOnly}
         </label>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        What the assistant is qualifying right now. Hot leads ready for a human are flagged — click any
-        row to read the transcript and follow up.
+        {t.subtitle}
       </p>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No conversations yet.</p>
+        <p className="text-sm text-muted-foreground">{t.noConversations}</p>
       ) : (
         <div className="bg-card border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="px-4 py-2 font-medium">Stage</th>
-                <th className="px-4 py-2 font-medium text-right">Score</th>
-                <th className="px-4 py-2 font-medium">Looking for</th>
-                <th className="px-4 py-2 font-medium">Contact</th>
-                <th className="px-4 py-2 font-medium text-right">Msgs</th>
-                <th className="px-4 py-2 font-medium">Last</th>
+                <th className="px-4 py-2 font-medium">{t.thStage}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thScore}</th>
+                <th className="px-4 py-2 font-medium">{t.thLookingFor}</th>
+                <th className="px-4 py-2 font-medium">{t.thContact}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thMsgs}</th>
+                <th className="px-4 py-2 font-medium">{t.thLast}</th>
               </tr>
             </thead>
             <tbody>
@@ -141,9 +214,9 @@ export default function AdminConversationsPage() {
           <div className="relative z-10 w-full max-w-lg bg-card border border-border p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h2 className="font-semibold text-foreground">Conversation</h2>
+                <h2 className="font-semibold text-foreground">{t.conversation}</h2>
                 <p className="text-xs text-muted-foreground">
-                  {open.convo.profile_summary} · score {open.convo.lead_score} · {open.convo.message_count} msgs
+                  {open.convo.profile_summary} · {t.score} {open.convo.lead_score} · {open.convo.message_count} {t.msgs}
                 </p>
                 {open.convo.phone && (
                   <p className="text-sm text-foreground mt-1">
@@ -153,7 +226,7 @@ export default function AdminConversationsPage() {
                 )}
                 {open.convo.inquiry_id && (
                   <Link href="/admin/inquiries" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                    <ExternalLink className="w-3 h-3" /> View lead in inquiries
+                    <ExternalLink className="w-3 h-3" /> {t.viewLead}
                   </Link>
                 )}
               </div>
@@ -172,7 +245,7 @@ export default function AdminConversationsPage() {
                     {m.content}
                   </div>
                 ))}
-                {open.messages.length === 0 && <p className="text-sm text-muted-foreground">No messages stored.</p>}
+                {open.messages.length === 0 && <p className="text-sm text-muted-foreground">{t.noMessages}</p>}
               </div>
             )}
           </div>

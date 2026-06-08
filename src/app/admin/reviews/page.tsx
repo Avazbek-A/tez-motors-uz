@@ -8,8 +8,154 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import type { Review } from "@/types/car";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
+
+const COPY: Record<Locale, {
+  title: string;
+  totalCount: (n: number) => string;
+  addReview: string;
+  clearSelection: string;
+  selectAll: string;
+  selected: (n: number) => string;
+  publishSelected: string;
+  unpublishSelected: string;
+  bulkResult: (ok: number, total: number, publish: boolean) => string;
+  reviewUnpublished: string;
+  reviewPublished: string;
+  failedToUpdate: string;
+  deleteConfirm: string;
+  reviewDeleted: string;
+  failedToDelete: string;
+  selectReviewAria: string;
+  published: string;
+  draft: string;
+  editReview: string;
+  addReviewTitle: string;
+  clientName: string;
+  carDescription: string;
+  carDescriptionPlaceholder: string;
+  linkedCar: string;
+  notLinked: string;
+  linkedCarHint: string;
+  reviewTextRu: string;
+  rating: string;
+  stars: (n: number) => string;
+  publishedLabel: string;
+  cancel: string;
+  update: string;
+  add: string;
+}> = {
+  ru: {
+    title: "Отзывы",
+    totalCount: (n) => `Всего отзывов: ${n}`,
+    addReview: "Добавить отзыв",
+    clearSelection: "Снять выделение",
+    selectAll: "Выбрать все",
+    selected: (n) => `выбрано: ${n}`,
+    publishSelected: "Опубликовать выбранные",
+    unpublishSelected: "Снять с публикации",
+    bulkResult: (ok, total, publish) => `${ok}/${total} ${publish ? "опубликовано" : "снято с публикации"}`,
+    reviewUnpublished: "Отзыв снят с публикации",
+    reviewPublished: "Отзыв опубликован",
+    failedToUpdate: "Не удалось обновить отзыв",
+    deleteConfirm: "Удалить этот отзыв?",
+    reviewDeleted: "Отзыв удалён",
+    failedToDelete: "Не удалось удалить отзыв",
+    selectReviewAria: "Выбрать отзыв",
+    published: "Опубликован",
+    draft: "Черновик",
+    editReview: "Редактировать отзыв",
+    addReviewTitle: "Добавить отзыв",
+    clientName: "Имя клиента",
+    carDescription: "Описание автомобиля",
+    carDescriptionPlaceholder: "напр., BYD Song Plus 2024",
+    linkedCar: "Связанный автомобиль (для AggregateRating)",
+    notLinked: "— не связано —",
+    linkedCarHint: "Связывание отзыва с автомобилем показывает звёздный рейтинг в сниппете поиска по этому автомобилю.",
+    reviewTextRu: "Текст отзыва (RU)",
+    rating: "Рейтинг",
+    stars: (n) => `${n} звёзд`,
+    publishedLabel: "Опубликован",
+    cancel: "Отмена",
+    update: "Обновить",
+    add: "Добавить",
+  },
+  uz: {
+    title: "Sharhlar",
+    totalCount: (n) => `Jami sharhlar: ${n}`,
+    addReview: "Sharh qo'shish",
+    clearSelection: "Belgilashni bekor qilish",
+    selectAll: "Hammasini tanlash",
+    selected: (n) => `tanlandi: ${n}`,
+    publishSelected: "Tanlanganlarni chop etish",
+    unpublishSelected: "Chop etishdan olish",
+    bulkResult: (ok, total, publish) => `${ok}/${total} ${publish ? "chop etildi" : "chop etishdan olindi"}`,
+    reviewUnpublished: "Sharh chop etishdan olindi",
+    reviewPublished: "Sharh chop etildi",
+    failedToUpdate: "Sharhni yangilab bo'lmadi",
+    deleteConfirm: "Ushbu sharh o'chirilsinmi?",
+    reviewDeleted: "Sharh o'chirildi",
+    failedToDelete: "Sharhni o'chirib bo'lmadi",
+    selectReviewAria: "Sharhni tanlash",
+    published: "Chop etilgan",
+    draft: "Qoralama",
+    editReview: "Sharhni tahrirlash",
+    addReviewTitle: "Sharh qo'shish",
+    clientName: "Mijoz ismi",
+    carDescription: "Avtomobil tavsifi",
+    carDescriptionPlaceholder: "masalan, BYD Song Plus 2024",
+    linkedCar: "Bog'langan avtomobil (AggregateRating uchun)",
+    notLinked: "— bog'lanmagan —",
+    linkedCarHint: "Sharhni avtomobilga bog'lash ushbu avtomobilning qidiruv snipetida yulduzli reytingni ko'rsatadi.",
+    reviewTextRu: "Sharh matni (RU)",
+    rating: "Reyting",
+    stars: (n) => `${n} yulduz`,
+    publishedLabel: "Chop etilgan",
+    cancel: "Bekor qilish",
+    update: "Yangilash",
+    add: "Qo'shish",
+  },
+  en: {
+    title: "Reviews",
+    totalCount: (n) => `${n} reviews total`,
+    addReview: "Add Review",
+    clearSelection: "Clear selection",
+    selectAll: "Select all",
+    selected: (n) => `${n} selected`,
+    publishSelected: "Publish selected",
+    unpublishSelected: "Unpublish selected",
+    bulkResult: (ok, total, publish) => `${ok}/${total} ${publish ? "published" : "unpublished"}`,
+    reviewUnpublished: "Review unpublished",
+    reviewPublished: "Review published",
+    failedToUpdate: "Failed to update review",
+    deleteConfirm: "Delete this review?",
+    reviewDeleted: "Review deleted",
+    failedToDelete: "Failed to delete review",
+    selectReviewAria: "Select review",
+    published: "Published",
+    draft: "Draft",
+    editReview: "Edit Review",
+    addReviewTitle: "Add Review",
+    clientName: "Client Name",
+    carDescription: "Car Description",
+    carDescriptionPlaceholder: "e.g., BYD Song Plus 2024",
+    linkedCar: "Linked car (for AggregateRating)",
+    notLinked: "— not linked —",
+    linkedCarHint: "Linking a review to a car shows star ratings on that car's search snippet.",
+    reviewTextRu: "Review Text (RU)",
+    rating: "Rating",
+    stars: (n) => `${n} stars`,
+    publishedLabel: "Published",
+    cancel: "Cancel",
+    update: "Update",
+    add: "Add",
+  },
+};
 
 export default function AdminReviewsPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -50,7 +196,7 @@ export default function AdminReviewsPage() {
     setBulkBusy(false);
     showFeedback(
       okIds.size === ids.length ? "success" : "error",
-      `${okIds.size}/${ids.length} ${publish ? "published" : "unpublished"}`,
+      t.bulkResult(okIds.size, ids.length, publish),
     );
   };
 
@@ -84,20 +230,20 @@ export default function AdminReviewsPage() {
       setReviews(reviews.map((r) =>
         r.id === review.id ? { ...r, is_published: !r.is_published } : r
       ));
-      showFeedback("success", review.is_published ? "Review unpublished" : "Review published");
+      showFeedback("success", review.is_published ? t.reviewUnpublished : t.reviewPublished);
     } else {
-      showFeedback("error", "Failed to update review");
+      showFeedback("error", t.failedToUpdate);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this review?")) return;
+    if (!confirm(t.deleteConfirm)) return;
     const res = await fetch(`/api/reviews/${id}`, { method: "DELETE" });
     if (res.ok) {
       setReviews(reviews.filter((r) => r.id !== id));
-      showFeedback("success", "Review deleted");
+      showFeedback("success", t.reviewDeleted);
     } else {
-      showFeedback("error", "Failed to delete review");
+      showFeedback("error", t.failedToDelete);
     }
   };
 
@@ -105,8 +251,8 @@ export default function AdminReviewsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Reviews</h1>
-          <p className="text-muted-foreground">{reviews.length} reviews total</p>
+          <h1 className="text-2xl font-bold">{t.title}</h1>
+          <p className="text-muted-foreground">{t.totalCount(reviews.length)}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={fetchReviews}>
@@ -114,7 +260,7 @@ export default function AdminReviewsPage() {
           </Button>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="w-4 h-4" />
-            Add Review
+            {t.addReview}
           </Button>
         </div>
       </div>
@@ -122,16 +268,16 @@ export default function AdminReviewsPage() {
       {reviews.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <Button type="button" size="sm" variant="outline" onClick={selected.size === reviews.length ? clearSelection : selectAll}>
-            {selected.size === reviews.length ? "Clear selection" : "Select all"}
+            {selected.size === reviews.length ? t.clearSelection : t.selectAll}
           </Button>
-          <span className="text-muted-foreground">{selected.size} selected</span>
+          <span className="text-muted-foreground">{t.selected(selected.size)}</span>
           <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(true)}>
             {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-            Publish selected
+            {t.publishSelected}
           </Button>
           <Button type="button" size="sm" variant="outline" disabled={selected.size === 0 || bulkBusy} onClick={() => bulkSetPublished(false)}>
             {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <EyeOff className="w-4 h-4" />}
-            Unpublish selected
+            {t.unpublishSelected}
           </Button>
         </div>
       )}
@@ -168,7 +314,7 @@ export default function AdminReviewsPage() {
                         checked={selected.has(review.id)}
                         onChange={() => toggleSelect(review.id)}
                         className="mt-1 rounded"
-                        aria-label="Select review"
+                        aria-label={t.selectReviewAria}
                       />
                       <div>
                         <p className="font-semibold">{review.client_name}</p>
@@ -177,9 +323,9 @@ export default function AdminReviewsPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       {review.is_published ? (
-                        <Badge variant="success">Published</Badge>
+                        <Badge variant="success">{t.published}</Badge>
                       ) : (
-                        <Badge variant="secondary">Draft</Badge>
+                        <Badge variant="secondary">{t.draft}</Badge>
                       )}
                     </div>
                   </div>
@@ -244,6 +390,8 @@ export default function AdminReviewsPage() {
 }
 
 function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; onClose: () => void; onSaved: () => void }) {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const isEditing = !!review;
   const [saving, setSaving] = useState(false);
   const [clientName, setClientName] = useState(review?.client_name || "");
@@ -300,27 +448,27 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl">
         <h2 className="text-xl font-bold mb-6">
-          {isEditing ? "Edit Review" : "Add Review"}
+          {isEditing ? t.editReview : t.addReviewTitle}
         </h2>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="text-sm font-medium mb-1 block">Client Name</label>
+            <label className="text-sm font-medium mb-1 block">{t.clientName}</label>
             <Input value={clientName} onChange={(e) => setClientName(e.target.value)} required />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Car Description</label>
-            <Input value={carDescription} onChange={(e) => setCarDescription(e.target.value)} placeholder="e.g., BYD Song Plus 2024" />
+            <label className="text-sm font-medium mb-1 block">{t.carDescription}</label>
+            <Input value={carDescription} onChange={(e) => setCarDescription(e.target.value)} placeholder={t.carDescriptionPlaceholder} />
           </div>
           <div>
             <label className="text-sm font-medium mb-1 block">
-              Linked car (for AggregateRating)
+              {t.linkedCar}
             </label>
             <select
               className="w-full h-11 rounded-xl border border-border px-3 text-sm bg-background"
               value={carId ?? ""}
               onChange={(e) => setCarId(e.target.value || null)}
             >
-              <option value="">— not linked —</option>
+              <option value="">{t.notLinked}</option>
               {carOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.brand} {c.model} {c.year}
@@ -328,11 +476,11 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
               ))}
             </select>
             <p className="text-xs text-muted-foreground mt-1">
-              Linking a review to a car shows star ratings on that car&apos;s search snippet.
+              {t.linkedCarHint}
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Review Text (RU)</label>
+            <label className="text-sm font-medium mb-1 block">{t.reviewTextRu}</label>
             <textarea
               className="w-full min-h-[100px] rounded-xl border border-border px-4 py-3 text-sm resize-none"
               value={reviewTextRu}
@@ -341,14 +489,14 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
             />
           </div>
           <div>
-            <label className="text-sm font-medium mb-1 block">Rating</label>
+            <label className="text-sm font-medium mb-1 block">{t.rating}</label>
             <select
               className="w-full h-11 rounded-xl border border-border px-3 text-sm"
               value={rating}
               onChange={(e) => setRating(parseInt(e.target.value))}
             >
               {[5, 4, 3, 2, 1].map((r) => (
-                <option key={r} value={r}>{r} stars</option>
+                <option key={r} value={r}>{t.stars(r)}</option>
               ))}
             </select>
           </div>
@@ -359,12 +507,12 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
               onChange={(e) => setIsPublished(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">Published</span>
+            <span className="text-sm">{t.publishedLabel}</span>
           </label>
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t.cancel}</Button>
             <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? "Update" : "Add"}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? t.update : t.add}
             </Button>
           </div>
         </form>

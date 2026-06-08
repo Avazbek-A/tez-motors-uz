@@ -6,6 +6,8 @@ import { Plus, Pencil, Trash2, X, Loader2, Truck, MessageCircle, Sparkles, Conta
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PURCHASE_ORDER_STATUSES } from "@/lib/schemas/purchase-order";
+import { useLocale } from "@/i18n/locale-context";
+import type { Locale } from "@/i18n/config";
 
 interface PurchaseOrder {
   id: string;
@@ -23,12 +25,188 @@ interface PurchaseOrder {
   created_at: string;
 }
 
-const MSG_KINDS: { value: string; label: string }[] = [
-  { value: "rfq", label: "Request quote" },
-  { value: "follow_up", label: "Follow up" },
-  { value: "eta", label: "Shipping / ETA" },
-  { value: "price_check", label: "Price check" },
-];
+const MSG_KIND_VALUES = ["rfq", "follow_up", "eta", "price_check"] as const;
+
+const COPY: Record<Locale, {
+  title: string;
+  newPurchaseOrder: string;
+  intro: string;
+  noPurchaseOrders: string;
+  thSupplier: string;
+  thCar: string;
+  thQty: string;
+  thUnitCost: string;
+  thTotal: string;
+  thStatus: string;
+  thEta: string;
+  thActions: string;
+  deleteConfirm: string;
+  edit: string;
+  new: string;
+  poSuffix: string;
+  supplier: string;
+  supplierWhatsapp: string;
+  brandRequired: string;
+  modelRequired: string;
+  trim: string;
+  year: string;
+  qty: string;
+  unitCostUsd: string;
+  notes: string;
+  supplierWhatsappMessage: string;
+  saveFirst: string;
+  draftPlaceholder: string;
+  bilingualNote: string;
+  sendOnWhatsapp: string;
+  draft: string;
+  next: string;
+  createShipment: string;
+  shipmentFrom: string;
+  poShort: string;
+  logSupplierPayment: string;
+  cancel: string;
+  save: string;
+  msgKinds: Record<string, string>;
+}> = {
+  ru: {
+    title: "Закупки",
+    newPurchaseOrder: "Новый заказ на закупку",
+    intro: "Отслеживайте, что вы заказываете у поставщиков — от черновика до прибытия. Только для внутреннего использования.",
+    noPurchaseOrders: "Пока нет заказов на закупку.",
+    thSupplier: "Поставщик",
+    thCar: "Машина",
+    thQty: "Кол-во",
+    thUnitCost: "Цена за ед.",
+    thTotal: "Итого",
+    thStatus: "Статус",
+    thEta: "ETA",
+    thActions: "Действия",
+    deleteConfirm: "Удалить этот заказ на закупку?",
+    edit: "Редактировать",
+    new: "Новый",
+    poSuffix: "заказ на закупку",
+    supplier: "Поставщик",
+    supplierWhatsapp: "WhatsApp поставщика (+86…)",
+    brandRequired: "Марка *",
+    modelRequired: "Модель *",
+    trim: "Комплектация",
+    year: "Год",
+    qty: "Кол-во",
+    unitCostUsd: "Цена за ед. USD",
+    notes: "Заметки",
+    supplierWhatsappMessage: "Сообщение поставщику в WhatsApp",
+    saveFirst: "Сначала сохраните этот заказ, чтобы составить сообщение поставщику.",
+    draftPlaceholder: "Составьте сообщение, отредактируйте, затем отправьте в WhatsApp…",
+    bilingualNote: "Двуязычно 中文/EN. Проверьте перед отправкой — отправляете вы, а не бот.",
+    sendOnWhatsapp: "Отправить в WhatsApp",
+    draft: "Составить",
+    next: "Далее:",
+    createShipment: "Создать поставку",
+    shipmentFrom: "от",
+    poShort: "ЗнЗ",
+    logSupplierPayment: "Записать оплату поставщику",
+    cancel: "Отмена",
+    save: "Сохранить",
+    msgKinds: {
+      rfq: "Запросить котировку",
+      follow_up: "Напоминание",
+      eta: "Доставка / ETA",
+      price_check: "Проверка цены",
+    },
+  },
+  uz: {
+    title: "Xaridlar",
+    newPurchaseOrder: "Yangi xarid buyurtmasi",
+    intro: "Yetkazib beruvchilardan nima buyurtma qilayotganingizni kuzating — qoralamadan kelguniga qadar. Faqat ichki foydalanish uchun.",
+    noPurchaseOrders: "Hozircha xarid buyurtmalari yo'q.",
+    thSupplier: "Yetkazib beruvchi",
+    thCar: "Mashina",
+    thQty: "Soni",
+    thUnitCost: "Birlik narxi",
+    thTotal: "Jami",
+    thStatus: "Holat",
+    thEta: "ETA",
+    thActions: "Amallar",
+    deleteConfirm: "Ushbu xarid buyurtmasini o'chirilsinmi?",
+    edit: "Tahrirlash",
+    new: "Yangi",
+    poSuffix: "xarid buyurtmasi",
+    supplier: "Yetkazib beruvchi",
+    supplierWhatsapp: "Yetkazib beruvchi WhatsApp (+86…)",
+    brandRequired: "Marka *",
+    modelRequired: "Model *",
+    trim: "Komplektatsiya",
+    year: "Yil",
+    qty: "Soni",
+    unitCostUsd: "Birlik narxi USD",
+    notes: "Eslatmalar",
+    supplierWhatsappMessage: "Yetkazib beruvchiga WhatsApp xabari",
+    saveFirst: "Yetkazib beruvchiga xabar tuzish uchun avval ushbu buyurtmani saqlang.",
+    draftPlaceholder: "Xabar tuzing, tahrirlang, so'ng WhatsAppda yuboring…",
+    bilingualNote: "Ikki tilli 中文/EN. Yuborishdan oldin ko'rib chiqing — bot emas, siz yuborasiz.",
+    sendOnWhatsapp: "WhatsAppda yuborish",
+    draft: "Tuzish",
+    next: "Keyingi:",
+    createShipment: "Yetkazib berish yaratish",
+    shipmentFrom: "dan",
+    poShort: "XB",
+    logSupplierPayment: "Yetkazib beruvchi to'lovini qayd etish",
+    cancel: "Bekor qilish",
+    save: "Saqlash",
+    msgKinds: {
+      rfq: "Narx so'rovi",
+      follow_up: "Eslatma",
+      eta: "Yetkazib berish / ETA",
+      price_check: "Narx tekshiruvi",
+    },
+  },
+  en: {
+    title: "Procurement",
+    newPurchaseOrder: "New purchase order",
+    intro: "Track what you order from suppliers — from draft to arrived. Internal only.",
+    noPurchaseOrders: "No purchase orders yet.",
+    thSupplier: "Supplier",
+    thCar: "Car",
+    thQty: "Qty",
+    thUnitCost: "Unit cost",
+    thTotal: "Total",
+    thStatus: "Status",
+    thEta: "ETA",
+    thActions: "Actions",
+    deleteConfirm: "Delete this purchase order?",
+    edit: "Edit",
+    new: "New",
+    poSuffix: "purchase order",
+    supplier: "Supplier",
+    supplierWhatsapp: "Supplier WhatsApp (+86…)",
+    brandRequired: "Brand *",
+    modelRequired: "Model *",
+    trim: "Trim",
+    year: "Year",
+    qty: "Qty",
+    unitCostUsd: "Unit cost USD",
+    notes: "Notes",
+    supplierWhatsappMessage: "Supplier WhatsApp message",
+    saveFirst: "Save this order first to draft a supplier message.",
+    draftPlaceholder: "Draft a message, edit it, then send on WhatsApp…",
+    bilingualNote: "Bilingual 中文/EN. Review before sending — you send, not the bot.",
+    sendOnWhatsapp: "Send on WhatsApp",
+    draft: "Draft",
+    next: "Next:",
+    createShipment: "Create shipment",
+    shipmentFrom: "from",
+    poShort: "PO",
+    logSupplierPayment: "Log supplier payment",
+    cancel: "Cancel",
+    save: "Save",
+    msgKinds: {
+      rfq: "Request quote",
+      follow_up: "Follow up",
+      eta: "Shipping / ETA",
+      price_check: "Price check",
+    },
+  },
+};
 
 /** Build a one-tap WhatsApp link. With a number → direct chat; without → share sheet. */
 function waLink(phone: string | null | undefined, text: string): string {
@@ -51,6 +229,8 @@ const STATUS_TONE: Record<string, string> = {
 type Draft = Partial<PurchaseOrder>;
 
 export default function AdminProcurementPage() {
+  const { locale } = useLocale();
+  const t = COPY[locale];
   const [rows, setRows] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Draft | null>(null);
@@ -144,7 +324,7 @@ export default function AdminProcurementPage() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this purchase order?")) return;
+    if (!confirm(t.deleteConfirm)) return;
     const res = await fetch(`/api/admin/purchase-orders/${id}`, { method: "DELETE" });
     if (res.ok) load();
   };
@@ -156,33 +336,33 @@ export default function AdminProcurementPage() {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-3">
           <Truck className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-semibold text-foreground">Procurement</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
         </div>
         <Button size="sm" onClick={() => setEditing({ brand: "", model: "", qty: 1, status: "draft" })}>
-          <Plus className="w-4 h-4" /> New purchase order
+          <Plus className="w-4 h-4" /> {t.newPurchaseOrder}
         </Button>
       </div>
       <p className="text-sm text-muted-foreground mb-6">
-        Track what you order from suppliers — from draft to arrived. Internal only.
+        {t.intro}
       </p>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No purchase orders yet.</p>
+        <p className="text-sm text-muted-foreground">{t.noPurchaseOrders}</p>
       ) : (
         <div className="bg-card border border-border overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="px-4 py-2 font-medium">Supplier</th>
-                <th className="px-4 py-2 font-medium">Car</th>
-                <th className="px-4 py-2 font-medium text-right">Qty</th>
-                <th className="px-4 py-2 font-medium text-right">Unit cost</th>
-                <th className="px-4 py-2 font-medium text-right">Total</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">ETA</th>
-                <th className="px-4 py-2 font-medium text-right">Actions</th>
+                <th className="px-4 py-2 font-medium">{t.thSupplier}</th>
+                <th className="px-4 py-2 font-medium">{t.thCar}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thQty}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thUnitCost}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thTotal}</th>
+                <th className="px-4 py-2 font-medium">{t.thStatus}</th>
+                <th className="px-4 py-2 font-medium">{t.thEta}</th>
+                <th className="px-4 py-2 font-medium text-right">{t.thActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -219,21 +399,21 @@ export default function AdminProcurementPage() {
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setEditing(null)} />
           <div className="relative z-10 w-full max-w-lg bg-card border border-border p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-foreground">{editing.id ? "Edit" : "New"} purchase order</h2>
+              <h2 className="font-semibold text-foreground">{editing.id ? t.edit : t.new} {t.poSuffix}</h2>
               <button onClick={() => setEditing(null)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Supplier" value={editing.supplier || ""} onChange={(e) => set({ supplier: e.target.value })} />
-                <Input placeholder="Supplier WhatsApp (+86…)" value={editing.supplier_phone || ""} onChange={(e) => set({ supplier_phone: e.target.value })} />
+                <Input placeholder={t.supplier} value={editing.supplier || ""} onChange={(e) => set({ supplier: e.target.value })} />
+                <Input placeholder={t.supplierWhatsapp} value={editing.supplier_phone || ""} onChange={(e) => set({ supplier_phone: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="Brand *" value={editing.brand || ""} onChange={(e) => set({ brand: e.target.value })} />
-                <Input placeholder="Model *" value={editing.model || ""} onChange={(e) => set({ model: e.target.value })} />
-                <Input placeholder="Trim" value={editing.trim || ""} onChange={(e) => set({ trim: e.target.value })} />
-                <Input type="number" placeholder="Year" value={editing.year ?? ""} onChange={(e) => set({ year: e.target.value ? Number(e.target.value) : null })} />
-                <Input type="number" placeholder="Qty" value={editing.qty ?? 1} onChange={(e) => set({ qty: Number(e.target.value) })} />
-                <Input type="number" placeholder="Unit cost USD" value={editing.unit_cost_usd ?? ""} onChange={(e) => set({ unit_cost_usd: e.target.value ? Number(e.target.value) : null })} />
+                <Input placeholder={t.brandRequired} value={editing.brand || ""} onChange={(e) => set({ brand: e.target.value })} />
+                <Input placeholder={t.modelRequired} value={editing.model || ""} onChange={(e) => set({ model: e.target.value })} />
+                <Input placeholder={t.trim} value={editing.trim || ""} onChange={(e) => set({ trim: e.target.value })} />
+                <Input type="number" placeholder={t.year} value={editing.year ?? ""} onChange={(e) => set({ year: e.target.value ? Number(e.target.value) : null })} />
+                <Input type="number" placeholder={t.qty} value={editing.qty ?? 1} onChange={(e) => set({ qty: Number(e.target.value) })} />
+                <Input type="number" placeholder={t.unitCostUsd} value={editing.unit_cost_usd ?? ""} onChange={(e) => set({ unit_cost_usd: e.target.value ? Number(e.target.value) : null })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <select
@@ -247,12 +427,12 @@ export default function AdminProcurementPage() {
                 </select>
                 <Input type="date" value={editing.eta_date || ""} onChange={(e) => set({ eta_date: e.target.value })} />
               </div>
-              <Input placeholder="Notes" value={editing.notes || ""} onChange={(e) => set({ notes: e.target.value })} />
+              <Input placeholder={t.notes} value={editing.notes || ""} onChange={(e) => set({ notes: e.target.value })} />
 
               {/* Supplier WhatsApp message — AI-drafted, you review & send (ToS-safe). */}
               <div className="rounded-[2px] border border-border bg-[var(--bg-3)]/50 p-3 space-y-2.5">
                 <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-                  <MessageCircle className="w-3.5 h-3.5" /> Supplier WhatsApp message
+                  <MessageCircle className="w-3.5 h-3.5" /> {t.supplierWhatsappMessage}
                 </div>
                 {editing.id ? (
                   <>
@@ -262,24 +442,24 @@ export default function AdminProcurementPage() {
                         onChange={(e) => setMsgKind(e.target.value)}
                         className="h-9 flex-1 rounded-[2px] border border-border bg-[var(--bg-3)] px-2 text-sm text-foreground"
                       >
-                        {MSG_KINDS.map((k) => (
-                          <option key={k.value} value={k.value}>{k.label}</option>
+                        {MSG_KIND_VALUES.map((k) => (
+                          <option key={k} value={k}>{t.msgKinds[k]}</option>
                         ))}
                       </select>
                       <Button type="button" variant="outline" size="sm" onClick={draftMessage} disabled={drafting}>
-                        {drafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Draft</>}
+                        {drafting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> {t.draft}</>}
                       </Button>
                     </div>
                     <textarea
                       value={msgText}
                       onChange={(e) => setMsgText(e.target.value)}
-                      placeholder="Draft a message, edit it, then send on WhatsApp…"
+                      placeholder={t.draftPlaceholder}
                       rows={5}
                       className="w-full rounded-[2px] border border-border bg-[var(--bg-3)] px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-[var(--accent)] whitespace-pre-wrap"
                     />
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[11px] text-muted-foreground">
-                        Bilingual 中文/EN. Review before sending — you send, not the bot.
+                        {t.bilingualNote}
                       </p>
                       <a
                         href={waLink(editing.supplier_phone, msgText)}
@@ -287,36 +467,36 @@ export default function AdminProcurementPage() {
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1.5 rounded-[2px] bg-[var(--success)] px-3 py-1.5 text-xs font-medium text-black ${msgText.trim() ? "" : "pointer-events-none opacity-50"}`}
                       >
-                        <MessageCircle className="w-3.5 h-3.5" /> Send on WhatsApp
+                        <MessageCircle className="w-3.5 h-3.5" /> {t.sendOnWhatsapp}
                       </a>
                     </div>
                   </>
                 ) : (
-                  <p className="text-[11px] text-muted-foreground">Save this order first to draft a supplier message.</p>
+                  <p className="text-[11px] text-muted-foreground">{t.saveFirst}</p>
                 )}
               </div>
             </div>
             {editing.id && (
               <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-border text-xs">
-                <span className="text-muted-foreground">Next:</span>
+                <span className="text-muted-foreground">{t.next}</span>
                 <Link
-                  href={`/admin/shipments?po_id=${editing.id}&title=${encodeURIComponent(`${editing.qty || 1}× ${editing.brand} ${editing.model}${editing.supplier ? ` from ${editing.supplier}` : ""}`)}&supplier=${encodeURIComponent(editing.supplier || "")}&qty=${editing.qty || 1}`}
+                  href={`/admin/shipments?po_id=${editing.id}&title=${encodeURIComponent(`${editing.qty || 1}× ${editing.brand} ${editing.model}${editing.supplier ? ` ${t.shipmentFrom} ${editing.supplier}` : ""}`)}&supplier=${encodeURIComponent(editing.supplier || "")}&qty=${editing.qty || 1}`}
                   className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
-                  <Container className="w-3.5 h-3.5" /> Create shipment
+                  <Container className="w-3.5 h-3.5" /> {t.createShipment}
                 </Link>
                 <Link
-                  href={`/admin/finance?exp_category=supplier_payment&exp_currency=USD&exp_supplier=${encodeURIComponent(editing.supplier || "")}&exp_amount=${Math.round((editing.unit_cost_usd || 0) * (editing.qty || 1))}&exp_desc=${encodeURIComponent(`${editing.brand} ${editing.model} — PO`)}`}
+                  href={`/admin/finance?exp_category=supplier_payment&exp_currency=USD&exp_supplier=${encodeURIComponent(editing.supplier || "")}&exp_amount=${Math.round((editing.unit_cost_usd || 0) * (editing.qty || 1))}&exp_desc=${encodeURIComponent(`${editing.brand} ${editing.model} — ${t.poShort}`)}`}
                   className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
-                  <Receipt className="w-3.5 h-3.5" /> Log supplier payment
+                  <Receipt className="w-3.5 h-3.5" /> {t.logSupplierPayment}
                 </Link>
               </div>
             )}
             <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-border">
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>{t.cancel}</Button>
               <Button size="sm" onClick={save} disabled={saving || !editing.brand || !editing.model}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t.save}
               </Button>
             </div>
           </div>
