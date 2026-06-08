@@ -4,6 +4,13 @@ import { Share2, Link as LinkIcon, Check } from "lucide-react";
 import { useState } from "react";
 import { SITE_CONFIG } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/i18n/locale-context";
+
+const SHARE_COPY = {
+  ru: { shareOn: "Поделиться в", copyLink: "Скопировать ссылку" },
+  uz: { shareOn: "Ulashish:", copyLink: "Havolani nusxalash" },
+  en: { shareOn: "Share on", copyLink: "Copy link" },
+} as const;
 
 interface ShareButtonsProps {
   title: string;
@@ -13,6 +20,8 @@ interface ShareButtonsProps {
 
 export function ShareButtons({ title, url, className }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
+  const { locale } = useLocale();
+  const sc = SHARE_COPY[locale];
   const shareUrl = url || (typeof window !== "undefined" ? window.location.href : "");
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
@@ -62,7 +71,7 @@ export function ShareButtons({ title, url, className }: ShareButtonsProps) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={`Share on ${link.name}`}
+          aria-label={`${sc.shareOn} ${link.name}`}
           className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 bg-white/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
         >
           {link.icon}
@@ -71,7 +80,7 @@ export function ShareButtons({ title, url, className }: ShareButtonsProps) {
       <button
         onClick={copyLink}
         className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 bg-white/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
-        aria-label="Copy link"
+        aria-label={sc.copyLink}
       >
         {copied ? <Check className="w-4 h-4 text-neon-green" /> : <LinkIcon className="w-4 h-4" />}
       </button>
