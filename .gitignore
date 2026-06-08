@@ -76,6 +76,7 @@ deploy/collector/gonzo-discovery.csv
 deploy/collector/autohome-index.json
 deploy/collector/gonzo-autohome-matches.csv
 deploy/collector/autohome-targets.json
+deploy/collector/gonzo-autohome-matches.json
 
 # LLM bake-off config (holds API keys)
 scripts/llm-bakeoff.config.json

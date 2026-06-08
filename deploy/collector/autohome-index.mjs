@@ -51,7 +51,7 @@ export async function buildAutohomeIndex({ log = console.log } = {}) {
       // www.autohome.com.cn routing from UZ is flaky — retry each letter a few times
       // (a single miss silently drops every brand on that pinyin letter, e.g. A→奥迪, B→宝马/保时捷/奔驰).
       let brands = null, lastErr = "";
-      for (let attempt = 1; attempt <= 4 && !brands; attempt++) {
+      for (let attempt = 1; attempt <= 6 && !brands; attempt++) {
         try {
           const resp = await page.goto(`https://www.autohome.com.cn/grade/carhtml/${L}.html`, { waitUntil: "domcontentloaded", timeout: 35000 });
           if (!resp || resp.status() !== 200) { lastErr = `HTTP ${resp?.status() || "?"}`; continue; }

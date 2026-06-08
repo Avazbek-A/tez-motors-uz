@@ -26,24 +26,36 @@ const REFRESH = ARGS.includes("--refresh-index");
 const DISCOVERY = process.env.GONZO_DISCOVERY || "./gonzo-discovery.json";
 
 // Latin brand → Chinese brand name(s) as they appear in the AutoHome index.
+// Multi-word keys (e.g. "land rover") are matched by longest-prefix in parseGonzo.
 const BRAND_ALIAS = {
   zeekr: ["极氪"], xiaomi: ["小米"], byd: ["比亚迪"], nio: ["蔚来"], xpeng: ["小鹏"],
-  li: ["理想"], lixiang: ["理想"], liauto: ["理想"], aito: ["问界"], avatr: ["阿维塔"],
+  li: ["理想"], lixiang: ["理想"], liauto: ["理想"], aito: ["问界", "AITO"], avatr: ["阿维塔"],
   mg: ["MG", "名爵"], bmw: ["宝马"], porsche: ["保时捷"], audi: ["奥迪"], "mercedes": ["奔驰"],
   "mercedes-benz": ["奔驰"], benz: ["奔驰"], ferrari: ["法拉利"], tesla: ["特斯拉"], lexus: ["雷克萨斯"],
   toyota: ["丰田"], honda: ["本田"], volkswagen: ["大众"], vw: ["大众"], volvo: ["沃尔沃"],
-  geely: ["吉利", "吉利银河"], chery: ["奇瑞"], changan: ["长安"], hongqi: ["红旗"], gac: ["广汽", "埃安"],
+  geely: ["吉利", "吉利银河"], chery: ["奇瑞"], changan: ["长安", "深蓝"], hongqi: ["红旗"], gac: ["广汽", "埃安", "传祺"],
   aion: ["埃安"], bentley: ["宾利"], lamborghini: ["兰博基尼"], maserati: ["玛莎拉蒂"],
-  rolls: ["劳斯莱斯"], "rolls-royce": ["劳斯莱斯"], landrover: ["路虎"], jaguar: ["捷豹"],
-  cadillac: ["凯迪拉克"], lynkco: ["领克"], "lynk": ["领克"], hyundai: ["现代"], kia: ["起亚"],
+  rolls: ["劳斯莱斯"], "rolls-royce": ["劳斯莱斯"], "rolls royce": ["劳斯莱斯"],
+  landrover: ["路虎"], "land rover": ["路虎"], "range rover": ["路虎"], jaguar: ["捷豹"],
+  "aston martin": ["阿斯顿马丁"], "aston": ["阿斯顿马丁"], mclaren: ["迈凯伦"],
+  cadillac: ["凯迪拉克"], lynkco: ["领克"], "lynk": ["领克"], "lynk&co": ["领克"], hyundai: ["现代"], kia: ["起亚"],
   jetour: ["捷途"], haval: ["哈弗"], tank: ["坦克"], wuling: ["五菱"], denza: ["腾势"],
-  smart: ["smart"], voyah: ["岚图"], polestar: ["极星"], "rising": ["飞凡"], im: ["智己"],
-  jishi: ["极石"], leapmotor: ["零跑"], neta: ["哪吒"], baojun: ["宝骏"],
+  smart: ["smart"], voyah: ["岚图"], polestar: ["极星"], "rising": ["飞凡"], feifan: ["飞凡"], im: ["智己"],
+  zhiji: ["智己"], jishi: ["极石"], leapmotor: ["零跑"], neta: ["哪吒"], baojun: ["宝骏"],
+  genesis: ["捷尼赛思"], dongfeng: ["东风"], saic: ["上汽"], buick: ["别克"], beijing: ["北京"],
+  mazda: ["马自达"], chevrolet: ["雪佛兰"], chevy: ["雪佛兰"], ora: ["欧拉"], roewe: ["荣威"],
+  aiways: ["爱驰"], hiphi: ["高合"], farizon: ["远程"], shenlan: ["深蓝"], deepal: ["深蓝"],
+  exeed: ["星途"], jaecoo: ["捷酷", "Jaecoo"], omoda: ["欧萌达", "OMODA"], skywell: ["天美"],
+  jmc: ["江铃"], foton: ["福田"], gwm: ["长城"], "great wall": ["长城"], luxeed: ["享界"], stelato: ["享界"],
+  maextro: ["尊界"], forthing: ["东风风行"], skyworth: ["创维"], nissan: ["日产"], mini: ["MINI"], "mercedes-amg": ["AMG", "奔驰"],
 };
-// Latin model → Chinese (for fully-Chinese model names, esp. BYD dynasty line).
+// Latin model → Chinese (for fully-Chinese model names: BYD dynasties, Land Rover, etc.).
+// Matched against the FIRST word of the Gonzo model (so "Tang L" → 唐).
 const MODEL_ALIAS = {
   han: "汉", tang: "唐", song: "宋", qin: "秦", yuan: "元", seal: "海豹", dolphin: "海豚",
-  destroyer: "驱逐舰", frigate: "护卫舰", leopard: "豹", "sea lion": "海狮", e: "e",
+  destroyer: "驱逐舰", frigate: "护卫舰", leopard: "豹", sealion: "海狮", "song": "宋",
+  // Land Rover lines
+  range: "揽胜", defender: "卫士", discovery: "发现", evoque: "极光", velar: "星脉",
 };
 
 const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -66,19 +78,32 @@ function findBrand(index, gonzoBrand) {
   );
 }
 
-function scoreSeries(gonzoModel, seriesName, brandCn) {
-  // strip the Chinese brand prefix from the series name → the model part.
+// German marques name by series number/letter (BMW 3系, Audi A4, Mercedes GLE/C级).
+const NUMBER_SERIES_BRANDS = new Set(["bmw", "mercedes", "mercedes-benz", "benz", "audi", "mercedes-amg"]);
+
+/** Leading series token: "3 g20 320i"→"3", "x5"→"x5", "a4l"→"a4", "gle 350"→"gle", "c-class"→"c". */
+function seriesCore(s) {
+  const t = norm(s).replace(/(\d)\s*系/g, "$1").replace(/[-\s]?class\b/g, "").replace(/[-\s]?series\b/g, "").replace(/级/g, "").replace(/[*()]/g, " ").trim();
+  const m = t.match(/^([a-z]{1,2}\d{1,2}|gl[a-z]|amg\s?gt|[xim]\s?\d{1,3}|\d{1,3}|[a-z]{2,3}|[a-z])\b/);
+  return (m ? m[1] : (t.split(/\s+/)[0] || "")).replace(/\s+/g, "");
+}
+
+function scoreSeries(gonzoModel, gonzoBrand, seriesName, brandStrips) {
+  // strip every Chinese/Latin brand alias from the series name → the model part.
   let m = seriesName;
-  if (brandCn) for (const part of brandCn) m = m.replace(part, "");
-  const gm = modelKey(gonzoModel);
-  // include CN alias of the gonzo model (BYD Han → 汉)
-  const gmCn = MODEL_ALIAS[norm(gonzoModel).replace(/20\d\d.*$/, "").trim()];
-  const sm = modelKey(m);
+  for (const part of brandStrips) if (part) m = m.split(part).join("");
+  m = m.trim();
+  const sm = modelKey(m), gm = modelKey(gonzoModel);
+  const gmCn = MODEL_ALIAS[norm(gonzoModel).split(/\s+/)[0]]; // first word → 汉/唐/揽胜…
+  // German number-series: match leading series cores ("3"↔"3系", "X5"↔"X5", "A4"↔"A4L").
+  if (NUMBER_SERIES_BRANDS.has(gonzoBrand)) {
+    const gc = seriesCore(gonzoModel), sc = seriesCore(m);
+    if (gc && sc && gc === sc) return 0.95; // exact core only — "eqb"≠"e", "ix"≠"ix3"
+  }
+  if (gmCn && m.startsWith(gmCn)) return 0.85;            // CN dynasty/line alias (BYD唐/汉, LR揽胜) — startsWith avoids 大唐≠唐
   if (!gm && !gmCn) return 0;
-  if (sm && gm && sm === gm) return 1.0;                 // exact model token
-  if (gmCn && m.includes(gmCn)) return 0.9;              // CN-aliased exact
-  if (sm && gm && (sm.includes(gm) || gm.includes(sm))) return 0.7; // containment
-  // token overlap (e.g. "su7" appears in "su7ultra")
+  if (sm && gm && sm === gm) return 1.0;                  // exact model token
+  if (sm && gm && (sm.includes(gm) || gm.includes(sm))) return 0.7;
   if (gm && sm && (sm.startsWith(gm) || gm.startsWith(sm))) return 0.6;
   return 0;
 }
@@ -90,7 +115,7 @@ function matchCar(index, car) {
   const strips = [...new Set([...brandHits.map((b) => b.brand), ...(BRAND_ALIAS[brand] || []), "汽车", "新能源"])];
   let best = null;
   for (const b of brandHits) for (const s of b.series) {
-    const score = scoreSeries(model, s.name, strips);
+    const score = scoreSeries(model, brand, s.name, strips);
     if (score > 0 && (!best || score > best.score)) best = { score, id: s.id, name: s.name, price: s.price, brandCn: b.brand };
   }
   if (!best) return { ...car, parsed_brand: brand, parsed_model: model, confidence: 0, reason: "no_model_match" };
@@ -118,6 +143,7 @@ async function main() {
   const lines = [headers.join(",")];
   for (const m of matched.sort((a, b) => (b.confidence || 0) - (a.confidence || 0))) lines.push(headers.map((h) => csvEsc(m[h])).join(","));
   writeFileSync("./gonzo-autohome-matches.csv", lines.join("\n"));
+  writeFileSync("./gonzo-autohome-matches.json", JSON.stringify(matched, null, 2));
   const targets = tiers.high.concat(tiers.med).map((m) => ({ url: m.config_url, seriesId: m.autohome_id, gonzoName: m.name, gonzoPrice: m.gonzo_price, autohomeName: m.autohome_name, confidence: m.confidence }));
   writeFileSync("./autohome-targets.json", JSON.stringify(targets, null, 2));
 
