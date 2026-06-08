@@ -48,18 +48,36 @@ const BRAND_ALIAS = {
   exeed: ["星途"], jaecoo: ["捷酷", "Jaecoo"], omoda: ["欧萌达", "OMODA"], skywell: ["天美"],
   jmc: ["江铃"], foton: ["福田"], gwm: ["长城"], "great wall": ["长城"], luxeed: ["享界"], stelato: ["享界"],
   maextro: ["尊界"], forthing: ["东风风行"], skyworth: ["创维"], nissan: ["日产"], mini: ["MINI"], "mercedes-amg": ["AMG", "奔驰"],
+  yangwang: ["仰望"], maxus: ["大通"], qiyuan: ["启源"], radar: ["雷达"], mitsubishi: ["三菱"],
+  weltmeister: ["威马"], hyndai: ["现代"], onvo: ["乐道"], yuanhang: ["远航"], hechuang: ["合创"],
+  ford: ["福特"], "saic maxus": ["大通"], arcfox: ["极狐"],
 };
 // Latin model → Chinese (for fully-Chinese model names: BYD dynasties, Land Rover, etc.).
 // Matched against the FIRST word of the Gonzo model (so "Tang L" → 唐).
 const MODEL_ALIAS = {
   han: "汉", tang: "唐", song: "宋", qin: "秦", yuan: "元", seal: "海豹", dolphin: "海豚",
-  destroyer: "驱逐舰", frigate: "护卫舰", leopard: "豹", sealion: "海狮", "song": "宋",
+  destroyer: "驱逐舰", frigate: "护卫舰", leopard: "豹", sealion: "海狮", seagull: "海鸥",
+  // Voyah (岚图), Ora cats, Buick Velite, Cadillac, etc.
+  dreamer: "梦想家", taishan: "泰山", courage: "知音", velite: "微蓝", lyriq: "锐歌",
+  mulan: "木兰", carnival: "嘉华", bingo: "缤果", mistra: "名图",
   // Land Rover lines
   range: "揽胜", defender: "卫士", discovery: "发现", evoque: "极光", velar: "星脉",
 };
 
 const norm = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
-const modelKey = (s) => norm(s).replace(/[\s\-_/]+/g, "").replace(/20\d\d款?/g, "").replace(/(款|新款|改款)/g, "");
+// strip spaces/hyphens/dots (so VW "ID.4" ↔ "ID4") and year/款 noise.
+const modelKey = (s) => norm(s).replace(/[\s\-_/.]+/g, "").replace(/20\d\d款?/g, "").replace(/(款|新款|改款)/g, "");
+
+// Sub-brands sold under a parent on Gonzo but listed as their own AutoHome brand:
+// "SAIC Maxus MIFA 9" → maxus, "BYD Yangwang U8" → yangwang, "Changan Shenlan S7" → shenlan.
+const SUBBRANDS = new Set(["maxus", "yangwang", "shenlan", "deepal", "aion", "qiyuan", "onvo"]);
+// Embedded CN model lines matched by substring (multi-word / not the first token).
+const CONTAINS_ALIAS = {
+  "sea lion": "海狮", sealion: "海狮", seagull: "海鸥", "good cat": "好猫", "lightning cat": "闪电猫",
+  dreamer: "梦想家", "chasing light": "追光", courage: "知音", taishan: "泰山", velite: "微蓝",
+  lyriq: "锐歌", mulan: "木兰", prado: "普拉多", carnival: "嘉华", bingo: "缤果", mistra: "名图",
+  bingguo: "缤果",
+};
 
 function parseGonzo(name) {
   const n = norm(name);
@@ -68,6 +86,9 @@ function parseGonzo(name) {
   const aliases = Object.keys(BRAND_ALIAS).sort((a, b) => b.length - a.length);
   for (const a of aliases) { if (n === a || n.startsWith(a + " ") || n.startsWith(a)) { brand = a; rest = n.slice(a.length).trim(); break; } }
   if (!brand) { const t = n.split(" "); brand = t[0]; rest = t.slice(1).join(" "); }
+  // sub-brand redirect: "saic maxus mifa 9" → maxus, "byd yangwang u8" → yangwang.
+  const fw = rest.split(" ")[0];
+  if (SUBBRANDS.has(fw)) { brand = fw; rest = rest.slice(fw.length).trim(); }
   return { brand, model: rest };
 }
 
@@ -81,9 +102,17 @@ function findBrand(index, gonzoBrand) {
 // German marques name by series number/letter (BMW 3系, Audi A4, Mercedes GLE/C级).
 const NUMBER_SERIES_BRANDS = new Set(["bmw", "mercedes", "mercedes-benz", "benz", "audi", "mercedes-amg"]);
 
-/** Leading series token: "3 g20 320i"→"3", "x5"→"x5", "a4l"→"a4", "gle 350"→"gle", "c-class"→"c". */
-function seriesCore(s) {
-  const t = norm(s).replace(/(\d)\s*系/g, "$1").replace(/[-\s]?class\b/g, "").replace(/[-\s]?series\b/g, "").replace(/级/g, "").replace(/[*()]/g, " ").trim();
+const MERCEDES = new Set(["mercedes", "benz", "mercedes-benz", "mercedes-amg"]);
+
+/** Leading series token. BMW/Audi keep the number (3, X5, A4); Mercedes keeps the
+ *  CLASS letters and drops the trim digits (C200→c, GLE350→gle, EQB→eqb). */
+function seriesCore(s, brand) {
+  let t = norm(s).replace(/(\d)\s*系/g, "$1").replace(/[-\s]?class\b/g, "").replace(/[-\s]?series\b/g, "").replace(/级/g, "").replace(/[*()]/g, " ").trim();
+  if (MERCEDES.has(brand)) {
+    t = t.replace(/^benz\s+/, ""); // Gonzo writes "Mercedes Benz C200"
+    const mm = t.match(/^(gl[a-z]|eq[a-z]|cl[a-z]|amg|maybach|[a-z])/);
+    return mm ? mm[1] : (t.split(/\s+/)[0] || "");
+  }
   const m = t.match(/^([a-z]{1,2}\d{1,2}|gl[a-z]|amg\s?gt|[xim]\s?\d{1,3}|\d{1,3}|[a-z]{2,3}|[a-z])\b/);
   return (m ? m[1] : (t.split(/\s+/)[0] || "")).replace(/\s+/g, "");
 }
@@ -94,10 +123,12 @@ function scoreSeries(gonzoModel, gonzoBrand, seriesName, brandStrips) {
   for (const part of brandStrips) if (part) m = m.split(part).join("");
   m = m.trim();
   const sm = modelKey(m), gm = modelKey(gonzoModel);
-  const gmCn = MODEL_ALIAS[norm(gonzoModel).split(/\s+/)[0]]; // first word → 汉/唐/揽胜…
-  // German number-series: match leading series cores ("3"↔"3系", "X5"↔"X5", "A4"↔"A4L").
+  // CN line alias: first-word (汉/唐/揽胜) or embedded substring (sea lion→海狮, prado→普拉多).
+  let gmCn = MODEL_ALIAS[norm(gonzoModel).split(/\s+/)[0]];
+  if (!gmCn) { const nm = norm(gonzoModel); for (const [k, v] of Object.entries(CONTAINS_ALIAS)) if (nm.includes(k)) { gmCn = v; break; } }
+  // German/Mercedes number-series: match leading series cores.
   if (NUMBER_SERIES_BRANDS.has(gonzoBrand)) {
-    const gc = seriesCore(gonzoModel), sc = seriesCore(m);
+    const gc = seriesCore(gonzoModel, gonzoBrand), sc = seriesCore(m, gonzoBrand);
     if (gc && sc && gc === sc) return 0.95; // exact core only — "eqb"≠"e", "ix"≠"ix3"
   }
   if (gmCn && m.startsWith(gmCn)) return 0.85;            // CN dynasty/line alias (BYD唐/汉, LR揽胜) — startsWith avoids 大唐≠唐
@@ -131,7 +162,9 @@ const csvEsc = (v) => { const s = v == null ? "" : String(v); return /[",\n]/.te
 
 async function main() {
   if (!existsSync(DISCOVERY)) { log.error(`missing ${DISCOVERY} — run \`npm run gonzo\` first`); process.exit(1); }
-  const cars = (JSON.parse(readFileSync(DISCOVERY, "utf8")).cars || []);
+  // Gonzo's catalog page leaks a few Russian-named PARTS ("Передний бампер для…") —
+  // they're not cars; exclude Cyrillic names from car matching.
+  const cars = (JSON.parse(readFileSync(DISCOVERY, "utf8")).cars || []).filter((c) => !/[а-яё]/i.test(c.name));
   const index = await loadAutohomeIndex({ refresh: REFRESH, log: (m) => log.info(m) });
   log.info(`matching ${cars.length} Gonzo cars against ${index.brands.length} brands / ${index.brands.reduce((a, b) => a + b.series.length, 0)} series\n`);
 
