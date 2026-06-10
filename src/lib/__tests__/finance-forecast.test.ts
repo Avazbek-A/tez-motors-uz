@@ -67,3 +67,18 @@ describe("fxExposureScenarios", () => {
     expect(s[1].usdUzsAt).toBe(13230);
   });
 });
+
+describe("cashRunway", () => {
+  it("returns null (infinite) when not burning", () => {
+    expect(cashRunway(1000, 5000, 3000).runwayMonths).toBeNull();
+    expect(cashRunway(0, 5000, 5000).runwayMonths).toBeNull(); // net 0 → not burning
+  });
+  it("computes finite months when burning with positive cash", () => {
+    expect(cashRunway(10000, 1000, 6000).runwayMonths).toBe(2); // 10000 / 5000
+  });
+  it("returns 0 (NOT infinite) when burning with zero/negative cash", () => {
+    // Regression: the old `cashNowUsd > 0` guard reported this as null/infinite.
+    expect(cashRunway(0, 1000, 6000).runwayMonths).toBe(0);
+    expect(cashRunway(-500, 1000, 6000).runwayMonths).toBe(0);
+  });
+});

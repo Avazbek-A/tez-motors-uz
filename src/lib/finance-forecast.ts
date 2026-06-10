@@ -73,7 +73,12 @@ export interface Runway {
 /** Cash runway from current cash + monthly in/out. */
 export function cashRunway(cashNowUsd: number, monthlyInflowUsd: number, monthlyOutflowUsd: number): Runway {
   const net = monthlyInflowUsd - monthlyOutflowUsd;
-  const runwayMonths = net < 0 && cashNowUsd > 0 ? Math.round((cashNowUsd / -net) * 10) / 10 : null;
+  // null = not burning (infinite). When burning (net < 0): positive cash gives a
+  // finite runway; zero/negative cash means the runway is already exhausted (0),
+  // NOT infinite — the previous `cashNowUsd > 0` guard wrongly reported the
+  // out-of-cash-and-burning case as infinite.
+  const runwayMonths =
+    net < 0 ? (cashNowUsd > 0 ? Math.round((cashNowUsd / -net) * 10) / 10 : 0) : null;
   return {
     cashNowUsd: Math.round(cashNowUsd),
     monthlyInflowUsd: Math.round(monthlyInflowUsd),

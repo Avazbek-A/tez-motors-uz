@@ -97,12 +97,25 @@ export function parseCsvToObjects(input: string): Record<string, string>[] {
 
 /**
  * Serialize a value for a CSV cell: quote if it contains comma, quote, or newline.
+ *
+ * Also neutralizes CSV formula injection: a cell whose first character is one of
+ * = + - @ (or a leading tab / CR) is interpreted as a formula by Excel / Google
+ * Sheets / LibreOffice, so an attacker-influenced value like `=HYPERLINK(...)`
+ * would execute when staff open an export. Prefix such values with a single
+ * quote so they render as literal text. (Field values here originate from user
+ * input — customer names, supplier-ingested part fields, etc.)
  */
 export function csvCell(value: string): string {
-  if (/[",\r\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
+  let v = value;
+  // Neutralize unless the value is a plain number (e.g. "-500", "30000.5") so
+  // legitimate negative/decimal figures in financial exports stay numeric.
+  if (/^[=+\-@\t\r]/.test(v) && !/^-?\d+(\.\d+)?$/.test(v)) {
+    v = `'${v}`;
   }
-  return value;
+  if (/[",\r\n]/.test(v)) {
+    return `"${v.replace(/"/g, '""')}"`;
+  }
+  return v;
 }
 
 /**

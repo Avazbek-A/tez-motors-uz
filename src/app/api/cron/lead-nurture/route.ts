@@ -48,12 +48,16 @@ async function handle(request: NextRequest) {
 
       const tpl = leadNurtureEmail("ru", { name: (lead.name as string) || undefined, step: dueStep });
       const { ok } = await sendEmail({ to: lead.email as string, subject: tpl.subject, html: tpl.html });
-      // Advance the step regardless of send result so we don't reprocess every run.
-      await supabase
-        .from("inquiries")
-        .update({ nurture_step: dueStep, nurtured_at: new Date().toISOString() })
-        .eq("id", lead.id);
-      if (ok) sent += 1;
+      // Advance the step only on a successful send; a transient failure leaves
+      // the step unchanged so the next run retries this drip touch instead of
+      // silently skipping it. The per-run cap + lt(nurture_step,3) bound spend.
+      if (ok) {
+        await supabase
+          .from("inquiries")
+          .update({ nurture_step: dueStep, nurtured_at: new Date().toISOString() })
+          .eq("id", lead.id);
+        sent += 1;
+      }
     }
 
     logEvent("cron.lead_nurture", { candidates: (leads || []).length, sent });

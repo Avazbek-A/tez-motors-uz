@@ -48,3 +48,24 @@ describe("round-trip", () => {
     expect(parsed[1]).toEqual(["x,y", 'q"q', "n\nl"]);
   });
 });
+
+describe("csvCell formula-injection neutralization", () => {
+  it("prefixes a leading =, +, @, tab or CR with a single quote", () => {
+    expect(csvCell('=HYPERLINK("http://evil")')).toBe('"\'=HYPERLINK(""http://evil"")"');
+    expect(csvCell("+1+2")).toBe("'+1+2");
+    expect(csvCell("@SUM(A1:A2)")).toBe("'@SUM(A1:A2)");
+    expect(csvCell("\t=cmd")).toBe("'\t=cmd");
+  });
+  it("neutralizes a leading-dash formula but NOT a plain negative number", () => {
+    expect(csvCell("-2+3")).toBe("'-2+3"); // formula-like → quoted-prefixed
+    expect(csvCell("-500")).toBe("-500"); // plain number → untouched
+    expect(csvCell("-500.25")).toBe("-500.25");
+  });
+  it("only triggers on the FIRST character", () => {
+    expect(csvCell("BYD=Song")).toBe("BYD=Song");
+    expect(csvCell("3-series")).toBe("3-series");
+  });
+  it("still quotes when a neutralized value also contains a delimiter", () => {
+    expect(csvCell("=A1,B2")).toBe('"\'=A1,B2"');
+  });
+});

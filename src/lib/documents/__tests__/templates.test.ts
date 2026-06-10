@@ -31,6 +31,14 @@ describe("buildDocument", () => {
   it("deposit receipt shows the deposit amount", () => {
     expect(buildDocument("deposit_receipt", base).html).toContain("$2,000");
   });
+  it("floors the amount-due at $0 when the deposit exceeds the price", () => {
+    // Regression: deposit > price (e.g. price unset/0) must not print a negative
+    // total on a customer-facing contract.
+    const html = buildDocument("sales_contract", { ...base, order: { ...base.order, amount_usd: 0 }, depositUsd: 500 }).html;
+    // money(-500) would render "$-500"; the fix floors the total to money(0) = "$0".
+    expect(html).not.toContain("$-"); // no negative figure anywhere in the doc
+    expect(html).toContain("$0");
+  });
   it("renders Uzbek labels", () => {
     const { title } = buildDocument("handover_act", { ...base, locale: "uz" });
     expect(title).toBe("Qabul-topshirish dalolatnomasi");
