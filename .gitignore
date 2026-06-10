@@ -80,3 +80,4 @@ deploy/collector/gonzo-autohome-matches.json
 
 # LLM bake-off config (holds API keys)
 scripts/llm-bakeoff.config.json
+deploy/collector/publish-preview.json

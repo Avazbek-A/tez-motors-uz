@@ -18,7 +18,8 @@
     "instagram": "node instagram-collector.mjs",
     "telegram": "node telegram-collector.mjs",
     "telegram:login": "node telegram-collector.mjs --login",
-    "postinstall": "echo 'Run: npx playwright install chromium  (needed for extractor + OLX browser fallback)'"
+    "postinstall": "echo 'Run: npx playwright install chromium  (needed for extractor + OLX browser fallback)'",
+    "publish": "node publish-from-targets.mjs"
   },
   "dependencies": {
     "crawlee": "^3.16.0",
