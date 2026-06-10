@@ -32,8 +32,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (parsed.data.status && parsed.data.status !== "done") update.completed_at = null;
 
   const supabase = createServiceClient();
-  const { error } = await supabase.from("crm_tasks").update(update).eq("id", id);
+  const { data: updated, error } = await supabase.from("crm_tasks").update(update).eq("id", id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!updated || updated.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   logAdminAction(request, { action: "update", entity: "crm_task", entity_id: id, diff: parsed.data }).catch(() => {});
   return NextResponse.json({ success: true });
@@ -45,8 +46,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const { id } = await params;
   const supabase = createServiceClient();
-  const { error } = await supabase.from("crm_tasks").delete().eq("id", id);
+  const { data: deleted, error } = await supabase.from("crm_tasks").delete().eq("id", id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!deleted || deleted.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   logAdminAction(request, { action: "delete", entity: "crm_task", entity_id: id }).catch(() => {});
   return NextResponse.json({ success: true });

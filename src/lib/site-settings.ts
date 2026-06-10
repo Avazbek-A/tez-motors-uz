@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SITE_CONFIG } from "@/lib/constants";
+import { safeHttpUrl } from "@/lib/schemas/safe-url";
 
 export const SiteSettingsSchema = z.object({
   siteName: z.string().max(100).optional(),
@@ -8,9 +9,12 @@ export const SiteSettingsSchema = z.object({
   email: z.string().max(200).optional(),
   address: z.string().max(500).optional(),
   workingHours: z.string().max(200).optional(),
-  telegram: z.string().url().max(500).optional().or(z.literal("")),
-  instagram: z.string().url().max(500).optional().or(z.literal("")),
-  whatsapp: z.string().url().max(500).optional().or(z.literal("")),
+  // safeHttpUrl (not z.string().url()) so a javascript:/data: scheme can't be
+  // stored — these render as <a href> in the global header (SocialLinks), where
+  // a non-http(s) scheme would be a one-click persistent DOM XSS on every page.
+  telegram: safeHttpUrl.optional().or(z.literal("")),
+  instagram: safeHttpUrl.optional().or(z.literal("")),
+  whatsapp: safeHttpUrl.optional().or(z.literal("")),
   // Showroom pin in WGS84 decimal degrees. The dealer can refine via
   // /admin/settings once they confirm the exact spot on the lot.
   mapLat: z.number().min(-90).max(90).optional(),

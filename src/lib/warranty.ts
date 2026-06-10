@@ -27,8 +27,12 @@ export function warrantyStatus(until: string | null | undefined, nowMs: number):
   if (!until) return "none";
   const end = new Date(until).getTime();
   if (!Number.isFinite(end)) return "none";
+  // `until` is a date with no time, parsed as UTC midnight. The warranty is
+  // valid through the WHOLE of that day, so it's only expired once `now` is past
+  // the end of the until-day — otherwise a still-valid warranty reads "expired"
+  // from the morning of its final day onward in positive timezones (UTC+5 here).
+  if (nowMs >= end + 86_400_000) return "expired";
   const daysLeft = Math.floor((end - nowMs) / 86_400_000);
-  if (daysLeft < 0) return "expired";
   if (daysLeft <= 30) return "expiring";
   return "active";
 }

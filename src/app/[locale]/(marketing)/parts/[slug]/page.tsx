@@ -133,7 +133,9 @@ export default async function PartDetailPage(
           },
         ]}
       />
-      <PartDetailClient part={part} />
+      {/* key by id so client-side nav between parts remounts (resets activeImage
+          / form / status) instead of reusing a stale previous-part state. */}
+      <PartDetailClient key={part.id} part={part} />
     </>
   );
 }

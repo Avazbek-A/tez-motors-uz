@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail, reviewRequestEmail, type EmailLocale } from "@/lib/email";
+import { isSuppressed } from "@/lib/automation/suppression";
 import { reportServerError, logEvent } from "@/lib/error-report";
 
 /**
@@ -85,9 +86,11 @@ async function handle(request: NextRequest) {
       const reviewUrl = `${base}/${locale}/feedback${params.toString() ? `?${params.toString()}` : ""}`;
 
       const hasEmail = !!order.customer_email;
+      // Honor the marketing opt-out list even for this post-purchase ask.
+      const suppressed = hasEmail ? await isSuppressed(supabase, order.customer_email as string, "email") : false;
       let delivered = false;
 
-      if (hasEmail) {
+      if (hasEmail && !suppressed) {
         const tpl = reviewRequestEmail(locale, {
           name: order.customer_name || undefined,
           carName: car?.name,
@@ -97,9 +100,10 @@ async function handle(request: NextRequest) {
         delivered = delivered || ok;
       }
 
-      // Stamp when we delivered, or when there's no channel to ever reach them
-      // (no email) so the scan doesn't churn on the same order forever.
-      if (delivered || !hasEmail) {
+      // Stamp when we delivered, when there's no channel to reach them (no email),
+      // or when they opted out — so the scan doesn't churn. A transient send
+      // failure (has email, not suppressed, not ok) leaves it NULL to retry.
+      if (delivered || !hasEmail || suppressed) {
         await supabase
           .from("orders")
           .update({ review_requested_at: new Date().toISOString() })

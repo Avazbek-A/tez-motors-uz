@@ -9,7 +9,6 @@ import {
   normalizePhone,
 } from "@/lib/customer-auth";
 import { sha256Hex, generateOpaqueToken } from "@/lib/auth";
-import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent, reportServerError } from "@/lib/error-report";
 
 const checkRateLimit = createKvRateLimiter({ max: 10, windowMs: 10 * 60 * 1000, prefix: "otp-verify" });
@@ -43,42 +42,30 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // Most recent live code for this phone.
-    const { data: otp, error: otpErr } = await supabase
-      .from("otp_codes")
-      .select("id, code_hash, expires_at, attempts, consumed_at")
-      .eq("phone", phone)
-      .is("consumed_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const codeHash = await sha256Hex(`${phone}:${data.code}`);
 
-    if (otpErr || !otp) {
-      return NextResponse.json({ success: false, error: "Code expired or not found" }, { status: 400 });
+    // Atomic verify: a single row-locked SQL function (migration 076) finds the
+    // newest live code, increments the attempt counter, and burns the code on a
+    // match — all under FOR UPDATE. This closes two races the old read-then-write
+    // path had: concurrent guesses bypassing the attempt cap (account takeover),
+    // and one code minting two sessions.
+    const { data: result, error: rpcErr } = await supabase.rpc("consume_otp", {
+      p_phone: phone,
+      p_code_hash: codeHash,
+      p_max: MAX_ATTEMPTS,
+    });
+    if (rpcErr) {
+      reportServerError("POST /api/account/verify-otp (consume_otp)", rpcErr).catch(() => {});
+      return NextResponse.json({ success: false, error: "Internal error" }, { status: 500 });
     }
-    if (new Date(otp.expires_at).getTime() <= Date.now()) {
-      return NextResponse.json({ success: false, error: "Code expired" }, { status: 400 });
-    }
-    if (otp.attempts >= MAX_ATTEMPTS) {
+    if (result === "too_many") {
       return NextResponse.json({ success: false, error: "Too many attempts" }, { status: 429 });
     }
-
-    const codeHash = await sha256Hex(`${phone}:${data.code}`);
-    // Constant-time comparison: never leak how many leading hex chars matched
-    // via response timing. SHA-256 hex strings are fixed length so the only
-    // signal worth hiding is per-position diffs. Mirrors the cron/webhook secret
-    // pattern (src/lib/timing-safe.ts) used elsewhere in the codebase.
-    if (!timingSafeEqual(codeHash, otp.code_hash || "")) {
-      await supabase
-        .from("otp_codes")
-        .update({ attempts: otp.attempts + 1 })
-        .eq("id", otp.id);
+    if (result !== "ok") {
+      // 'wrong' or 'not_found' — don't reveal which (avoid code/phone enumeration).
       logEvent("auth.otp.fail", { ip, phone }, "warn");
-      return NextResponse.json({ success: false, error: "Incorrect code" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Incorrect or expired code" }, { status: 401 });
     }
-
-    // Correct: burn the code so it can't be reused.
-    await supabase.from("otp_codes").update({ consumed_at: new Date().toISOString() }).eq("id", otp.id);
 
     // Upsert the customer by phone (don't clobber an existing name with null).
     const { data: existing } = await supabase

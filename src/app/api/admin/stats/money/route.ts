@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { getFxRates } from "@/lib/fx-rate";
 
 /**
@@ -15,7 +16,6 @@ import { getFxRates } from "@/lib/fx-rate";
  *   - fx_rate            → USD/CNY/UZS rates for the 3-currency exposure
  * Read-only, admin-gated, service-role.
  */
-const MAX_ROWS = 5000;
 const ACTIVE_PO = new Set(["ordered", "in_production", "shipped"]);
 
 export async function GET(request: NextRequest) {
@@ -25,10 +25,16 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const [carsRes, costsRes, paymentsRes, poRes, fx] = await Promise.all([
-      supabase.from("cars").select("id, price_usd, inventory_status").limit(MAX_ROWS),
-      supabase.from("car_costs").select("car_id, cost_usd").limit(MAX_ROWS),
-      supabase.from("payments").select("amount_tiyin").eq("state", 2).limit(MAX_ROWS),
-      supabase.from("purchase_orders").select("status, qty, unit_cost_usd").limit(MAX_ROWS),
+      // All aggregates paginated so inventory value / margin / deposits don't
+      // undercount past the row cap.
+      fetchAllRows<{ id: string; price_usd: number; inventory_status: string }>((from, to) =>
+        supabase.from("cars").select("id, price_usd, inventory_status").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ car_id: string; cost_usd: number }>((from, to) =>
+        supabase.from("car_costs").select("car_id, cost_usd").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ amount_tiyin: number }>((from, to) =>
+        supabase.from("payments").select("amount_tiyin").eq("state", 2).range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ status: string; qty: number; unit_cost_usd: number }>((from, to) =>
+        supabase.from("purchase_orders").select("status, qty, unit_cost_usd").range(from, to)).then((data) => ({ data })),
       getFxRates(supabase),
     ]);
 

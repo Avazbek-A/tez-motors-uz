@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
       const s = agingSuggestion({ price_usd: Number(c.price_usd) || 0, daysOnLot, demandScore });
       return { c, daysOnLot, markdownPct: s.markdownPct, suggestedPriceUsd: s.suggestedPriceUsd };
     })
+    // Dedupe: never auto-markdown a car that ALREADY shows a discount
+    // (original_price_usd set — by a prior auto-markdown or a manual one).
+    // Without this, every run recomputes agingSuggestion off the new, lower
+    // price_usd and applies ANOTHER markdown, so the discount compounds run after
+    // run and (when no cost floor applies) spirals toward $0. One markdown per car.
+    .filter((x) => x.c.original_price_usd == null)
     .filter((x) => x.daysOnLot >= cfg.autoMarkdown.minDaysOnLot && x.markdownPct > 0)
     // Margin floor: skip if it would sell below cost + minMarginPct (when cost known).
     .filter((x) => {

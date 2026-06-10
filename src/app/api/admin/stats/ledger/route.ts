@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 /**
  * Per-car profit ledger — the financial-automation view.
@@ -11,7 +12,6 @@ import { createServiceClient } from "@/lib/supabase/service";
  * at cost, unrealized margin still on the lot, realized margin on sold units,
  * and deposits collected to date. Read-only, admin-gated.
  */
-const MAX_ROWS = 5000;
 
 export async function GET(request: NextRequest) {
   const guard = await requireAdmin(request);
@@ -21,9 +21,14 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
 
     const [carsRes, costsRes, paymentsRes] = await Promise.all([
-      supabase.from("cars").select("id, brand, model, year, price_usd, inventory_status").limit(MAX_ROWS),
-      supabase.from("car_costs").select("car_id, cost_usd").limit(MAX_ROWS),
-      supabase.from("payments").select("amount_tiyin").eq("state", 2).limit(MAX_ROWS),
+      fetchAllRows<{ id: string; brand: string; model: string; year: number | null; price_usd: number; inventory_status: string }>((from, to) =>
+        supabase.from("cars").select("id, brand, model, year, price_usd, inventory_status").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ car_id: string; cost_usd: number }>((from, to) =>
+        supabase.from("car_costs").select("car_id, cost_usd").range(from, to)).then((data) => ({ data })),
+      // Paginate the deposit sum so it doesn't silently undercount past the cap.
+      fetchAllRows<{ amount_tiyin: number }>((from, to) =>
+        supabase.from("payments").select("amount_tiyin").eq("state", 2).range(from, to),
+      ).then((data) => ({ data })),
     ]);
 
     const costByCar = new Map<string, number>();

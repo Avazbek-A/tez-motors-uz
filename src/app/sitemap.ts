@@ -61,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const carPages = (cars || []).flatMap((car) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/catalog/${car.slug}`,
-        lastModified: new Date(car.updated_at),
+        lastModified: new Date(car.updated_at || Date.now()),
         changeFrequency: "weekly" as const,
         priority: 0.6,
         alternates: alternatesFor(`/catalog/${car.slug}`),
@@ -91,7 +91,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const partPages = (parts || []).flatMap((part) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/parts/${part.slug}`,
-        lastModified: new Date(part.updated_at),
+        lastModified: new Date(part.updated_at || Date.now()),
         changeFrequency: "weekly" as const,
         priority: 0.5,
         alternates: alternatesFor(`/parts/${part.slug}`),
@@ -106,7 +106,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const scooterPages = (scooters || []).flatMap((sc) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/scooters/${sc.slug}`,
-        lastModified: new Date(sc.updated_at),
+        lastModified: new Date(sc.updated_at || Date.now()),
         changeFrequency: "weekly" as const,
         priority: 0.5,
         alternates: alternatesFor(`/scooters/${sc.slug}`),

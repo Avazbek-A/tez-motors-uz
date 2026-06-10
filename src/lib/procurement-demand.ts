@@ -37,7 +37,12 @@ export interface PreorderDemand {
   brand: string;
   model: string;
   total: number;
+  /** Committed (deposit_paid or beyond, incl. sourcing/in_transit/…). */
   deposited: number;
+  /** Committed AND not yet being procured (status === 'deposit_paid' only).
+   *  This — NOT `deposited` — is how many units still need a purchase order, so
+   *  autopilot doesn't re-order pre-orders already in 'sourcing'. */
+  needsImport: number;
 }
 
 export async function aggregatePreorderDemand(
@@ -68,9 +73,10 @@ export async function aggregatePreorderDemand(
       const meta = metaById.get(o.model_id as string);
       if (!meta) continue;
       const k = modelKey(meta.brand, meta.model);
-      const row = out.get(k) || { brand: meta.brand, model: meta.model, total: 0, deposited: 0 };
+      const row = out.get(k) || { brand: meta.brand, model: meta.model, total: 0, deposited: 0, needsImport: 0 };
       row.total += 1;
       if (isDepositedStatus(o.status as string)) row.deposited += 1;
+      if (o.status === "deposit_paid") row.needsImport += 1; // not yet being sourced
       out.set(k, row);
     }
     return out;

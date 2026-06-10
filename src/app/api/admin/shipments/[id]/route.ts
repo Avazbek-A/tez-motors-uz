@@ -56,8 +56,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const update: Record<string, unknown> = { ...rest, updated_at: new Date().toISOString() };
   if (status !== undefined) update.status = status;
 
-  const { error } = await supabase.from("shipments").update(update).eq("id", id);
+  // .select() so a nonexistent id returns 0 rows → 404, instead of silently
+  // "succeeding": otherwise the milestone insert below creates an orphan
+  // shipment_events row and the audit log records a change that never happened.
+  const { data: updated, error } = await supabase.from("shipments").update(update).eq("id", id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!updated || updated.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // A milestone change appends to the timeline.
   if (status !== undefined) {
@@ -74,8 +78,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const { id } = await params;
   const supabase = createServiceClient();
-  const { error } = await supabase.from("shipments").delete().eq("id", id);
+  const { data: deleted, error } = await supabase.from("shipments").delete().eq("id", id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!deleted || deleted.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   logAdminAction(request, { action: "delete", entity: "shipment", entity_id: id }).catch(() => {});
   return NextResponse.json({ success: true });

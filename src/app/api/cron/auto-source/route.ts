@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
   ]);
 
   // Demand per "brand|model" (inquiry count over 30d).
-  const demand = new Map<string, { brand: string; model: string; score: number; deposited: number }>();
+  const demand = new Map<string, { brand: string; model: string; score: number; deposited: number; needsImport: number }>();
   for (const i of inqRes.data || []) {
     const rel = i.cars as { brand: string; model: string } | { brand: string; model: string }[] | null;
     const car = Array.isArray(rel) ? rel[0] : rel;
     if (!car) continue;
     const key = `${car.brand}|${car.model}`.toLowerCase();
-    const cur = demand.get(key) || { brand: car.brand, model: car.model, score: 0, deposited: 0 };
+    const cur = demand.get(key) || { brand: car.brand, model: car.model, score: 0, deposited: 0, needsImport: 0 };
     cur.score += 1;
     demand.set(key, cur);
   }
@@ -52,9 +52,10 @@ export async function POST(request: NextRequest) {
   // ×5, pending ×2 — so even a couple of paid pre-orders cross the threshold.
   const preorder = await aggregatePreorderDemand(supabase);
   for (const [key, pd] of preorder) {
-    const cur = demand.get(key) || { brand: pd.brand, model: pd.model, score: 0, deposited: 0 };
+    const cur = demand.get(key) || { brand: pd.brand, model: pd.model, score: 0, deposited: 0, needsImport: 0 };
     cur.score += pd.deposited * 5 + (pd.total - pd.deposited) * 2;
     cur.deposited += pd.deposited;
+    cur.needsImport += pd.needsImport;
     demand.set(key, cur);
   }
 
@@ -68,10 +69,12 @@ export async function POST(request: NextRequest) {
     .filter(([key, d]) => {
       if (drafted.has(key)) return false;
       if (d.score < cfg.autoSourceDrafts.minDemandScore) return false;
-      // Deposited pre-orders are committed buyers wanting a specific config —
-      // import even if generic stock exists. Soft (inquiry-only) demand still
-      // honors the in-stock skip.
-      if (inStock.has(key) && d.deposited === 0) return false;
+      // Deposited buyers STILL NEEDING import (deposit_paid, not yet sourcing)
+      // want a specific config — import even if generic stock exists. Soft
+      // (inquiry-only) demand, and demand already being sourced, honor the
+      // in-stock skip. Using needsImport (not deposited) avoids re-importing
+      // pre-orders that are already in 'sourcing'.
+      if (inStock.has(key) && d.needsImport === 0) return false;
       return true;
     })
     .sort((a, b) => b[1].score - a[1].score)
@@ -79,8 +82,10 @@ export async function POST(request: NextRequest) {
 
   const created: string[] = [];
   for (const [, d] of targets) {
-    // Never under-order what's already pre-sold; createDraftPo clamps to [1,100].
-    const qty = Math.max(1, d.deposited);
+    // Order only what still needs importing (deposit_paid pre-orders not yet in
+    // 'sourcing') so we don't draft a PO to re-order units already being
+    // procured. createDraftPo clamps to [1,100].
+    const qty = Math.max(1, d.needsImport);
     const res = await createDraftPo(supabase, { brand: d.brand, model: d.model, qty });
     if (res.ok) {
       created.push(`${d.brand} ${d.model} (спрос ${d.score}${d.deposited ? `, депозитов: ${d.deposited}` : ""})`);

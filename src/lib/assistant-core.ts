@@ -11,6 +11,7 @@ import { estimatedMonthlyFrom, priceFromMonthly } from "./finance";
 import { generateAssistantReply } from "./llm";
 import type { Car } from "@/types/car";
 import type { AssistantCarLite } from "./llm";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 
 export const MAX_ASSISTANT_CARS = 6;
 
@@ -138,7 +139,11 @@ export async function recommendCars(
 
   const ceiling = parseBudgetCeiling(opts.message);
 
-  let carQuery = supabase.from("cars").select("*").neq("inventory_status", "sold");
+  // PUBLIC_CAR_COLUMNS (not "*"): this runs on the service-role client (RLS
+  // bypassed) and the rows are returned to the public buyer + bots, so it must
+  // use the same allowlist as /api/cars — otherwise tenant_id (and any future
+  // internal column on `cars`) leaks straight into the assistant response.
+  let carQuery = supabase.from("cars").select(PUBLIC_CAR_COLUMNS).neq("inventory_status", "sold");
   if (ids && ids.length > 0) carQuery = carQuery.in("id", ids);
   if (ceiling !== null) carQuery = carQuery.lte("price_usd", ceiling);
   carQuery = carQuery
@@ -152,7 +157,7 @@ export async function recommendCars(
   if (!cars || cars.length === 0) {
     const { data: anyCars } = await supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .neq("inventory_status", "sold")
       .order("is_hot_offer", { ascending: false })
       .order("price_usd", { ascending: true })
@@ -160,7 +165,7 @@ export async function recommendCars(
     cars = anyCars || [];
   }
 
-  const carList = (cars as Car[]) || [];
+  const carList = (cars as unknown as Car[]) || [];
 
   const llmReply = await generateAssistantReply({
     locale,
