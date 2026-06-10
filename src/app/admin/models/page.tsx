@@ -255,6 +255,7 @@ export default function AdminModelsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     fetchModels();
   }, [fetchModels]);
 
@@ -267,6 +268,7 @@ export default function AdminModelsPage() {
     if (!brand) return;
     const year = params.get("year");
     const base = params.get("base_price_usd");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setEditing({
       ...emptyModel(),
       brand,

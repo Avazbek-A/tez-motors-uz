@@ -115,6 +115,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
 
   useEffect(() => {
     // Cookie gate — persists across pages for the session.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setWholesale(document.cookie.split("; ").some((c) => c.startsWith("tm_wholesale=1")));
   }, []);
 

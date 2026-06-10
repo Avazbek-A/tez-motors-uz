@@ -265,6 +265,7 @@ export default function AdminOrdersPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     fetchOrders();
   }, []);
 

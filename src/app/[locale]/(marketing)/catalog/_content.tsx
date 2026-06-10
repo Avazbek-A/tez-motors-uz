@@ -123,6 +123,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
       skipFirstFetch.current = false;
       return; // first render already has the server-rendered page
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(page));
