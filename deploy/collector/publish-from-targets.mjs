@@ -29,7 +29,12 @@ const TIER = (ARGS.find((a) => a.startsWith("--tier=")) || "").split("=")[1] || 
 const LIMIT = Number((ARGS.find((a) => a.startsWith("--limit=")) || "").split("=")[1] || 0)
   || (!WRITE && !ALL ? 15 : 0); // quick dry-run sample unless --all/--write
 const TARGETS = process.env.AUTOHOME_TARGETS || "./autohome-targets.json";
-const MAX_IMAGES = 20, MIN_PHOTO_BYTES = 12000;
+const MAX_IMAGES = 20, MIN_PHOTO_BYTES = 12000, MAX_PHOTO_BYTES = 12 * 1024 * 1024;
+// Image store: when MEDIA_UPLOAD_URL+SECRET are set, photos go to the Vostro's disk
+// (via /api/admin/disk-image, no size cap); otherwise they re-host to Supabase Storage.
+const MEDIA_URL = (process.env.MEDIA_UPLOAD_URL || "").replace(/\/$/, "");
+const MEDIA_SECRET = process.env.MEDIA_UPLOAD_SECRET || "";
+const USE_DISK = !!(MEDIA_URL && MEDIA_SECRET);
 
 // --- field derivation ---
 const MULTIWORD = ["land rover", "aston martin", "mercedes benz", "rolls royce"];
@@ -98,18 +103,38 @@ function sniff(b) {
   if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57) return "image/webp";
   return null;
 }
-async function rehost(sb, url, seriesId) {
-  const r = await fetch(url, { headers: { "user-agent": UA, accept: "image/*", referer: REFERER }, signal: AbortSignal.timeout(15000) });
+async function fetchPhoto(url) {
+  const r = await fetch(url, { headers: { "user-agent": UA, accept: "image/*", referer: REFERER }, signal: AbortSignal.timeout(20000) });
   if (!r.ok) throw new Error(`img ${r.status}`);
   const bytes = new Uint8Array(await r.arrayBuffer());
-  if (bytes.byteLength < MIN_PHOTO_BYTES || bytes.byteLength > 10 * 1024 * 1024) throw new Error("size");
+  if (bytes.byteLength < MIN_PHOTO_BYTES || bytes.byteLength > MAX_PHOTO_BYTES) throw new Error("size");
   const mime = sniff(bytes); if (!mime) throw new Error("not image");
+  return { bytes, mime };
+}
+// Supabase Storage re-host (1GB free cap).
+async function rehost(sb, url, seriesId) {
+  const { bytes, mime } = await fetchPhoto(url);
   const ext = mime === "image/jpeg" ? "jpg" : mime === "image/png" ? "png" : "webp";
   const path = `autohome/${seriesId}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
   const up = await sb.storage.from("car-images").upload(path, bytes, { contentType: mime, cacheControl: "31536000", upsert: false });
   if (up.error) throw new Error(up.error.message);
   return sb.storage.from("car-images").getPublicUrl(path).data.publicUrl;
 }
+// Vostro-disk re-host (no size cap): POST bytes to the app's /api/admin/disk-image.
+async function rehostToDisk(url) {
+  const { bytes, mime } = await fetchPhoto(url);
+  const up = await fetch(`${MEDIA_URL}/api/admin/disk-image?bucket=car-images&dir=autohome`, {
+    method: "POST",
+    headers: { "content-type": mime, authorization: `Bearer ${MEDIA_SECRET}` },
+    body: bytes,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!up.ok) throw new Error(`disk ${up.status}`);
+  const j = await up.json();
+  if (!j.url) throw new Error("disk: no url");
+  return j.url;
+}
+const rehostPhoto = (sb, url, seriesId) => (USE_DISK ? rehostToDisk(url) : rehost(sb, url, seriesId));
 
 function loadEnv() {
   const env = {};
@@ -127,6 +152,7 @@ async function main() {
   let targets = TIER === "all" ? all : all.filter((t) => (t.confidence || 0) >= 0.9);
   if (LIMIT) targets = targets.slice(0, LIMIT);
   log.info(`publish: ${targets.length} ${TIER} target(s)${WRITE ? " — WILL UPSERT cars" : " — DRY-RUN (preview only)"}`);
+  if (WRITE) log.info(`  image store: ${USE_DISK ? `Vostro disk → ${MEDIA_URL}` : "Supabase Storage (1GB free cap)"}`);
 
   let sb = null;
   if (WRITE) {
@@ -166,7 +192,7 @@ async function main() {
       if (WRITE) {
         const g = await gallery(t.seriesId, browser);
         const imgs = [];
-        for (const u of g) { if (imgs.length >= MAX_IMAGES) break; try { imgs.push(await rehost(sb, u, t.seriesId)); } catch { /* skip bad */ } }
+        for (const u of g) { if (imgs.length >= MAX_IMAGES) break; try { imgs.push(await rehostPhoto(sb, u, t.seriesId)); } catch { /* skip bad */ } }
         row.images = imgs; row.thumbnail = imgs[0] || null;
         const { data: ex } = await sb.from("cars").select("id,images").eq("slug", slug).maybeSingle();
         if (ex) {
