@@ -29,7 +29,7 @@ const TIER = (ARGS.find((a) => a.startsWith("--tier=")) || "").split("=")[1] || 
 const LIMIT = Number((ARGS.find((a) => a.startsWith("--limit=")) || "").split("=")[1] || 0)
   || (!WRITE && !ALL ? 15 : 0); // quick dry-run sample unless --all/--write
 const TARGETS = process.env.AUTOHOME_TARGETS || "./autohome-targets.json";
-const MAX_IMAGES = 10, MIN_PHOTO_BYTES = 8000;
+const MAX_IMAGES = 20, MIN_PHOTO_BYTES = 12000;
 
 // --- field derivation ---
 const MULTIWORD = ["land rover", "aston martin", "mercedes benz", "rolls royce"];
@@ -70,16 +70,25 @@ function engineL(spec) { const l = parseFloat(specVal(spec, /排量\(L\)/)); ret
 function slugify(s) { return s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 110); }
 
 // --- hi-res gallery from the CN pic page (size-templated autoimg URLs) ---
-const upsize = (u) => (u.startsWith("//") ? "https:" + u : u).replace(/\/\d{2,4}x\d{1,4}_autohomecar/i, "/1024x0_autohomecar");
+// AutoHome serves cardfs thumbs as ".../{W}x{H}_0_q95_c42_autohomecar__HASH.jpg".
+// Swap the leading size token → 1100x0 (≈1100×825, ~280KB) for a sharp web image
+// (vs the 480×360 thumb). Dedupe by the photo HASH so the same shot at different
+// sizes counts once. (Recon: page 1 alone exposes ~54 distinct photos.)
+const upsize = (u) => (u.startsWith("//") ? "https:" + u : u).replace(/\/\d{2,4}x\d{1,4}_/, "/1100x0_");
+const photoHash = (u) => (u.match(/autohomecar__([A-Za-z0-9]+)/) || u.match(/([A-Za-z0-9]{20,})\.(?:jpe?g|png|webp)/i) || [, u])[1];
 async function gallery(seriesId, browser) {
-  const ctx = await browser.newContext({ userAgent: UA, locale: "zh-CN", viewport: { width: 1400, height: 2200 } });
+  const ctx = await browser.newContext({ userAgent: UA, locale: "zh-CN", viewport: { width: 1400, height: 2400 } });
   const page = await ctx.newPage();
   try {
     await page.goto(`https://car.autohome.com.cn/pic/series/${seriesId}.html`, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(1500);
-    await page.evaluate(async () => { for (let y = 0; y < 8000; y += 1000) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 250)); } });
+    await page.evaluate(async () => { for (let y = 0; y < 14000; y += 900) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 220)); } window.scrollTo(0, 0); });
+    await page.waitForTimeout(400);
     const urls = await page.evaluate(() => Array.from(document.querySelectorAll("img")).map((i) => i.getAttribute("data-original") || i.getAttribute("src") || "").filter(Boolean));
-    return [...new Set(urls.filter((u) => /autoimg\.cn\/.*cardfs/i.test(u)).map(upsize))].slice(0, 24);
+    const cardfs = urls.filter((u) => /autoimg\.cn\/.*cardfs/i.test(u)).map(upsize);
+    const seen = new Set(), out = [];
+    for (const u of cardfs) { const h = photoHash(u); if (h && seen.has(h)) continue; if (h) seen.add(h); out.push(u); if (out.length >= 30) break; }
+    return out;
   } catch { return []; } finally { await ctx.close(); }
 }
 function sniff(b) {
@@ -104,7 +113,12 @@ async function rehost(sb, url, seriesId) {
 
 function loadEnv() {
   const env = {};
-  try { for (const line of readFileSync(".env.local", "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) env[line.slice(0, i).trim()] = line.slice(i + 1).trim().replace(/^['"]|['"]$/g, ""); } } catch {}
+  // .env.local lives at the repo root; this script runs from deploy/collector — search up.
+  let raw = "";
+  for (const p of [".env.local", "../.env.local", "../../.env.local"]) {
+    try { raw = readFileSync(p, "utf8"); if (raw) break; } catch { /* next */ }
+  }
+  try { for (const line of raw.split("\n")) { const i = line.indexOf("="); if (i > 0) env[line.slice(0, i).trim()] = line.slice(i + 1).trim().replace(/^['"]|['"]$/g, ""); } } catch {}
   return env;
 }
 
@@ -156,9 +170,11 @@ async function main() {
         row.images = imgs; row.thumbnail = imgs[0] || null;
         const { data: ex } = await sb.from("cars").select("id,images").eq("slug", slug).maybeSingle();
         if (ex) {
-          const merged = [...new Set([...(Array.isArray(ex.images) ? ex.images : []), ...imgs])].slice(0, 14);
-          const { error } = await sb.from("cars").update({ spec_data: row.spec_data, spec_captured_at: row.spec_captured_at, images: merged, specs: row.specs }).eq("id", ex.id);
-          if (error) log.error(`  ! ${slug}: ${error.message}`); else { enriched++; log.info(`  ~ enriched ${slug} (+${imgs.length} photos)`); }
+          // AutoHome-sourced cars: REPLACE with the fresh hi-res set (don't keep old 480×360);
+          // only fall back to existing images if this gallery fetch came back empty.
+          const newImages = imgs.length ? imgs : (Array.isArray(ex.images) ? ex.images : []);
+          const { error } = await sb.from("cars").update({ spec_data: row.spec_data, spec_captured_at: row.spec_captured_at, images: newImages, thumbnail: newImages[0] || null, specs: row.specs }).eq("id", ex.id);
+          if (error) log.error(`  ! ${slug}: ${error.message}`); else { enriched++; log.info(`  ~ enriched ${slug} (${imgs.length} hi-res photos)`); }
           skipped.exists.push(slug);
         } else {
           const { error } = await sb.from("cars").insert(row);
