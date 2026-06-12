@@ -12,6 +12,7 @@
  * optional injected `translateUnknown` for the rare long-tail term, and reports what
  * (if anything) it couldn't translate so the dict can be extended.
  */
+import { EXTRA_PARAMS, UNIT_MAP, VALUE_WORDS, EXTRA_VALUES, TRIM_WORDS } from "./cn-spec-terms.mjs";
 
 export const GROUPS = {
   基本参数: { en: "Basics", ru: "Основные параметры", uz: "Asosiy parametrlar" },
@@ -272,6 +273,10 @@ export const VALUES = {
   未知: { en: "Unknown", ru: "Неизвестно", uz: "Noma’lum" },
 };
 
+// Merge the extended Claude-authored term tables (cn-spec-terms.mjs).
+Object.assign(PARAMS, EXTRA_PARAMS);
+Object.assign(VALUES, EXTRA_VALUES);
+
 const LANGS = ["en", "ru", "uz"];
 const memo = new Map();
 
@@ -279,15 +284,26 @@ function splitUnit(name) {
   const m = String(name).match(/^(.*?)(\s*[（(][^（）()]*[)）])\s*$/);
   return m ? { stem: m[1].trim(), unit: m[2].replace(/（/g, "(").replace(/）/g, ")").replace(/\s+/g, "") } : { stem: String(name).trim(), unit: "" };
 }
+// translate CJK inside a "(unit)" → "(¥)"/"(h)"/"(pcs)"; Latin units unchanged.
+function transUnit(unit) {
+  if (!unit) return "";
+  let u = unit;
+  for (const [cn, en] of Object.entries(UNIT_MAP)) u = u.split(cn).join(en);
+  return u;
+}
 
 /** Translate one label (group/param name). Returns {en,ru,uz} or null if unknown. */
 export function translateLabel(cn) {
   if (GROUPS[cn]) return GROUPS[cn];
-  const { stem, unit } = splitUnit(cn);
-  const hit = PARAMS[stem] || PARAMS[cn];
+  // peel a trailing standard tag that sits AFTER the unit (e.g. 油耗(L/100km)CLTC)
+  let tag = "", base = String(cn);
+  const tm = base.match(/^(.*[)）])\s*(CLTC|WLTC|NEDC|EPA)$/);
+  if (tm) { base = tm[1]; tag = " " + tm[2]; }
+  const { stem, unit } = splitUnit(base);
+  const hit = PARAMS[stem] || PARAMS[base] || PARAMS[cn];
   if (!hit) return null;
-  if (!unit) return hit;
-  return Object.fromEntries(LANGS.map((l) => [l, `${hit[l]} ${unit}`]));
+  const u = transUnit(unit);
+  return Object.fromEntries(LANGS.map((l) => [l, `${hit[l]}${u ? ` ${u}` : ""}${tag}`]));
 }
 
 /** Translate one value. Numeric/Latin pass through; 万/亿 normalized; categorical via dict + composers. */
@@ -315,9 +331,20 @@ export function translateValue(cn) {
     const tr = map[t] || [t, t, t];
     return { en: `${gb[1]}-speed ${tr[0]}`, ru: `${gb[1]}-ст. ${tr[1]}`, uz: `${gb[1]}-pog‘onali ${tr[2]}` };
   }
+  // compound on "+"/"/"/"、" → translate each part, rejoin
+  if (/[+＋/、]/.test(v)) {
+    const sep = /[+＋]/.test(v) ? " + " : /、/.test(v) ? ", " : " / ";
+    const parts = v.split(/[+＋/、]/).map((p) => p.trim()).filter(Boolean);
+    const tp = parts.map((p) => translateValue(p));
+    if (parts.length > 1 && tp.every(Boolean)) return { en: tp.map((x) => x.en).join(sep), ru: tp.map((x) => x.ru).join(sep), uz: tp.map((x) => x.uz).join(sep) };
+  }
+  // embedded-word pass (engine specs: "2.0T 233马力 L4" → "2.0T 233 hp L4")
+  let w = v; for (const [re, rep] of VALUE_WORDS) w = w.replace(re, rep);
+  w = w.replace(/\s+/g, " ").trim();
+  if (w !== v && !/[一-鿿]/.test(w)) return { en: w, ru: w, uz: w };
   if (!/[一-鿿]/.test(v)) return { en: v, ru: v, uz: v }; // pure number/Latin
-  // trim-name-shaped values (e.g. the 车型名称/Model row) → run the trim translator
-  if (/款|版|续航|[四后前两]驱|套装|纪念|限量/.test(v)) { const tn = translateTrimName(v); if (tn && tn !== v) return { en: tn, ru: tn, uz: tn }; }
+  // trim-name-shaped values (the 车型名称/Model row) → trim translator (only if it fully resolves)
+  if (/款|版|续航|[四后前两]驱|套装|纪念|限量|型|双电机|单电机/.test(v)) { const tn = translateTrimName(v); if (tn && tn !== v && !/[一-鿿]/.test(tn)) return { en: tn, ru: tn, uz: tn }; }
   return null;
 }
 
@@ -339,9 +366,12 @@ const TRIM_TR = [
   [/敞篷/g, " Convertible"], [/硬顶/g, " Hardtop"], [/软顶/g, " Soft-top"],
   [/改款/g, " (facelift)"], [/新款/g, ""], [/(20\d\d)款/g, "$1"], [/款/g, ""], [/版/g, ""],
 ];
+const TRIM_WORDS_SORTED = Object.entries(TRIM_WORDS).sort((a, b) => b[0].length - a[0].length);
 export function translateTrimName(name) {
   let t = ` ${String(name || "")} `;
   for (const [re, rep] of TRIM_TR) t = t.replace(re, rep);
+  for (const [cn, en] of TRIM_WORDS_SORTED) if (t.includes(cn)) t = t.split(cn).join(en ? ` ${en} ` : " ");
+  t = t.replace(/马力/g, "hp");
   return t.replace(/\s+/g, " ").trim() || String(name || "");
 }
 
@@ -370,11 +400,17 @@ export async function translateSpec(spec, { translateUnknown } = {}) {
   const tl = (cn) => translateLabel(cn) || extra[cn] || { en: cn, ru: cn, uz: cn };
   const tv = (cn) => translateValue(cn) || extra[cn] || { en: cn, ru: cn, uz: cn };
   const trimName = (n) => translateTrimName(n);
+  const cleanPrice = (raw) => {
+    if (!raw) return null;
+    const s = String(raw).trim();
+    const m = s.match(/^([\d.]+)\s*万$/); if (m) return "¥" + Math.round(parseFloat(m[1]) * 1e4).toLocaleString("en-US");
+    return /[一-鿿]/.test(s) ? null : s; // 暂无报价 etc → no price
+  };
 
   const render = (lang) => ({
     groups: spec.groups.map((g) => tl(g)[lang]),
     trims: spec.trims.map((t) => ({
-      specid: t.specid, name: trimName(t.name), price_raw: t.price_raw,
+      specid: t.specid, name: trimName(t.name), price_raw: cleanPrice(t.price_raw),
       params: Object.fromEntries(Object.entries(t.params).map(([gn, sec]) => [
         tl(gn)[lang],
         Object.fromEntries(Object.entries(sec).map(([pn, pv]) => [tl(pn)[lang], tv(pv)[lang]])),
