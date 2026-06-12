@@ -59,8 +59,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "write failed", detail: String((e as Error).message).slice(0, 120) }, { status: 500 });
   }
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || `${url.protocol}//${url.host}`;
-  // sanity: ensure rel resolved under the configured root (defensive)
+  // Return a ROOT-RELATIVE URL: resolves to whatever origin serves the page —
+  // localhost now (photos on the Mac), tezmotors.uz after the media folder is copied
+  // to the Vostro. No DB rewrite needed on transfer. (Absolute opt-in via ?absolute=1.)
   void mediaRoot();
-  return NextResponse.json({ ok: true, url: `${base}/api/media/${rel}`, bytes: bytes.byteLength, mime: kind.mime });
+  const rootRel = `/api/media/${rel}`;
+  const absolute = url.searchParams.get("absolute") === "1";
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || `${url.protocol}//${url.host}`;
+  return NextResponse.json({ ok: true, url: absolute ? `${base}${rootRel}` : rootRel, bytes: bytes.byteLength, mime: kind.mime });
 }
