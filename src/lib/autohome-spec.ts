@@ -86,6 +86,19 @@ export interface SpecData {
   /** Interior colors (AutoHome `var innerColor`): name + hex + key photos per color. */
   interior_colors?: CarColor[];
   /**
+   * Customs-clearance (растаможка) estimate in USD, scraped from the matched
+   * Gonzo detail page's "Таможня" figure. A frequently-asked number — shown as an
+   * estimate on the car page (confirm-with-manager), never a hard all-in commitment.
+   */
+  customs_usd?: number;
+  /**
+   * Per-trim CIP-Tashkent prices from the matched Gonzo detail page, each already
+   * −$100 (the catalog's pricing rule). Gonzo's exact labels + prices — the
+   * authoritative price list shown on the car page. AutoHome trims are matched to
+   * these at render time (best-effort) to head spec-compare columns with a price.
+   */
+  gonzo_trims?: { label: string; price_usd: number }[];
+  /**
    * Per-locale translated views (ru/uz/en). Present for CN-sourced specs whose
    * base groups/trims are Chinese — produced by the collector's CN→RU/UZ/EN
    * dictionary (deploy/collector/cn-spec-dict.mjs). Absent for global-EN specs.
@@ -101,6 +114,81 @@ export function localizedSpecView(spec: SpecData, locale: "ru" | "uz" | "en"): L
   const v = spec.i18n?.[locale];
   if (v && Array.isArray(v.groups) && Array.isArray(v.trims) && v.trims.length) return v;
   return { groups: spec.groups, trims: spec.trims };
+}
+
+type TrimSignals = { dt: string; pt: string; kwh: number; seats: number; long: boolean };
+
+/** Extract drivetrain / powertrain / battery-kWh / seats signals from a trim label
+ *  (handles both Chinese AutoHome names and English Gonzo labels). */
+function trimSignals(text: string, params?: Record<string, Record<string, string>>): TrimSignals {
+  const s = String(text || "").toLowerCase();
+  let dt = "";
+  if (/四驱|4wd|awd|双电机|全时四驱|four[- ]?wheel|all[- ]?wheel/.test(s)) dt = "awd";
+  else if (/后驱|rwd|后轮|rear[- ]?wheel|单电机/.test(s)) dt = "rwd";
+  else if (/前驱|fwd|前轮|front[- ]?wheel/.test(s)) dt = "fwd";
+  let pt = "";
+  if (/增程|erev|range[- ]?extend|extended[- ]?range/.test(s)) pt = "erev";
+  else if (/插电|phev|plug[- ]?in/.test(s)) pt = "phev";
+  else if (/油电|混动|hybrid|\bhev\b/.test(s)) pt = "hybrid";
+  else if (/纯电|純電|\bev\b|electric|\bbev\b/.test(s)) pt = "ev";
+  let kwh = 0;
+  const km = s.match(/(\d{2,3}(?:\.\d)?)\s*(?:kwh|kw·h|度|千瓦时)/);
+  if (km) kwh = Math.round(parseFloat(km[1]));
+  if (!kwh && params) {
+    for (const g of Object.values(params)) {
+      for (const [k, v] of Object.entries(g)) {
+        if (/电池|battery|容量|电量|квтч|кВтч/i.test(k) && /^\d{2,3}(\.\d+)?$/.test(String(v))) {
+          const n = parseFloat(String(v));
+          if (n >= 20 && n <= 200) { kwh = Math.round(n); break; }
+        }
+      }
+      if (kwh) break;
+    }
+  }
+  let seats = 0;
+  const sm = s.match(/(\d)\s*(?:座|seat|мест)/);
+  if (sm) seats = parseInt(sm[1], 10);
+  const long = /长续航|長續航|long[- ]?range/.test(s);
+  return { dt, pt, kwh, seats, long };
+}
+
+function sigScore(a: TrimSignals, b: TrimSignals): number {
+  let sc = 0;
+  if (a.dt && a.dt === b.dt) sc += 2; else if (a.dt && b.dt) sc -= 2;
+  if (a.pt && a.pt === b.pt) sc += 2; else if (a.pt && b.pt) sc -= 2;
+  if (a.kwh && b.kwh) sc += a.kwh === b.kwh ? 3 : -2;
+  if (a.seats && b.seats && a.seats === b.seats) sc += 1;
+  if (a.long && b.long) sc += 1;
+  return sc;
+}
+
+/**
+ * Best-effort map of each AutoHome trim → a Gonzo per-trim USD price, aligned to
+ * `trims` by index. Conservative: only assigns on a confident signal match
+ * (drivetrain/powertrain/battery), so the spec-compare column headers never show a
+ * wrong price. Falls back to price-rank alignment only when the counts are equal.
+ * Returns nulls when there's nothing confident — the car page still shows the exact
+ * Gonzo list as the authoritative source. Pure.
+ */
+export function matchGonzoToTrims(
+  trims: SpecTrim[],
+  gonzo?: { label: string; price_usd: number }[],
+): (number | null)[] {
+  if (!gonzo?.length || !trims.length) return trims.map(() => null);
+  const gs = gonzo.map((g) => ({ price: g.price_usd, sig: trimSignals(g.label) }));
+  const out: (number | null)[] = trims.map((t) => {
+    const ts = trimSignals(t.name, t.params);
+    let best: number | null = null, bestSc = 2; // require > 2 to assign
+    for (const g of gs) { const sc = sigScore(ts, g.sig); if (sc > bestSc) { bestSc = sc; best = g.price; } }
+    return best;
+  });
+  if (!out.some((x) => x !== null) && trims.length === gonzo.length) {
+    const rawNum = (t: SpecTrim) => parseFloat(String(t.price_raw || "").replace(/[^\d.]/g, "")) || 0;
+    const order = [...trims.keys()].sort((a, b) => rawNum(trims[a]) - rawNum(trims[b]));
+    const gp = [...gonzo].sort((a, b) => a.price_usd - b.price_usd);
+    order.forEach((ti, i) => { if (gp[i]) out[ti] = gp[i].price_usd; });
+  }
+  return out;
 }
 
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";

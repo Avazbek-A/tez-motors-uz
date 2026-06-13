@@ -8,7 +8,8 @@ import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { localizedPath } from "@/lib/locale-path";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
-import { localizedSpecView, type SpecData } from "@/lib/autohome-spec";
+import { localizedSpecView, matchGonzoToTrims, type SpecData } from "@/lib/autohome-spec";
+import { SpecComparison } from "@/components/catalog/spec-comparison";
 
 /**
  * Public, shareable, print-friendly spec sheet — the full multi-trim parameter
@@ -18,9 +19,9 @@ import { localizedSpecView, type SpecData } from "@/lib/autohome-spec";
  */
 
 const T = {
-  ru: { sheet: "Спецификация", trim: "Комплектация", download: "Скачать PDF", back: "← К автомобилю", price: "Цена", noData: "Подробная спецификация пока не загружена.", ref: "Данные приведены для справки. Уточняйте актуальную комплектацию у менеджера.", param: "Параметр" },
-  uz: { sheet: "Texnik tavsif", trim: "Komplektatsiya", download: "PDF yuklab olish", back: "← Avtomobilga", price: "Narx", noData: "Batafsil texnik tavsif hali yuklanmagan.", ref: "Ma'lumotlar ma'lumot uchun. Aniq komplektatsiyani menejerdan so'rang.", param: "Parametr" },
-  en: { sheet: "Specification sheet", trim: "Trim", download: "Download PDF", back: "← Back to car", price: "Price", noData: "No detailed spec sheet imported yet.", ref: "Figures are for reference. Confirm the exact configuration with a manager.", param: "Parameter" },
+  ru: { sheet: "Спецификация", trim: "Комплектация", download: "Скачать PDF", back: "← К автомобилю", price: "Цена", noData: "Подробная спецификация пока не загружена.", ref: "Данные приведены для справки. Уточняйте актуальную комплектацию у менеджера.", param: "Параметр", differencesOnly: "Только отличия", showAll: "Все параметры", selectTrims: "Выберите комплектации для сравнения", noDiff: "Нет отличий" },
+  uz: { sheet: "Texnik tavsif", trim: "Komplektatsiya", download: "PDF yuklab olish", back: "← Avtomobilga", price: "Narx", noData: "Batafsil texnik tavsif hali yuklanmagan.", ref: "Ma'lumotlar ma'lumot uchun. Aniq komplektatsiyani menejerdan so'rang.", param: "Parametr", differencesOnly: "Faqat farqlar", showAll: "Barcha parametrlar", selectTrims: "Solishtirish uchun komplektatsiyalarni tanlang", noDiff: "Farq yo'q" },
+  en: { sheet: "Specification sheet", trim: "Trim", download: "Download PDF", back: "← Back to car", price: "Price", noData: "No detailed spec sheet imported yet.", ref: "Figures are for reference. Confirm the exact configuration with a manager.", param: "Parameter", differencesOnly: "Differences only", showAll: "All parameters", selectTrims: "Select trims to compare", noDiff: "No differences" },
 };
 
 async function resolveLocale(): Promise<SeoLocale> {
@@ -70,6 +71,8 @@ export default async function SpecSheetPage({ params }: { params: Promise<{ slug
   const view = spec ? localizedSpecView(spec, locale) : null;
   const groups = view?.groups ?? [];
   const trims = view?.trims ?? [];
+  // Best-effort per-trim Gonzo price, aligned to spec.trims (== view.trims order).
+  const trimPrices = spec ? matchGonzoToTrims(spec.trims, spec.gonzo_trims) : [];
 
   return (
     <div className="pt-24 pb-20">
@@ -112,47 +115,17 @@ export default async function SpecSheetPage({ params }: { params: Promise<{ slug
           </div>
         )}
 
-        {/* Spec tables */}
+        {/* Spec comparison — smart multi-trim table (differences-only by default).
+            Chinese (AutoHome ¥) trim prices are NOT passed to the client. */}
         {!spec || trims.length === 0 ? (
           <p className="text-muted-foreground">{t.noData}</p>
         ) : (
-          <div className="space-y-8">
-            {groups.map((group) => {
-              // Params that appear in this group for at least one trim.
-              const paramNames = Array.from(new Set(trims.flatMap((tr) => Object.keys(tr.params[group] || {}))));
-              if (paramNames.length === 0) return null;
-              return (
-                <section key={group} className="spec-group">
-                  <h2 className="text-lg font-semibold text-foreground mb-2">{group}</h2>
-                  <div className="overflow-x-auto rounded-xl border border-border">
-                    <table className="spec-table w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="bg-card">
-                          <th className="text-left font-medium text-muted-foreground px-3 py-2 w-1/3">{t.param}</th>
-                          {trims.map((tr, ti) => (
-                            <th key={ti} className="text-left font-medium text-foreground px-3 py-2">
-                              {tr.name}
-                              {tr.price_raw ? <span className="block text-[11px] font-normal text-[var(--accent)]">{tr.price_raw}</span> : null}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paramNames.map((p, ri) => (
-                          <tr key={p} className={ri % 2 ? "bg-card/40" : ""}>
-                            <td className="px-3 py-2 text-muted-foreground align-top">{p}</td>
-                            {trims.map((tr, ti) => (
-                              <td key={ti} className="px-3 py-2 text-foreground align-top">{tr.params[group]?.[p] || "—"}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+          <SpecComparison
+            groups={groups}
+            trims={trims}
+            trimPrices={trimPrices}
+            labels={{ param: t.param, differencesOnly: t.differencesOnly, showAll: t.showAll, selectTrims: t.selectTrims, noDiff: t.noDiff }}
+          />
         )}
 
         <p className="text-[11px] text-muted-foreground mt-8">{t.ref}</p>

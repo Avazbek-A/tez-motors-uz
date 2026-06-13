@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
-  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle
+  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle, Layers
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -319,6 +319,53 @@ export default function CarDetailPage() {
                   </p>
                 )}
               </div>
+
+              {/* Растаможка (customs) — a frequently-asked figure. Shown only when the
+                  matched Gonzo page provided one; presented as an estimate (not a hard
+                  all-in commitment), since CIP may or may not already bundle customs. */}
+              {car.spec_data?.customs_usd ? (
+                <div className="rounded-xl border border-amber-400/25 bg-amber-400/5 p-4 mb-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm text-white/70">{dictionary.common.customs}</span>
+                    <span className="text-xl font-mono font-bold text-amber-300">≈ {formatPrice(car.spec_data.customs_usd)}</span>
+                  </div>
+                  {car.price_usd > 0 && (
+                    <p className="mt-1 text-xs text-white/55">
+                      {formatPrice(car.price_usd)} + {formatPrice(car.spec_data.customs_usd)} ≈{" "}
+                      <span className="font-semibold text-white/85">
+                        {formatPrice(car.price_usd + car.spec_data.customs_usd)} {dictionary.common.allIn}
+                      </span>
+                    </p>
+                  )}
+                  <p className="mt-1 text-[11px] text-white/40">{dictionary.common.customsNote}</p>
+                </div>
+              ) : null}
+
+              {/* Per-trim CIP-Tashkent prices (authoritative Gonzo list). */}
+              {car.spec_data?.gonzo_trims?.length ? (
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 mb-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-white/50 mb-2">{dictionary.common.trimsCip}</p>
+                  <ul className="space-y-1.5">
+                    {car.spec_data.gonzo_trims.map((tr, i) => (
+                      <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="text-white/70 truncate">{tr.label}</span>
+                        <span className="font-mono font-semibold text-white whitespace-nowrap">{formatPrice(tr.price_usd)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {/* Compare trims → full smart spec sheet (differences-only). */}
+              {(car.spec_data?.trims?.length ?? 0) > 1 && (
+                <Link
+                  href={localizedPath(locale, `/catalog/${car.slug}/spec`)}
+                  className="flex items-center justify-center gap-2 w-full mb-4 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-white/90 hover:bg-white/5 transition-colors"
+                >
+                  <Layers className="w-4 h-4" />
+                  {dictionary.common.compareTrims}
+                </Link>
+              )}
 
               {car.price_usd > 0 && (
                 <Button
