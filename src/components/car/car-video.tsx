@@ -27,7 +27,21 @@ function pickDefault(vs: Variant[]): number {
   return (asc.filter((v) => v.value <= cap).pop() || asc[0]).value;
 }
 
-export function CarVideo({ mid, poster }: { mid: string; poster?: string }) {
+const SUB_LABELS: Record<string, string> = { ru: "Русский", uz: "O'zbekcha", en: "English" };
+
+export function CarVideo({
+  mid,
+  poster,
+  subLangs = [],
+  defaultLang = "ru",
+}: {
+  mid: string;
+  poster?: string;
+  /** Subtitle languages available for this clip (keys of spec_data.subtitles). */
+  subLangs?: string[];
+  /** Which subtitle track to show by default (the visitor's locale). */
+  defaultLang?: string;
+}) {
   const [variants, setVariants] = useState<Variant[] | null>(null);
   const [cur, setCur] = useState<number | null>(null);
   const [failed, setFailed] = useState(false);
@@ -57,6 +71,7 @@ export function CarVideo({ mid, poster }: { mid: string; poster?: string }) {
 
   if (failed) return null;
   const src = variants && cur != null ? variants.find((v) => v.value === cur)?.url : undefined;
+  const subDefault = subLangs.includes(defaultLang) ? defaultLang : subLangs[0];
 
   return (
     <div className="relative w-full h-full">
@@ -72,7 +87,18 @@ export function CarVideo({ mid, poster }: { mid: string; poster?: string }) {
           const r = resume.current; const v = videoRef.current;
           if (r && v) { try { v.currentTime = r.t; } catch {} if (r.play) v.play().catch(() => {}); resume.current = null; }
         }}
-      />
+      >
+        {subLangs.map((l) => (
+          <track
+            key={l}
+            kind="subtitles"
+            srcLang={l}
+            label={SUB_LABELS[l] || l.toUpperCase()}
+            src={`/api/video/${mid}/subtitles?lang=${l}`}
+            default={l === subDefault}
+          />
+        ))}
+      </video>
       {variants && variants.length > 1 && cur != null && (
         <select
           aria-label="Quality"

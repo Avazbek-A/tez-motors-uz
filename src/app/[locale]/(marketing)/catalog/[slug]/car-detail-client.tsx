@@ -221,7 +221,12 @@ export default function CarDetailPage() {
                   {locale === "ru" ? "Видеообзор" : locale === "uz" ? "Video sharh" : "Video overview"}
                 </div>
                 <div className="aspect-video">
-                  <CarVideo mid={car.spec_data.video_mid} poster={Array.isArray(car.images) ? car.images[0] : undefined} />
+                  <CarVideo
+                    mid={car.spec_data.video_mid}
+                    poster={Array.isArray(car.images) ? car.images[0] : undefined}
+                    subLangs={Object.keys(car.spec_data.subtitles ?? {})}
+                    defaultLang={locale}
+                  />
                 </div>
               </div>
             )}

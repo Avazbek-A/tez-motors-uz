@@ -47,6 +47,13 @@ export interface SpecData {
    * AutoHome's CDN (no download/storage).
    */
   video_mid?: string | null;
+  /**
+   * Per-locale WebVTT subtitle tracks for the overview clip. Generated offline
+   * (local Whisper STT of the Chinese narration → translation), stored only for
+   * clips that actually contain speech (music-only b-roll has none). Served as a
+   * <track> via /api/video/{mid}/subtitles?lang=…; absent → no subtitle toggle.
+   */
+  subtitles?: Partial<Record<"ru" | "uz" | "en", string>>;
   /** ordered group names (Basic Information, Body, Electric Motor, …). */
   groups: string[];
   trims: SpecTrim[];
