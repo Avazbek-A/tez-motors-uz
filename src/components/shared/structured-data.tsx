@@ -176,6 +176,10 @@ export function CarSchema({
       ? { "@type": "EngineSpecification", displacement: `${car.engine_volume}L` }
       : undefined,
     modelDate: car.year.toString(),
+    color:
+      car.spec_data?.exterior_colors?.map((c) => c.name_en || c.name_cn).filter(Boolean).join(", ") ||
+      car.color ||
+      undefined,
   };
 
   if (aggregate && aggregate.count > 0) {

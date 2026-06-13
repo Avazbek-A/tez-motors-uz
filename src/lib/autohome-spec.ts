@@ -27,6 +27,22 @@ export interface LocalizedSpecView {
   trims: SpecTrim[];
 }
 
+/**
+ * An exterior or interior color option, harvested from AutoHome's config-page
+ * `var color` / `var innerColor` JSON. `hex` is the swatch (dual-tone interiors
+ * come as "#aaaaaa/#bbbbbb"); `images` are the re-hosted key photos for that
+ * color (≤10 exterior / ≤15 interior), category-diverse + deduped.
+ */
+export interface CarColor {
+  name_cn: string;
+  name_ru?: string;
+  name_uz?: string;
+  name_en?: string;
+  hex: string;
+  color_id?: number;
+  images?: string[];
+}
+
 export interface SpecData {
   source: "global" | "cn";
   source_url: string;
@@ -65,6 +81,10 @@ export interface SpecData {
   trims: SpecTrim[];
   gallery?: string[];
   colors?: string[];
+  /** Exterior body colors (AutoHome `var color`): name + hex + key photos per color. */
+  exterior_colors?: CarColor[];
+  /** Interior colors (AutoHome `var innerColor`): name + hex + key photos per color. */
+  interior_colors?: CarColor[];
   /**
    * Per-locale translated views (ru/uz/en). Present for CN-sourced specs whose
    * base groups/trims are Chinese — produced by the collector's CN→RU/UZ/EN

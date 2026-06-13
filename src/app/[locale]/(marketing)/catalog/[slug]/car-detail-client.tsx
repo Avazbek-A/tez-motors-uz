@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
-import { CarGallery } from "@/components/catalog/car-gallery";
+import { CarColorsGallery } from "@/components/catalog/car-colors-gallery";
 import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";
@@ -179,7 +179,14 @@ export default function CarDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
           <div className="lg:col-span-3 space-y-6">
             <div className="animate-fade-in-up">
-              <CarGallery images={car.images} brand={car.brand} model={car.model} />
+              <CarColorsGallery
+                images={car.images}
+                exteriorColors={car.spec_data?.exterior_colors}
+                interiorColors={car.spec_data?.interior_colors}
+                brand={car.brand}
+                model={car.model}
+                locale={locale}
+              />
             </div>
 
             {car.video_url && (
