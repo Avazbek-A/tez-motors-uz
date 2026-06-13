@@ -194,6 +194,25 @@ export default function CarDetailPage() {
               </div>
             )}
 
+            {car.spec_data?.pano_id && (
+              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "110ms" }}>
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-white font-bold text-lg">
+                  <span className="text-neon-blue">360°</span>
+                  {locale === "ru" ? "Обзор" : locale === "uz" ? "Ko‘rinish" : "Walkthrough"}
+                </div>
+                <div className="aspect-video">
+                  <iframe
+                    title={`${car.brand} ${car.model} 360`}
+                    src={`https://pano.autohome.com.cn/car/pano/${car.spec_data.pano_id}?_ahrotate=1`}
+                    className="w-full h-full"
+                    loading="lazy"
+                    allow="accelerometer; gyroscope; fullscreen"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
+
             {description && (
               <div className="bg-card rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
                 <h2 className="font-bold text-lg mb-3 flex items-center gap-2 text-white">

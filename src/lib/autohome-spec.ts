@@ -35,6 +35,12 @@ export interface SpecData {
   model?: string;
   /** AutoHome series id — used to fetch the full image gallery. */
   series_id?: number;
+  /**
+   * AutoHome panorama id for the 360° walkthrough (exterior spin + interior VR).
+   * Embedded as https://pano.autohome.com.cn/car/pano/{pano_id} — same approach
+   * the competitor uses. Different id-space from series_id.
+   */
+  pano_id?: string | null;
   /** ordered group names (Basic Information, Body, Electric Motor, …). */
   groups: string[];
   trims: SpecTrim[];
