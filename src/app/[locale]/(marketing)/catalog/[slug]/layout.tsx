@@ -28,11 +28,12 @@ export async function generateMetadata({
       };
     }
 
-    const title = `${car.brand} ${car.model} ${car.year} — ${formatPrice(car.price_usd)}`;
+    const priceTag = car.price_usd > 0 ? ` — ${formatPrice(car.price_usd)}` : "";
+    const title = `${car.brand} ${car.model} ${car.year}${priceTag}`;
     const description =
       car.description_ru ||
       `${car.brand} ${car.model} ${car.year} — купить из Китая в Узбекистан. ` +
-        `${formatPrice(car.price_usd)}. ${car.body_type}, ${car.fuel_type}. Tez Motors.`;
+        `${car.price_usd > 0 ? formatPrice(car.price_usd) + ". " : ""}${car.body_type}, ${car.fuel_type}. Tez Motors.`;
 
     const imageUrl = car.thumbnail || car.images?.[0] || `${SITE_CONFIG.url}/opengraph-image`;
 

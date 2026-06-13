@@ -158,18 +158,19 @@ export function CarSchema({
       "@type": "Brand",
       name: car.brand,
     },
-    offers: {
-      "@type": "Offer",
-      price: car.price_usd,
-      priceCurrency: "USD",
-      availability: car.is_available
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
-      seller: {
-        "@type": "Organization",
-        name: SITE_CONFIG.name,
-      },
-    },
+    ...(car.price_usd > 0
+      ? {
+          offers: {
+            "@type": "Offer",
+            price: car.price_usd,
+            priceCurrency: "USD",
+            availability: car.is_available
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
+            seller: { "@type": "Organization", name: SITE_CONFIG.name },
+          },
+        }
+      : {}),
     vehicleConfiguration: car.transmission,
     fuelType: car.fuel_type,
     vehicleEngine: car.engine_volume

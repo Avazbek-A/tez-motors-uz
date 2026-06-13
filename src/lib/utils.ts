@@ -6,6 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number, currency: "USD" | "UZS" = "USD"): string {
+  // No/zero price → neutral dash (card + detail show a localized "Price on request").
+  if (!price || price <= 0) return "—";
   if (currency === "UZS") {
     return new Intl.NumberFormat("uz-UZ", {
       style: "currency",

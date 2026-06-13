@@ -99,7 +99,7 @@ export function CarCard({ car }: CarCardProps) {
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{dictionary.common.from}</p>
+            {car.price_usd > 0 && <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{dictionary.common.from}</p>}
             {discount > 0 ? (
               <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground/60 line-through">
@@ -110,7 +110,7 @@ export function CarCard({ car }: CarCardProps) {
                 </p>
               </div>
             ) : (
-              <p className="text-lg font-mono font-semibold text-primary tracking-tight">{formatPrice(car.price_usd)}</p>
+              <p className="text-lg font-mono font-semibold text-primary tracking-tight">{car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}</p>
             )}
             {car.price_usd > 0 && (
               <p className="text-xs text-muted-foreground mt-1 tracking-wide">

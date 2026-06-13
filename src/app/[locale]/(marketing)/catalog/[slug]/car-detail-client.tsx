@@ -98,10 +98,10 @@ export default function CarDetailPage() {
 
   const waMessage =
     locale === "ru"
-      ? `Здравствуйте! Интересует ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}). Подскажите по наличию и условиям.`
+      ? `Здравствуйте! Интересует ${car.brand} ${car.model} ${car.year} (${car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}). Подскажите по наличию и условиям.`
       : locale === "uz"
-      ? `Assalomu alaykum! ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}) qiziqtiryapti. Mavjudligi va shartlari bo'yicha ma'lumot bering.`
-      : `Hello! I'm interested in the ${car.brand} ${car.model} ${car.year} (${formatPrice(car.price_usd)}). Could you share availability and terms?`;
+      ? `Assalomu alaykum! ${car.brand} ${car.model} ${car.year} (${car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}) qiziqtiryapti. Mavjudligi va shartlari bo'yicha ma'lumot bering.`
+      : `Hello! I'm interested in the ${car.brand} ${car.model} ${car.year} (${car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}). Could you share availability and terms?`;
   const waHref = whatsappLink(settings.whatsapp, waMessage);
   const tgHref = telegramLink(settings.telegram);
 
@@ -294,7 +294,7 @@ export default function CarDetailPage() {
               </div>
 
               <div className="bg-neon-blue/10 rounded-xl p-4 mb-4">
-                <p className="text-xs text-white/60 mb-1">{dictionary.common.from}</p>
+                {car.price_usd > 0 && <p className="text-xs text-white/60 mb-1">{dictionary.common.from}</p>}
                 {discount > 0 ? (
                   <>
                     <p className="text-sm text-white/45 line-through">{formatPrice(car.original_price_usd!)}</p>
@@ -303,7 +303,7 @@ export default function CarDetailPage() {
                     </p>
                   </>
                 ) : (
-                  <p className="text-3xl font-mono font-bold text-neon-blue">{formatPrice(car.price_usd)}</p>
+                  <p className="text-3xl font-mono font-bold text-neon-blue">{car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}</p>
                 )}
                 {car.price_uzs && (
                   <p className="text-sm text-white/60 mt-1">
