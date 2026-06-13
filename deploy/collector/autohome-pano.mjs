@@ -46,28 +46,35 @@ async function main() {
   if (LIMIT) todo = todo.slice(0, LIMIT);
   console.log(`cars needing a pano (have series id, no pano yet): ${todo.length}\n`);
 
+  // existing pano ids already on OTHER cars — a freshly-found pano matching one of
+  // these is a shared/featured placeholder (the series has no own 360), not real.
+  const existing = {}; cars.forEach((c) => { const p = c.spec_data?.pano_id; if (p) existing[p] = (existing[p] || 0) + 1; });
+
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ userAgent: UA, locale: "zh-CN" });
-  const seen = {}; let found = 0, set = 0, none = 0;
+  // PASS 1 — collect (no write)
+  const pairs = []; let none = 0;
   try {
     for (const c of todo) {
-      const sid = c.specs.autohome_id;
-      const pano = await panoForSeries(page, sid);
+      const pano = await panoForSeries(page, c.specs.autohome_id);
       await sleep(400);
       if (!pano) { none++; continue; }
-      seen[pano] = (seen[pano] || 0) + 1;
-      found++;
-      if (WRITE) {
-        const sd = { ...(c.spec_data || {}), pano_id: pano };
-        const r = await fetch(`${u}/rest/v1/cars?id=eq.${c.id}`, { method: "PATCH", headers: { ...H, Prefer: "return=minimal" }, body: JSON.stringify({ spec_data: sd }) });
-        if (r.ok) { set++; }
-        console.log(`  ${set}/${found}  ${c.slug}  series ${sid} → pano ${pano}`);
-      } else {
-        console.log(`  ${c.slug}  series ${sid} → pano ${pano}`);
-      }
+      pairs.push({ c, pano });
+      console.log(`  ${c.slug}  series ${c.specs.autohome_id} → pano ${pano}`);
     }
   } finally { await browser.close(); }
-  const dups = Object.entries(seen).filter(([, n]) => n > 1);
-  console.log(`\n── ${WRITE ? "WROTE " + set : "dry-run"} ── pano found: ${found} | no-pano: ${none}${dups.length ? " | ⚠ repeated pano ids (review): " + dups.map(([id, n]) => id + "×" + n).join(",") : ""}`);
+  // a real per-series pano is UNIQUE — drop ones repeated within this run OR already used elsewhere
+  const freq = {}; pairs.forEach((p) => (freq[p.pano] = (freq[p.pano] || 0) + 1));
+  const unique = pairs.filter((p) => freq[p.pano] === 1 && !existing[p.pano]);
+  const dropped = pairs.length - unique.length;
+  console.log(`\npano found: ${pairs.length} | unique/reliable: ${unique.length} | shared/placeholder dropped: ${dropped}`);
+  // PASS 2 — write uniques
+  let set = 0;
+  if (WRITE) for (const { c, pano } of unique) {
+    const sd = { ...(c.spec_data || {}), pano_id: pano };
+    const r = await fetch(`${u}/rest/v1/cars?id=eq.${c.id}`, { method: "PATCH", headers: { ...H, Prefer: "return=minimal" }, body: JSON.stringify({ spec_data: sd }) });
+    if (r.ok) set++;
+  }
+  console.log(`── ${WRITE ? "WROTE " + set : "dry-run"} ── reliable: ${unique.length} | no-pano: ${none}`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
