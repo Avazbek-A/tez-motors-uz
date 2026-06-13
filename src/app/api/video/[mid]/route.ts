@@ -29,14 +29,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ mid
     if (!r.ok) return NextResponse.json({ error: "upstream" }, { status: 502 });
     const j = await r.json();
     const media = j?.result?.media || {};
-    const urls = [...(media.qualities || []), ...(media.extqualities || [])]
-      .map((q: { copy?: string }) => q?.copy)
-      .filter((u: unknown): u is string => typeof u === "string" && u.includes(".mp4"));
-    if (!urls.length) return NextResponse.json({ error: "no video" }, { status: 404 });
-    // prefer the highest resolution (the …-{height}.mp4 suffix)
-    urls.sort((a, b) => (Number((b.match(/-(\d+)\.mp4/) || [])[1]) || 0) - (Number((a.match(/-(\d+)\.mp4/) || [])[1]) || 0));
+    // AutoHome quality codes -> clean labels (流畅/标清/高清/1080P/4K)
+    const LABEL: Record<number, string> = { 100: "360p", 200: "480p", 300: "720p", 400: "1080p", 500: "4K" };
+    const variants = (media.qualities || [])
+      .map((q: { value?: number; desc?: string; copy?: string }) => ({
+        value: Number(q?.value) || 0,
+        label: LABEL[Number(q?.value)] || String(q?.desc || ""),
+        url: q?.copy,
+      }))
+      .filter((v: { url?: unknown }): v is { value: number; label: string; url: string } => typeof v.url === "string" && v.url.includes(".mp4"))
+      .sort((a: { value: number }, b: { value: number }) => b.value - a.value); // high → low
+    if (!variants.length) return NextResponse.json({ error: "no video" }, { status: 404 });
     return NextResponse.json(
-      { url: urls[0] },
+      { variants, url: variants[0].url },
       { headers: { "Cache-Control": "public, max-age=120, stale-while-revalidate=300" } },
     );
   } catch {
