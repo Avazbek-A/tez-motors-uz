@@ -34,6 +34,7 @@ export function CarVideo({
   poster,
   subLangs = [],
   defaultLang = "ru",
+  cached = false,
 }: {
   mid: string;
   poster?: string;
@@ -41,6 +42,8 @@ export function CarVideo({
   subLangs?: string[];
   /** Which subtitle track to show by default (the visitor's locale). */
   defaultLang?: string;
+  /** Clip is cached on our disk (spec_data.video_local) → serve it locally, fast. */
+  cached?: boolean;
 }) {
   const [variants, setVariants] = useState<Variant[] | null>(null);
   const [cur, setCur] = useState<number | null>(null);
@@ -49,6 +52,7 @@ export function CarVideo({
   const resume = useRef<{ t: number; play: boolean } | null>(null);
 
   useEffect(() => {
+    if (cached) return; // local file: no need to resolve AutoHome variants
     let alive = true;
     fetch(`/api/video/${mid}`, { signal: AbortSignal.timeout(9000) })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -61,7 +65,7 @@ export function CarVideo({
       })
       .catch(() => alive && setFailed(true));
     return () => { alive = false; };
-  }, [mid]);
+  }, [mid, cached]);
 
   function changeQuality(value: number) {
     const v = videoRef.current;
@@ -69,8 +73,12 @@ export function CarVideo({
     setCur(value);
   }
 
-  if (failed) return null;
-  const src = variants && cur != null ? variants.find((v) => v.value === cur)?.url : undefined;
+  if (!cached && failed) return null;
+  const src = cached
+    ? `/api/video/${mid}/file`
+    : variants && cur != null
+      ? variants.find((v) => v.value === cur)?.url
+      : undefined;
   const subDefault = subLangs.includes(defaultLang) ? defaultLang : subLangs[0];
 
   return (
@@ -99,7 +107,7 @@ export function CarVideo({
           />
         ))}
       </video>
-      {variants && variants.length > 1 && cur != null && (
+      {!cached && variants && variants.length > 1 && cur != null && (
         <select
           aria-label="Quality"
           value={cur}

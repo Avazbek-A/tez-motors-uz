@@ -48,6 +48,12 @@ export interface SpecData {
    */
   video_mid?: string | null;
   /**
+   * True once the overview mp4 has been downloaded to the Vostro disk
+   * (IMAGE_STORE_DIR/videos/{video_mid}.mp4). The player then serves it locally
+   * via /api/video/{mid}/file (fast from UZ) instead of streaming from China.
+   */
+  video_local?: boolean;
+  /**
    * Per-locale WebVTT subtitle tracks for the overview clip. Generated offline
    * (local Whisper STT of the Chinese narration → translation), stored only for
    * clips that actually contain speech (music-only b-roll has none). Served as a

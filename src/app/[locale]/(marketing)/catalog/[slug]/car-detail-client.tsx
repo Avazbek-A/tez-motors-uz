@@ -224,6 +224,7 @@ export default function CarDetailPage() {
                     poster={Array.isArray(car.images) ? car.images[0] : undefined}
                     subLangs={Object.keys(car.spec_data.subtitles ?? {})}
                     defaultLang={locale}
+                    cached={!!car.spec_data.video_local}
                   />
                 </div>
               </div>
