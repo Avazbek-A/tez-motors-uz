@@ -50,7 +50,7 @@ export function CarVideo({
 
   useEffect(() => {
     let alive = true;
-    fetch(`/api/video/${mid}`)
+    fetch(`/api/video/${mid}`, { signal: AbortSignal.timeout(9000) })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => {
         if (!alive) return;

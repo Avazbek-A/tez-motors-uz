@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { CarVideo } from "@/components/car/car-video";
+import { Car360 } from "@/components/car/car-360";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
@@ -202,13 +203,10 @@ export default function CarDetailPage() {
                   {locale === "ru" ? "Обзор" : locale === "uz" ? "Ko‘rinish" : "Walkthrough"}
                 </div>
                 <div className="aspect-video">
-                  <iframe
-                    title={`${car.brand} ${car.model} 360`}
-                    src={`https://pano.autohome.com.cn/car/pano/${car.spec_data.pano_id}?_ahrotate=1`}
-                    className="w-full h-full"
-                    loading="lazy"
-                    allow="accelerometer; gyroscope; fullscreen"
-                    allowFullScreen
+                  <Car360
+                    panoId={car.spec_data.pano_id}
+                    poster={Array.isArray(car.images) ? car.images[0] : undefined}
+                    locale={locale}
                   />
                 </div>
               </div>
