@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
+      "media-src 'self' https://*.autohome.com.cn",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
       "frame-src 'self' https://yandex.com https://yandex.ru https://*.yandex.net https://*.maps.yandex.net https://challenges.cloudflare.com https://pano.autohome.com.cn",
       "frame-ancestors 'self'",

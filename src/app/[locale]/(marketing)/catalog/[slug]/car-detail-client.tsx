@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { CarVideo } from "@/components/car/car-video";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
@@ -209,6 +210,18 @@ export default function CarDetailPage() {
                     allow="accelerometer; gyroscope; fullscreen"
                     allowFullScreen
                   />
+                </div>
+              </div>
+            )}
+
+            {car.spec_data?.video_mid && (
+              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "115ms" }}>
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-white font-bold text-lg">
+                  <span className="text-neon-blue">▶</span>
+                  {locale === "ru" ? "Видеообзор" : locale === "uz" ? "Video sharh" : "Video overview"}
+                </div>
+                <div className="aspect-video">
+                  <CarVideo mid={car.spec_data.video_mid} poster={Array.isArray(car.images) ? car.images[0] : undefined} />
                 </div>
               </div>
             )}

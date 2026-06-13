@@ -41,6 +41,12 @@ export interface SpecData {
    * the competitor uses. Different id-space from series_id.
    */
   pano_id?: string | null;
+  /**
+   * AutoHome video media id for the car overview clip. Resolved at request time
+   * to a fresh signed mp4 via /api/video/{mid} and streamed direct from
+   * AutoHome's CDN (no download/storage).
+   */
+  video_mid?: string | null;
   /** ordered group names (Basic Information, Body, Electric Motor, …). */
   groups: string[];
   trims: SpecTrim[];
