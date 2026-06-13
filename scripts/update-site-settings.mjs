@@ -29,14 +29,14 @@ async function loadEnv() {
 
 const VALUES = {
   siteName: "Tez Motors",
-  phone: "+998 90 908 70 13",
-  phoneRaw: "+998909087013",
+  phone: "+998 90 858 89 89",
+  phoneRaw: "+998908588989",
   email: "tezglobalmotors@gmail.com",
   address: "г. Ташкент, Чиланзарский район, ул. Катартал, 25",
   workingHours: "Пн-Сб: 09:00 – 19:00",
   telegram: "https://t.me/tezmotors",
   instagram: "https://instagram.com/tezmotors_uz",
-  whatsapp: "https://wa.me/998909087013",
+  whatsapp: "https://wa.me/998908588989",
   // Showroom pin — ул. Катартал, 25, Чиланзарский район, Tashkent.
   // Resolved via OpenStreetMap Nominatim. Refine via /admin/settings
   // once the dealer confirms the exact spot on the lot.

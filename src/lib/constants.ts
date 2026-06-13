@@ -4,12 +4,12 @@ export const SITE_CONFIG = {
   url: "https://tezmotors.uz",
   // Verified from public Tez Motors socials (DuckDuckGo + Telegram bio).
   // Email + working hours still need to come from the dealer.
-  phone: "+998 90 908 70 13",
-  phoneRaw: "+998909087013",
+  phone: "+998 90 858 89 89",
+  phoneRaw: "+998908588989",
   email: "tezglobalmotors@gmail.com",
   telegram: "https://t.me/tezmotors",
   instagram: "https://instagram.com/tezmotors_uz",
-  whatsapp: "https://wa.me/998909087013",
+  whatsapp: "https://wa.me/998908588989",
   address: "г. Ташкент, Чиланзарский район, ул. Катартал, 25",
   workingHours: "Пн-Сб: 09:00 – 19:00",
   foundedYear: 2024,
