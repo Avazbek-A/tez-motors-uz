@@ -25,6 +25,10 @@ const REFERER = "https://car.autohome.com.cn/";
 const ARGS = process.argv.slice(2);
 const WRITE = ARGS.includes("--write");
 const ALL = ARGS.includes("--all");
+// Resume-friendly: by default skip targets already enriched with disk-hosted
+// photos (so a re-run finishes the remaining set instead of re-rendering everything).
+// Pass --force to re-enrich every target regardless.
+const FORCE = ARGS.includes("--force");
 const TIER = (ARGS.find((a) => a.startsWith("--tier=")) || "").split("=")[1] || "high";
 const LIMIT = Number((ARGS.find((a) => a.startsWith("--limit=")) || "").split("=")[1] || 0)
   || (!WRITE && !ALL ? 15 : 0); // quick dry-run sample unless --all/--write
@@ -169,6 +173,26 @@ async function main() {
   let created = 0, enriched = 0;
   try {
     for (const t of targets) {
+      // Resume: skip if this target is already enriched with disk-hosted photos.
+      // Keyed on specs->>gonzo_name (known upfront — no render needed), so a re-run
+      // picks up where it left off instead of redoing the expensive decode+gallery.
+      if (WRITE && !FORCE) {
+        const { data: done } = await sb
+          .from("cars")
+          .select("id,spec_data,images")
+          .eq("specs->>gonzo_name", t.gonzoName)
+          .limit(1)
+          .maybeSingle();
+        if (
+          done && done.spec_data &&
+          Array.isArray(done.images) &&
+          done.images.some((u) => typeof u === "string" && u.includes("/api/media/"))
+        ) {
+          skipped.exists.push(t.gonzoName);
+          log.info(`  = skip ${t.gonzoName} (already enriched)`);
+          continue;
+        }
+      }
       const r = await extractAutohomeSpec(t.url, { browser });
       if (!r.ok) { skipped.decode.push(t.gonzoName); log.warning(`· ${t.gonzoName}: decode failed (${r.reason || (r.blocked ? "blocked" : "?")})`); continue; }
       const price = priceUsd(t.gonzoPrice);
