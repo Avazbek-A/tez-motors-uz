@@ -1,8 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { CarVideo } from "@/components/car/car-video";
-import { Car360 } from "@/components/car/car-360";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
@@ -15,6 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useLocale } from "@/i18n/locale-context";
 import { CarColorsGallery } from "@/components/catalog/car-colors-gallery";
+// Heavy, interactive, below-the-gallery widgets — code-split so they don't ship in
+// the initial bundle (no SEO value; only mounted when the car has video/360).
+const CarVideo = dynamic(() => import("@/components/car/car-video").then((m) => m.CarVideo), { ssr: false });
+const Car360 = dynamic(() => import("@/components/car/car-360").then((m) => m.Car360), { ssr: false });
 import { ShareButtons } from "@/components/shared/share-buttons";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
 import { RelatedCars } from "@/components/catalog/related-cars";

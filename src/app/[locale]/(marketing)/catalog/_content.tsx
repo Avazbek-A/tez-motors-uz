@@ -10,7 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { CarCard } from "@/components/catalog/car-card";
 import { CarGridSkeleton } from "@/components/catalog/car-card-skeleton";
 import { RecentlyViewed } from "@/components/catalog/recently-viewed";
-import { FindMyCar } from "@/components/assistant/find-my-car";
+import dynamicImport from "next/dynamic";
+// AI assistant widget — client-only, below the grid → code-split out of the initial bundle.
+const FindMyCar = dynamicImport(() => import("@/components/assistant/find-my-car").then((m) => m.FindMyCar), { ssr: false });
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { CAR_BRANDS, BODY_TYPES, FUEL_TYPES } from "@/lib/constants";
