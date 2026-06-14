@@ -70,7 +70,7 @@ memory `market-intel-engine` and `DEPLOY.md`.
 
 ## 🔒 / 🌐 / 💲 Blocked (build scaffold where possible, can't complete unilaterally)
 
-- **Telegram coverage** 🔒 — collector built; needs owner `TG_API_ID/HASH/SESSION/CHANNELS`. Biggest coverage gain.
+- **Telegram coverage** ✅ LIVE — creds set on the Vostro, runs via cron (~35 rows so far). Coverage lever now = adding more/better channels to `TG_CHANNELS`, not auth.
 - **Calibration loop vs real sales** 🔒 — needs the dealer's actual realized **sale prices**. I'll build the consumer; it stays inert until that data exists/is identified.
 - **Competitor import-volume intel** 🌐 — Uzbek customs/trade stats; recon needed (may be brand/segment-level only).
 - **New-car price anchor** 🌐 — official local new-car prices; need a source.
