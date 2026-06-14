@@ -60,6 +60,8 @@ const nextConfig: NextConfig = {
       "form-action 'self'",
       "object-src 'none'",
       "upgrade-insecure-requests",
+      // Collect violations so we can safely flip Report-Only → enforced once prod is clean.
+      "report-uri /api/csp-report",
     ].join("; ");
 
     return [
