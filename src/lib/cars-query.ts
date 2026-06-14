@@ -13,17 +13,24 @@ import { stripPublicSpecData, type SpecData } from "@/lib/autohome-spec";
  *  provenance with no display value; the car page used to render it as a grid.) */
 const PROVENANCE_SPECS_KEYS = ["source", "confidence", "autohome_id"];
 
-/** Strip internal provenance fields from spec_data AND the legacy specs jsonb on
- *  each public row (in place). */
+/** Internal-only TOP-LEVEL car columns — never exposed to clients. These are
+ *  valuation inputs (provenance, battery health, warranty start) used by the
+ *  pricing engine; some are sensitive (a "gray" import_channel must not be shown
+ *  to buyers). Stripped here so any public select("*") path is covered. */
+const PRIVATE_CAR_COLUMNS = ["import_channel", "battery_soh_pct", "in_service_date"];
+
+/** Strip internal provenance fields from spec_data, the legacy specs jsonb, AND
+ *  the private top-level columns on each public row (in place). */
 export function scrubCarsForPublic<T>(rows: T[]): T[] {
   for (const row of rows) {
-    const r = row as { spec_data?: SpecData | null; specs?: Record<string, unknown> | null };
+    const r = row as { spec_data?: SpecData | null; specs?: Record<string, unknown> | null } & Record<string, unknown>;
     if (r && r.spec_data) r.spec_data = stripPublicSpecData(r.spec_data);
     if (r && r.specs && typeof r.specs === "object") {
       const s: Record<string, unknown> = { ...r.specs };
       for (const k of PROVENANCE_SPECS_KEYS) delete s[k];
       r.specs = s;
     }
+    if (r) for (const k of PRIVATE_CAR_COLUMNS) delete r[k];
   }
   return rows;
 }
