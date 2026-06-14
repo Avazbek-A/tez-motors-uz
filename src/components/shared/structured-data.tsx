@@ -164,6 +164,10 @@ export function CarSchema({
             "@type": "Offer",
             price: car.price_usd,
             priceCurrency: "USD",
+            // Google rich-results recommends priceValidUntil + itemCondition; their
+            // absence triggers Search Console "missing field" warnings.
+            priceValidUntil: new Date(Date.now() + 90 * 86_400_000).toISOString().split("T")[0],
+            itemCondition: car.listing_type === "used" ? "https://schema.org/UsedCondition" : "https://schema.org/NewCondition",
             availability: car.is_available
               ? "https://schema.org/InStock"
               : "https://schema.org/OutOfStock",
