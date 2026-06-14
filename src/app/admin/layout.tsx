@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/buying", label: { ru: "Закупочный ИИ", uz: "Xarid AI", en: "Buying Brain" }, icon: Target },
       { href: "/admin/deals", label: { ru: "Выгодные сделки", uz: "Foydali bitimlar", en: "Deal Sniper" }, icon: Tag },
       { href: "/admin/repricing", label: { ru: "Переоценка склада", uz: "Qayta narxlash", en: "Repricing" }, icon: Hourglass },
+      { href: "/admin/engine", label: { ru: "Движок (диагностика)", uz: "Dvigatel diagnostikasi", en: "Engine Ops" }, icon: Gauge },
       { href: "/admin/demand", label: { ru: "Спрос", uz: "Talab", en: "Demand" }, icon: TrendingUp },
       { href: "/admin/market", label: { ru: "Рынок", uz: "Bozor tahlili", en: "Market Intel" }, icon: LineChart },
       { href: "/admin/procurement", label: { ru: "Снабжение", uz: "Ta'minot", en: "Procurement" }, icon: Truck },

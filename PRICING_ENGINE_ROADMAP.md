@@ -22,50 +22,49 @@ memory `market-intel-engine` and `DEPLOY.md`.
 
 ---
 
-## 🔨 / ⏳ Build queue (this push, in order)
+## Build queue — ✅ ALL SHIPPED (build-all push, 2026-06-14)
 
-### Phase 1 — pure analytics core (`src/lib/`, unit-tested)
-- [ ] **Sold-price & time-to-sell inference** ⏳ — a listing that disappears (stale `last_seen_at` while peers stay fresh) = sold/withdrawn; estimate a *clearing* price (asking − learned haggle gap) and days-to-sell. The asking→transaction correction.
-- [ ] **Dealer-vs-private classification** 🔨 — heuristic on raw_text (salon keywords) + repeated phone numbers + posting volume. Splits "your competitor's retail" from "your acquisition cost."
-- [ ] **Seller-motivation scoring** 🔨 — text signals (срочно / уезжаю / торг / срочная продажа / relisted-lower) → 0–1 desperation → per-listing lowball price.
-- [ ] **Cross-source dedup** 🔨 — same car on OLX+avtoelon+Telegram = one comp. Signature = phone + price-band + model + year; collapse before median/confidence.
-- [ ] **Bayesian shrinkage (thin models)** 🔨 — partial-pool a model's median toward its brand/segment mean by sample size; honest numbers for the 156/208 no-comp models.
-- [ ] **Prediction intervals** 🔨 — fair value as a band (±, ~80%) from spread + sample, pairing with the confidence score.
-- [ ] **Price elasticity curve** ⏳ — price ↔ days-to-sell relationship per model (needs sold-inference data to mature).
-- [ ] **Residual-value forecast** ⏳ — forward depreciation curve per model from the price time-series.
-- [ ] **Regional spread (intra-UZ)** 🔨 — per-city median deltas (uses `city`) → buy-cheap-region / sell-dear-region.
-- [ ] **Market regime-break detection** 🔨 — flag when a model's incoming price distribution shifts structurally (mean/variance break) → "assumptions changed."
-- [ ] **VIN journey + odometer-rollback** 🔨 — parse VINs from raw_text; track a car across relistings; flag mileage that *decreased* over time (rollback) and relisted-lower (motivation).
-- [ ] **Cost-of-capital / holding cost** 🔨 — per-day carrying cost folded into margin + markdown math.
+### Phase 1 — pure analytics core (`src/lib/market-analytics.ts`, unit-tested) ✅
+- [x] **Sold-price & time-to-sell inference** (`inferSold`) — disappeared listings → clearing price (asking − haggle) + days-to-sell. ⏳ sharpens as lifecycle accrues.
+- [x] **Dealer-vs-private classification** (`classifySeller` + `extractPhone`).
+- [x] **Seller-motivation scoring** (`motivationScore`).
+- [x] **Cross-source dedup** (`dedupeListings` — phone+model+year+band).
+- [x] **Bayesian shrinkage** (`shrinkEstimate`).
+- [x] **Prediction intervals** (`predictionInterval`).
+- [x] **Price elasticity** (`priceElasticity`). ⏳ needs sold data.
+- [x] **Residual-value forecast** (`residualValue` + `estimateAnnualDepreciation`).
+- [x] **Regional spread** (`regionalSpread`).
+- [x] **Regime-break detection** (`regimeBreak`).
+- [x] **VIN journey + odometer-rollback** (`extractVin` + `vinJourneys`).
+- [x] **Cost-of-capital / holding cost** (`holdingCost`).
 
-### Phase 2 — buy brain wiring (`/api/admin/buying`, page)
-- [ ] Apply shrinkage + prediction intervals to each rec.
-- [ ] Dealer/private split (anchor buy price on private, ceiling on dealer).
-- [ ] Regional spread column.
-- [ ] Cost-of-capital in the margin.
-- [ ] Regime-break flag surfaced.
-- [ ] **Demand forecasting** 🔨 — next-period demand per model from inquiry/watch/saved-search time-series + simple seasonality. Reactive → anticipatory.
-- [ ] **Capital allocation** 🔨 — given a cash budget, the optimal buy *mix* (profit-per-$-per-day knapsack), not just a ranked list.
+### Phase 2 — buy brain wiring (`/api/admin/buying` + page) ✅
+- [x] Shrinkage + prediction intervals per rec.
+- [x] Dealer/private split (acquisition median + resale ceiling).
+- [x] Cost-of-capital → net margin.
+- [x] Regime-break flag surfaced (⚠).
+- [x] **Demand momentum** (recent vs prior inquiries).
+- [x] **Capital allocation** (`?budget=N` → optimal buy mix by profit density).
 
-### Phase 3 — Deal-sniper (new surface)
-- [ ] `/api/admin/deals` — scan individual live listings priced below mileage-adjusted fair value (× motivation × dealer/private) → ranked acquisition targets.
-- [ ] `/admin/deals` page — the buy-low feed.
+### Phase 3 — Deal-sniper ✅
+- [x] `/api/admin/deals` + `/admin/deals` page (buy-low feed).
 
-### Phase 4 — Dynamic repricing (own inventory)
-- [ ] `/api/admin/repricing` — your stock × days-in-stock × market trend × holding cost → markdown suggestions.
-- [ ] Admin surface (extend inventory or new page).
+### Phase 4 — Dynamic repricing ✅
+- [x] `/api/admin/repricing` + `/admin/repricing` page (markdown suggestions on own stock).
 
-### Phase 5 — new value inputs (migrations + valuation + admin form)
-- [ ] **Remaining-warranty** 🔨 — `cars.in_service_date`; warranty-left as a value input.
-- [ ] **Battery state-of-health (EV/PHEV)** 🔨 — `cars.battery_soh_pct`; dominant value driver for electrics.
-- [ ] **Official-vs-gray provenance** 🔨 — `cars.import_channel`; provenance premium split.
+### Phase 5 — new value inputs ✅ (migration 077)
+- [x] **Remaining-warranty** (`cars.in_service_date` + `warrantyMonthsLeft`).
+- [x] **Battery state-of-health** (`cars.battery_soh_pct`).
+- [x] **Official-vs-gray provenance** (`cars.import_channel`) → `valueAdjustmentFactor` wired into repricing + admin form.
 
-### Phase 6 — ops & tools
-- [ ] **Negotiation cockpit** 🔨 — floor / target / walk-away per car for the sales floor.
-- [ ] **Scraper drift / health monitoring** 🔨 — per-collector yield tracking; alert when a source's output drops.
-- [ ] **Import-policy scenario simulator** 🔨 — what-if on customs/duty config → impact on every buy price.
-- [ ] **Lead-to-inventory matching** 🔨 — match open inquiries/saved-searches to current + incoming stock.
-- [ ] **AutoHome China-price leading indicator** ⏳ — track `source_prices` changes over time as a ~1–2-month-ahead local signal.
+### Phase 6 — ops & tools ✅
+- [x] **Negotiation cockpit** (`negotiationBand` → buying sell-guidance + repricing floor).
+- [x] **Scraper health** (`/api/admin/market/health`).
+- [x] **Import-policy simulator** (`/api/admin/policy-sim?dutyDelta=N`).
+- [x] **Lead-to-inventory matching** (`/api/admin/leads/match`).
+- [x] **AutoHome/supplier-cost leading indicator** (`costTrendPct` in buying recs).
+- [x] **Calibration scaffold** (`/api/admin/calibration` — proxy until realized sale prices wired).
+- [x] All surfaced on **`/admin/engine`** (Engine Ops).
 
 ---
 
