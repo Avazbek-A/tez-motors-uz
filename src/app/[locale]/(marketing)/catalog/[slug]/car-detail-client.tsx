@@ -266,16 +266,23 @@ export default function CarDetailPage() {
                 ))}
               </div>
 
-              {Object.keys(car.specs).length > 0 && (
+              {(() => {
+                // Defense-in-depth: never render internal provenance keys (source/
+                // confidence/autohome_id) even if an unscrubbed specs object reaches here.
+                const visibleSpecs = Object.entries(car.specs || {}).filter(
+                  ([k]) => !["source", "confidence", "autohome_id"].includes(k),
+                );
+                return visibleSpecs.length > 0 ? (
                 <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {Object.entries(car.specs).map(([key, value]) => (
+                  {visibleSpecs.map(([key, value]) => (
                     <div key={key} className="p-3 rounded-xl bg-white/5">
                       <p className="text-xs text-white/60 capitalize">{key.replace(/_/g, " ")}</p>
                       <p className="text-sm font-mono font-semibold">{String(value)}</p>
                     </div>
                   ))}
                 </div>
-              )}
+                ) : null;
+              })()}
             </div>
           </div>
 

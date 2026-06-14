@@ -8,11 +8,22 @@ import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { scopeToTenant } from "@/lib/tenant-context";
 import { stripPublicSpecData, type SpecData } from "@/lib/autohome-spec";
 
-/** Strip internal provenance fields from spec_data on each public row (in place). */
+/** Provenance keys in the legacy `specs` jsonb — internal only, never for clients.
+ *  (Every car's `specs` is { source:"autohome", confidence, autohome_id } — pure
+ *  provenance with no display value; the car page used to render it as a grid.) */
+const PROVENANCE_SPECS_KEYS = ["source", "confidence", "autohome_id"];
+
+/** Strip internal provenance fields from spec_data AND the legacy specs jsonb on
+ *  each public row (in place). */
 export function scrubCarsForPublic<T>(rows: T[]): T[] {
   for (const row of rows) {
-    const r = row as { spec_data?: SpecData | null };
+    const r = row as { spec_data?: SpecData | null; specs?: Record<string, unknown> | null };
     if (r && r.spec_data) r.spec_data = stripPublicSpecData(r.spec_data);
+    if (r && r.specs && typeof r.specs === "object") {
+      const s: Record<string, unknown> = { ...r.specs };
+      for (const k of PROVENANCE_SPECS_KEYS) delete s[k];
+      r.specs = s;
+    }
   }
   return rows;
 }
