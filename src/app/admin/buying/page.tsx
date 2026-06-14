@@ -13,11 +13,20 @@ interface Rec {
   demand: { inquiries: number; watches: number; favorites: number; savedSearches: number };
   demandScore: number;
   marketMedianUsd: number | null;
+  marketMedianShrunkUsd?: number | null;
+  acquisitionMedianUsd?: number | null;
+  resaleCeilingUsd?: number | null;
+  fairLowUsd?: number | null;
+  fairHighUsd?: number | null;
+  clearingMedianUsd?: number | null;
+  estDaysToSell?: number | null;
   marketSample: number;
   marketFreshnessDays: number | null;
   marketSpreadPct?: number | null;
   marketSources?: number;
   marketTrendPct?: number | null;
+  demandTrendPct?: number | null;
+  regimeBreak?: string | null;
   confidence?: number;
   confidenceLabel?: "high" | "medium" | "low";
   supplierCostUsd: number | null;
@@ -25,10 +34,20 @@ interface Rec {
   landedCostUsd: number | null;
   marginUsd: number | null;
   marginPct: number | null;
+  holdingCostUsd?: number | null;
+  netMarginUsd?: number | null;
+  netMarginPct?: number | null;
   suggestedPriceUsd: number | null;
   opportunityScore: number;
   verdict: string;
   recommendedQty: number;
+}
+
+interface Allocation {
+  budgetUsd: number;
+  spentUsd: number;
+  expectedProfitUsd: number;
+  picks: { brand: string; model: string; qty: number; capitalUsd: number; expectedProfitUsd: number }[];
 }
 
 const usd = (n: number | null) => (n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"));
@@ -71,6 +90,10 @@ const COPY: Record<Locale, {
   order: string;
   footnote: string;
   signalsLabel: string;
+  budgetPh: string;
+  allocateBtn: string;
+  planTitle: string;
+  planNote: string;
   verdict: Record<string, string>;
 }> = {
   ru: {
@@ -101,6 +124,10 @@ const COPY: Record<Locale, {
     footnote:
       "Возможность сочетает спрос (40%) и маржу (60%), масштабированную по достоверности рыночных данных. Для маржи нужна отслеживаемая стоимость поставщика (из заказа на закупку) и рыночные объявления; модели без одного из этого всё равно показываются только по спросу. Рекомендованная розничная цена по модели: см. калькулятор импорта.",
     signalsLabel: "Движения рынка (30д)",
+    budgetPh: "Бюджет $",
+    allocateBtn: "Распределить",
+    planTitle: "План закупки",
+    planNote: "Оптимальный набор под бюджет — по плотности прибыли (чистая маржа на $ вложений).",
     verdict: {
       strong_buy: "Уверенная покупка",
       buy: "Покупать",
@@ -136,6 +163,10 @@ const COPY: Record<Locale, {
     footnote:
       "Imkoniyat talab (40%) va marjani (60%) birlashtiradi, bozor ma'lumotlari ishonchliligi bo'yicha masshtablanadi. Marja uchun kuzatiladigan yetkazib beruvchi tannarxi (xarid buyurtmasidan) va bozor e'lonlari kerak; ulardan birortasi yo'q modellar baribir faqat talab bo'yicha ko'rsatiladi. Model bo'yicha tavsiya etilgan sotuv narxi: import kalkulyatoriga qarang.",
     signalsLabel: "Bozor harakatlari (30k)",
+    budgetPh: "Byudjet $",
+    allocateBtn: "Taqsimlash",
+    planTitle: "Xarid rejasi",
+    planNote: "Byudjet uchun optimal to'plam — foyda zichligi bo'yicha (sof marja / $ sarmoya).",
     verdict: {
       strong_buy: "Qat'iy xarid",
       buy: "Xarid qilish",
@@ -171,6 +202,10 @@ const COPY: Record<Locale, {
     footnote:
       "Opportunity blends demand (40%) and margin (60%), scaled by market-data confidence. Margin needs a tracked supplier cost (from a purchase order) and market listings; models missing either still show on demand alone. Suggested list price per model: see the import calculator.",
     signalsLabel: "Market moves (30d)",
+    budgetPh: "Budget $",
+    allocateBtn: "Allocate",
+    planTitle: "Buy plan",
+    planNote: "Optimal mix for the budget — by profit density (net margin per $ of capital).",
     verdict: {
       strong_buy: "Strong buy",
       buy: "Buy",
@@ -184,7 +219,10 @@ export default function AdminBuyingPage() {
   const { locale } = useLocale();
   const t = COPY[locale];
   const [rows, setRows] = useState<Rec[]>([]);
+  const [allocation, setAllocation] = useState<Allocation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [budget, setBudget] = useState(0);
 
   // Proactive signal: models whose market median moved materially (≥8%) on a
   // trustworthy sample — the "something changed, look here" alert (Leap 5).
@@ -194,11 +232,17 @@ export default function AdminBuyingPage() {
     .slice(0, 6);
 
   useEffect(() => {
-    fetch("/api/admin/buying")
+    setLoading(true);
+    fetch(budget > 0 ? `/api/admin/buying?budget=${budget}` : "/api/admin/buying")
       .then((r) => r.json())
-      .then((d) => setRows(d?.ok ? d.recommendations || [] : []))
+      .then((d) => {
+        if (d?.ok) {
+          setRows(d.recommendations || []);
+          setAllocation(d.allocation || null);
+        }
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [budget]);
 
   return (
     <div className="max-w-6xl">
@@ -218,6 +262,43 @@ export default function AdminBuyingPage() {
               {m.brand} {m.model} {m.marketTrendPct! > 0 ? "▲" : "▼"}{Math.abs(m.marketTrendPct!)}%
             </span>
           ))}
+        </div>
+      )}
+
+      <form
+        className="mb-5 flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setBudget(Math.max(0, Math.round(Number(budgetInput)) || 0));
+        }}
+      >
+        <input
+          type="number"
+          min={0}
+          step={1000}
+          value={budgetInput}
+          onChange={(e) => setBudgetInput(e.target.value)}
+          placeholder={t.budgetPh}
+          className="w-40 border border-border bg-background px-2.5 py-1.5 text-sm font-mono text-foreground"
+        />
+        <button type="submit" className="border border-primary px-3 py-1.5 text-sm text-primary hover:bg-primary/10">{t.allocateBtn}</button>
+      </form>
+
+      {allocation && allocation.picks.length > 0 && (
+        <div className="mb-5 border border-[var(--accent)]/40 bg-card px-3 py-2.5">
+          <div className="mb-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+            <span className="font-semibold text-foreground">{t.planTitle}</span>
+            <span className="font-mono text-muted-foreground">{usd(allocation.spentUsd)} / {usd(allocation.budgetUsd)}</span>
+            <span className="font-mono text-[var(--success)]">+{usd(allocation.expectedProfitUsd)}</span>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            {allocation.picks.map((p, i) => (
+              <span key={i} className="font-mono text-foreground">
+                {p.brand} {p.model} <span className="text-muted-foreground">×{p.qty}</span>
+              </span>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">{t.planNote}</p>
         </div>
       )}
 
@@ -252,24 +333,47 @@ export default function AdminBuyingPage() {
                 return (
                   <tr key={i} className="border-b border-border last:border-0">
                     <td className="px-3 py-2.5">
-                      <div className="text-foreground">{r.brand} {r.model}</div>
+                      <div className="text-foreground">
+                        {r.brand} {r.model}
+                        {r.regimeBreak && (
+                          <span className="ml-1.5 text-[var(--warning)]" title={`Regime shift: ${r.regimeBreak}`}>⚠</span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-muted-foreground font-mono">
-                        {r.fuel}{r.marketSample > 0 ? ` · n=${r.marketSample}${r.marketFreshnessDays != null ? ` · ${r.marketFreshnessDays}d` : ""}` : t.noMarketData}
+                        {r.fuel}
+                        {r.marketSample > 0 ? ` · n=${r.marketSample}${r.marketFreshnessDays != null ? ` · ${r.marketFreshnessDays}d` : ""}` : t.noMarketData}
+                        {r.estDaysToSell != null ? ` · ~${r.estDaysToSell}d to sell` : ""}
                       </div>
                     </td>
                     <td className="px-3 py-2.5">
                       <span className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${verdictTone}`}>{verdictLabel}</span>
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono font-semibold text-foreground">{r.opportunityScore}</td>
-                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground" title={t.demandTitle(r.demand.inquiries, r.demand.watches, r.demand.favorites, r.demand.savedSearches)}>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground whitespace-nowrap" title={t.demandTitle(r.demand.inquiries, r.demand.watches, r.demand.favorites, r.demand.savedSearches)}>
                       {r.demandScore}
+                      {r.demandTrendPct != null && r.demandTrendPct !== 0 && (
+                        <span className={`ml-1 text-[10px] ${r.demandTrendPct > 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`} title="inquiries: recent 30d vs prior 30d">
+                          {r.demandTrendPct > 0 ? "▲" : "▼"}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-foreground whitespace-nowrap">
-                      {usd(r.marketMedianUsd)}
+                    <td
+                      className="px-3 py-2.5 text-right font-mono text-foreground whitespace-nowrap"
+                      title={[
+                        r.fairLowUsd != null && r.fairHighUsd != null ? `fair band ${usd(r.fairLowUsd)}–${usd(r.fairHighUsd)}` : "",
+                        r.marketMedianShrunkUsd != null ? `shrunk ${usd(r.marketMedianShrunkUsd)} (thin sample)` : "",
+                        r.resaleCeilingUsd != null ? `dealer ceiling ${usd(r.resaleCeilingUsd)}` : "",
+                        r.clearingMedianUsd != null ? `est. clearing ${usd(r.clearingMedianUsd)}` : "",
+                      ].filter(Boolean).join(" · ")}
+                    >
+                      {usd(r.marketMedianShrunkUsd ?? r.marketMedianUsd)}
                       {r.marketTrendPct != null && r.marketTrendPct !== 0 && (
-                        <span className="ml-1 text-[10px] text-muted-foreground" title="recent 30d vs prior 30d median">
+                        <span className="ml-1 text-[10px] text-muted-foreground">
                           {r.marketTrendPct > 0 ? "▲" : "▼"}{Math.abs(r.marketTrendPct)}%
                         </span>
+                      )}
+                      {r.acquisitionMedianUsd != null && r.acquisitionMedianUsd !== r.marketMedianUsd && (
+                        <div className="text-[10px] text-muted-foreground">buy ~{usd(r.acquisitionMedianUsd)}</div>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right">
@@ -290,9 +394,20 @@ export default function AdminBuyingPage() {
                         <span className="ml-1 rounded bg-[var(--warning)]/15 px-1 text-[10px] font-sans text-[var(--warning)]" title="No quote/PO — cost estimated from China retail price">est.</span>
                       )}
                     </td>
-                    <td className={`px-3 py-2.5 text-right font-mono ${r.marginPct == null ? "text-muted-foreground" : r.marginPct >= 10 ? "text-[var(--success)]" : r.marginPct < 5 ? "text-[var(--danger)]" : "text-foreground"}`}>
-                      {r.marginUsd == null ? "—" : `${usd(r.marginUsd)}`}{r.marginPct != null ? <span className="text-[11px] opacity-70"> {r.marginPct > 0 ? "+" : ""}{r.marginPct}%</span> : null}
-                    </td>
+                    {(() => {
+                      const showNet = r.netMarginUsd != null;
+                      const val = showNet ? r.netMarginUsd! : r.marginUsd;
+                      const pct = showNet ? r.netMarginPct : r.marginPct;
+                      return (
+                        <td
+                          className={`px-3 py-2.5 text-right font-mono ${pct == null ? "text-muted-foreground" : pct >= 10 ? "text-[var(--success)]" : pct < 5 ? "text-[var(--danger)]" : "text-foreground"}`}
+                          title={showNet ? `gross ${usd(r.marginUsd)} − holding ${usd(r.holdingCostUsd ?? null)} = net ${usd(r.netMarginUsd ?? null)}` : ""}
+                        >
+                          {val == null ? "—" : usd(val)}
+                          {pct != null ? <span className="text-[11px] opacity-70"> {pct > 0 ? "+" : ""}{pct}%</span> : null}
+                        </td>
+                      );
+                    })()}
                     <td className="px-3 py-2.5 text-right font-mono text-foreground">{r.recommendedQty || ""}</td>
                     <td className="px-3 py-2.5 text-right whitespace-nowrap">
                       {r.recommendedQty > 0 && (
