@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import type { Car } from "@/types/car";
 import { SITE_CONFIG } from "@/lib/constants";
 import CarDetailClient from "./car-detail-client";
@@ -79,14 +80,7 @@ export async function generateMetadata(
         description,
         images: [image],
     },
-    alternates: {
-      canonical: `${SITE_CONFIG.url}/${locale}/catalog/${slug}`,
-      languages: {
-        ru: `${SITE_CONFIG.url}/ru/catalog/${slug}`,
-        uz: `${SITE_CONFIG.url}/uz/catalog/${slug}`,
-          en: `${SITE_CONFIG.url}/en/catalog/${slug}`,
-        },
-      },
+    alternates: localizedAlternates(`/catalog/${slug}`, (locale as SeoLocale) ?? "ru"),
     };
   }
 

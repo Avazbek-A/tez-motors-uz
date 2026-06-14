@@ -109,16 +109,22 @@ async function CarDetailSchemaInjector({ slug }: { slug: string }) {
       vehicleModelDate: String(car.year),
       vehicleConfiguration: car.transmission,
       fuelType: car.fuel_type,
-      offers: {
-        "@type": "Offer",
-        price: car.price_usd,
-        priceCurrency: "USD",
-        availability: car.is_available
-          ? "https://schema.org/InStock"
-          : "https://schema.org/OutOfStock",
-        url: `${SITE_CONFIG.url}/${locale}/catalog/${slug}`,
-        seller: { "@type": "Organization", name: SITE_CONFIG.name },
-      },
+      // Only emit an Offer when there's a real price — price:0 is an invalid
+      // Offer (Google flags it). Import-to-order cars with no price set skip it.
+      ...(car.price_usd > 0 && {
+        offers: {
+          "@type": "Offer",
+          price: car.price_usd,
+          priceCurrency: "USD",
+          priceValidUntil: new Date(Date.now() + 90 * 86_400_000).toISOString().split("T")[0],
+          itemCondition: car.listing_type === "used" ? "https://schema.org/UsedCondition" : "https://schema.org/NewCondition",
+          availability: car.is_available
+            ? "https://schema.org/InStock"
+            : "https://schema.org/OutOfStock",
+          url: `${SITE_CONFIG.url}/${locale}/catalog/${slug}`,
+          seller: { "@type": "Organization", name: SITE_CONFIG.name },
+        },
+      }),
       modelDate: String(car.year),
       ...(car.engine_volume && {
         vehicleEngine: {
