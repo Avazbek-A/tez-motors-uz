@@ -20,6 +20,7 @@ const GRACE_DAYS = 45; // no age-markdown before this
 const AGE_STEP_DAYS = 30;
 const AGE_STEP_PCT = 0.02; // 2% per extra 30d sitting
 const FLOOR_FACTOR = 0.7; // never suggest below 70% of current (sanity)
+const MIN_MARGIN_PCT = 5; // never suggest below cost + this margin (when cost known)
 const MIN_MARKDOWN_PCT = 2;
 
 export async function GET(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
     const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 
-    const [carsRes, marketRes] = await Promise.all([
+    const [carsRes, marketRes, costsRes] = await Promise.all([
       supabase
         .from("cars")
         .select("id, slug, brand, model, year, price_usd, mileage, inventory_status, in_stock, created_at, in_service_date, battery_soh_pct, import_channel")
@@ -43,7 +44,15 @@ export async function GET(request: NextRequest) {
         .gte("observed_at", since)
         .not("price_usd", "is", null)
         .limit(MAX),
+      // Real landed cost per car (same source the auto-markdown cron uses) → an
+      // accurate holding cost and a hard "never below cost + margin" floor.
+      supabase.from("car_costs").select("car_id, cost_usd").limit(MAX).then((r) => r, () => ({ data: [] })),
     ]);
+    const costBy = new Map<string, number>();
+    for (const c of (costsRes.data as { car_id: string; cost_usd: number }[]) || []) {
+      const v = num(c.cost_usd);
+      if (v > 0) costBy.set(c.car_id, v);
+    }
 
     // Comps by base-model key → price+mileage pairs + lifecycle for trend.
     type Comp = { price_usd: number; mileage_km: number | null; observed_at: string | null; last_seen_at: string | null };
@@ -90,8 +99,11 @@ export async function GET(request: NextRequest) {
       const ageFactor = 1 - ageSteps * AGE_STEP_PCT;
       // A falling market nudges one extra step.
       const trendFactor = trendPct != null && trendPct < -5 ? 1 - AGE_STEP_PCT : 1;
+      // Hard floor: never suggest selling below cost + min margin (when cost known).
+      const cost = costBy.get(c.id as string) ?? null;
+      const costFloor = cost ? Math.round(cost * (1 + MIN_MARGIN_PCT / 100)) : 0;
       let suggested = Math.round(Math.min(currentPrice, target) * ageFactor * trendFactor);
-      suggested = Math.max(suggested, Math.round(currentPrice * FLOOR_FACTOR));
+      suggested = Math.max(suggested, Math.round(currentPrice * FLOOR_FACTOR), costFloor);
 
       const markdownUsd = currentPrice - suggested;
       const markdownPct = Math.round((markdownUsd / currentPrice) * 1000) / 10;
@@ -114,8 +126,9 @@ export async function GET(request: NextRequest) {
         markdownUsd,
         markdownPct,
         daysInStock,
-        holdingCostUsd: holdingCost(currentPrice, daysInStock),
-        negotiationFloorUsd: Math.round(fair * 0.9), // lowest to accept before walking
+        costUsd: cost, // real landed cost if known (else null)
+        holdingCostUsd: holdingCost(cost ?? currentPrice, daysInStock), // capital tied = cost, not list
+        negotiationFloorUsd: Math.max(Math.round(fair * 0.9), costFloor), // never below cost + margin
         marketTrendPct: trendPct,
         reason: reasons.join(" · ") || "market-aligned cut",
         urgency: daysInStock > 90 || markdownPct >= 8 ? "high" : daysInStock > 60 || markdownPct >= 4 ? "medium" : "low",

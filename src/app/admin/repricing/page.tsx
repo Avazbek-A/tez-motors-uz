@@ -18,7 +18,9 @@ interface Item {
   markdownUsd: number;
   markdownPct: number;
   daysInStock: number;
+  costUsd: number | null;
   holdingCostUsd: number;
+  negotiationFloorUsd: number;
   marketTrendPct: number | null;
   reason: string;
   urgency: "high" | "medium" | "low";
@@ -144,7 +146,7 @@ export default function AdminRepricingPage() {
                     </Link>
                   </td>
                   <td className="px-3 py-2.5 text-right font-mono text-foreground">{usd(it.currentPriceUsd)}</td>
-                  <td className="px-3 py-2.5 text-right font-mono text-muted-foreground" title={`holding cost so far ${usd(it.holdingCostUsd)}`}>{usd(it.marketFairUsd)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-muted-foreground" title={`${it.costUsd != null ? `cost ${usd(it.costUsd)} · ` : ""}holding cost so far ${usd(it.holdingCostUsd)} · floor ${usd(it.negotiationFloorUsd)}`}>{usd(it.marketFairUsd)}</td>
                   <td className="px-3 py-2.5 text-right font-mono font-semibold text-[var(--accent)]">{usd(it.suggestedPriceUsd)}</td>
                   <td className="px-3 py-2.5 text-right font-mono text-[var(--danger)]">−{usd(it.markdownUsd)} <span className="text-[11px] opacity-70">{it.markdownPct}%</span></td>
                   <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{it.daysInStock}d</td>
