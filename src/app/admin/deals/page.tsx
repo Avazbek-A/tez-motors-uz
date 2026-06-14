@@ -23,6 +23,13 @@ interface Deal {
   score: number;
 }
 
+interface VinFlag {
+  vin: string;
+  sightings: number;
+  firstKm: number | null;
+  lastKm: number | null;
+}
+
 const usd = (n: number | null) => (n == null ? "—" : "$" + Math.round(n).toLocaleString("en-US"));
 const isUrl = (s: string | null) => !!s && /^https?:\/\//.test(s);
 
@@ -96,12 +103,18 @@ export default function AdminDealsPage() {
   const { locale } = useLocale();
   const t = COPY[locale];
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [vinFlags, setVinFlags] = useState<VinFlag[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/deals")
       .then((r) => r.json())
-      .then((d) => setDeals(d?.ok ? d.deals || [] : []))
+      .then((d) => {
+        if (d?.ok) {
+          setDeals(d.deals || []);
+          setVinFlags(d.vinFlags || []);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -112,6 +125,18 @@ export default function AdminDealsPage() {
         <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
       </div>
       <p className="mb-6 text-sm text-muted-foreground">{t.intro}</p>
+
+      {vinFlags.length > 0 && (
+        <div className="mb-5 border border-[var(--danger)]/40 bg-[var(--danger)]/5 px-3 py-2 text-xs">
+          <span className="font-medium text-[var(--danger)]">⚠ {vinFlags.length} odometer-rollback VIN(s)</span>
+          <span className="ml-2 text-muted-foreground">— same VIN relisted with lower mileage; verify before buying.</span>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+            {vinFlags.map((v) => (
+              <span key={v.vin}>{v.vin.slice(-8)}: {v.firstKm != null ? Math.round(v.firstKm / 1000) + "k" : "?"}→{v.lastKm != null ? Math.round(v.lastKm / 1000) + "k" : "?"}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></div>

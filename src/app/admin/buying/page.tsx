@@ -38,6 +38,10 @@ interface Rec {
   netMarginUsd?: number | null;
   netMarginPct?: number | null;
   costTrendPct?: number | null;
+  annualDepreciationPct?: number | null;
+  residual12moUsd?: number | null;
+  elasticityDaysPerUsd?: number | null;
+  cheapestRegion?: { city: string; deltaPct: number | null } | null;
   sellWalkAwayUsd?: number | null;
   sellTargetUsd?: number | null;
   sellOpeningUsd?: number | null;
@@ -369,6 +373,9 @@ export default function AdminBuyingPage() {
                         r.resaleCeilingUsd != null ? `dealer ceiling ${usd(r.resaleCeilingUsd)}` : "",
                         r.clearingMedianUsd != null ? `est. clearing ${usd(r.clearingMedianUsd)}` : "",
                         r.costTrendPct != null && r.costTrendPct !== 0 ? `supplier cost ${r.costTrendPct > 0 ? "+" : ""}${r.costTrendPct}% (leading)` : "",
+                        r.annualDepreciationPct != null ? `depreciation ~${r.annualDepreciationPct}%/yr` : "",
+                        r.residual12moUsd != null ? `residual 12mo ${usd(r.residual12moUsd)}` : "",
+                        r.cheapestRegion ? `cheapest in ${r.cheapestRegion.city} (${r.cheapestRegion.deltaPct}%)` : "",
                       ].filter(Boolean).join(" · ")}
                     >
                       {usd(r.marketMedianShrunkUsd ?? r.marketMedianUsd)}

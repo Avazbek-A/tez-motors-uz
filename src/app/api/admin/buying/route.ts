@@ -14,6 +14,10 @@ import {
   holdingCost,
   inferSold,
   negotiationBand,
+  priceElasticity,
+  residualValue,
+  estimateAnnualDepreciation,
+  regionalSpread,
   type ListingLike,
 } from "@/lib/market-analytics";
 import { baseModelKey } from "@/lib/model-normalize";
@@ -58,6 +62,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const since = new Date(Date.now() - MARKET_WINDOW_DAYS * 86_400_000).toISOString();
+    const NOW_YEAR = new Date().getFullYear();
     const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 
     const [carsRes, marketRes, inqRes, watchRes, favRes, savedRes, poRes, sourceRes, cfgRes, fx] = await Promise.all([
@@ -329,6 +334,17 @@ export async function GET(request: NextRequest) {
       // local price + landed cost rising in ~1–2 months.
       const costTrendPct = priceTrend(sourceHistByKey.get(k) || [], { windowDays: 30 }).changePct;
 
+      // Forward depreciation from cross-sectional year medians → residual in 12mo.
+      const byYear = new Map<number, number[]>();
+      for (const l of listings) if (l.year) (byYear.get(l.year) || byYear.set(l.year, []).get(l.year)!).push(l.price_usd);
+      const depPoints = [...byYear.entries()].map(([year, ps]) => ({ year, medianUsd: median(cleanCarPrices(ps)) ?? 0 })).filter((p) => p.medianUsd > 0);
+      const annualDepreciationPct = estimateAnnualDepreciation(depPoints, NOW_YEAR);
+      const residual12moUsd = residualValue(effectiveMedian, 12, annualDepreciationPct ?? undefined);
+      // Elasticity (price↔days-to-sell) + cheapest region.
+      const elasticity = priceElasticity(listings, { staleDays: 14 });
+      const regions = regionalSpread(listings, { minSample: 3 });
+      const cheapestRegion = regions.length && regions[0].deltaPct != null && regions[0].deltaPct < 0 ? regions[0] : null;
+
       const score = opportunityScore({ demandScore: dScore, marginPct, sampleSize, freshnessDays });
       rows.push({
         brand: meta.brand,
@@ -365,6 +381,10 @@ export async function GET(request: NextRequest) {
         netMarginUsd, // margin after holding cost
         netMarginPct,
         costTrendPct, // supplier-cost momentum (leading indicator)
+        annualDepreciationPct, // fitted from year medians (null if too few years)
+        residual12moUsd, // projected value in 12 months
+        elasticityDaysPerUsd: elasticity.daysPerUsd, // +days per $ asked (speed↔price)
+        cheapestRegion: cheapestRegion ? { city: cheapestRegion.city, deltaPct: cheapestRegion.deltaPct } : null,
         sellWalkAwayUsd: sellBand.walkAwayUsd,
         sellTargetUsd: sellBand.targetUsd,
         sellOpeningUsd: sellBand.openingUsd,

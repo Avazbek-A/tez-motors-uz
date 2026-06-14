@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { median, cleanCarPrices, mileageAdjustedValue } from "@/lib/market-intel";
-import { motivationScore, classifySeller, extractPhone } from "@/lib/market-analytics";
+import { motivationScore, classifySeller, extractPhone, vinJourneys } from "@/lib/market-analytics";
 import { baseModelKey } from "@/lib/model-normalize";
 
 /**
@@ -114,7 +114,15 @@ export async function GET(request: NextRequest) {
     }
 
     deals.sort((a, b) => b.score - a.score);
-    return NextResponse.json({ ok: true, count: deals.length, deals: deals.slice(0, 60) });
+
+    // Odometer-rollback / cross-listing fraud warnings (VIN seen multiple times
+    // with a DECREASING odometer). Don't buy a deal that's a rolled-back car.
+    const vinFlags = vinJourneys(listings)
+      .filter((j) => j.rollback)
+      .slice(0, 20)
+      .map((j) => ({ vin: j.vin, sightings: j.sightings, firstKm: j.firstKm, lastKm: j.lastKm }));
+
+    return NextResponse.json({ ok: true, count: deals.length, deals: deals.slice(0, 60), vinFlags });
   } catch {
     return NextResponse.json({ ok: false, error: "Failed to compute deals" }, { status: 500 });
   }
