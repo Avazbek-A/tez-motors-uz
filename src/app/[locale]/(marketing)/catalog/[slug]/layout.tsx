@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import type { Car } from "@/types/car";
 import { SITE_CONFIG } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 import { formatPrice } from "@/lib/utils";
@@ -84,11 +86,12 @@ async function CarDetailSchemaInjector({ slug }: { slug: string }) {
       (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
       getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
     const supabase = await createClient();
-    const { data: car } = await supabase
+    const { data } = await supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .eq("slug", slug)
       .single();
+    const car = data as unknown as Car | null;
 
     if (!car) return null;
 

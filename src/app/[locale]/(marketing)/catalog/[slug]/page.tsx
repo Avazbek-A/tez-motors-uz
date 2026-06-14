@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import type { Car } from "@/types/car";
 import { SITE_CONFIG } from "@/lib/constants";
 import CarDetailClient from "./car-detail-client";
 import { getLocaleFromCookie } from "@/i18n/config";
@@ -12,10 +14,10 @@ async function fetchCar(slug: string) {
     const supabase = await createClient();
     const { data } = await supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .eq("slug", slug)
       .maybeSingle();
-    return data;
+    return data as unknown as Car | null;
   } catch {
     return null;
   }

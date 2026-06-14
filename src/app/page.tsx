@@ -15,6 +15,8 @@ import { ContactForm } from "@/components/sections/contact-form";
 import { CtaBanner } from "@/components/sections/cta-banner";
 import { createClient } from "@/lib/supabase/server";
 import { scrubCarsForPublic } from "@/lib/cars-query";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import type { Car } from "@/types/car";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -22,7 +24,7 @@ export default async function HomePage() {
   const [carsResult, partsResult, reviewsResult, faqsResult] = await Promise.all([
     supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .eq("is_available", true)
       .eq("is_hot_offer", true)
       .order("order_position")
@@ -49,7 +51,7 @@ export default async function HomePage() {
 
   // Scrub internal spec_data fields before these rows are serialized into the
   // client RSC payload (CarCard is a client component — the whole car prop ships).
-  const hotOfferCars = scrubCarsForPublic(carsResult.data || []);
+  const hotOfferCars = scrubCarsForPublic((carsResult.data || []) as unknown as Car[]);
   const hotParts = partsResult.data || [];
   const publishedReviews = reviewsResult.data || [];
   const publishedFaqs = faqsResult.data || [];

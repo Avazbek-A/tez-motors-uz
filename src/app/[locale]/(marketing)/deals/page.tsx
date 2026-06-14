@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { scrubCarsForPublic } from "@/lib/cars-query";
+import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { CarCard } from "@/components/catalog/car-card";
@@ -58,11 +59,11 @@ export default async function DealsPage() {
     const supabase = await createClient();
     const { data } = await supabase
       .from("cars")
-      .select("*")
+      .select(PUBLIC_CAR_COLUMNS)
       .neq("inventory_status", "sold")
       .not("original_price_usd", "is", null)
       .limit(60);
-    cars = scrubCarsForPublic((data || []) as Car[])
+    cars = scrubCarsForPublic((data || []) as unknown as Car[])
       .filter((car) => car.original_price_usd != null && car.original_price_usd > car.price_usd)
       .sort((a, b) => (1 - a.price_usd / (a.original_price_usd as number)) < (1 - b.price_usd / (b.original_price_usd as number)) ? 1 : -1);
   } catch {
