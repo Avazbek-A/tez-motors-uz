@@ -26,13 +26,17 @@ import { stdin as input, stdout as output } from "node:process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const API_ID = Number(process.env.TG_API_ID || 0);
-const API_HASH = process.env.TG_API_HASH || "";
-const SESSION = process.env.TG_SESSION || "";
-const CHANNELS = (process.env.TG_CHANNELS || "").split(",").map((s) => s.trim()).filter(Boolean);
-const INGEST_URL = process.env.INGEST_URL;
-const SECRET = process.env.MARKET_INGEST_SECRET;
-const PER_CHANNEL = Number(process.env.TG_LIMIT || 60);
+// Config from the shell env first, then .env.local (so everything can live in one
+// file on the box — loadEnv() is hoisted and returns every KEY=VALUE from it).
+const FILEENV = loadEnv();
+const cfg = (k, d = "") => process.env[k] || FILEENV[k] || d;
+const API_ID = Number(cfg("TG_API_ID") || 0);
+const API_HASH = cfg("TG_API_HASH");
+const SESSION = cfg("TG_SESSION");
+const CHANNELS = cfg("TG_CHANNELS").split(",").map((s) => s.trim()).filter(Boolean);
+const INGEST_URL = cfg("INGEST_URL", "http://127.0.0.1:3000/api/admin/market/ingest");
+const SECRET = cfg("MARKET_INGEST_SECRET");
+const PER_CHANNEL = Number(cfg("TG_LIMIT") || 60);
 
 // Catalog-driven model dictionary: fetched from the live cars table so Telegram
 // tracks EVERY model the dealer stocks (not a hardcoded list). A message matches a
