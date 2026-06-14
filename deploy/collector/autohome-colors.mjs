@@ -119,17 +119,18 @@ function spread(list, n) {
 }
 
 async function picsForColor(series, colorId, kind) {
-  // exterior → category 1 (车身外观); interior → i{colorId} page
-  const url = kind === "ext"
-    ? `https://car.autohome.com.cn/pic/series-${series}-${colorId}-1-1.html`
-    : `https://car.autohome.com.cn/pic/series-${series}-i${colorId}.html`;
+  // INTERIOR per-colour galleries are JS-rendered on AutoHome: the static
+  // /pic/series-{S}-i{colorId}.html page carries only unrelated recommendation
+  // thumbnails (which is exactly how exterior shots leaked into the interior sets).
+  // There is no reliable per-interior-colour photo source in the static HTML, so
+  // interior is swatch-only (name + hex, no gallery). Exterior is unaffected.
+  if (kind !== "ext") return [];
+  // Exterior category 1 (车身外观) — the real per-colour gallery, in static HTML.
   let html = "";
-  try { html = await fetchHtml(url); } catch { return []; }
-  let urls = cardfsFrom(html);
-  if (!urls.length && kind === "ext") { // fall back to the all-photos colour page
-    try { urls = cardfsFrom(await fetchHtml(`https://car.autohome.com.cn/pic/series-${series}-${colorId}.html`)); } catch {}
-  }
-  return spread(urls, kind === "ext" ? EXT_CAP : INT_CAP);
+  try { html = await fetchHtml(`https://car.autohome.com.cn/pic/series-${series}-${colorId}-1-1.html`); } catch { return []; }
+  // Deliberately NO fallback to the generic /pic/series-{S}-{colorId}.html page —
+  // that page mixes interior + exterior and would pollute the exterior set.
+  return spread(cardfsFrom(html), EXT_CAP);
 }
 
 async function main() {

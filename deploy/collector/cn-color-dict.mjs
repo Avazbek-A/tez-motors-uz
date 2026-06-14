@@ -21,6 +21,11 @@ const BASE = {
   "粉": { ru: "розовый", uz: "pushti", en: "Pink" },
   "黄": { ru: "жёлтый", uz: "sariq", en: "Yellow" },
   "米": { ru: "бежевый", uz: "bej", en: "Beige" },
+  "青": { ru: "бирюзовый", uz: "feruza", en: "Teal" },
+  "翠": { ru: "изумрудный", uz: "zumrad", en: "Jade" },
+  "褐": { ru: "коричневый", uz: "jigarrang", en: "Brown" },
+  "栗": { ru: "каштановый", uz: "kashtan", en: "Chestnut" },
+  "沙": { ru: "песочный", uz: "qum", en: "Sand" },
 };
 // modifier morphemes (prefix before the base colour)
 const MOD = {
@@ -62,6 +67,8 @@ const MOD = {
   "炭": { ru: "угольный", uz: "ko'mir", en: "Charcoal" },
   "岩": { ru: "каменный", uz: "tosh", en: "Rock" },
   "砂": { ru: "песочный", uz: "qum", en: "Sand" },
+  "沙": { ru: "песочный", uz: "qum", en: "Sand" },
+  "暮光": { ru: "сумеречный", uz: "shomgi", en: "Twilight" },
   "金属": { ru: "металлик", uz: "metalik", en: "Metallic" },
   "珠光": { ru: "перламутровый", uz: "sadafrang", en: "Pearlescent" },
   "流光": { ru: "переливающийся", uz: "tovlanuvchi", en: "Iridescent" },
@@ -72,6 +79,13 @@ const MOD = {
 // full-name exact overrides where compose would read awkwardly
 const EXACT = {
   "快银": { ru: "Quicksilver (серебристый)", uz: "Quicksilver (kumush)", en: "Quicksilver" },
+  "干邑色": { ru: "коньячный", uz: "konyak", en: "Cognac" },
+  "干邑": { ru: "коньячный", uz: "konyak", en: "Cognac" },
+  // Ferrari/Italian factory names: translate the leading colour word.
+  "Giallo Auge": { ru: "жёлтый (Giallo)", uz: "sariq (Giallo)", en: "Giallo (Yellow)" },
+  "GrigioNimbus": { ru: "серый (Grigio Nimbus)", uz: "kulrang (Grigio)", en: "Grigio Nimbus (Grey)" },
+  "BluEleos": { ru: "синий (Blu Eleos)", uz: "ko'k (Blu)", en: "Blu Eleos (Blue)" },
+  "Verde Viper": { ru: "зелёный (Verde Viper)", uz: "yashil (Verde)", en: "Verde Viper (Green)" },
 };
 
 const pick = (s) => ["ru", "uz", "en"].reduce((o, k) => ((o[k] = s[k]), o), {});
