@@ -45,6 +45,14 @@ describe("parseMoney", () => {
   it("returns null with no number", () => {
     expect(parseMoney("договорная")).toBeNull();
   });
+  it("ignores Uzbek phone numbers and picks the real price", () => {
+    // A Telegram post: price $24 000, contact +998 90 123 45 67.
+    expect(parseMoney("BYD Song Plus 2024, $24 000, тел +998 90 123 45 67")).toEqual({ amount: 24000, currency: "usd" });
+    // Bare 998… phone must not be read as a price.
+    expect(parseMoney("Haval Jolion, 998901234567")).toBeNull();
+    // Phone with no price → no money.
+    expect(parseMoney("звоните 998 99 817 77 73")).toBeNull();
+  });
 });
 
 describe("toUsd / priceToUsd", () => {

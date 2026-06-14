@@ -28,8 +28,14 @@ export function parseMoney(text: string): ParsedMoney | null {
   const million = /млн|mln|million|миллион/.test(s);
   const billion = /млрд|mlrd|миллиард|billion/.test(s);
 
+  // Strip Uzbek phone numbers first — Telegram car posts are full of them
+  // ("+998 90 123 45 67", "998901234567") and the "largest number" heuristic
+  // would otherwise mistake a phone for the price.
+  const sNoPhone = s
+    .replace(/\+?998[\s\-]?\d{2}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}/g, " ")
+    .replace(/\b998\d{9}\b/g, " ");
   // Grab the most prominent number (longest digit run, separators stripped).
-  const matches = s.match(/\d[\d\s.,]*\d|\d/g);
+  const matches = sNoPhone.match(/\d[\d\s.,]*\d|\d/g);
   if (!matches) return null;
   const nums = matches
     .map((m) => {
@@ -37,7 +43,8 @@ export function parseMoney(text: string): ParsedMoney | null {
       const n = parseInt(cleaned, 10);
       return Number.isFinite(n) ? n : NaN;
     })
-    .filter((n) => Number.isFinite(n) && n > 0);
+    // Drop phone-length runs (≥ 11 digits) — never a car price (max ~6e9 UZS ≈ $475k).
+    .filter((n) => Number.isFinite(n) && n > 0 && n < 1e11);
   if (nums.length === 0) return null;
 
   // If a "million/billion" multiplier is present, the price is usually the

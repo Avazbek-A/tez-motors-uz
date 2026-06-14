@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
         priceUsd = toUsd({ amount: l.price_raw, currency: cur === "uzs" ? "uzs" : cur === "usd" ? "usd" : "unknown" }, usdUzs);
       }
       if (priceUsd == null && l.raw_text) priceUsd = priceToUsd(l.raw_text, usdUzs);
+      // Sanity clamp: a real car is ~$500–$1,000,000. Anything outside is a parse
+      // artifact (phone number, mileage, junk) → drop the price, don't poison comps.
+      if (priceUsd != null && (priceUsd < 500 || priceUsd > 1_000_000)) priceUsd = null;
 
       const source = l.source || defaultSource;
       const fp = fingerprint({ source, source_ref: l.source_ref, brand: l.brand, model: l.model, year: l.year, price_usd: priceUsd, city: l.city });
