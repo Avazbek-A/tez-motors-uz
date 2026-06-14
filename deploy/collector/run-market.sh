@@ -12,4 +12,5 @@ echo "[$(date)] === market run start ===" >> "$LOG"
 node gen-searches.mjs >> "$LOG" 2>&1
 node olx-crawlee.mjs >> "$LOG" 2>&1
 node avtoelon-crawlee.mjs >> "$LOG" 2>&1   # no-op until the 'avtoelon' source migration is applied
+[ -n "$TG_SESSION" ] && node telegram-collector.mjs >> "$LOG" 2>&1   # only when Telegram creds are configured
 echo "[$(date)] === market run done ===" >> "$LOG"

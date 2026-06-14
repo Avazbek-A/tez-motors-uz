@@ -23,6 +23,8 @@
  */
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const API_ID = Number(process.env.TG_API_ID || 0);
 const API_HASH = process.env.TG_API_HASH || "";
@@ -32,36 +34,44 @@ const INGEST_URL = process.env.INGEST_URL;
 const SECRET = process.env.MARKET_INGEST_SECRET;
 const PER_CHANNEL = Number(process.env.TG_LIMIT || 60);
 
-// Brand+model dictionary — only messages matching a pair become listings, so the
-// data is clean. Extend with the models you track. Patterns are case-insensitive.
-const MODELS = [
-  { brand: "BYD", model: "Song Plus", re: /\bsong\s*plus\b|сонг\s*плюс/i },
-  { brand: "BYD", model: "Seal", re: /\bbyd\s*seal\b|сил\b/i },
-  { brand: "BYD", model: "Atto 3", re: /\batto\s*3\b/i },
-  { brand: "BYD", model: "Han", re: /\bbyd\s*han\b|хан\b/i },
-  { brand: "BYD", model: "Chazor", re: /\bchazor\b|чазор/i },
-  { brand: "Chery", model: "Tiggo 8 Pro", re: /tiggo\s*8\s*pro|тигго\s*8\s*про/i },
-  { brand: "Chery", model: "Tiggo 8", re: /tiggo\s*8\b|тигго\s*8/i },
-  { brand: "Chery", model: "Tiggo 7 Pro", re: /tiggo\s*7\s*pro|тигго\s*7\s*про/i },
-  { brand: "Chery", model: "Tiggo 7", re: /tiggo\s*7\b|тигго\s*7/i },
-  { brand: "Chery", model: "Arrizo 8", re: /arrizo\s*8|арризо\s*8/i },
-  { brand: "Haval", model: "Jolion", re: /\bjolion\b|джолион/i },
-  { brand: "Haval", model: "H6", re: /\bhaval\s*h6\b|хавал\s*h6/i },
-  { brand: "Haval", model: "Dargo", re: /\bdargo\b|дарго/i },
-  { brand: "Geely", model: "Coolray", re: /\bcoolray\b|кулрей/i },
-  { brand: "Geely", model: "Monjaro", re: /\bmonjaro\b|монджаро/i },
-  { brand: "Geely", model: "Atlas Pro", re: /atlas\s*pro|атлас\s*про/i },
-  { brand: "Changan", model: "CS75 Plus", re: /cs75\s*plus|cs-?75/i },
-  { brand: "Changan", model: "UNI-T", re: /\buni-?t\b/i },
-  { brand: "Zeekr", model: "001", re: /\bzeekr\s*001\b|зикр\s*001/i },
-  { brand: "Tank", model: "300", re: /\btank\s*300\b|танк\s*300/i },
-  { brand: "Tank", model: "500", re: /\btank\s*500\b|танк\s*500/i },
-  { brand: "Omoda", model: "C5", re: /\bomoda\s*c5\b|омода\s*c5/i },
-  { brand: "Jaecoo", model: "J7", re: /\bjaecoo\s*j7\b|джейку\s*j7/i },
-];
+// Catalog-driven model dictionary: fetched from the live cars table so Telegram
+// tracks EVERY model the dealer stocks (not a hardcoded list). A message matches a
+// model when it contains the brand + all the model's significant tokens (engine/
+// fuel/drivetrain noise stripped, so "Tiggo 8 Pro" stays distinct from "Tiggo 8").
+// Mirrors src/lib/model-normalize.ts.
+const TRIM_NOISE = /^(\d(?:\.\d)?[tl]|hev|phev|mhev|dm-?i|dmi|ev|bev|awd|4wd|2wd|fwd|rwd)$/i;
+const sigTokens = (lc) => lc.split(/[\s/-]+/).filter((t) => t.length >= 2 && !TRIM_NOISE.test(t));
 
-function identify(text) {
-  for (const m of MODELS) if (m.re.test(text)) return m;
+function loadEnv() {
+  for (const p of ["../../.env.local", "../.env.local", "./.env.local", "/home/rayxona/tez-motors/.env.local"]) {
+    try { const e = {}; for (const l of readFileSync(resolve(p), "utf8").split("\n")) { const i = l.indexOf("="); if (i > 0) e[l.slice(0, i).trim()] = l.slice(i + 1).trim().replace(/^['"]|['"]$/g, ""); } if (e.NEXT_PUBLIC_SUPABASE_URL) return e; } catch {}
+  }
+  return {};
+}
+
+async function buildModels() {
+  const env = loadEnv();
+  const U = env.NEXT_PUBLIC_SUPABASE_URL, K = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!U || !K) return [];
+  const cars = await (await fetch(`${U}/rest/v1/cars?select=brand,model&limit=400`, { headers: { apikey: K, authorization: `Bearer ${K}` } })).json();
+  const seen = new Set(), out = [];
+  for (const c of cars || []) {
+    const brand = String(c.brand || "").trim(), model = String(c.model || "").trim();
+    if (!brand || !model) continue;
+    const id = `${brand}|${model}`.toLowerCase();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ brand, model, brandLc: brand.toLowerCase(), tokens: sigTokens(model.toLowerCase()) });
+  }
+  out.sort((a, b) => b.tokens.length - a.tokens.length); // most-specific first
+  return out;
+}
+
+function identify(text, models) {
+  const t = text.toLowerCase();
+  for (const m of models) {
+    if (m.tokens.length && t.includes(m.brandLc) && m.tokens.every((tok) => t.includes(tok))) return m;
+  }
   return null;
 }
 
@@ -101,6 +111,10 @@ async function collect() {
     console.error("Set TG_CHANNELS (comma-separated @usernames).");
     process.exit(1);
   }
+  const models = await buildModels();
+  if (models.length === 0) { console.error("No catalog models loaded (check Supabase env in .env.local)."); process.exit(1); }
+  console.log(`tracking ${models.length} catalog models`);
+
   const { TelegramClient } = await import("telegram");
   const { StringSession } = await import("telegram/sessions/index.js");
   const client = new TelegramClient(new StringSession(SESSION), API_ID, API_HASH, { connectionRetries: 3 });
@@ -114,7 +128,7 @@ async function collect() {
       for (const msg of messages) {
         const text = msg?.message || msg?.text || "";
         if (!text || text.length < 12) continue;
-        const hit = identify(text);
+        const hit = identify(text, models);
         if (!hit) continue;
         listings.push({
           source: "telegram",
