@@ -90,7 +90,9 @@ export default function CarDetailPage() {
   }
 
   const description = locale === "uz" ? car.description_uz : locale === "en" ? car.description_en : car.description_ru;
-  const discount = car.original_price_usd && car.original_price_usd > car.price_usd
+  // Guard price_usd > 0: a "price on request" car (price_usd === 0) with an
+  // original_price set must NOT render a bogus "-100%" + "—" headline.
+  const discount = car.price_usd > 0 && car.original_price_usd && car.original_price_usd > car.price_usd
     ? Math.round((1 - car.price_usd / car.original_price_usd) * 100)
     : 0;
 

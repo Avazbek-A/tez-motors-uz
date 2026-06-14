@@ -14,6 +14,7 @@ import { FAQPreview } from "@/components/sections/faq-preview";
 import { ContactForm } from "@/components/sections/contact-form";
 import { CtaBanner } from "@/components/sections/cta-banner";
 import { createClient } from "@/lib/supabase/server";
+import { scrubCarsForPublic } from "@/lib/cars-query";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -46,7 +47,9 @@ export default async function HomePage() {
       .limit(5),
   ]);
 
-  const hotOfferCars = carsResult.data || [];
+  // Scrub internal spec_data fields before these rows are serialized into the
+  // client RSC payload (CarCard is a client component — the whole car prop ships).
+  const hotOfferCars = scrubCarsForPublic(carsResult.data || []);
   const hotParts = partsResult.data || [];
   const publishedReviews = reviewsResult.data || [];
   const publishedFaqs = faqsResult.data || [];

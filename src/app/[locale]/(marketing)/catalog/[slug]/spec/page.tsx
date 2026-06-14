@@ -101,7 +101,7 @@ export default async function SpecSheetPage({ params }: { params: Promise<{ slug
           </div>
           <div className="flex gap-2" data-print-hide>
             <Link href={localizedPath(locale, `/catalog/${slug}`)} className="inline-flex items-center rounded-xl border border-border px-4 py-2 text-sm text-foreground/90 hover:bg-white/5">{t.back}</Link>
-            <a href={`/api/cars/${car.id}/spec-sheet`} className="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{t.download}</a>
+            {/* Public PDF spec-sheet download removed — clients view the spec on-page only. */}
           </div>
         </div>
 

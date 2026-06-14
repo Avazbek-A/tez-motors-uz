@@ -191,7 +191,7 @@ export function matchGonzoToTrims(
   trims: SpecTrim[],
   gonzo?: { label: string; price_usd: number }[],
 ): (number | null)[] {
-  if (!gonzo?.length || !trims.length) return trims.map(() => null);
+  if (!Array.isArray(trims) || !trims.length || !gonzo?.length) return Array.isArray(trims) ? trims.map(() => null) : [];
   const gs = gonzo.map((g) => ({ price: g.price_usd, sig: trimSignals(g.label) }));
   const out: (number | null)[] = trims.map((t) => {
     const ts = trimSignals(t.name, t.params);
