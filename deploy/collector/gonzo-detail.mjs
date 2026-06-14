@@ -123,7 +123,10 @@ async function main() {
 
   let scraped = 0, wrote = 0, skipped = 0, empty = 0;
   for (const { c, g } of matched) {
-    const already = c.spec_data && typeof c.spec_data.customs_usd === "number";
+    // "Done" = already has customs OR a per-trim list (a trims-only car just means
+    // Gonzo has no Таможня for it — re-fetching won't help). Retry only the un-enriched.
+    const already = c.spec_data && (typeof c.spec_data.customs_usd === "number" ||
+      (Array.isArray(c.spec_data.gonzo_trims) && c.spec_data.gonzo_trims.length > 0));
     if (already && !FORCE) { skipped++; continue; }
 
     const text = await fetchText(g.url);
