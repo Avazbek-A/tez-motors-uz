@@ -7,6 +7,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 import { formatPrice } from "@/lib/utils";
 import { getLocaleFromCookie } from "@/i18n/config";
+import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 
 export async function generateMetadata({
   params,
@@ -14,6 +15,13 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  // Locale comes from the middleware header (params here only carries slug).
+  const reqHeaders = await headers();
+  const cookieStore = await cookies();
+  const locale: SeoLocale =
+    (reqHeaders.get("x-tez-locale") as SeoLocale | null) ??
+    (getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value) as SeoLocale) ??
+    "ru";
 
   try {
     const supabase = await createClient();
@@ -61,14 +69,9 @@ export async function generateMetadata({
         description,
         images: [imageUrl],
       },
-      alternates: {
-        canonical: `${SITE_CONFIG.url}/catalog/${slug}`,
-        languages: {
-          ru: `${SITE_CONFIG.url}/ru/catalog/${slug}`,
-          uz: `${SITE_CONFIG.url}/uz/catalog/${slug}`,
-          en: `${SITE_CONFIG.url}/en/catalog/${slug}`,
-        },
-      },
+      // Self-referential, locale-specific canonical + hreflang (+ x-default). The
+      // old canonical was locale-less (/catalog/slug), which isn't a served URL.
+      alternates: localizedAlternates(`/catalog/${slug}`, locale),
     };
   } catch {
     return {
