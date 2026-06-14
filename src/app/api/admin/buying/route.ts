@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 
     const [carsRes, marketRes, inqRes, watchRes, favRes, savedRes, poRes, sourceRes, cfgRes, fx] = await Promise.all([
-      supabase.from("cars").select("id, brand, model, fuel_type").limit(MAX),
+      supabase.from("cars").select("id, brand, model, fuel_type, spec_data").limit(MAX),
       supabase.from("market_listings").select("brand, model, price_usd, observed_at").gte("observed_at", since).not("price_usd", "is", null).limit(MAX),
       supabase.from("inquiries").select("car_id").not("car_id", "is", null).limit(MAX),
       supabase.from("price_watches").select("car_id").limit(MAX),
@@ -69,13 +69,32 @@ export async function GET(request: NextRequest) {
     // model_catalog, not cars). Used below once modelMeta is built.
     const preorderDemand = await aggregatePreorderDemand(supabase);
 
-    // car_id → model key + a representative fuel for the model.
+    // Cheapest China retail price (AutoHome trim price_raw, "26.35万" = 263 500 ¥)
+    // → USD, as a LAST-RESORT cost proxy for models with no RFQ/PO cost. It's the
+    // Chinese MSRP (dealers buy at/below it), so it's a conservative upper bound —
+    // surfaced only with costSource='china_estimate' so the dealer treats it as such.
+    const chinaCostUsd = (spec: unknown): number | null => {
+      const trims = (spec as { trims?: { price_raw?: string | null }[] } | null)?.trims;
+      if (!Array.isArray(trims)) return null;
+      let minCny = Infinity;
+      for (const t of trims) {
+        const m = String(t?.price_raw || "").match(/([\d.]+)\s*万/);
+        if (m) { const cny = parseFloat(m[1]) * 10_000; if (cny > 0 && cny < minCny) minCny = cny; }
+      }
+      if (!Number.isFinite(minCny) || !(fx.cny_usd > 0)) return null;
+      return Math.round(minCny * fx.cny_usd);
+    };
+
+    // car_id → model key + a representative fuel for the model. Also the China-price
+    // cost proxy per model key (first non-null wins).
     const carToKey = new Map<string, string>();
     const modelMeta = new Map<string, { brand: string; model: string; fuel: FuelKind }>();
+    const chinaCostByKey = new Map<string, number>();
     for (const c of carsRes.data || []) {
       const k = key(c.brand as string, c.model as string);
       carToKey.set(c.id as string, k);
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: c.brand as string, model: c.model as string, fuel: resolveFuelKind(c.fuel_type as string) });
+      if (!chinaCostByKey.has(k)) { const cc = chinaCostUsd(c.spec_data); if (cc != null) chinaCostByKey.set(k, cc); }
     }
 
     // Market median per model. Also bucket by BASE-model key (trim/chassis/year
@@ -175,8 +194,10 @@ export async function GET(request: NextRequest) {
       const sup = supplierAgg.get(k);
       const poAvgCostUsd = sup ? Math.round(sup.sum / sup.n) : null;
       const sourceCostUsd = sourceCostByKey.get(k) ?? null;
-      const supplierCostUsd = sourceCostUsd ?? poAvgCostUsd;
-      const costSource = sourceCostUsd != null ? "rfq" : poAvgCostUsd != null ? "po_history" : null;
+      // RFQ (now) → PO history (past) → China-retail estimate (last resort).
+      const chinaEstUsd = chinaCostByKey.get(k) ?? null;
+      const supplierCostUsd = sourceCostUsd ?? poAvgCostUsd ?? chinaEstUsd;
+      const costSource = sourceCostUsd != null ? "rfq" : poAvgCostUsd != null ? "po_history" : chinaEstUsd != null ? "china_estimate" : null;
 
       let landedCostUsd: number | null = null;
       let marginUsd: number | null = null;
@@ -213,6 +234,7 @@ export async function GET(request: NextRequest) {
         marketFreshnessDays: freshnessDays,
         supplierCostUsd,
         costSource,
+        costEstimated: costSource === "china_estimate", // cost is a China-retail proxy, not a real quote
         landedCostUsd,
         marginUsd,
         marginPct,

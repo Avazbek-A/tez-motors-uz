@@ -16,6 +16,7 @@ interface Rec {
   marketSample: number;
   marketFreshnessDays: number | null;
   supplierCostUsd: number | null;
+  costEstimated?: boolean;
   landedCostUsd: number | null;
   marginUsd: number | null;
   marginPct: number | null;
@@ -222,7 +223,12 @@ export default function AdminBuyingPage() {
                       {r.demandScore}
                     </td>
                     <td className="px-3 py-2.5 text-right font-mono text-foreground">{usd(r.marketMedianUsd)}</td>
-                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">{usd(r.landedCostUsd)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
+                      {usd(r.landedCostUsd)}
+                      {r.costEstimated && (
+                        <span className="ml-1 rounded bg-[var(--warning)]/15 px-1 text-[10px] font-sans text-[var(--warning)]" title="No quote/PO — cost estimated from China retail price">est.</span>
+                      )}
+                    </td>
                     <td className={`px-3 py-2.5 text-right font-mono ${r.marginPct == null ? "text-muted-foreground" : r.marginPct >= 10 ? "text-[var(--success)]" : r.marginPct < 5 ? "text-[var(--danger)]" : "text-foreground"}`}>
                       {r.marginUsd == null ? "—" : `${usd(r.marginUsd)}`}{r.marginPct != null ? <span className="text-[11px] opacity-70"> {r.marginPct > 0 ? "+" : ""}{r.marginPct}%</span> : null}
                     </td>
