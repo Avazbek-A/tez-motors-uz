@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getFxRates } from "@/lib/fx-rate";
 import { median, cleanCarPrices } from "@/lib/market-intel";
+import { baseModelKey } from "@/lib/model-normalize";
 import {
   computeLandedCost,
   suggestedListPrice,
@@ -77,14 +78,22 @@ export async function GET(request: NextRequest) {
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: c.brand as string, model: c.model as string, fuel: resolveFuelKind(c.fuel_type as string) });
     }
 
-    // Market median per model.
+    // Market median per model. Also bucket by BASE-model key (trim/chassis/year
+    // stripped) so a catalog car like "H6 2.0T" picks up "H6" market comps when it
+    // has no exact-key listings — without merging genuinely distinct models.
     const marketByKey = new Map<string, { prices: number[]; dates: string[]; brand: string; model: string }>();
+    const marketByBase = new Map<string, { prices: number[]; dates: string[] }>();
     for (const m of marketRes.data || []) {
       const k = key(m.brand as string, m.model as string);
       const g = marketByKey.get(k) || { prices: [], dates: [], brand: m.brand as string, model: m.model as string };
       g.prices.push(num(m.price_usd));
       if (m.observed_at) g.dates.push(m.observed_at as string);
       marketByKey.set(k, g);
+      const bk = baseModelKey(m.brand as string, m.model as string);
+      const gb = marketByBase.get(bk) || { prices: [], dates: [] };
+      gb.prices.push(num(m.price_usd));
+      if (m.observed_at) gb.dates.push(m.observed_at as string);
+      marketByBase.set(bk, gb);
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: m.brand as string, model: m.model as string, fuel: "petrol" });
     }
 
@@ -151,7 +160,8 @@ export async function GET(request: NextRequest) {
         preordersDeposited: pre.deposited,
       });
 
-      const mk = marketByKey.get(k);
+      // Exact brand|model comps, else fall back to base-model comps (H6 2.0T → H6).
+      const mk = marketByKey.get(k) || marketByBase.get(baseModelKey(meta.brand, meta.model)) || null;
       // Clean parts/junk/outliers out of the comp cloud before the median, and
       // report the cleaned sample as the confidence signal.
       const cleanedPrices = mk ? cleanCarPrices(mk.prices) : [];

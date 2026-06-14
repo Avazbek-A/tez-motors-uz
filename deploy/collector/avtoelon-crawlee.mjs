@@ -62,7 +62,9 @@ async function main() {
   // the catalog often carries trim suffixes ("H6 2.0T", "H6 HEV"), so match on the
   // model's *significant* tokens (drop trim noise) — a caption matches a catalog
   // model when ALL its significant tokens appear. Most-specific (most tokens) wins.
-  const TRIM_NOISE = /^(\d(?:\.\d)?t|hev|phev|dm-?i|ev|bev|champion|gt|awd|4wd|2wd|long|range|pro\+?|версия|пакет)$/i;
+  // Engine/fuel/drivetrain only — NEVER trim/series words (Pro, Plus, Max…), so
+  // "Tiggo 8 Pro" stays distinct from "Tiggo 8". Mirrors src/lib/model-normalize.ts.
+  const TRIM_NOISE = /^(\d(?:\.\d)?[tl]|hev|phev|mhev|dm-?i|dmi|ev|bev|awd|4wd|2wd|fwd|rwd)$/i;
   const sigTokens = (lc) => lc.split(/[\s/-]+/).filter((t) => t.length >= 2 && !TRIM_NOISE.test(t));
   const cars = await (await fetch(`${U}/rest/v1/cars?select=brand,model&limit=400`, { headers: H })).json();
   const brandModels = new Map();
