@@ -1,10 +1,7 @@
-import type { Metadata } from "next";
 import AboutContent from "./_content";
 
-export const metadata: Metadata = {
-  title: "О нас — Tez Motors",
-  description: "Tez Motors — импортёр автомобилей из Китая в Узбекистан с 2024 года. Прозрачность, надёжность, скорость.",
-};
+// Metadata (localized title/description + canonical/hreflang) is provided by
+// about/layout.tsx via makePageMetadata — keep it in one place.
 
 export default function AboutPage() {
   return <AboutContent />;

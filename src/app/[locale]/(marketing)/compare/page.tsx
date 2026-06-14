@@ -1,12 +1,8 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 import CompareContent from "./_content";
 
-export const metadata: Metadata = {
-  title: "Сравнение автомобилей — Tez Motors",
-  description: "Сравните характеристики и цены китайских авто: BYD, Haval, Chery, Geely и другие бренды.",
-};
+// Metadata is provided by compare/layout.tsx via makePageMetadata.
 
 export default function ComparePage() {
   return (

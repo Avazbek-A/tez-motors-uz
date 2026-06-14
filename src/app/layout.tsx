@@ -64,7 +64,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const rootMetadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz"),
+  // Force https — the site is HTTPS-only (cloudflared tunnel); a stray http
+  // NEXT_PUBLIC_SITE_URL would otherwise emit http og:image/canonical URLs that
+  // social crawlers flag or reject.
+  metadataBase: new URL((process.env.NEXT_PUBLIC_SITE_URL ?? "https://tezmotors.uz").replace(/^http:\/\//, "https://")),
   title: {
     default: "Tez Motors — Импорт авто из Китая в Узбекистан",
     template: "%s | Tez Motors",

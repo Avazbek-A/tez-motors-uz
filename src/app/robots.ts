@@ -49,22 +49,34 @@ export default function robots(): MetadataRoute.Robots {
     "Sogou",
   ];
 
+  // Private / user-specific / low-value pages — no SEO value and shouldn't be
+  // crawled or indexed. Locale-prefixed (/ru/account …), so wildcard the locale
+  // segment (Google/Bing/Yandex/DuckDuckGo all support `*`).
+  const privatePaths = [
+    "/*/account",
+    "/*/favorites",
+    "/*/sign",
+    "/*/unsubscribe",
+    "/*/feedback",
+    "/*/track",
+  ];
+
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api/", "/_next/"],
+        disallow: ["/admin", "/api/", "/_next/", ...privatePaths],
       },
       ...aiCrawlers.map((agent) => ({
         userAgent: agent,
         allow: "/",
-        disallow: ["/admin", "/api/"],
+        disallow: ["/admin", "/api/", ...privatePaths],
       })),
       ...searchCrawlers.map((agent) => ({
         userAgent: agent,
         allow: "/",
-        disallow: ["/admin", "/api/"],
+        disallow: ["/admin", "/api/", ...privatePaths],
       })),
     ],
     sitemap,
