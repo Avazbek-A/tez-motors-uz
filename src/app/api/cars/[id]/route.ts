@@ -8,6 +8,7 @@ import { logEvent } from "@/lib/error-report";
 import { logAdminAction, compactDiff } from "@/lib/audit";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { scrubCarsForPublic } from "@/lib/cars-query";
+import { pingCar } from "@/lib/seo/indexnow";
 
 // GET single car by ID or slug
 export async function GET(
@@ -98,6 +99,10 @@ export async function PUT(
       console.error("Update error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
+
+    // Re-submit the updated listing to Bing/Yandex (IndexNow) so changed price /
+    // status / specs get re-indexed quickly.
+    if (data?.slug) pingCar(data.slug as string);
 
     // Price dropped → email anyone watching this car who hit their target.
     // Fire-and-forget; never blocks or fails the save.

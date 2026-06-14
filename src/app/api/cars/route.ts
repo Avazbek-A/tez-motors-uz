@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { carWriteSchema } from "@/lib/schemas/car";
+import { pingCar } from "@/lib/seo/indexnow";
 import { requireAdmin, isAdminRequest } from "@/lib/auth";
 import { priceFromMonthly } from "@/lib/finance";
 import { logAdminAction } from "@/lib/audit";
@@ -282,6 +283,9 @@ export async function POST(request: NextRequest) {
       entity_id: car?.id,
       diff: { brand: data.brand, model: data.model, year: data.year, price_usd: data.price_usd, slug },
     }).catch(() => {});
+
+    // Push the new listing to Bing/Yandex (IndexNow) for near-instant indexing.
+    pingCar(slug);
 
     // New arrival → auto-announce to the Telegram channel (free reach, fail-open).
     if (data.inventory_status === "available") {

@@ -94,6 +94,21 @@ export default function AdminEnginePage() {
   const [sim, setSim] = useState<PolicySim | null>(null);
   const [duty, setDuty] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [inBusy, setInBusy] = useState(false);
+  const [inResult, setInResult] = useState<string | null>(null);
+
+  const submitIndexNow = async () => {
+    setInBusy(true);
+    setInResult(null);
+    try {
+      const d = await fetch("/api/admin/indexnow", { method: "POST" }).then((r) => r.json());
+      setInResult(d?.ok ? `✓ ${d.submitted} URLs submitted (${d.cars} cars)` : "✗ failed");
+    } catch {
+      setInResult("✗ failed");
+    } finally {
+      setInBusy(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([
@@ -113,7 +128,18 @@ export default function AdminEnginePage() {
         <Gauge className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-semibold text-foreground">{t.title}</h1>
       </div>
-      <p className="mb-6 text-sm text-muted-foreground">{t.intro}</p>
+      <p className="mb-4 text-sm text-muted-foreground">{t.intro}</p>
+
+      <div className="mb-6 flex items-center gap-3">
+        <button
+          onClick={submitIndexNow}
+          disabled={inBusy}
+          className="border border-primary px-3 py-1.5 text-sm text-primary hover:bg-primary/10 disabled:opacity-50"
+        >
+          {inBusy ? "…" : "Submit catalog to IndexNow (Bing/Yandex)"}
+        </button>
+        {inResult && <span className="font-mono text-xs text-muted-foreground">{inResult}</span>}
+      </div>
 
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" /></div>
