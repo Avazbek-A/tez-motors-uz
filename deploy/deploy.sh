@@ -26,7 +26,7 @@ fi
 echo "==> [1/4] push $BRANCH to GitHub"
 git push origin "$BRANCH"
 
-echo "==> [2/4] sync Vostro to origin/$BRANCH + rebuild"
+echo "==> [2/4] sync Vostro to origin/$BRANCH + migrate + rebuild"
 ssh "$VOSTRO" "set -e
   cd '$REMOTE_DIR'
   git fetch -q origin
@@ -34,6 +34,8 @@ ssh "$VOSTRO" "set -e
   echo \"   prev: \$PREV\"
   git reset --hard 'origin/$BRANCH'
   echo \"   now:  \$(git rev-parse --short HEAD)\"
+  npm install --no-audit --no-fund    # pick up dependency changes (e.g. pg)
+  node deploy/migrate.mjs             # apply pending DB migrations BEFORE build; fails closed
   npm run selfhost:build
 "
 

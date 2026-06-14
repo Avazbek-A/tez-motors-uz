@@ -16,7 +16,7 @@ Working branch: **`design/cinematic-showroom`** (not `main`). Prod runs this bra
    ```bash
    ./deploy/deploy.sh
    ```
-   It pushes, then on the Vostro: `git fetch` → `git reset --hard origin/<branch>` → `npm run selfhost:build` → restart `tez-motors.service` → health-check `/ru/catalog`.
+   It pushes, then on the Vostro: `git fetch` → `git reset --hard origin/<branch>` → `npm install` → **`node deploy/migrate.mjs`** (apply pending DB migrations, fails closed) → `npm run selfhost:build` → restart `tez-motors.service` → health-check `/ru/catalog`.
 
 **push ≠ deploy.** Pushing backs code to GitHub; deploying makes it live. They're separate steps.
 
@@ -33,5 +33,5 @@ ssh vostro "cd /home/rayxona/tez-motors && git reset --hard <prev-sha> && npm ru
 
 ## Prod facts (see also memory: infra-production-topology)
 - Self-hosted on the Vostro: `tez-motors.service` (systemd, standalone Next build, 127.0.0.1:3000) behind a `cloudflared` tunnel → **tezmotors.uz**. Not Cloudflare Workers.
-- Canonical DB: Supabase `wyivyvoljvplkdrjmpox` (the `kmzd…` project is abandoned). **DB migrations are applied by hand in the Supabase SQL editor** — `deploy.sh` does not run them.
+- Canonical DB: Supabase `wyivyvoljvplkdrjmpox` (the `kmzd…` project is abandoned). **DB migrations apply automatically** during deploy via `deploy/migrate.mjs` — it tracks applied files in `public._migrations` (baselined to the 75 hand-applied ones on 2026-06-14) and runs only new `supabase/migrations/*.sql`, in order, transactionally, fail-closed. Needs `SUPABASE_DB_URL` in the Vostro `.env.local` (the direct Postgres URI, gitignored). For a genuinely destructive change, still eyeball it first — it'll run on the next deploy.
 - Market collectors run on the Vostro via cron (`deploy/collector/run-market.sh`): OLX + avtoelon + Telegram → `market_listings` → the buying brain. See memory: market-intel-engine.
