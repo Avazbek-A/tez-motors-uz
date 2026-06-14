@@ -17,6 +17,7 @@ import {
   holdingCost,
   warrantyMonthsLeft,
   valueAdjustmentFactor,
+  negotiationBand,
 } from "../market-analytics";
 
 const now = Date.parse("2026-06-14T00:00:00Z");
@@ -206,5 +207,17 @@ describe("valueAdjustmentFactor", () => {
   });
   it("is neutral with no inputs", () => {
     expect(valueAdjustmentFactor({})).toBe(1);
+  });
+});
+
+describe("negotiationBand", () => {
+  it("walk-away = cost + min margin, target = fair, opening above target", () => {
+    const b = negotiationBand(20000, 24000, { minMarginPct: 5, openingBufferPct: 5 });
+    expect(b.walkAwayUsd).toBe(21000); // 20000 × 1.05
+    expect(b.targetUsd).toBe(24000);
+    expect(b.openingUsd).toBe(25200); // 24000 × 1.05
+  });
+  it("handles missing cost", () => {
+    expect(negotiationBand(null, 24000).walkAwayUsd).toBeNull();
   });
 });

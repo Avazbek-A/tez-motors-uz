@@ -115,6 +115,7 @@ export async function GET(request: NextRequest) {
         markdownPct,
         daysInStock,
         holdingCostUsd: holdingCost(currentPrice, daysInStock),
+        negotiationFloorUsd: Math.round(fair * 0.9), // lowest to accept before walking
         marketTrendPct: trendPct,
         reason: reasons.join(" · ") || "market-aligned cut",
         urgency: daysInStock > 90 || markdownPct >= 8 ? "high" : daysInStock > 60 || markdownPct >= 4 ? "medium" : "low",

@@ -382,3 +382,24 @@ export function valueAdjustmentFactor(opts: {
   else if (opts.importChannel === "gray") f *= 0.95;
   return Math.max(0.5, Math.min(1.2, Math.round(f * 1000) / 1000));
 }
+
+// ─── 14. Negotiation band (sales-floor cockpit) ───────────────────────────────
+// Per car: where to open, what to aim for, and the floor you must not cross. Gives
+// the salesperson a defensible walk-away grounded in landed cost + market fair.
+export interface NegotiationBand {
+  walkAwayUsd: number | null; // lowest sale price that still clears the min margin
+  targetUsd: number | null; // the realistic close (market fair)
+  openingUsd: number | null; // where to start the ask
+}
+export function negotiationBand(
+  landedCostUsd: number | null,
+  marketFairUsd: number | null,
+  opts?: { minMarginPct?: number; openingBufferPct?: number },
+): NegotiationBand {
+  const minM = (opts?.minMarginPct ?? 5) / 100;
+  const buf = (opts?.openingBufferPct ?? 5) / 100;
+  const walkAway = landedCostUsd && landedCostUsd > 0 ? Math.round(landedCostUsd * (1 + minM)) : null;
+  const target = marketFairUsd && marketFairUsd > 0 ? Math.round(marketFairUsd) : walkAway != null ? Math.round(walkAway * 1.1) : null;
+  const opening = target != null ? Math.round(target * (1 + buf)) : null;
+  return { walkAwayUsd: walkAway, targetUsd: target, openingUsd: opening };
+}

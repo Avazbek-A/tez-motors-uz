@@ -13,6 +13,7 @@ import {
   regimeBreak,
   holdingCost,
   inferSold,
+  negotiationBand,
   type ListingLike,
 } from "@/lib/market-analytics";
 import { baseModelKey } from "@/lib/model-normalize";
@@ -206,9 +207,11 @@ export async function GET(request: NextRequest) {
     // newest-first, so the first seen per model is the most recent — this beats
     // PO history because it reflects what the supplier quotes RIGHT NOW.
     const sourceCostByKey = new Map<string, number>();
-    for (const s of (sourceRes.data as { brand: string; model: string; price_usd: number }[]) || []) {
+    const sourceHistByKey = new Map<string, { price_usd: number; observed_at: string | null }[]>(); // for cost-trend (AutoHome/RFQ leading indicator)
+    for (const s of (sourceRes.data as { brand: string; model: string; price_usd: number; observed_at: string }[]) || []) {
       const k = key(s.brand, s.model);
       if (!sourceCostByKey.has(k)) sourceCostByKey.set(k, num(s.price_usd));
+      (sourceHistByKey.get(k) || sourceHistByKey.set(k, []).get(k)!).push({ price_usd: num(s.price_usd), observed_at: s.observed_at ?? null });
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: s.brand, model: s.model, fuel: "petrol" });
     }
 
@@ -320,6 +323,12 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Sales-floor cockpit: where to open / aim / walk away when selling this model.
+      const sellBand = negotiationBand(landedCostUsd, effectiveMedian);
+      // Supplier-cost trend (AutoHome/RFQ) — a leading indicator: cost rising now =
+      // local price + landed cost rising in ~1–2 months.
+      const costTrendPct = priceTrend(sourceHistByKey.get(k) || [], { windowDays: 30 }).changePct;
+
       const score = opportunityScore({ demandScore: dScore, marginPct, sampleSize, freshnessDays });
       rows.push({
         brand: meta.brand,
@@ -355,6 +364,10 @@ export async function GET(request: NextRequest) {
         holdingCostUsd, // cost of capital while it sits
         netMarginUsd, // margin after holding cost
         netMarginPct,
+        costTrendPct, // supplier-cost momentum (leading indicator)
+        sellWalkAwayUsd: sellBand.walkAwayUsd,
+        sellTargetUsd: sellBand.targetUsd,
+        sellOpeningUsd: sellBand.openingUsd,
         suggestedPriceUsd,
         opportunityScore: score,
         verdict: verdict(score, marginPct),

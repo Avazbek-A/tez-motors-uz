@@ -37,6 +37,10 @@ interface Rec {
   holdingCostUsd?: number | null;
   netMarginUsd?: number | null;
   netMarginPct?: number | null;
+  costTrendPct?: number | null;
+  sellWalkAwayUsd?: number | null;
+  sellTargetUsd?: number | null;
+  sellOpeningUsd?: number | null;
   suggestedPriceUsd: number | null;
   opportunityScore: number;
   verdict: string;
@@ -364,6 +368,7 @@ export default function AdminBuyingPage() {
                         r.marketMedianShrunkUsd != null ? `shrunk ${usd(r.marketMedianShrunkUsd)} (thin sample)` : "",
                         r.resaleCeilingUsd != null ? `dealer ceiling ${usd(r.resaleCeilingUsd)}` : "",
                         r.clearingMedianUsd != null ? `est. clearing ${usd(r.clearingMedianUsd)}` : "",
+                        r.costTrendPct != null && r.costTrendPct !== 0 ? `supplier cost ${r.costTrendPct > 0 ? "+" : ""}${r.costTrendPct}% (leading)` : "",
                       ].filter(Boolean).join(" · ")}
                     >
                       {usd(r.marketMedianShrunkUsd ?? r.marketMedianUsd)}
@@ -401,7 +406,10 @@ export default function AdminBuyingPage() {
                       return (
                         <td
                           className={`px-3 py-2.5 text-right font-mono ${pct == null ? "text-muted-foreground" : pct >= 10 ? "text-[var(--success)]" : pct < 5 ? "text-[var(--danger)]" : "text-foreground"}`}
-                          title={showNet ? `gross ${usd(r.marginUsd)} − holding ${usd(r.holdingCostUsd ?? null)} = net ${usd(r.netMarginUsd ?? null)}` : ""}
+                          title={[
+                            showNet ? `gross ${usd(r.marginUsd)} − holding ${usd(r.holdingCostUsd ?? null)} = net ${usd(r.netMarginUsd ?? null)}` : "",
+                            r.sellTargetUsd != null ? `sell: open ${usd(r.sellOpeningUsd ?? null)} / aim ${usd(r.sellTargetUsd)} / floor ${usd(r.sellWalkAwayUsd ?? null)}` : "",
+                          ].filter(Boolean).join("\n")}
                         >
                           {val == null ? "—" : usd(val)}
                           {pct != null ? <span className="text-[11px] opacity-70"> {pct > 0 ? "+" : ""}{pct}%</span> : null}
