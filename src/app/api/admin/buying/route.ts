@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getFxRates } from "@/lib/fx-rate";
-import { median, cleanCarPrices } from "@/lib/market-intel";
+import { median, cleanCarPrices, priceTrend, priceConfidence } from "@/lib/market-intel";
 import { baseModelKey } from "@/lib/model-normalize";
 import {
   computeLandedCost,
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     const [carsRes, marketRes, inqRes, watchRes, favRes, savedRes, poRes, sourceRes, cfgRes, fx] = await Promise.all([
       supabase.from("cars").select("id, brand, model, fuel_type, spec_data").limit(MAX),
-      supabase.from("market_listings").select("brand, model, price_usd, observed_at").gte("observed_at", since).not("price_usd", "is", null).limit(MAX),
+      supabase.from("market_listings").select("brand, model, price_usd, observed_at, last_seen_at, source").gte("observed_at", since).not("price_usd", "is", null).limit(MAX),
       supabase.from("inquiries").select("car_id").not("car_id", "is", null).limit(MAX),
       supabase.from("price_watches").select("car_id").limit(MAX),
       supabase.from("favorites").select("car_id").limit(MAX),
@@ -100,18 +100,23 @@ export async function GET(request: NextRequest) {
     // Market median per model. Also bucket by BASE-model key (trim/chassis/year
     // stripped) so a catalog car like "H6 2.0T" picks up "H6" market comps when it
     // has no exact-key listings — without merging genuinely distinct models.
-    const marketByKey = new Map<string, { prices: number[]; dates: string[]; brand: string; model: string }>();
-    const marketByBase = new Map<string, { prices: number[]; dates: string[] }>();
+    type MLite = { price_usd: number; observed_at: string | null; last_seen_at: string | null; source: string };
+    const marketByKey = new Map<string, { listings: MLite[]; brand: string; model: string }>();
+    const marketByBase = new Map<string, { listings: MLite[] }>();
     for (const m of marketRes.data || []) {
+      const lite: MLite = {
+        price_usd: num(m.price_usd),
+        observed_at: (m.observed_at as string) ?? null,
+        last_seen_at: (m.last_seen_at as string) ?? null,
+        source: (m.source as string) ?? "other",
+      };
       const k = key(m.brand as string, m.model as string);
-      const g = marketByKey.get(k) || { prices: [], dates: [], brand: m.brand as string, model: m.model as string };
-      g.prices.push(num(m.price_usd));
-      if (m.observed_at) g.dates.push(m.observed_at as string);
+      const g = marketByKey.get(k) || { listings: [], brand: m.brand as string, model: m.model as string };
+      g.listings.push(lite);
       marketByKey.set(k, g);
       const bk = baseModelKey(m.brand as string, m.model as string);
-      const gb = marketByBase.get(bk) || { prices: [], dates: [] };
-      gb.prices.push(num(m.price_usd));
-      if (m.observed_at) gb.dates.push(m.observed_at as string);
+      const gb = marketByBase.get(bk) || { listings: [] };
+      gb.listings.push(lite);
       marketByBase.set(bk, gb);
       if (!modelMeta.has(k)) modelMeta.set(k, { brand: m.brand as string, model: m.model as string, fuel: "petrol" });
     }
@@ -181,13 +186,24 @@ export async function GET(request: NextRequest) {
 
       // Exact brand|model comps, else fall back to base-model comps (H6 2.0T → H6).
       const mk = marketByKey.get(k) || marketByBase.get(baseModelKey(meta.brand, meta.model)) || null;
+      const listings = mk?.listings ?? [];
       // Clean parts/junk/outliers out of the comp cloud before the median, and
       // report the cleaned sample as the confidence signal.
-      const cleanedPrices = mk ? cleanCarPrices(mk.prices) : [];
+      const cleanedPrices = cleanCarPrices(listings.map((l) => l.price_usd));
       const marketMedian = cleanedPrices.length ? median(cleanedPrices) : null;
       const sampleSize = cleanedPrices.length;
-      const latest = mk && mk.dates.length ? mk.dates.sort().slice(-1)[0] : null;
-      const freshnessDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : null;
+      // Freshness from last_seen_at (re-scrape time) falling back to observed_at.
+      const times = listings.map((l) => Date.parse(l.last_seen_at || l.observed_at || "")).filter((t) => Number.isFinite(t));
+      const latestMs = times.length ? Math.max(...times) : null;
+      const freshnessDays = latestMs ? Math.floor((Date.now() - latestMs) / 86_400_000) : null;
+      // Spread, source diversity, trend, confidence — the "why" behind the median.
+      const spreadPct =
+        marketMedian && marketMedian > 0 && cleanedPrices.length > 1
+          ? Math.round(((Math.max(...cleanedPrices) - Math.min(...cleanedPrices)) / marketMedian) * 1000) / 10
+          : null;
+      const sourceCount = new Set(listings.map((l) => l.source)).size;
+      const trend = priceTrend(listings, { windowDays: 30 });
+      const conf = priceConfidence({ sampleSize, freshnessDays, spreadPct, sourceCount });
 
       // Prefer a current RFQ source price over PO-history average — it reflects
       // what the supplier quotes now, not what we paid in the past.
@@ -232,6 +248,11 @@ export async function GET(request: NextRequest) {
         marketMedianUsd: marketMedian,
         marketSample: sampleSize,
         marketFreshnessDays: freshnessDays,
+        marketSpreadPct: spreadPct,
+        marketSources: sourceCount,
+        marketTrendPct: trend.changePct, // + rising, − falling (last 30d vs prior 30d)
+        confidence: conf.score, // 0–1 trust in this market read
+        confidenceLabel: conf.label,
         supplierCostUsd,
         costSource,
         costEstimated: costSource === "china_estimate", // cost is a China-retail proxy, not a real quote

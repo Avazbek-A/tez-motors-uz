@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
-import { median } from "@/lib/market-intel";
+import { median, mileageAdjustedValue } from "@/lib/market-intel";
 import { estimateTradeIn } from "@/lib/tradein-estimate";
 
 /**
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     const since = new Date(Date.now() - 180 * 86_400_000).toISOString();
     const { data: rows } = await supabase
       .from("market_listings")
-      .select("price_usd, observed_at")
+      .select("price_usd, mileage_km, observed_at")
       .ilike("brand", data.brand)
       .ilike("model", `%${data.model}%`)
       .gte("observed_at", since)
@@ -46,11 +46,17 @@ export async function POST(request: NextRequest) {
       .limit(500);
 
     const prices: number[] = [];
+    const comps: { price_usd: number | null; mileage_km: number | null }[] = [];
     for (const r of rows || []) {
       const usd = typeof r.price_usd === "number" ? r.price_usd : Number(r.price_usd);
       if (Number.isFinite(usd) && usd > 0) prices.push(usd);
+      comps.push({ price_usd: usd, mileage_km: r.mileage_km == null ? null : Number(r.mileage_km) });
     }
     const marketMedianUsd = median(prices);
+
+    // Hedonic (Leap 3): resale value AT this car's odometer, regressed from the
+    // comps' price-vs-mileage relationship — only when the customer gave mileage.
+    const mv = data.mileage_km != null ? mileageAdjustedValue(comps, data.mileage_km) : null;
 
     // Clamp the client-provided year to a sane current-year window.
     const nowYear = Math.min(2100, Math.max(2024, data.now_year ?? 2026));
@@ -61,12 +67,14 @@ export async function POST(request: NextRequest) {
       mileageKm: data.mileage_km ?? null,
       condition: data.condition ?? null,
       nowYear,
+      mileageAdjustedUsd: mv?.value ?? null,
+      mileageAdjustBasis: mv?.basis,
     });
 
     if (!estimate) {
       return NextResponse.json({ ok: true, estimate: null, reason: "no_market_data" });
     }
-    return NextResponse.json({ ok: true, estimate, sample: prices.length });
+    return NextResponse.json({ ok: true, estimate, sample: prices.length, valuationBasis: mv?.basis ?? "median" });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ ok: false, errors: error.issues }, { status: 400 });

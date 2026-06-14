@@ -18,6 +18,14 @@ export interface TradeInInput {
   condition?: "excellent" | "good" | "fair" | "poor" | null;
   /** Current year for age calc (injected so the fn stays pure/testable). */
   nowYear: number;
+  /**
+   * Hedonic anchor (Leap 3): resale value at THIS car's mileage, regressed from
+   * the comps' price-vs-odometer relationship (mileageAdjustedValue). When present
+   * and not the bare median fallback, it replaces the median anchor AND the flat
+   * per-10k-km factor — mileage is already baked into the regression.
+   */
+  mileageAdjustedUsd?: number | null;
+  mileageAdjustBasis?: "regression" | "flat" | "median";
 }
 
 export interface TradeInEstimate {
@@ -43,18 +51,27 @@ const PER_10K_KM_DEPRECIATION = 0.02;
 const MIN_FACTOR = 0.35; // never depreciate below this fraction of the anchor
 
 export function estimateTradeIn(input: TradeInInput): TradeInEstimate | null {
-  if (!input.marketMedianUsd || input.marketMedianUsd <= 0) return null;
+  // Prefer the hedonic (mileage-regressed) anchor when we genuinely modeled
+  // mileage; else fall back to the median + a flat per-10k-km factor.
+  const hedonic =
+    input.mileageAdjustedUsd != null &&
+    input.mileageAdjustedUsd > 0 &&
+    input.mileageAdjustBasis &&
+    input.mileageAdjustBasis !== "median";
+  const anchor = hedonic ? input.mileageAdjustedUsd! : input.marketMedianUsd;
+  if (!anchor || anchor <= 0) return null;
 
   const ageYears = input.year ? Math.max(0, input.nowYear - input.year) : 0;
   const ageFactor = 1 - ageYears * PER_YEAR_DEPRECIATION;
 
+  // Mileage is already in the hedonic anchor → don't double-count it.
   const km = input.mileageKm && input.mileageKm > 0 ? input.mileageKm : 0;
-  const kmFactor = 1 - (km / 10_000) * PER_10K_KM_DEPRECIATION;
+  const kmFactor = hedonic ? 1 : 1 - (km / 10_000) * PER_10K_KM_DEPRECIATION;
 
   const condFactor = input.condition ? CONDITION_FACTOR[input.condition] : 0.9;
 
   const combined = Math.max(MIN_FACTOR, ageFactor * kmFactor * condFactor);
-  const mid = Math.round(input.marketMedianUsd * combined * DEALER_BUFFER);
+  const mid = Math.round(anchor * combined * DEALER_BUFFER);
 
   // ±8% range, rounded to the nearest $100.
   const round100 = (n: number) => Math.max(0, Math.round(n / 100) * 100);

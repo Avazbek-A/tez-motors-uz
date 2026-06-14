@@ -15,6 +15,11 @@ interface Rec {
   marketMedianUsd: number | null;
   marketSample: number;
   marketFreshnessDays: number | null;
+  marketSpreadPct?: number | null;
+  marketSources?: number;
+  marketTrendPct?: number | null;
+  confidence?: number;
+  confidenceLabel?: "high" | "medium" | "low";
   supplierCostUsd: number | null;
   costEstimated?: boolean;
   landedCostUsd: number | null;
@@ -35,6 +40,12 @@ const VERDICT_TONE: Record<string, string> = {
   skip: "text-muted-foreground border-border",
 };
 
+const CONF_TONE: Record<string, string> = {
+  high: "text-[var(--success)] border-[var(--success)]",
+  medium: "text-[var(--warning)] border-[var(--warning)]",
+  low: "text-muted-foreground border-border",
+};
+
 const COPY: Record<Locale, {
   title: string;
   intro: string;
@@ -48,15 +59,18 @@ const COPY: Record<Locale, {
   thOpp: string;
   thDemand: string;
   thMarketMed: string;
+  thConf: string;
   thLanded: string;
   thMargin: string;
   thQty: string;
   thAction: string;
+  conf: Record<string, string>;
   noMarketData: string;
   demandTitle: (inq: number, watch: number, fav: number, search: number) => string;
   createPoTitle: string;
   order: string;
   footnote: string;
+  signalsLabel: string;
   verdict: Record<string, string>;
 }> = {
   ru: {
@@ -73,10 +87,12 @@ const COPY: Record<Locale, {
     thOpp: "Возм.",
     thDemand: "Спрос",
     thMarketMed: "Медиана рынка",
+    thConf: "Дост.",
     thLanded: "С доставкой",
     thMargin: "Маржа",
     thQty: "Кол-во",
     thAction: "Действие",
+    conf: { high: "высокая", medium: "средняя", low: "низкая" },
     noMarketData: " · нет рыночных данных",
     demandTitle: (inq, watch, fav, search) =>
       `${inq} запр. · ${watch} отсл. · ${fav} избр. · ${search} поиск.`,
@@ -84,6 +100,7 @@ const COPY: Record<Locale, {
     order: "заказать",
     footnote:
       "Возможность сочетает спрос (40%) и маржу (60%), масштабированную по достоверности рыночных данных. Для маржи нужна отслеживаемая стоимость поставщика (из заказа на закупку) и рыночные объявления; модели без одного из этого всё равно показываются только по спросу. Рекомендованная розничная цена по модели: см. калькулятор импорта.",
+    signalsLabel: "Движения рынка (30д)",
     verdict: {
       strong_buy: "Уверенная покупка",
       buy: "Покупать",
@@ -105,10 +122,12 @@ const COPY: Record<Locale, {
     thOpp: "Imkon.",
     thDemand: "Talab",
     thMarketMed: "Bozor medianasi",
+    thConf: "Ishonch",
     thLanded: "Yetkazilgan",
     thMargin: "Marja",
     thQty: "Soni",
     thAction: "Amal",
+    conf: { high: "yuqori", medium: "o'rta", low: "past" },
     noMarketData: " · bozor ma'lumotlari yo'q",
     demandTitle: (inq, watch, fav, search) =>
       `${inq} so'rov · ${watch} kuzatuv · ${fav} sevimli · ${search} qidiruv`,
@@ -116,6 +135,7 @@ const COPY: Record<Locale, {
     order: "buyurtma",
     footnote:
       "Imkoniyat talab (40%) va marjani (60%) birlashtiradi, bozor ma'lumotlari ishonchliligi bo'yicha masshtablanadi. Marja uchun kuzatiladigan yetkazib beruvchi tannarxi (xarid buyurtmasidan) va bozor e'lonlari kerak; ulardan birortasi yo'q modellar baribir faqat talab bo'yicha ko'rsatiladi. Model bo'yicha tavsiya etilgan sotuv narxi: import kalkulyatoriga qarang.",
+    signalsLabel: "Bozor harakatlari (30k)",
     verdict: {
       strong_buy: "Qat'iy xarid",
       buy: "Xarid qilish",
@@ -137,10 +157,12 @@ const COPY: Record<Locale, {
     thOpp: "Opp.",
     thDemand: "Demand",
     thMarketMed: "Market med.",
+    thConf: "Conf.",
     thLanded: "Landed",
     thMargin: "Margin",
     thQty: "Qty",
     thAction: "Action",
+    conf: { high: "high", medium: "med", low: "low" },
     noMarketData: " · no market data",
     demandTitle: (inq, watch, fav, search) =>
       `${inq} inq · ${watch} watch · ${fav} fav · ${search} search`,
@@ -148,6 +170,7 @@ const COPY: Record<Locale, {
     order: "order",
     footnote:
       "Opportunity blends demand (40%) and margin (60%), scaled by market-data confidence. Margin needs a tracked supplier cost (from a purchase order) and market listings; models missing either still show on demand alone. Suggested list price per model: see the import calculator.",
+    signalsLabel: "Market moves (30d)",
     verdict: {
       strong_buy: "Strong buy",
       buy: "Buy",
@@ -162,6 +185,13 @@ export default function AdminBuyingPage() {
   const t = COPY[locale];
   const [rows, setRows] = useState<Rec[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Proactive signal: models whose market median moved materially (≥8%) on a
+  // trustworthy sample — the "something changed, look here" alert (Leap 5).
+  const movers = rows
+    .filter((r) => r.marketTrendPct != null && Math.abs(r.marketTrendPct) >= 8 && r.confidenceLabel !== "low" && r.marketSample >= 3)
+    .sort((a, b) => Math.abs(b.marketTrendPct!) - Math.abs(a.marketTrendPct!))
+    .slice(0, 6);
 
   useEffect(() => {
     fetch("/api/admin/buying")
@@ -180,6 +210,17 @@ export default function AdminBuyingPage() {
         {t.intro}
       </p>
 
+      {movers.length > 0 && (
+        <div className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border border-border bg-card px-3 py-2 text-xs">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t.signalsLabel}</span>
+          {movers.map((m, i) => (
+            <span key={i} className={`font-mono ${m.marketTrendPct! > 0 ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
+              {m.brand} {m.model} {m.marketTrendPct! > 0 ? "▲" : "▼"}{Math.abs(m.marketTrendPct!)}%
+            </span>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
@@ -196,6 +237,7 @@ export default function AdminBuyingPage() {
                 <th className="px-3 py-2 font-medium text-right">{t.thOpp}</th>
                 <th className="px-3 py-2 font-medium text-right">{t.thDemand}</th>
                 <th className="px-3 py-2 font-medium text-right">{t.thMarketMed}</th>
+                <th className="px-3 py-2 font-medium text-right">{t.thConf}</th>
                 <th className="px-3 py-2 font-medium text-right">{t.thLanded}</th>
                 <th className="px-3 py-2 font-medium text-right">{t.thMargin}</th>
                 <th className="px-3 py-2 font-medium text-right">{t.thQty}</th>
@@ -222,7 +264,26 @@ export default function AdminBuyingPage() {
                     <td className="px-3 py-2.5 text-right font-mono text-muted-foreground" title={t.demandTitle(r.demand.inquiries, r.demand.watches, r.demand.favorites, r.demand.savedSearches)}>
                       {r.demandScore}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-foreground">{usd(r.marketMedianUsd)}</td>
+                    <td className="px-3 py-2.5 text-right font-mono text-foreground whitespace-nowrap">
+                      {usd(r.marketMedianUsd)}
+                      {r.marketTrendPct != null && r.marketTrendPct !== 0 && (
+                        <span className="ml-1 text-[10px] text-muted-foreground" title="recent 30d vs prior 30d median">
+                          {r.marketTrendPct > 0 ? "▲" : "▼"}{Math.abs(r.marketTrendPct)}%
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      {r.confidenceLabel ? (
+                        <span
+                          className={`inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border rounded-[2px] ${CONF_TONE[r.confidenceLabel]}`}
+                          title={`confidence ${Math.round((r.confidence ?? 0) * 100)}% · spread ${r.marketSpreadPct ?? "—"}% · ${r.marketSources ?? 0} source(s)`}
+                        >
+                          {t.conf[r.confidenceLabel]}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 text-right font-mono text-muted-foreground">
                       {usd(r.landedCostUsd)}
                       {r.costEstimated && (

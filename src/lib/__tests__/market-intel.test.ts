@@ -8,6 +8,11 @@ import {
   summarize,
   profitability,
   cleanCarPrices,
+  extractMileageKm,
+  extractCondition,
+  priceTrend,
+  priceConfidence,
+  mileageAdjustedValue,
 } from "../market-intel";
 
 describe("cleanCarPrices", () => {
@@ -117,5 +122,94 @@ describe("profitability", () => {
   it("returns nulls when inputs are missing", () => {
     expect(profitability(null, 30000)).toEqual({ marginUsd: null, marginPct: null });
     expect(profitability(36000, 0)).toEqual({ marginUsd: null, marginPct: null });
+  });
+});
+
+describe("extractMileageKm", () => {
+  it("parses spaced + plain km", () => {
+    expect(extractMileageKm("Tiggo 7, 120 000 км, 2022")).toBe(120000);
+    expect(extractMileageKm("пробег 85000 km")).toBe(85000);
+  });
+  it("handles 'тыс км' as thousands", () => {
+    expect(extractMileageKm("150 тыс км")).toBe(150000);
+    expect(extractMileageKm("150 тыс. км")).toBe(150000);
+  });
+  it("doesn't grab engine displacement or absent km", () => {
+    expect(extractMileageKm("2.0 turbo, отличное состояние")).toBeNull();
+    expect(extractMileageKm("$18 500, торг")).toBeNull();
+    expect(extractMileageKm(null)).toBeNull();
+  });
+});
+
+describe("extractCondition", () => {
+  it("detects used", () => {
+    expect(extractCondition("Cobalt, с пробегом 90000 км")).toBe("used");
+    expect(extractCondition("б/у, торг")).toBe("used");
+  });
+  it("detects new", () => {
+    expect(extractCondition("Новый автомобиль, 0 км")).toBe("new");
+    expect(extractCondition("без пробега")).toBe("new");
+  });
+  it("returns null with no signal", () => {
+    expect(extractCondition("Chevrolet Cobalt 2023")).toBeNull();
+  });
+});
+
+describe("priceTrend", () => {
+  const now = Date.parse("2026-06-14T00:00:00Z");
+  const day = 86_400_000;
+  it("computes window-over-window change", () => {
+    const listings = [
+      // recent (≤30d): median 22000
+      { price_usd: 21000, last_seen_at: new Date(now - 5 * day).toISOString() },
+      { price_usd: 22000, last_seen_at: new Date(now - 6 * day).toISOString() },
+      { price_usd: 23000, last_seen_at: new Date(now - 7 * day).toISOString() },
+      // prior (31–60d): median 20000
+      { price_usd: 19000, last_seen_at: new Date(now - 40 * day).toISOString() },
+      { price_usd: 20000, last_seen_at: new Date(now - 45 * day).toISOString() },
+      { price_usd: 21000, last_seen_at: new Date(now - 50 * day).toISOString() },
+    ];
+    const t = priceTrend(listings, { now });
+    expect(t.recentMedian).toBe(22000);
+    expect(t.priorMedian).toBe(20000);
+    expect(t.changePct).toBe(10); // +10%
+    expect(t.recentCount).toBe(3);
+  });
+  it("null change when a window is empty", () => {
+    const t = priceTrend([{ price_usd: 20000, last_seen_at: new Date(now - 3 * day).toISOString() }], { now });
+    expect(t.changePct).toBeNull();
+  });
+});
+
+describe("priceConfidence", () => {
+  it("high for big fresh tight multi-source samples", () => {
+    const c = priceConfidence({ sampleSize: 15, freshnessDays: 2, spreadPct: 10, sourceCount: 3 });
+    expect(c.label).toBe("high");
+    expect(c.score).toBeGreaterThan(0.66);
+  });
+  it("low for a single stale wide comp", () => {
+    const c = priceConfidence({ sampleSize: 1, freshnessDays: 90, spreadPct: 90, sourceCount: 1 });
+    expect(c.label).toBe("low");
+  });
+});
+
+describe("mileageAdjustedValue", () => {
+  it("regresses price down with mileage", () => {
+    // perfectly linear: $25000 at 0km, −$0.1/km
+    const comps = [
+      { price_usd: 25000, mileage_km: 0 },
+      { price_usd: 24000, mileage_km: 10000 },
+      { price_usd: 23000, mileage_km: 20000 },
+      { price_usd: 22000, mileage_km: 30000 },
+      { price_usd: 21000, mileage_km: 40000 },
+    ];
+    const r = mileageAdjustedValue(comps, 50000);
+    expect(r.basis).toBe("regression");
+    expect(r.value).toBe(20000); // extrapolated
+    expect(r.perKm).toBeCloseTo(-0.1, 2);
+  });
+  it("falls back to median when comps are thin", () => {
+    const r = mileageAdjustedValue([{ price_usd: 20000, mileage_km: 50000 }], 30000);
+    expect(r.basis).toBe("median");
   });
 });

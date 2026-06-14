@@ -191,3 +191,140 @@ export function profitability(
   const marginPct = Math.round((marginUsd / landedUsd) * 1000) / 10;
   return { marginUsd, marginPct };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Big-leap analytics: richer extraction, price trend, confidence, mileage-adjusted
+// fair value. All pure + unit-tested (market-intel.test.ts). $0 — no LLM/network.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Pull a km odometer reading out of free-text (UZ/RU listings). Null if none. */
+export function extractMileageKm(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const s = text.toLowerCase();
+  // "120 000 км", "85000 km", "150 тыс км", "150 тыс. км" — letters break the
+  // char-class so it can't span across words like "2.0 turbo". Lookahead instead
+  // of \b: \b is false after Cyrillic "км" (Cyrillic isn't a JS word char).
+  const m = s.match(/(\d[\d\s.,]{0,8}?)\s*(тыс\.?\s*)?(км|km)(?![a-zа-яё])/);
+  if (!m) return null;
+  let n = parseInt(m[1].replace(/[\s.,]/g, ""), 10);
+  if (!Number.isFinite(n)) return null;
+  if (m[2]) n *= 1000; // "150 тыс км" = 150 000
+  if (n < 0 || n > 1_000_000) return null;
+  return n;
+}
+
+/** Classify new vs used from free-text. Null when there's no clear signal. */
+export function extractCondition(text: string | null | undefined): "new" | "used" | null {
+  if (!text) return null;
+  const s = text.toLowerCase();
+  // "0 км" only counts as new when it's a standalone zero — not the trailing
+  // "0 км" of "90000 км" (which is a used car). Lookbehind blocks a preceding digit.
+  if (/(без пробега|(?<!\d)0\s*(км|km)(?![a-zа-яё]))/.test(s)) return "new";
+  if (/(б\/?у|с пробегом|пробег|used|second[\s-]?hand)/.test(s)) return "used";
+  if (/(нов(ый|ая|ое|ые)|\bnew\b|yangi)/.test(s)) return "new";
+  return null;
+}
+
+export interface TrendResult {
+  recentMedian: number | null;
+  priorMedian: number | null;
+  changePct: number | null; // + = market rising, − = falling
+  recentCount: number;
+  priorCount: number;
+}
+
+/**
+ * Price trend per model: median of the recent window vs the window before it.
+ * Uses last_seen_at (fresher signal) falling back to observed_at. `now` is an
+ * arg so tests are deterministic.
+ */
+export function priceTrend(
+  listings: { price_usd: number | null; observed_at?: string | null; last_seen_at?: string | null }[],
+  opts?: { now?: number; windowDays?: number },
+): TrendResult {
+  const now = opts?.now ?? Date.now();
+  const win = (opts?.windowDays ?? 30) * 86_400_000;
+  const recent: number[] = [];
+  const prior: number[] = [];
+  for (const l of listings) {
+    const p = Number(l.price_usd);
+    if (!Number.isFinite(p) || p <= 0) continue;
+    const t = Date.parse(l.last_seen_at || l.observed_at || "");
+    if (!Number.isFinite(t)) continue;
+    const age = now - t;
+    if (age <= win) recent.push(p);
+    else if (age <= 2 * win) prior.push(p);
+  }
+  const rc = cleanCarPrices(recent);
+  const pc = cleanCarPrices(prior);
+  const rm = median(rc);
+  const pm = median(pc);
+  const changePct = rm != null && pm != null && pm > 0 ? Math.round(((rm - pm) / pm) * 1000) / 10 : null;
+  return { recentMedian: rm, priorMedian: pm, changePct, recentCount: rc.length, priorCount: pc.length };
+}
+
+export interface ConfidenceInput {
+  sampleSize: number;
+  freshnessDays: number | null; // age of the freshest comp
+  spreadPct: number | null; // (max−min)/median ×100
+  sourceCount?: number; // distinct sources (olx/avtoelon/telegram)
+}
+
+/** 0–1 trust score for a model's market read. More/fresher/tighter/diverse = higher. */
+export function priceConfidence(i: ConfidenceInput): { score: number; label: "high" | "medium" | "low" } {
+  const sample = Math.min(1, i.sampleSize / 12); // saturates ~12 comps
+  const fresh = i.freshnessDays == null ? 0 : Math.max(0, Math.min(1, (60 - i.freshnessDays) / 53)); // 1 ≤7d → 0 ≥60d
+  const spread = i.spreadPct == null ? 0.5 : Math.max(0, Math.min(1, 1 - i.spreadPct / 80)); // tight band = confident
+  const src = Math.min(1, 0.4 + 0.2 * (i.sourceCount ?? 1)); // 1→.6, 2→.8, 3+→1
+  const score = Math.round((0.4 * sample + 0.25 * fresh + 0.2 * spread + 0.15 * src) * 100) / 100;
+  const label = score >= 0.66 ? "high" : score >= 0.4 ? "medium" : "low";
+  return { score, label };
+}
+
+export interface MileageValue {
+  value: number | null;
+  perKm: number | null; // $ depreciation per km (negative)
+  basis: "regression" | "flat" | "median";
+}
+
+/**
+ * Mileage-adjusted fair value: OLS of price on odometer across comps, evaluated at
+ * targetKm. Falls back to a flat −$0.08/km off the median when comps are thin or the
+ * regression is degenerate (positive/absurd slope). The hedonic core for used-car
+ * (trade-in) valuation — a 30k-km car and a 150k-km car are not the same median.
+ */
+export function mileageAdjustedValue(
+  comps: { price_usd: number | null; mileage_km: number | null }[],
+  targetKm: number,
+): MileageValue {
+  const pts = comps
+    .map((c) => ({ p: Number(c.price_usd), km: Number(c.mileage_km) }))
+    .filter((c) => Number.isFinite(c.p) && c.p > 0 && Number.isFinite(c.km) && c.km >= 0 && c.km < 600_000);
+  const med = median(cleanCarPrices(pts.map((p) => p.p)));
+
+  if (pts.length < 4) return { value: med, perKm: null, basis: "median" };
+
+  const n = pts.length;
+  const mx = pts.reduce((a, c) => a + c.km, 0) / n;
+  const my = pts.reduce((a, c) => a + c.p, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (const c of pts) {
+    num += (c.km - mx) * (c.p - my);
+    den += (c.km - mx) ** 2;
+  }
+  const slope = den === 0 ? 0 : num / den;
+
+  // Degenerate slope (rises with km, or steeper than −$2/km) → flat depreciation.
+  if (den === 0 || slope > 0 || slope < -2) {
+    if (med == null) return { value: null, perKm: null, basis: "median" };
+    const flat = -0.08;
+    return { value: Math.max(0, Math.round(med + flat * (targetKm - mx))), perKm: flat, basis: "flat" };
+  }
+  const intercept = my - slope * mx;
+  return {
+    value: Math.max(0, Math.round(intercept + slope * targetKm)),
+    perKm: Math.round(slope * 100) / 100,
+    basis: "regression",
+  };
+}

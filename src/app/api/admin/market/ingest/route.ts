@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getUsdUzsRate } from "@/lib/fx-rate";
-import { toUsd, priceToUsd, fingerprint } from "@/lib/market-intel";
+import { toUsd, priceToUsd, fingerprint, extractMileageKm, extractCondition } from "@/lib/market-intel";
 import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
@@ -89,22 +89,27 @@ export async function POST(request: NextRequest) {
         brand: l.brand,
         model: l.model,
         year: l.year ?? null,
-        mileage_km: l.mileage_km ?? null,
+        // Backfill structured fields from free-text when the collector didn't send
+        // them ($0 heuristics — no LLM). Mileage feeds the hedonic trade-in model.
+        mileage_km: l.mileage_km ?? extractMileageKm(l.raw_text),
         price_usd: priceUsd,
         price_raw: l.price_raw ?? null,
         currency_raw: l.currency ?? null,
-        condition: l.condition ?? null,
+        condition: l.condition ?? extractCondition(l.raw_text),
         city: l.city ?? null,
         posted_at: l.posted_at ?? null,
         raw_text: l.raw_text ?? null,
         fingerprint: fp,
+        last_seen_at: new Date().toISOString(), // bumped on every re-scrape → days-on-market
       };
     })
     .filter(Boolean);
 
+  // Upsert (update on conflict) so re-seeing a listing refreshes last_seen_at + price
+  // without touching observed_at (first seen) — that delta IS the days-on-market signal.
   const { error, count } = await supabase
     .from("market_listings")
-    .upsert(rows as object[], { onConflict: "fingerprint", ignoreDuplicates: true, count: "exact" });
+    .upsert(rows as object[], { onConflict: "fingerprint", ignoreDuplicates: false, count: "exact" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, received: parsed.data.listings.length, stored: count ?? rows.length });
