@@ -27,6 +27,8 @@ export async function makePageMetadata(
     title: c.title,
     description: c.description,
     alternates: localizedAlternates(path, locale),
-    openGraph: { title: c.title, description: c.description },
+    // Next shallow-replaces openGraph, so we must re-declare images here or the
+    // root layout's og:image is dropped on every makePageMetadata page.
+    openGraph: { title: c.title, description: c.description, images: ["/opengraph-image"] },
   };
 }
