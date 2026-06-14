@@ -18,10 +18,13 @@ export type SeoLocale = (typeof LOCALES)[number];
 export function localizedAlternates(path: string, locale: SeoLocale) {
   const clean = path.startsWith("/") ? path : `/${path}`;
   const trimmed = clean === "/" ? "" : clean;
+  const languages = Object.fromEntries(
+    LOCALES.map((l) => [l, `${SITE_CONFIG.url}/${l}${trimmed}`]),
+  ) as Record<string, string>;
+  // x-default for unmatched locales → the primary-market (ru) version.
+  languages["x-default"] = `${SITE_CONFIG.url}/ru${trimmed}`;
   return {
     canonical: `${SITE_CONFIG.url}/${locale}${trimmed}`,
-    languages: Object.fromEntries(
-      LOCALES.map((l) => [l, `${SITE_CONFIG.url}/${l}${trimmed}`]),
-    ) as Record<SeoLocale, string>,
+    languages,
   };
 }

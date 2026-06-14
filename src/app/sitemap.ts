@@ -35,10 +35,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const alternatesFor = (path: string) => {
-    const languages = Object.fromEntries(
+    const languages: Record<string, string> = Object.fromEntries(
       locales.map((locale) => [locale, `${baseUrl}/${locale}${path}`]),
     );
-    return { languages } as const;
+    languages["x-default"] = `${baseUrl}/ru${path}`;
+    return { languages };
   };
 
   const staticPages = staticPaths.flatMap(({ path, changeFrequency, priority }) =>
