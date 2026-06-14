@@ -46,6 +46,7 @@ const navGroups: NavGroup[] = [
     section: { ru: "Закупка и импорт", uz: "Xarid va import", en: "Buy & import" },
     items: [
       { href: "/admin/buying", label: { ru: "Закупочный ИИ", uz: "Xarid AI", en: "Buying Brain" }, icon: Target },
+      { href: "/admin/deals", label: { ru: "Выгодные сделки", uz: "Foydali bitimlar", en: "Deal Sniper" }, icon: Tag },
       { href: "/admin/demand", label: { ru: "Спрос", uz: "Talab", en: "Demand" }, icon: TrendingUp },
       { href: "/admin/market", label: { ru: "Рынок", uz: "Bozor tahlili", en: "Market Intel" }, icon: LineChart },
       { href: "/admin/procurement", label: { ru: "Снабжение", uz: "Ta'minot", en: "Procurement" }, icon: Truck },
