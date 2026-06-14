@@ -24,6 +24,8 @@ export interface Car {
   is_hot_offer: boolean;
   is_available: boolean;
   inventory_status?: "available" | "reserved" | "sold";
+  /** Physically in Tashkent and sellable now — admin-toggled. Gates the Reserve CTA. */
+  in_stock?: boolean;
   listing_type?: "new" | "used";
   vin?: string | null;
   owners_count?: number | null;

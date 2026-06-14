@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getCustomerContext } from "@/lib/customer-auth";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { scrubCarsForPublic } from "@/lib/cars-query";
 import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/recommend";
 
 /**
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
       personalized = false;
     }
 
+    scrubCarsForPublic(recommended);
     return NextResponse.json(
       { cars: recommended, personalized },
       { headers: { "Cache-Control": "private, max-age=60" } },

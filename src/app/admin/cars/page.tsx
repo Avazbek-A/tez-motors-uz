@@ -111,6 +111,7 @@ const COPY: Record<Locale, {
   remove: string;
   moveRight: string;
   hotOffer: string;
+  inStock: string;
   inventoryStatus: string;
   invAvailable: string;
   invReserved: string;
@@ -218,6 +219,7 @@ const COPY: Record<Locale, {
     remove: "Удалить",
     moveRight: "Вправо",
     hotOffer: "Горячее предложение",
+    inStock: "В наличии (Ташкент) — показывать «Забронировать»",
     inventoryStatus: "Статус наличия",
     invAvailable: "В наличии",
     invReserved: "Забронировано",
@@ -326,6 +328,7 @@ const COPY: Record<Locale, {
     remove: "Oʻchirish",
     moveRight: "Oʻngga",
     hotOffer: "Issiq taklif",
+    inStock: "Sotuvda (Toshkent) — «Band qilish» ko'rsatilsin",
     inventoryStatus: "Mavjudlik holati",
     invAvailable: "Mavjud",
     invReserved: "Band qilingan",
@@ -434,6 +437,7 @@ const COPY: Record<Locale, {
     remove: "Remove",
     moveRight: "Move right",
     hotOffer: "Hot Offer",
+    inStock: "In stock (Tashkent) — show Reserve",
     inventoryStatus: "Inventory Status",
     invAvailable: "Available",
     invReserved: "Reserved",
@@ -897,6 +901,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [descriptionRu, setDescriptionRu] = useState(car?.description_ru || "");
   const [videoUrl, setVideoUrl] = useState(car?.video_url || "");
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
+  const [inStock, setInStock] = useState(car?.in_stock || false);
   const [inventoryStatus, setInventoryStatus] = useState<string>(car?.inventory_status || "available");
   const [listingType, setListingType] = useState<string>(car?.listing_type || "new");
   const [mileage, setMileage] = useState<string>(car?.mileage != null ? String(car.mileage) : "0");
@@ -987,6 +992,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       description_ru: descriptionRu,
       video_url: videoUrl || null,
       is_hot_offer: isHotOffer,
+      in_stock: inStock,
       inventory_status: inventoryStatus,
       mileage: parseInt(mileage) || 0,
       listing_type: listingType,
@@ -1338,7 +1344,7 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
             )}
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-wrap">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -1347,6 +1353,15 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
                 className="rounded"
               />
               <span className="text-sm">{t.hotOffer}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={inStock}
+                onChange={(e) => setInStock(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">{t.inStock}</span>
             </label>
           </div>
 

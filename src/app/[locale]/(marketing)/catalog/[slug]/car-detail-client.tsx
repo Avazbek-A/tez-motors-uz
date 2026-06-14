@@ -31,7 +31,6 @@ import { useSiteSettings } from "@/lib/site-settings-context";
 import type { Car } from "@/types/car";
 import { Turnstile } from "@/components/shared/turnstile";
 import { ReservationModal } from "@/components/car/reservation-modal";
-import { TestDriveModal } from "@/components/car/test-drive-modal";
 
 export default function CarDetailPage() {
   const params = useParams();
@@ -47,7 +46,6 @@ export default function CarDetailPage() {
   const [form, setForm] = useState({ name: "", phone: "", message: "" });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [showReserve, setShowReserve] = useState(false);
-  const [showTestDrive, setShowTestDrive] = useState(false);
   const [financing, setFinancing] = useState(false);
 
   useEffect(() => {
@@ -426,22 +424,18 @@ export default function CarDetailPage() {
                 <FavoriteButton carId={car.id} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              {/* Reserve is only for cars physically in Tashkent the dealer can sell now
+                  (admin-toggled in_stock). For import-to-order cars it's hidden — the
+                  inquiry form + contact CTAs below remain the path. */}
+              {car.in_stock && car.inventory_status === "available" && (
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => setShowTestDrive(true)}
-                >
-                  Test drive
-                </Button>
-                <Button
-                  type="button"
+                  className="w-full mb-4"
                   onClick={() => setShowReserve(true)}
-                  disabled={car.inventory_status !== "available"}
                 >
-                  Reserve
+                  {locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать"}
                 </Button>
-              </div>
+              )}
               {car.spec_data && (car.spec_data.trims?.length ?? 0) > 0 && (
                 <Button type="button" asChild className="w-full mb-4">
                   <Link href={localizedPath(locale, `/catalog/${car.slug}/spec`)}>
@@ -449,11 +443,6 @@ export default function CarDetailPage() {
                   </Link>
                 </Button>
               )}
-              <Button type="button" variant="outline" asChild className="w-full mb-4">
-                <a href={`/api/cars/${car.id}/spec-sheet?locale=${locale}`} download>
-                  Download PDF spec sheet
-                </a>
-              </Button>
               <Button type="button" variant="outline" asChild className="w-full mb-4">
                 <Link
                   href={localizedPath(
@@ -543,12 +532,6 @@ export default function CarDetailPage() {
         carName={`${car.brand} ${car.model}`}
         open={showReserve}
         onClose={() => setShowReserve(false)}
-      />
-      <TestDriveModal
-        carId={car.id}
-        carName={`${car.brand} ${car.model}`}
-        open={showTestDrive}
-        onClose={() => setShowTestDrive(false)}
       />
     </div>
   );

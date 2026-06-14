@@ -6,6 +6,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { scopeToTenant } from "@/lib/tenant-context";
+import { stripPublicSpecData, type SpecData } from "@/lib/autohome-spec";
+
+/** Strip internal provenance fields from spec_data on each public row (in place). */
+export function scrubCarsForPublic<T>(rows: T[]): T[] {
+  for (const row of rows) {
+    const r = row as { spec_data?: SpecData | null };
+    if (r && r.spec_data) r.spec_data = stripPublicSpecData(r.spec_data);
+  }
+  return rows;
+}
 
 interface Sortable {
   price_usd: number;
@@ -97,5 +107,8 @@ export async function fetchCarsPage(
 
   const { data, count, error } = await query;
   if (error) throw error;
+  // Public reads get internal spec_data fields stripped; admin (includeAll) keeps them
+  // so the dealer can still see series_id/source for re-import etc.
+  if (!opts.includeAll) scrubCarsForPublic(data || []);
   return { cars: applySort((data || []) as unknown as Sortable[], opts.sort ?? null), total: count || 0 };
 }

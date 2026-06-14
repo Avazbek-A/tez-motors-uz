@@ -41,6 +41,7 @@ export const PUBLIC_CAR_COLUMNS = [
   "is_hot_offer",
   "is_available",
   "inventory_status",
+  "in_stock",
   "order_position",
   "specs",
   "spec_data",

@@ -116,6 +116,23 @@ export function localizedSpecView(spec: SpecData, locale: "ru" | "uz" | "en"): L
   return { groups: spec.groups, trims: spec.trims };
 }
 
+/** Internal/provenance keys that must never reach public clients — they ride inside
+ *  the spec_data jsonb but are not rendered, and they reveal the upstream source /
+ *  AutoHome ids. Collectors read the DB directly with the service key, so stripping
+ *  these from the PUBLIC projection doesn't affect scraping. */
+const INTERNAL_SPEC_KEYS = ["source", "source_url", "captured_at", "series_id", "confidence", "untranslated", "brand", "model"];
+
+/** Return spec_data safe to send to anonymous visitors: display fields only
+ *  (groups, trims, i18n, colors, gallery, 360/video, customs/gonzo prices). Pure. */
+export function stripPublicSpecData(spec: SpecData | null | undefined): SpecData | null {
+  if (!spec || typeof spec !== "object") return (spec as SpecData | null) ?? null;
+  const out: Record<string, unknown> = { ...spec };
+  for (const k of INTERNAL_SPEC_KEYS) delete out[k];
+  // Internal keys are intentionally absent from the public projection; the UI only
+  // reads display fields, so the SpecData shape is satisfied at the use sites.
+  return out as unknown as SpecData;
+}
+
 type TrimSignals = { dt: string; pt: string; kwh: number; seats: number; long: boolean };
 
 /** Extract drivetrain / powertrain / battery-kWh / seats signals from a trim label

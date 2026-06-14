@@ -32,6 +32,9 @@ export const carWriteSchema = z.object({
   thumbnail: safeHttpUrlNullable,
   video_url: safeHttpUrlNullable,
   is_hot_offer: z.boolean().default(false),
+  // Physically in Tashkent + sellable now. Gates the public Reserve CTA (import-to-
+  // order cars leave this false and only show the inquiry path).
+  in_stock: z.boolean().default(false),
   // is_available is a GENERATED column derived from inventory_status (migration 022);
   // it is never written directly. inventory_status is the single source of truth.
   inventory_status: z.enum(["available", "reserved", "sold"]).default("available"),

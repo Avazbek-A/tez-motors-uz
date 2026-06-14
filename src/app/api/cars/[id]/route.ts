@@ -7,6 +7,7 @@ import { notifyPriceWatchers } from "@/lib/price-watch";
 import { logEvent } from "@/lib/error-report";
 import { logAdminAction, compactDiff } from "@/lib/audit";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { stripPublicSpecData, type SpecData } from "@/lib/autohome-spec";
 
 // GET single car by ID or slug
 export async function GET(
@@ -40,6 +41,10 @@ export async function GET(
     if (error || !car) {
       return NextResponse.json({ error: "Car not found" }, { status: 404 });
     }
+
+    // Strip internal provenance fields from spec_data before it reaches the client.
+    const c = car as { spec_data?: SpecData | null };
+    if (c.spec_data) c.spec_data = stripPublicSpecData(c.spec_data);
 
     return NextResponse.json(
       { car },
