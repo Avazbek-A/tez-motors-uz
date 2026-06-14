@@ -14,7 +14,7 @@ import { timingSafeEqual } from "@/lib/timing-safe";
  * presenting `Authorization: Bearer $MARKET_INGEST_SECRET`. Fail-closed.
  */
 const listingSchema = z.object({
-  source: z.enum(["olx", "telegram", "manual", "other"]).optional(),
+  source: z.enum(["olx", "avtoelon", "telegram", "manual", "other"]).optional(),
   source_ref: z.string().max(400).optional().nullable(),
   brand: z.string().min(1).max(60),
   model: z.string().min(1).max(80),
@@ -30,7 +30,7 @@ const listingSchema = z.object({
 });
 
 const bodySchema = z.object({
-  source: z.enum(["olx", "telegram", "manual", "other"]).optional(),
+  source: z.enum(["olx", "avtoelon", "telegram", "manual", "other"]).optional(),
   listings: z.array(listingSchema).min(1).max(500),
 });
 
