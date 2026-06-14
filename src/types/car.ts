@@ -26,6 +26,10 @@ export interface Car {
   inventory_status?: "available" | "reserved" | "sold";
   /** Physically in Tashkent and sellable now — admin-toggled. Gates the Reserve CTA. */
   in_stock?: boolean;
+  /** Value inputs (pricing-engine Phase 5). */
+  in_service_date?: string | null;
+  battery_soh_pct?: number | null;
+  import_channel?: "official" | "gray" | null;
   listing_type?: "new" | "used";
   vin?: string | null;
   owners_count?: number | null;

@@ -112,6 +112,11 @@ const COPY: Record<Locale, {
   moveRight: string;
   hotOffer: string;
   inStock: string;
+  inServiceDate: string;
+  batterySoh: string;
+  importChannel: string;
+  channelOfficial: string;
+  channelGray: string;
   inventoryStatus: string;
   invAvailable: string;
   invReserved: string;
@@ -220,6 +225,11 @@ const COPY: Record<Locale, {
     moveRight: "Вправо",
     hotOffer: "Горячее предложение",
     inStock: "В наличии (Ташкент) — показывать «Забронировать»",
+    inServiceDate: "Дата ввода в эксплуатацию (гарантия)",
+    batterySoh: "Здоровье батареи, %",
+    importChannel: "Канал импорта",
+    channelOfficial: "Официальный",
+    channelGray: "Серый",
     inventoryStatus: "Статус наличия",
     invAvailable: "В наличии",
     invReserved: "Забронировано",
@@ -329,6 +339,11 @@ const COPY: Record<Locale, {
     moveRight: "Oʻngga",
     hotOffer: "Issiq taklif",
     inStock: "Sotuvda (Toshkent) — «Band qilish» ko'rsatilsin",
+    inServiceDate: "Ishga tushirilgan sana (kafolat)",
+    batterySoh: "Batareya holati, %",
+    importChannel: "Import kanali",
+    channelOfficial: "Rasmiy",
+    channelGray: "Kulrang",
     inventoryStatus: "Mavjudlik holati",
     invAvailable: "Mavjud",
     invReserved: "Band qilingan",
@@ -438,6 +453,11 @@ const COPY: Record<Locale, {
     moveRight: "Move right",
     hotOffer: "Hot Offer",
     inStock: "In stock (Tashkent) — show Reserve",
+    inServiceDate: "In-service date (warranty)",
+    batterySoh: "Battery health, %",
+    importChannel: "Import channel",
+    channelOfficial: "Official",
+    channelGray: "Gray",
     inventoryStatus: "Inventory Status",
     invAvailable: "Available",
     invReserved: "Reserved",
@@ -903,6 +923,9 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
   const [isHotOffer, setIsHotOffer] = useState(car?.is_hot_offer || false);
   const [inStock, setInStock] = useState(car?.in_stock || false);
   const [inventoryStatus, setInventoryStatus] = useState<string>(car?.inventory_status || "available");
+  const [inServiceDate, setInServiceDate] = useState(car?.in_service_date || "");
+  const [batterySoh, setBatterySoh] = useState(car?.battery_soh_pct?.toString() || "");
+  const [importChannel, setImportChannel] = useState<string>(car?.import_channel || "");
   const [listingType, setListingType] = useState<string>(car?.listing_type || "new");
   const [mileage, setMileage] = useState<string>(car?.mileage != null ? String(car.mileage) : "0");
   const [vin, setVin] = useState(car?.vin || "");
@@ -994,6 +1017,9 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
       is_hot_offer: isHotOffer,
       in_stock: inStock,
       inventory_status: inventoryStatus,
+      in_service_date: inServiceDate || null,
+      battery_soh_pct: batterySoh ? parseInt(batterySoh) : null,
+      import_channel: importChannel || null,
       mileage: parseInt(mileage) || 0,
       listing_type: listingType,
       vin: listingType === "used" ? (vin || null) : null,
@@ -1363,6 +1389,42 @@ function CarFormModal({ car, onClose, onSaved }: { car: CarType | null; onClose:
               />
               <span className="text-sm">{t.inStock}</span>
             </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">{t.inServiceDate}</label>
+              <input
+                type="date"
+                value={inServiceDate}
+                onChange={(e) => setInServiceDate(e.target.value)}
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">{t.batterySoh}</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={batterySoh}
+                onChange={(e) => setBatterySoh(e.target.value)}
+                placeholder="%"
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">{t.importChannel}</label>
+              <select
+                value={importChannel}
+                onChange={(e) => setImportChannel(e.target.value)}
+                className="w-full h-11 rounded-xl border border-border px-3 text-sm"
+              >
+                <option value="">—</option>
+                <option value="official">{t.channelOfficial}</option>
+                <option value="gray">{t.channelGray}</option>
+              </select>
+            </div>
           </div>
 
           <div>

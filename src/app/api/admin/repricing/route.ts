@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { median, cleanCarPrices, mileageAdjustedValue, priceTrend } from "@/lib/market-intel";
-import { holdingCost } from "@/lib/market-analytics";
+import { holdingCost, valueAdjustmentFactor, warrantyMonthsLeft } from "@/lib/market-analytics";
 import { baseModelKey } from "@/lib/model-normalize";
 
 /**
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const [carsRes, marketRes] = await Promise.all([
       supabase
         .from("cars")
-        .select("id, slug, brand, model, year, price_usd, mileage, inventory_status, in_stock, created_at")
+        .select("id, slug, brand, model, year, price_usd, mileage, inventory_status, in_stock, created_at, in_service_date, battery_soh_pct, import_channel")
         .or("in_stock.eq.true,inventory_status.eq.available")
         .limit(MAX),
       supabase
@@ -67,9 +67,17 @@ export async function GET(request: NextRequest) {
       if (comps.length < MIN_COMPS) continue;
 
       const mileage = num(c.mileage);
-      const fair =
+      const baseFair =
         mileage > 1000 ? mileageAdjustedValue(comps, mileage).value : median(cleanCarPrices(comps.map((x) => x.price_usd)));
-      if (fair == null || fair <= 0) continue;
+      if (baseFair == null || baseFair <= 0) continue;
+      // Adjust the market fair for attributes the median can't see: battery health,
+      // warranty remaining, official-vs-gray provenance (Phase 5 value inputs).
+      const adj = valueAdjustmentFactor({
+        batterySohPct: c.battery_soh_pct == null ? null : num(c.battery_soh_pct),
+        warrantyMonthsLeft: warrantyMonthsLeft(c.in_service_date as string | null),
+        importChannel: (c.import_channel as string) ?? null,
+      });
+      const fair = Math.round(baseFair * adj);
 
       const createdMs = Date.parse((c.created_at as string) || "") || now;
       const daysInStock = Math.max(0, Math.floor((now - createdMs) / 86_400_000));

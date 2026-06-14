@@ -347,3 +347,38 @@ export function holdingCost(vehicleCostUsd: number, daysHeld: number, opts?: { a
   const fixed = (opts?.perDayFixedUsd ?? 0) * daysHeld;
   return Math.round(capital + fixed);
 }
+
+// ─── 13. New value inputs: battery SoH, warranty remaining, provenance ────────
+/** Months of factory warranty left, given in-service date + total warranty length. */
+export function warrantyMonthsLeft(inServiceDate: string | null | undefined, opts?: { now?: number; warrantyMonths?: number }): number | null {
+  if (!inServiceDate) return null;
+  const start = Date.parse(inServiceDate);
+  if (!Number.isFinite(start)) return null;
+  const now = opts?.now ?? Date.now();
+  const total = opts?.warrantyMonths ?? 36;
+  const elapsedMonths = (now - start) / (DAY * 30.44);
+  return Math.max(0, Math.round(total - elapsedMonths));
+}
+
+/**
+ * Value multiplier from attributes the market median can't see. Battery health is
+ * the dominant driver for EVs (~0.4% per SoH point below 100); warranty remaining
+ * adds up to +5%; official import commands a premium, gray a discount. Clamped to a
+ * sane band so bad inputs can't produce absurd values.
+ */
+export function valueAdjustmentFactor(opts: {
+  batterySohPct?: number | null;
+  warrantyMonthsLeft?: number | null;
+  importChannel?: string | null;
+}): number {
+  let f = 1;
+  if (opts.batterySohPct != null && opts.batterySohPct > 0 && opts.batterySohPct <= 100) {
+    f *= 1 - (100 - opts.batterySohPct) * 0.004;
+  }
+  if (opts.warrantyMonthsLeft != null && opts.warrantyMonthsLeft > 0) {
+    f *= 1 + Math.min(0.05, (opts.warrantyMonthsLeft / 36) * 0.05);
+  }
+  if (opts.importChannel === "official") f *= 1.03;
+  else if (opts.importChannel === "gray") f *= 0.95;
+  return Math.max(0.5, Math.min(1.2, Math.round(f * 1000) / 1000));
+}

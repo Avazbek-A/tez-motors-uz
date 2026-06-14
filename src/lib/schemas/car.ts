@@ -38,6 +38,10 @@ export const carWriteSchema = z.object({
   // is_available is a GENERATED column derived from inventory_status (migration 022);
   // it is never written directly. inventory_status is the single source of truth.
   inventory_status: z.enum(["available", "reserved", "sold"]).default("available"),
+  // Value inputs (pricing-engine Phase 5): warranty start, EV battery health, provenance.
+  in_service_date: z.string().optional().nullable(),
+  battery_soh_pct: z.number().int().min(0).max(100).optional().nullable(),
+  import_channel: z.enum(["official", "gray"]).optional().nullable(),
   order_position: z.number().int().min(0).default(0),
   specs: z.record(z.string(), z.unknown()).default({}),
 });

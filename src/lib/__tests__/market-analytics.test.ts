@@ -15,6 +15,8 @@ import {
   extractVin,
   vinJourneys,
   holdingCost,
+  warrantyMonthsLeft,
+  valueAdjustmentFactor,
 } from "../market-analytics";
 
 const now = Date.parse("2026-06-14T00:00:00Z");
@@ -183,5 +185,26 @@ describe("holdingCost", () => {
     // $20000 at 24%/yr for ~183d ≈ $2400
     expect(holdingCost(20000, 365, { annualCapitalCostPct: 24 })).toBe(4800);
     expect(holdingCost(20000, 0)).toBe(0);
+  });
+});
+
+describe("warrantyMonthsLeft", () => {
+  it("counts down a 36-month warranty", () => {
+    const oneYearAgo = new Date(now - 365 * day).toISOString().slice(0, 10);
+    expect(warrantyMonthsLeft(oneYearAgo, { now })).toBe(24);
+    expect(warrantyMonthsLeft(null)).toBeNull();
+  });
+});
+
+describe("valueAdjustmentFactor", () => {
+  it("discounts a degraded battery", () => {
+    expect(valueAdjustmentFactor({ batterySohPct: 80 })).toBeCloseTo(0.92, 2); // -20pts × 0.4%
+  });
+  it("rewards warranty + official import, penalizes gray", () => {
+    expect(valueAdjustmentFactor({ warrantyMonthsLeft: 36, importChannel: "official" })).toBeGreaterThan(1);
+    expect(valueAdjustmentFactor({ importChannel: "gray" })).toBeLessThan(1);
+  });
+  it("is neutral with no inputs", () => {
+    expect(valueAdjustmentFactor({})).toBe(1);
   });
 });
