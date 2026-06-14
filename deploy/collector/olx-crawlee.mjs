@@ -131,7 +131,10 @@ async function main() {
   await apiCrawler.run(searches.map((s) => ({ url: apiUrl(s.q), userData: { q: s.q } })));
 
   // --- Pass 2: PlaywrightCrawler fallback for queries the API didn't cover ---
-  const missing = searches.filter((s) => !gotResults.has(s.q));
+  // OLX_NO_BROWSER=1 skips this — essential for big catalog-driven runs where many
+  // niche models legitimately have zero OLX listings (empty API result ≠ block), so
+  // we don't fire a slow Playwright render per empty model. The API is the workhorse.
+  const missing = process.env.OLX_NO_BROWSER === "1" ? [] : searches.filter((s) => !gotResults.has(s.q));
   if (missing.length) {
     log.info(`browser fallback for ${missing.length} query(ies) the API missed`);
     const browserCrawler = new PlaywrightCrawler({

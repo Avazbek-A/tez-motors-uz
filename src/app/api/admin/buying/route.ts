@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getFxRates } from "@/lib/fx-rate";
-import { median } from "@/lib/market-intel";
+import { median, cleanCarPrices } from "@/lib/market-intel";
 import {
   computeLandedCost,
   suggestedListPrice,
@@ -152,8 +152,11 @@ export async function GET(request: NextRequest) {
       });
 
       const mk = marketByKey.get(k);
-      const marketMedian = mk ? median(mk.prices) : null;
-      const sampleSize = mk ? mk.prices.length : 0;
+      // Clean parts/junk/outliers out of the comp cloud before the median, and
+      // report the cleaned sample as the confidence signal.
+      const cleanedPrices = mk ? cleanCarPrices(mk.prices) : [];
+      const marketMedian = cleanedPrices.length ? median(cleanedPrices) : null;
+      const sampleSize = cleanedPrices.length;
       const latest = mk && mk.dates.length ? mk.dates.sort().slice(-1)[0] : null;
       const freshnessDays = latest ? Math.floor((Date.now() - new Date(latest).getTime()) / 86_400_000) : null;
 

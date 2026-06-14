@@ -100,6 +100,25 @@ export function median(nums: number[]): number | null {
   return xs.length % 2 ? xs[mid] : Math.round((xs[mid - 1] + xs[mid]) / 2);
 }
 
+/** No real Chinese-import car sells below this; cheaper "matches" are parts /
+ *  accessories / services / typos that keyword search drags in. */
+export const CAR_PRICE_FLOOR_USD = 2000;
+
+/**
+ * Clean a price cluster before taking a market median. OLX/Telegram keyword
+ * matching pulls in junk ($5 floor-mats under "Jolion", a rent-per-day rate, a
+ * mistyped price), which wrecks the median. Two passes: (1) drop anything below
+ * the car-price floor, (2) drop values far from the provisional median (wrong-
+ * model matches / typos). Returns the kept comps. Pure.
+ */
+export function cleanCarPrices(prices: number[]): number[] {
+  const floored = prices.filter((n) => Number.isFinite(n) && n >= CAR_PRICE_FLOOR_USD);
+  if (floored.length < 2) return floored;
+  const m0 = median(floored);
+  if (m0 == null) return floored;
+  return floored.filter((n) => n >= 0.4 * m0 && n <= 2.5 * m0);
+}
+
 export interface ModelGroup {
   brand: string;
   model: string;
@@ -134,7 +153,9 @@ export function summarize(listings: ListingLike[]): ModelGroup[] {
 
   const out: ModelGroup[] = [];
   for (const arr of buckets.values()) {
-    const prices = arr.map((l) => Number(l.price_usd)).filter((n) => Number.isFinite(n) && n > 0);
+    // Clean junk/outliers before the median; `count` reflects the comps actually
+    // used (real confidence), not the raw match count (which includes parts etc.).
+    const prices = cleanCarPrices(arr.map((l) => Number(l.price_usd)).filter((n) => Number.isFinite(n) && n > 0));
     const dates = arr.map((l) => l.observed_at).filter(Boolean) as string[];
     out.push({
       brand: arr[0].brand,
@@ -143,7 +164,7 @@ export function summarize(listings: ListingLike[]): ModelGroup[] {
       medianUsd: median(prices),
       minUsd: prices.length ? Math.min(...prices) : null,
       maxUsd: prices.length ? Math.max(...prices) : null,
-      count: arr.length,
+      count: prices.length,
       latestObservedAt: dates.length ? dates.sort().slice(-1)[0] : null,
     });
   }

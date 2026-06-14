@@ -7,7 +7,25 @@ import {
   median,
   summarize,
   profitability,
+  cleanCarPrices,
 } from "../market-intel";
+
+describe("cleanCarPrices", () => {
+  it("drops parts/junk below the car-price floor", () => {
+    // OLX 'Jolion' search pulls in $5 mats etc.; real cars cluster ~$21k.
+    const cleaned = cleanCarPrices([5, 75, 300, 21000, 22000, 20000, 23000, 26000]);
+    expect(cleaned).not.toContain(5);
+    expect(cleaned).not.toContain(300);
+    expect(median(cleaned)).toBeGreaterThan(15000);
+  });
+  it("trims extreme outliers around the provisional median", () => {
+    expect(cleanCarPrices([20000, 21000, 22000, 23000, 82000])).not.toContain(82000);
+  });
+  it("keeps a thin cluster as-is when too few to trim", () => {
+    expect(cleanCarPrices([19048])).toEqual([19048]);
+    expect(cleanCarPrices([5, 75])).toEqual([]); // all junk → empty
+  });
+});
 
 describe("parseMoney", () => {
   it("parses USD listings", () => {
