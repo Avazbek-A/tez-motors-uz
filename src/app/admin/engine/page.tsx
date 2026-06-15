@@ -34,7 +34,7 @@ interface PolicySim {
   catalog: { carsCounted: number; avgExtraLandedUsd: number; totalMarginImpactUsd: number; carsFlippedUnprofitable: number };
 }
 interface SearchStats {
-  bing: { configured: boolean; verified: boolean } | null;
+  bing: { configured: boolean; verified: boolean; clicks?: number; impressions?: number } | null;
   yandex: { configured: boolean; verified: boolean; loaded: boolean; sqi?: number | null; searchablePages?: number | null; status?: string; topQueries?: { query: string; shows: number; clicks: number }[] } | null;
   google: {
     configured: boolean;
@@ -141,6 +141,21 @@ export default function AdminEnginePage() {
       if (d?.ok) setCov(d);
     } finally {
       setCovBusy(false);
+    }
+  };
+
+  const [resubBusy, setResubBusy] = useState(false);
+  const [resubResult, setResubResult] = useState<string | null>(null);
+  const resubmitSitemap = async () => {
+    setResubBusy(true);
+    setResubResult(null);
+    try {
+      const d = await fetch("/api/admin/resubmit-sitemap", { method: "POST" }).then((r) => r.json());
+      setResubResult(d?.ok ? `Google ${d.google?.status === 204 ? "✓" : d.google?.status} · Yandex ${d.yandex?.ok ? "✓" : d.yandex?.status}` : "✗ failed");
+    } catch {
+      setResubResult("✗ failed");
+    } finally {
+      setResubBusy(false);
     }
   };
 
@@ -268,7 +283,9 @@ export default function AdminEnginePage() {
                   {!search.bing?.configured ? (
                     <span className="text-muted-foreground">not configured</span>
                   ) : search.bing.verified ? (
-                    <span className="text-[var(--success)]">verified</span>
+                    <span className="text-[var(--success)]">
+                      verified{(search.bing.impressions ?? 0) > 0 ? ` · ${search.bing.clicks} clicks · ${search.bing.impressions} impr` : ""}
+                    </span>
                   ) : (
                     <span className="text-[var(--danger)]">not verified</span>
                   )}
@@ -317,9 +334,15 @@ export default function AdminEnginePage() {
                 )}
 
                 <div className="mt-1 border-t border-border pt-2">
-                  <button onClick={checkCoverage} disabled={covBusy} className="border border-primary px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50">
-                    {covBusy ? "checking…" : "Check Google index coverage"}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button onClick={checkCoverage} disabled={covBusy} className="border border-primary px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50">
+                      {covBusy ? "checking…" : "Check Google index coverage"}
+                    </button>
+                    <button onClick={resubmitSitemap} disabled={resubBusy} className="border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/40 disabled:opacity-50">
+                      {resubBusy ? "…" : "Re-submit sitemap (Google/Yandex)"}
+                    </button>
+                    {resubResult && <span className="font-mono text-[11px] text-muted-foreground">{resubResult}</span>}
+                  </div>
                   {cov && (
                     <div className="mt-1.5 text-xs">
                       <span className={`font-mono ${cov.indexed === cov.checked ? "text-[var(--success)]" : "text-foreground"}`}>{cov.indexed}/{cov.checked} car pages indexed</span>

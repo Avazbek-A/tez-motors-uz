@@ -31,14 +31,26 @@ export interface BingStats {
   configured: boolean;
   verified: boolean;
   url?: string;
+  clicks?: number;
+  impressions?: number;
 }
 
 export async function bingStats(): Promise<BingStats> {
   if (!process.env.BING_WEBMASTER_KEY) return { configured: false, verified: false };
-  const data = await bingCall("GetUserSites");
+  const [data, traffic] = await Promise.all([
+    bingCall("GetUserSites"),
+    bingCall(`GetRankAndTrafficStats?siteUrl=${encodeURIComponent("https://tezmotors.uz")}`),
+  ]);
   const sites = (data?.d as { Url?: string; IsVerified?: boolean }[] | undefined) || [];
   const site = sites.find((s) => String(s.Url || "").includes("tezmotors.uz"));
-  return { configured: true, verified: !!site?.IsVerified, url: site?.Url };
+  const rows = (traffic?.d as { Clicks?: number; Impressions?: number }[] | undefined) || [];
+  return {
+    configured: true,
+    verified: !!site?.IsVerified,
+    url: site?.Url,
+    clicks: rows.reduce((a, r) => a + (Number(r.Clicks) || 0), 0),
+    impressions: rows.reduce((a, r) => a + (Number(r.Impressions) || 0), 0),
+  };
 }
 
 // ─── Yandex ───────────────────────────────────────────────────────────────────
@@ -112,7 +124,7 @@ async function googleToken(): Promise<string | null> {
     const unsigned =
       b64({ alg: "RS256", typ: "JWT" }) +
       "." +
-      b64({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/webmasters.readonly", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 });
+      b64({ iss: sa.client_email, scope: "https://www.googleapis.com/auth/webmasters", aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 });
     const sig = crypto.createSign("RSA-SHA256").update(unsigned).sign(sa.private_key, "base64url");
     const tok = (await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -225,4 +237,45 @@ export async function googleIndexCoverage(items: { url: string; path: string; la
     indexed: results.filter((r) => r.indexed).length,
     notIndexed: results.filter((r) => !r.indexed).map((r) => ({ label: r.label, path: r.path, state: r.state })),
   };
+}
+
+// ─── Programmatic sitemap re-submission ───────────────────────────────────────
+// Bing isn't here: it has no key-API sitemap-submit endpoint (it auto-discovers
+// from robots.txt + IndexNow), so there's nothing to call.
+const SITEMAP_URL = "https://tezmotors.uz/sitemap.xml";
+
+export async function googleSubmitSitemap(): Promise<{ ok: boolean; status: number }> {
+  const token = await googleToken();
+  if (!token) return { ok: false, status: 0 };
+  try {
+    const res = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(GSC_SITE)}/sitemaps/${encodeURIComponent(SITEMAP_URL)}`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { ok: res.ok, status: res.status }; // 204 = submitted
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
+export async function yandexSubmitSitemap(): Promise<{ ok: boolean; status: number }> {
+  const tok = process.env.YANDEX_WEBMASTER_OAUTH;
+  if (!tok) return { ok: false, status: 0 };
+  const user = await yandexCall("/user/");
+  const uid = user?.user_id;
+  if (!uid) return { ok: false, status: 0 };
+  const hosts = await yandexCall(`/user/${uid}/hosts/`);
+  const list = (hosts?.hosts as { host_id?: string; unicode_host_url?: string }[] | undefined) || [];
+  const host = list.find((h) => String(h.unicode_host_url || "").startsWith("https://tezmotors.uz")) || list[0];
+  if (!host?.host_id) return { ok: false, status: 0 };
+  try {
+    const res = await fetch(`${YBASE}/user/${uid}/hosts/${host.host_id}/user-added-sitemaps/`, {
+      method: "POST",
+      headers: { Authorization: `OAuth ${tok}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: SITEMAP_URL }),
+    });
+    return { ok: res.ok || res.status === 409, status: res.status }; // 201 new, 409 already-added
+  } catch {
+    return { ok: false, status: 0 };
+  }
 }
