@@ -34,6 +34,7 @@ export function CarColorsGallery({
   brand,
   model,
   locale,
+  hasPano = false,
 }: {
   images: string[];
   exteriorColors?: CarColor[];
@@ -41,6 +42,9 @@ export function CarColorsGallery({
   brand: string;
   model: string;
   locale: string;
+  /** Car has a 360° walkthrough below — interior swatches route to it (AutoHome
+   *  has no interior stills, so we never show exterior photos as "interior"). */
+  hasPano?: boolean;
 }) {
   const ext = exteriorColors.filter((c) => c?.hex);
   const int = interiorColors.filter((c) => c?.hex);
@@ -87,9 +91,27 @@ export function CarColorsGallery({
       </div>
     );
 
+  // Interior selected but no interior stills exist (AutoHome doesn't expose them).
+  // Don't pass exterior photos off as interior — show an honest note + route to 360°.
+  const intNoPhotos = sel?.kind === "int" && selected != null && !hasImgs(selected);
+
   return (
     <div className="space-y-4">
       <CarGallery key={galleryKey} images={shown} brand={brand} model={model} />
+      {intNoPhotos && (
+        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
+          {t(
+            "Фото интерьера для этого цвета недоступны — показано фото кузова.",
+            "Bu rang uchun salon rasmlari yo‘q — kuzov rasmi ko‘rsatilgan.",
+            "No interior stills for this color — showing the body photos.",
+          )}
+          {hasPano && (
+            <a href="#car-360" className="ml-1 font-medium text-neon-blue hover:underline">
+              {t("Открыть интерьер в 360° ↓", "360° da ochish ↓", "Open interior in 360° ↓")}
+            </a>
+          )}
+        </div>
+      )}
       <div className="space-y-3 rounded-2xl bg-white/5 border border-white/10 p-4">
         {row("ext", ext, t("Цвет кузова", "Kuzov rangi", "Exterior color"))}
         {row("int", int, t("Цвет салона", "Salon rangi", "Interior color"))}

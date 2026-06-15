@@ -189,6 +189,7 @@ export default function CarDetailPage() {
                 brand={car.brand}
                 model={car.model}
                 locale={locale}
+                hasPano={!!car.spec_data?.pano_id}
               />
             </div>
 
@@ -207,7 +208,7 @@ export default function CarDetailPage() {
             )}
 
             {car.spec_data?.pano_id && (
-              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "110ms" }}>
+              <div id="car-360" className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up scroll-mt-24" style={{ animationDelay: "110ms" }}>
                 <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-white font-bold text-lg">
                   <span className="text-neon-blue">360°</span>
                   {locale === "ru" ? "Обзор" : locale === "uz" ? "Ko‘rinish" : "Walkthrough"}
