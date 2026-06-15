@@ -22,6 +22,10 @@ const ARGV = process.argv.slice(2);
 const has = (f) => ARGV.includes(f);
 const opt = (k, d = "") => (ARGV.find((a) => a.startsWith(`--${k}=`)) || "").split("=").slice(1).join("=") || d;
 const DRY = has("--dry") || !has("--write");
+// --int-only: backfill ONLY interior photos onto cars that already have colours,
+// merging into existing interior_colors and leaving exterior_colors untouched (so we
+// don't re-download + orphan the 1300+ existing exterior photos). See picsForColor.
+const INT_ONLY = has("--int-only");
 const ONLY_SERIES = opt("series");
 const LIMIT = Number(opt("limit") || 0);
 const EXT_CAP = Number(opt("ext") || 10);
@@ -119,18 +123,20 @@ function spread(list, n) {
 }
 
 async function picsForColor(series, colorId, kind) {
-  // INTERIOR per-colour galleries are JS-rendered on AutoHome: the static
-  // /pic/series-{S}-i{colorId}.html page carries only unrelated recommendation
-  // thumbnails (which is exactly how exterior shots leaked into the interior sets).
-  // There is no reliable per-interior-colour photo source in the static HTML, so
-  // interior is swatch-only (name + hex, no gallery). Exterior is unaffected.
-  if (kind !== "ext") return [];
-  // Exterior category 1 (车身外观) — the real per-colour gallery, in static HTML.
+  // Per-COLOUR galleries, both in static server-rendered HTML:
+  //  - exterior: /pic/series-{S}-{colorId}-1-1.html  (category 1 = 车身外观)
+  //  - interior: /pic/series-{S}-i{colorId}.html      (the `i`-prefixed colour page)
+  // The interior `i{colorId}` page returns CLEAN, colour-specific cabin shots
+  // (verified on series 6388: colour 4773 → red-brown leather, 4161 → apricot — no
+  // exterior or cross-series recommendation bleed). An earlier attempt scraped the
+  // generic /pic/series-{S}-{colorId}.html page (which DOES mix interior+exterior)
+  // and then gave up; the `i`-prefixed URL is the correct, reliable interior source.
+  const url = kind === "ext"
+    ? `https://car.autohome.com.cn/pic/series-${series}-${colorId}-1-1.html`
+    : `https://car.autohome.com.cn/pic/series-${series}-i${colorId}.html`;
   let html = "";
-  try { html = await fetchHtml(`https://car.autohome.com.cn/pic/series-${series}-${colorId}-1-1.html`); } catch { return []; }
-  // Deliberately NO fallback to the generic /pic/series-{S}-{colorId}.html page —
-  // that page mixes interior + exterior and would pollute the exterior set.
-  return spread(cardfsFrom(html), EXT_CAP);
+  try { html = await fetchHtml(url); } catch { return []; }
+  return spread(cardfsFrom(html), kind === "ext" ? EXT_CAP : INT_CAP);
 }
 
 async function main() {
@@ -153,6 +159,31 @@ async function main() {
 
   for (const c of cars) {
     const S = c.spec_data.series_id;
+    if (INT_ONLY) {
+      // Backfill interior photos onto the EXISTING interior_colors (name+hex+id are
+      // already there from the original run); leave exterior_colors as-is.
+      const baseInt = c.spec_data?.interior_colors || [];
+      if (!baseInt.length) { console.log(`${c.slug}: no interior colours — skip`); continue; }
+      if (!FORCE && baseInt.some((col) => col.images?.length)) { console.log(`${c.slug}: interior photos already present — skip`); continue; }
+      const int = baseInt.map((col) => ({ ...col })); // clone so a failure can't half-write
+      try {
+        for (const col of int) {
+          const pics = await picsForColor(S, col.color_id, "int");
+          await sleep(200);
+          if (DRY) { col.images = pics; console.log(`  INT ${col.name_cn} → ${pics.length} photos (dry)`); continue; }
+          const local = [];
+          for (const u of pics) { try { local.push(await rehostToDisk(u, MEDIA_URL, MEDIA_SECRET)); } catch {} }
+          col.images = local; delete col.picnum;
+          console.log(`  INT ${col.name_cn} → ${local.length} re-hosted`);
+        }
+        if (DRY) { console.log(`${c.slug}: dry int-only`); continue; }
+        const spec = { ...(c.spec_data || {}), interior_colors: int };
+        const pr = await fetch(`${U}/rest/v1/cars?id=eq.${c.id}`, { method: "PATCH", headers: { ...H, Prefer: "return=minimal" }, body: JSON.stringify({ spec_data: spec }) });
+        console.log(`${c.slug} (series ${S}): int-only PATCH ${pr.status}`);
+      } catch (e) { console.log(`${c.slug}: int-only ERROR ${e.message}`); }
+      await sleep(300);
+      continue;
+    }
     if (!DRY && !FORCE && c.id && c.spec_data?.exterior_colors?.length) { console.log(`${c.slug}: skip (already has colors)`); continue; }
     try {
       const cfg = await fetchHtml(`https://car.autohome.com.cn/config/series/${S}.html`);
