@@ -48,7 +48,10 @@ ssh "$VOSTRO" '
 '
 
 echo "==> [4/4] health check"
-CODE=$(ssh "$VOSTRO" 'curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/ru/catalog')
+# Send x-forwarded-proto: https — the origin is plain http on localhost, and the
+# middleware now 308-upgrades http→https. Without this header the check would see
+# the upgrade redirect (308) instead of the real page.
+CODE=$(ssh "$VOSTRO" 'curl -s -o /dev/null -w "%{http_code}" -H "x-forwarded-proto: https" http://127.0.0.1:3000/ru/catalog')
 if [ "$CODE" = "200" ]; then
   echo "✅ deploy OK (catalog $CODE)"
 else
