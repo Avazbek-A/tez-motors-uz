@@ -36,6 +36,7 @@ interface PolicySim {
 interface SearchStats {
   bing: { configured: boolean; verified: boolean } | null;
   yandex: { configured: boolean; verified: boolean; loaded: boolean; sqi?: number | null; searchablePages?: number | null; status?: string } | null;
+  google: { configured: boolean; clicks28d?: number; impressions28d?: number; avgPosition?: number | null; topQueries?: { query: string; clicks: number; impressions: number }[] } | null;
 }
 
 const STATUS_TONE: Record<string, string> = {
@@ -247,7 +248,24 @@ export default function AdminEnginePage() {
                     <span className="text-[var(--danger)]">not verified</span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground">Google: no public API — see Search Console. IndexNow pushes new cars to Bing/Yandex automatically.</p>
+                <div className="font-mono text-foreground">
+                  Google:{" "}
+                  {!search.google?.configured ? (
+                    <span className="text-muted-foreground">not configured</span>
+                  ) : (search.google.impressions28d ?? 0) > 0 ? (
+                    <span className="text-[var(--success)]">{search.google.clicks28d} clicks · {search.google.impressions28d} impr · pos {search.google.avgPosition ?? "—"} (28d)</span>
+                  ) : (
+                    <span className="text-[var(--warning)]">connected · no search data yet</span>
+                  )}
+                </div>
+                {search.google?.topQueries && search.google.topQueries.length > 0 && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    top: {search.google.topQueries.map((q, i) => (
+                      <span key={i} className="font-mono">{q.query} ({q.clicks})</span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">IndexNow pushes new cars to Bing/Yandex automatically; Google indexes via the sitemap.</p>
               </div>
             ) : <p className="text-sm text-muted-foreground">—</p>}
           </Card>
