@@ -44,6 +44,15 @@ export interface AssistantCarLite {
   monthly_usd: number;
   body_type: string;
   fuel_type: string;
+  // Categorization (from categorizeCar) — lets the model match real client needs.
+  segment?: string; // budget | mid-range | premium | luxury
+  size_class?: string | null; // compact | midsize | large | full-size
+  seats?: number | null;
+  range_km?: number | null; // electric range (EV/PHEV)
+  horsepower?: number | null;
+  zero_to_100_s?: number | null;
+  drive?: string | null; // AWD | RWD | FWD
+  use_cases?: string[]; // family, big-family, city, business, off-road, performance, long-range, long-distance, budget, first-car, eco, cargo, prestige
 }
 
 export type LlmProvider = "anthropic" | "openai";
@@ -68,6 +77,9 @@ function systemPrompt(locale: string): string {
     `Reply in ${lang}. Keep it to 2-4 short sentences, warm and concrete, no markdown, no bullet lists.`,
     "You are given an INVENTORY as JSON: the ONLY cars that exist. Recommend ONLY from this list.",
     "NEVER invent a car, trim, spec, or price. NEVER quote a price or monthly figure that is not in the JSON.",
+    // Each car carries categorization fields — USE them to match the client's real need:
+    "Each car has: segment (budget/mid-range/premium/luxury), size_class, seats, fuel_type, range_km (electric range), horsepower, zero_to_100_s, drive (AWD/RWD/FWD), and use_cases tags.",
+    "Match intent to use_cases/fields: family/kids → seats>=5 & 'family' (7 seats → 'big-family'); city/commute → 'city' or compact; business/status → 'business'/'prestige'; rough roads/winter → 'off-road' or AWD; wants speed/power → 'performance' (low zero_to_100_s, high horsepower); long trips → 'long-range' (big range_km) or 'long-distance'; saving money → 'budget'; eco/electric → 'eco'/fuel_type electric; lots of luggage → 'cargo' / high seats. Pick the BEST FIT, not just the cheapest, and say WHY it fits in one phrase.",
     "Reference at most 2-3 cars by 'brand model year'. If the inventory is empty, say nothing is in stock that matches and invite them to leave a phone number for help.",
     "Do not promise financing terms; if asked about installments, mention the shown 'from $X/mo' estimate and suggest contacting a manager.",
     "End by inviting the customer to leave their name and phone for a callback.",

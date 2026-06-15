@@ -9,10 +9,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { estimatedMonthlyFrom, priceFromMonthly } from "./finance";
 import { generateAssistantReply } from "./llm";
+import { categorizeCar } from "./car-category";
 import type { Car } from "@/types/car";
 import type { AssistantCarLite } from "./llm";
 
-export const MAX_ASSISTANT_CARS = 6;
+export const MAX_ASSISTANT_CARS = 12;
 
 /** Strip characters that would break a Postgres trigram/ILIKE search term. */
 export function sanitizeSearch(raw: string): string {
@@ -74,15 +75,26 @@ export function templatedReply(locale: string, cars: Car[]): string {
 
 /** Project full DB cars into the lean shape the LLM prompt is handed. */
 export function toAssistantCarLite(cars: Car[]): AssistantCarLite[] {
-  return cars.map((c) => ({
-    brand: c.brand,
-    model: c.model,
-    year: c.year,
-    price_usd: c.price_usd,
-    monthly_usd: estimatedMonthlyFrom(c.price_usd),
-    body_type: c.body_type,
-    fuel_type: c.fuel_type,
-  }));
+  return cars.map((c) => {
+    const cat = categorizeCar(c);
+    return {
+      brand: c.brand,
+      model: c.model,
+      year: c.year,
+      price_usd: c.price_usd,
+      monthly_usd: estimatedMonthlyFrom(c.price_usd),
+      body_type: c.body_type,
+      fuel_type: c.fuel_type,
+      segment: cat.segment,
+      size_class: cat.sizeClass,
+      seats: cat.seats,
+      range_km: cat.rangeKm,
+      horsepower: cat.horsepower,
+      zero_to_100_s: cat.zeroTo100,
+      drive: cat.driveType,
+      use_cases: cat.useCases,
+    };
+  });
 }
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
@@ -126,45 +138,66 @@ export async function recommendCars(
 ): Promise<RecommendResult> {
   const locale = opts.locale === "uz" ? "uz" : opts.locale === "en" ? "en" : "ru";
 
-  // Trigram RPC first, then a sensible fallback so there are always real cars.
+  // ---- Parse CATEGORY intent from the message so retrieval surfaces RELEVANT
+  //      cars (a 7-seat SUV for a family query, an EV for "electric", premium for
+  //      "luxury") instead of just the cheapest. Mirrors sales-agent.extractSlots. ----
+  const m = (opts.message || "").toLowerCase();
+  const bodyType =
+    /кроссовер|crossover|внедорожник|suv|джип|krossover/.test(m) ? "suv"
+    : /седан|sedan/.test(m) ? "sedan"
+    : /хэтч|хетч|hatch/.test(m) ? "hatchback"
+    : /минивэн|минивен|minivan|микроавтобус/.test(m) ? "minivan"
+    : /купе|coupe/.test(m) ? "coupe"
+    : null;
+  const fuel =
+    /электр|electric|\bev\b|elektr/.test(m) ? "electric"
+    : /плагин|phev|plug-?in/.test(m) ? "phev"
+    : /гибрид|hybrid|gibrid/.test(m) ? "hybrid"
+    : /дизель|diesel|dizel/.test(m) ? "diesel"
+    : /бензин|petrol|gasoline|benzin/.test(m) ? "petrol"
+    : null;
+  const seatMatch = m.match(/(\d)\s*-?\s*(?:мест|seat|o['’]?rin|orin)/);
+  const seatsMin = seatMatch ? parseInt(seatMatch[1], 10)
+    : /семь[ия]|для семьи|family|оила|семимест|big.?family/.test(m) ? 6 : null;
+  const premiumIntent = /люкс|премиум|luxury|premium|бизнес|business|престиж|prestige|мощн|powerful|спорт|sport|быстр|fast|tezkor/.test(m);
+
+  const ceiling = parseBudgetCeiling(opts.message);
+
+  // Trigram (brand/model text match) — used as one optional constraint.
   const q = sanitizeSearch(opts.message);
   let ids: string[] | null = null;
   if (q.length >= 2) {
     const { data: rpc } = await supabase.rpc("search_cars_ids", { q, max_results: 50 });
-    if (Array.isArray(rpc) && rpc.length > 0) {
-      ids = rpc.map((r: { id: string }) => r.id);
-    }
+    if (Array.isArray(rpc) && rpc.length > 0) ids = rpc.map((r: { id: string }) => r.id);
   }
 
-  const ceiling = parseBudgetCeiling(opts.message);
+  // Fetch a POOL with the chosen constraints (priced only); seats are filtered in
+  // JS afterwards (seat count lives in spec_data, not a column). Order cheapest-first
+  // normally, priciest-first when the client signals premium/performance intent.
+  const POOL = 60;
+  const fetchPool = async (useIds: boolean, useCeiling: boolean, useBody: boolean, useFuel: boolean): Promise<Car[]> => {
+    let qy = supabase.from("cars").select("*").neq("inventory_status", "sold").gt("price_usd", 0);
+    if (useIds && ids && ids.length > 0) qy = qy.in("id", ids);
+    if (useCeiling && ceiling !== null) qy = qy.lte("price_usd", ceiling);
+    if (useBody && bodyType) qy = qy.eq("body_type", bodyType);
+    if (useFuel && fuel) qy = qy.eq("fuel_type", fuel);
+    qy = qy.order("is_hot_offer", { ascending: false }).order("price_usd", { ascending: !premiumIntent }).limit(POOL);
+    const { data } = await qy;
+    return (data as Car[]) || [];
+  };
+  const bySeats = (list: Car[]): Car[] => {
+    if (!seatsMin) return list;
+    const ok = list.filter((c) => (categorizeCar(c).seats ?? 0) >= seatsMin);
+    return ok.length > 0 ? ok : list; // never empty the set over a soft seat signal
+  };
 
-  // Only recommend PRICED cars: ~13 available cars have price_usd=0 (no price set
-  // yet). They sort first under "price ascending" and can't be budget-matched, so
-  // they used to dominate every reply and render as "$0"/"$X". Exclude them here.
-  let carQuery = supabase.from("cars").select("*").neq("inventory_status", "sold").gt("price_usd", 0);
-  if (ids && ids.length > 0) carQuery = carQuery.in("id", ids);
-  if (ceiling !== null) carQuery = carQuery.lte("price_usd", ceiling);
-  carQuery = carQuery
-    .order("is_hot_offer", { ascending: false })
-    .order("price_usd", { ascending: true })
-    .limit(MAX_ASSISTANT_CARS);
-
-  let { data: cars } = await carQuery;
-
-  // Fallback: nothing matched — show available stock so the reply is never empty.
-  if (!cars || cars.length === 0) {
-    const { data: anyCars } = await supabase
-      .from("cars")
-      .select("*")
-      .neq("inventory_status", "sold")
-      .gt("price_usd", 0)
-      .order("is_hot_offer", { ascending: false })
-      .order("price_usd", { ascending: true })
-      .limit(MAX_ASSISTANT_CARS);
-    cars = anyCars || [];
-  }
-
-  const carList = (cars as Car[]) || [];
+  // Strictest → progressively relaxed, so the reply is never empty.
+  let pool = bySeats(await fetchPool(true, true, true, true));
+  if (pool.length === 0) pool = bySeats(await fetchPool(false, true, true, true)); // drop trigram
+  if (pool.length === 0) pool = bySeats(await fetchPool(false, false, true, true)); // drop budget
+  if (pool.length === 0) pool = bySeats(await fetchPool(false, true, false, false)); // drop category, keep budget
+  if (pool.length === 0) pool = await fetchPool(false, false, false, false); // anything priced
+  const carList = pool.slice(0, MAX_ASSISTANT_CARS);
 
   const llmReply = await generateAssistantReply({
     locale,
