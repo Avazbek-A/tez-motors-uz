@@ -27,12 +27,13 @@
  *   LLM_API_URL   default per provider (anthropic messages / ollama chat)
  *   LLM_MODEL     default per provider (claude-haiku-4-5 / qwen2.5:7b-instruct)
  *
- * CHOSEN PRIMARY: Qwen3.6-35B-A3B via OpenRouter (openai path) — multilingual
- * (RU/UZ) + vision-capable, so one model does text AND spec-screenshots. It runs
- * on OpenRouter's GPUs; nothing runs on local hardware. See .env.example for the
- * exact vars. Local Ollama is a dev/offline fallback only (a box that must stay
- * up AND cool — proven inadequate for production here).
+ * MODELS: per-tier (chat / reason / vision), resolved at runtime from
+ * site_settings('llm_models') via llm-models.ts (so the weekly auto-refresh job can
+ * swap free models live). Each tier has a primary + fallback — the cloud-only
+ * fallback chain runs entirely on OpenRouter's GPUs (nothing on local hardware, so
+ * the Vostro never heats up). Local Ollama remains only a dev/offline option.
  */
+import { getTierModels, tierPair, type LlmTier } from "@/lib/llm-models";
 
 export interface AssistantCarLite {
   brand: string;
@@ -153,28 +154,47 @@ export function parseChatResponse(provider: LlmProvider, data: unknown): string 
   return text.length > 0 ? text : null;
 }
 
-/** Internal: one fetch for either provider. Fail-open to null. */
-async function callChat(args: { system: string; messages: ChatMessage[]; maxTokens: number }): Promise<string | null> {
+// Per-tier request timeout. The reason tier may run a 550B reasoner (~25s+), so it
+// gets a long budget; chat must stay snappy. A timeout drops to the tier fallback.
+const TIER_TIMEOUT_MS: Record<LlmTier, number> = { chat: 30000, reason: 90000, vision: 60000 };
+
+/**
+ * Internal: run a chat completion for the given tier, walking the tier's
+ * [primary, fallback] models — on a non-OK status, timeout, empty content, or
+ * thrown error it tries the next model, then returns null (caller → template).
+ * Fail-open to null. Reads `content` only — a reasoning model's separate
+ * `reasoning` field is intentionally ignored.
+ */
+async function callChat(args: { system: string; messages: ChatMessage[]; maxTokens: number; tier: LlmTier }): Promise<string | null> {
   if (!llmConfigured()) return null;
   const provider = resolveProvider();
-  const apiKey = process.env.LLM_API_KEY || "";
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = process.env.LLM_API_URL || (provider === "openai" ? OLLAMA_URL : ANTHROPIC_URL);
-  const model = process.env.LLM_MODEL || undefined;
+  const models = tierPair(args.tier, await getTierModels());
+  const timeout = TIER_TIMEOUT_MS[args.tier];
 
-  const req = buildChatRequest(provider, { system: args.system, messages: args.messages, maxTokens: args.maxTokens, apiKey, url, model });
-  try {
-    const res = await fetch(req.url, { method: "POST", headers: req.headers, body: req.body });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("LLM non-OK", provider, res.status, body.slice(0, 500));
-      return null;
+  for (const model of models) {
+    if (!model) continue;
+    const req = buildChatRequest(provider, { system: args.system, messages: args.messages, maxTokens: args.maxTokens, apiKey, url, model });
+    if (/openrouter\.ai/i.test(req.url)) {
+      req.headers["HTTP-Referer"] = "https://tezmotors.uz";
+      req.headers["X-Title"] = "Tez Motors";
     }
-    const data = await res.json();
-    return parseChatResponse(provider, data);
-  } catch (err) {
-    console.error("LLM call failed", err);
-    return null;
+    try {
+      const res = await fetch(req.url, { method: "POST", headers: req.headers, body: req.body, signal: AbortSignal.timeout(timeout) });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error("LLM non-OK", provider, model, res.status, body.slice(0, 300));
+        continue; // try the tier fallback
+      }
+      const text = parseChatResponse(provider, await res.json());
+      if (text) return text;
+      console.error("LLM empty content", model);
+    } catch (err) {
+      console.error("LLM call failed", model, err instanceof Error ? err.message : err);
+    }
   }
+  return null;
 }
 
 /**
@@ -191,7 +211,10 @@ export async function generateAssistantReply(args: {
   return callChat({
     system: systemPrompt(args.locale),
     messages: [...(args.history ?? []), { role: "user", content: userPrompt(args.userMessage, args.cars) }],
-    maxTokens: 400,
+    // Reasoning models spend tokens "thinking" before the answer; give enough
+    // headroom that the visible reply isn't truncated to empty.
+    maxTokens: 700,
+    tier: "chat",
   });
 }
 
@@ -199,8 +222,10 @@ export async function generateAssistantReply(args: {
  * Generic single-shot completion (system + user → text). Returns null when the
  * LLM is unconfigured or the call fails, so callers fail open to a template.
  */
-export async function llmText(args: { system: string; user: string; maxTokens?: number }): Promise<string | null> {
-  return callChat({ system: args.system, messages: [{ role: "user", content: args.user }], maxTokens: args.maxTokens ?? 400 });
+export async function llmText(args: { system: string; user: string; maxTokens?: number; tier?: LlmTier }): Promise<string | null> {
+  // Default to the "reason" tier (extraction / content / parsing / operator); a
+  // caller that wants chat-speed can pass tier:"chat".
+  return callChat({ system: args.system, messages: [{ role: "user", content: args.user }], maxTokens: args.maxTokens ?? 700, tier: args.tier ?? "reason" });
 }
 
 /**
@@ -233,27 +258,32 @@ export function buildVisionMessages(system: string, user: string, images: string
  */
 export async function llmVision(args: { system: string; user: string; images: string[]; maxTokens?: number }): Promise<string | null> {
   if (!llmConfigured() || resolveProvider() !== "openai" || args.images.length === 0) return null;
-  const apiKey = process.env.LLM_API_KEY || "";
-  const url = process.env.LLM_API_URL || OLLAMA_URL;
-  const model = process.env.LLM_VISION_MODEL || "qwen2.5-vl";
-  const headers: Record<string, string> = { "content-type": "application/json" };
-  if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
-  const body = JSON.stringify({
-    model,
-    max_tokens: args.maxTokens ?? 1800,
-    temperature: 0.1,
-    stream: false,
-    messages: buildVisionMessages(args.system, args.user, args.images),
-  });
-  try {
-    const res = await fetch(openaiChatUrl(url), { method: "POST", headers, body });
-    if (!res.ok) {
-      console.error("LLM vision non-OK", res.status);
-      return null;
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
+  const url = openaiChatUrl(process.env.LLM_API_URL || OLLAMA_URL);
+  const models = tierPair("vision", await getTierModels());
+  for (const model of models) {
+    if (!model) continue;
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
+    if (/openrouter\.ai/i.test(url)) {
+      headers["HTTP-Referer"] = "https://tezmotors.uz";
+      headers["X-Title"] = "Tez Motors";
     }
-    return parseChatResponse("openai", await res.json());
-  } catch (err) {
-    console.error("LLM vision failed", err);
-    return null;
+    const body = JSON.stringify({
+      model,
+      max_tokens: args.maxTokens ?? 1800,
+      temperature: 0.1,
+      stream: false,
+      messages: buildVisionMessages(args.system, args.user, args.images),
+    });
+    try {
+      const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(TIER_TIMEOUT_MS.vision) });
+      if (!res.ok) { console.error("LLM vision non-OK", model, res.status); continue; }
+      const text = parseChatResponse("openai", await res.json());
+      if (text) return text;
+    } catch (err) {
+      console.error("LLM vision failed", model, err instanceof Error ? err.message : err);
+    }
   }
+  return null;
 }
