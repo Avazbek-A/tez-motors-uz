@@ -35,8 +35,21 @@ interface PolicySim {
 }
 interface SearchStats {
   bing: { configured: boolean; verified: boolean } | null;
-  yandex: { configured: boolean; verified: boolean; loaded: boolean; sqi?: number | null; searchablePages?: number | null; status?: string } | null;
-  google: { configured: boolean; clicks28d?: number; impressions28d?: number; avgPosition?: number | null; topQueries?: { query: string; clicks: number; impressions: number }[] } | null;
+  yandex: { configured: boolean; verified: boolean; loaded: boolean; sqi?: number | null; searchablePages?: number | null; status?: string; topQueries?: { query: string; shows: number; clicks: number }[] } | null;
+  google: {
+    configured: boolean;
+    clicks28d?: number;
+    impressions28d?: number;
+    avgPosition?: number | null;
+    topQueries?: { query: string; clicks: number; impressions: number }[];
+    topPages?: { page: string; clicks: number; impressions: number; ctr: number }[];
+    fixCtrPages?: { page: string; impressions: number; ctr: number }[];
+  } | null;
+}
+interface Coverage {
+  checked: number;
+  indexed: number;
+  notIndexed: { label: string; path: string; state: string }[];
 }
 
 const STATUS_TONE: Record<string, string> = {
@@ -105,6 +118,8 @@ export default function AdminEnginePage() {
   const [loading, setLoading] = useState(true);
   const [inBusy, setInBusy] = useState(false);
   const [inResult, setInResult] = useState<string | null>(null);
+  const [cov, setCov] = useState<Coverage | null>(null);
+  const [covBusy, setCovBusy] = useState(false);
 
   const submitIndexNow = async () => {
     setInBusy(true);
@@ -116,6 +131,16 @@ export default function AdminEnginePage() {
       setInResult("✗ failed");
     } finally {
       setInBusy(false);
+    }
+  };
+
+  const checkCoverage = async () => {
+    setCovBusy(true);
+    try {
+      const d = await fetch("/api/admin/index-coverage", { method: "POST" }).then((r) => r.json());
+      if (d?.ok) setCov(d);
+    } finally {
+      setCovBusy(false);
     }
   };
 
@@ -260,11 +285,56 @@ export default function AdminEnginePage() {
                 </div>
                 {search.google?.topQueries && search.google.topQueries.length > 0 && (
                   <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                    top: {search.google.topQueries.map((q, i) => (
+                    <span className="uppercase tracking-wider">queries:</span>
+                    {search.google.topQueries.map((q, i) => (
                       <span key={i} className="font-mono">{q.query} ({q.clicks})</span>
                     ))}
                   </div>
                 )}
+                {search.google?.topPages && search.google.topPages.length > 0 && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    <span className="uppercase tracking-wider">top pages:</span>
+                    {search.google.topPages.map((p, i) => (
+                      <span key={i} className="font-mono">{p.page} ({p.clicks}c/{p.ctr}%)</span>
+                    ))}
+                  </div>
+                )}
+                {search.google?.fixCtrPages && search.google.fixCtrPages.length > 0 && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-[var(--warning)]">
+                    <span className="uppercase tracking-wider" title="High impressions, low CTR — improve the title/snippet">fix CTR:</span>
+                    {search.google.fixCtrPages.map((p, i) => (
+                      <span key={i} className="font-mono">{p.page} ({p.impressions} impr/{p.ctr}%)</span>
+                    ))}
+                  </div>
+                )}
+                {search.yandex?.topQueries && search.yandex.topQueries.length > 0 && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    <span className="uppercase tracking-wider">yandex queries:</span>
+                    {search.yandex.topQueries.map((q, i) => (
+                      <span key={i} className="font-mono">{q.query} ({q.clicks})</span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-1 border-t border-border pt-2">
+                  <button onClick={checkCoverage} disabled={covBusy} className="border border-primary px-2.5 py-1 text-xs text-primary hover:bg-primary/10 disabled:opacity-50">
+                    {covBusy ? "checking…" : "Check Google index coverage"}
+                  </button>
+                  {cov && (
+                    <div className="mt-1.5 text-xs">
+                      <span className={`font-mono ${cov.indexed === cov.checked ? "text-[var(--success)]" : "text-foreground"}`}>{cov.indexed}/{cov.checked} car pages indexed</span>
+                      {cov.notIndexed.length > 0 && (
+                        <div className="mt-1 space-y-0.5 text-[11px] text-[var(--warning)]">
+                          {cov.notIndexed.slice(0, 12).map((n, i) => (
+                            <div key={i} className="font-mono">{n.label} — {n.state}</div>
+                          ))}
+                          {cov.notIndexed.length > 12 && <div className="text-muted-foreground">+{cov.notIndexed.length - 12} more</div>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <p className="text-[11px] text-muted-foreground">IndexNow pushes new cars to Bing/Yandex automatically; Google indexes via the sitemap.</p>
               </div>
             ) : <p className="text-sm text-muted-foreground">—</p>}

@@ -62,6 +62,7 @@ export interface YandexStats {
   sqi?: number | null; // Site Quality Index
   searchablePages?: number | null;
   excludedPages?: number | null;
+  topQueries?: { query: string; shows: number; clicks: number }[];
   status?: string; // e.g. HOST_NOT_LOADED
 }
 
@@ -78,6 +79,13 @@ export async function yandexStats(): Promise<YandexStats> {
   if (!summary || summary.error_code) {
     return { configured: true, verified: !!host.verified, loaded: false, status: (summary?.error_code as string) || "no_data" };
   }
+  // Popular search queries (empty until the host is fully crawled — graceful).
+  const pq = await yandexCall(`/user/${uid}/hosts/${host.host_id}/search-queries/popular/?order_by=TOTAL_CLICKS&query_indicator=TOTAL_SHOWS&query_indicator=TOTAL_CLICKS&limit=5`);
+  const topQueries = ((pq?.queries as { query_text?: string; indicators?: { TOTAL_SHOWS?: number; TOTAL_CLICKS?: number } }[] | undefined) || []).map((q) => ({
+    query: q.query_text || "?",
+    shows: Math.round(q.indicators?.TOTAL_SHOWS ?? 0),
+    clicks: Math.round(q.indicators?.TOTAL_CLICKS ?? 0),
+  }));
   return {
     configured: true,
     verified: !!host.verified,
@@ -85,6 +93,7 @@ export async function yandexStats(): Promise<YandexStats> {
     sqi: (summary.sqi as number) ?? null,
     searchablePages: (summary.searchable_pages_count as number) ?? null,
     excludedPages: (summary.excluded_pages_count as number) ?? null,
+    topQueries,
   };
 }
 
@@ -138,6 +147,9 @@ export interface GoogleStats {
   impressions28d?: number;
   avgPosition?: number | null;
   topQueries?: { query: string; clicks: number; impressions: number }[];
+  topPages?: { page: string; clicks: number; impressions: number; ctr: number }[];
+  // High-impression, low-CTR pages — titles/snippets worth improving.
+  fixCtrPages?: { page: string; impressions: number; ctr: number }[];
 }
 
 export async function googleStats(): Promise<GoogleStats> {
@@ -148,16 +160,69 @@ export async function googleStats(): Promise<GoogleStats> {
   const day = 86_400_000;
   const endDate = new Date(Date.now() - 3 * day).toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 31 * day).toISOString().slice(0, 10);
-  const [totals, byQuery] = await Promise.all([
+  const [totals, byQuery, byPage] = await Promise.all([
     gscQuery(token, { startDate, endDate }),
     gscQuery(token, { startDate, endDate, dimensions: ["query"], rowLimit: 5 }),
+    gscQuery(token, { startDate, endDate, dimensions: ["page"], rowLimit: 25 }),
   ]);
   const t = totals?.rows?.[0];
+  const rel = (u?: string) => (u || "").replace("https://tezmotors.uz", "");
+  const pages = (byPage?.rows || []).map((r) => ({
+    page: rel(r.keys?.[0]),
+    clicks: Math.round(r.clicks ?? 0),
+    impressions: Math.round(r.impressions ?? 0),
+    ctr: r.impressions ? Math.round(((r.clicks ?? 0) / r.impressions) * 1000) / 10 : 0,
+  }));
   return {
     configured: true,
     clicks28d: Math.round(t?.clicks ?? 0),
     impressions28d: Math.round(t?.impressions ?? 0),
     avgPosition: t?.position != null ? Math.round(t.position * 10) / 10 : null,
     topQueries: (byQuery?.rows || []).map((r) => ({ query: r.keys?.[0] || "?", clicks: Math.round(r.clicks ?? 0), impressions: Math.round(r.impressions ?? 0) })),
+    topPages: pages.slice(0, 6),
+    // ≥50 impressions but <1% CTR = the snippet isn't earning clicks.
+    fixCtrPages: pages.filter((p) => p.impressions >= 50 && p.ctr < 1).sort((a, b) => b.impressions - a.impressions).slice(0, 5).map((p) => ({ page: p.page, impressions: p.impressions, ctr: p.ctr })),
+  };
+}
+
+// ─── Google index coverage (URL Inspection API) ───────────────────────────────
+export interface IndexCoverage {
+  configured: boolean;
+  checked: number;
+  indexed: number;
+  notIndexed: { label: string; path: string; state: string }[];
+}
+
+export async function googleIndexCoverage(items: { url: string; path: string; label: string }[]): Promise<IndexCoverage> {
+  const token = await googleToken();
+  if (!token) return { configured: false, checked: 0, indexed: 0, notIndexed: [] };
+  const results: { label: string; path: string; state: string; indexed: boolean }[] = [];
+  const queue = [...items];
+  const worker = async () => {
+    while (queue.length) {
+      const it = queue.shift();
+      if (!it) break;
+      try {
+        const res = await fetch("https://searchconsole.googleapis.com/v1/urlInspection/index:inspect", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ inspectionUrl: it.url, siteUrl: GSC_SITE }),
+        });
+        const data = (await res.json()) as { inspectionResult?: { indexStatusResult?: { coverageState?: string } } };
+        const state = data?.inspectionResult?.indexStatusResult?.coverageState || (res.ok ? "unknown" : "error");
+        const indexed = state.toLowerCase().includes("indexed") && !state.toLowerCase().includes("not indexed");
+        results.push({ label: it.label, path: it.path, state, indexed });
+      } catch {
+        results.push({ label: it.label, path: it.path, state: "error", indexed: false });
+      }
+    }
+  };
+  // Modest concurrency — URL Inspection is ~600/min; 5 workers is safe + polite.
+  await Promise.all(Array.from({ length: 5 }, worker));
+  return {
+    configured: true,
+    checked: results.length,
+    indexed: results.filter((r) => r.indexed).length,
+    notIndexed: results.filter((r) => !r.indexed).map((r) => ({ label: r.label, path: r.path, state: r.state })),
   };
 }
