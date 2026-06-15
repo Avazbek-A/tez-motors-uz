@@ -23,6 +23,7 @@
  *
  * Respect OLX ToS/robots; run gently. Verify product/price/image rights before publishing.
  */
+import { writeFileSync } from "node:fs";
 import { HttpCrawler, Configuration } from "crawlee";
 import { UA, baseCrawlerOptions, writeCsv, loadJsonOrDefault, log } from "./crawlee-shared.mjs";
 
@@ -183,7 +184,13 @@ async function main() {
   }
   const res = writeCsv(OUT, CSV_HEADERS, rows);
   log.info(`wrote ${res.rows} DRAFT parts → ${res.path}`);
-  log.info("Next: Admin → Parts → Import → upload this CSV (dry-run first), review, then publish.");
+  // Also emit JSON for the direct ingester (import-parts.mjs) — easier than parsing CSV.
+  try {
+    const jsonPath = OUT.replace(/\.csv$/i, ".json");
+    writeFileSync(jsonPath, JSON.stringify(rows));
+    log.info(`wrote JSON → ${jsonPath}`);
+  } catch {}
+  log.info("Next: node import-parts.mjs (rehost photos + upsert DRAFTS), or Admin → Parts → Import the CSV.");
 }
 
 main().catch((e) => {
