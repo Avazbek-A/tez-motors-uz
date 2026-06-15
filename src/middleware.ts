@@ -11,15 +11,21 @@ const LOCALE_COOKIE = "NEXT_LOCALE";
  * verifies the cookie against the admin_sessions table.
  */
 export function middleware(request: NextRequest) {
-  // Force HTTPS. cloudflared terminates TLS and forwards the client's original
-  // scheme in x-forwarded-proto (the origin connection itself is plain http on
-  // localhost, so we must NOT key off the connection). A real http visitor →
-  // 308 to https, giving search engines one canonical https site (fixes the
-  // Yandex "main URL isn't HTTPS" warning + the http://…/ru duplicate). The
-  // localhost deploy health-check has no x-forwarded-proto, so it's untouched.
-  if (request.headers.get("x-forwarded-proto") === "http") {
-    const host = request.headers.get("host") || request.nextUrl.host;
-    return NextResponse.redirect(`https://${host}${request.nextUrl.pathname}${request.nextUrl.search}`, 308);
+  // Canonical host: force HTTPS + strip www, in one 308.
+  //  - HTTPS: cloudflared terminates TLS and forwards the client's scheme in
+  //    x-forwarded-proto (the origin connection is plain http on localhost, so we
+  //    must NOT key off the connection). A real http visitor → https.
+  //  - www → apex: www.tezmotors.uz serves the full site, splitting it from the
+  //    non-www canonical; a 308 consolidates all signals onto tezmotors.uz.
+  // The localhost deploy health-check (no www, x-forwarded-proto:https) is untouched.
+  {
+    const host = (request.headers.get("host") || request.nextUrl.host || "").toLowerCase();
+    const needsHttps = request.headers.get("x-forwarded-proto") === "http";
+    const needsApex = host.startsWith("www.");
+    if (needsHttps || needsApex) {
+      const targetHost = needsApex ? host.slice(4) : host;
+      return NextResponse.redirect(`https://${targetHost}${request.nextUrl.pathname}${request.nextUrl.search}`, 308);
+    }
   }
 
   const { pathname } = request.nextUrl;
