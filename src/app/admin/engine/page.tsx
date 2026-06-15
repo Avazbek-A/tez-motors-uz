@@ -33,6 +33,10 @@ interface PolicySim {
   perFuel: { fuel: string; dutyNowPct: number; landedNowUsd: number; landedNewUsd: number; deltaUsd: number }[];
   catalog: { carsCounted: number; avgExtraLandedUsd: number; totalMarginImpactUsd: number; carsFlippedUnprofitable: number };
 }
+interface SearchStats {
+  bing: { configured: boolean; verified: boolean } | null;
+  yandex: { configured: boolean; verified: boolean; loaded: boolean; sqi?: number | null; searchablePages?: number | null; status?: string } | null;
+}
 
 const STATUS_TONE: Record<string, string> = {
   ok: "text-[var(--success)]",
@@ -43,7 +47,7 @@ const STATUS_TONE: Record<string, string> = {
   no_data: "text-muted-foreground",
 };
 
-const COPY: Record<Locale, { title: string; intro: string; health: string; calibration: string; leads: string; policy: string; dutyApply: string; loading: string }> = {
+const COPY: Record<Locale, { title: string; intro: string; health: string; calibration: string; leads: string; policy: string; dutyApply: string; loading: string; indexing: string }> = {
   ru: {
     title: "Движок — диагностика",
     intro: "Здоровье движка ценообразования: свежесть сборщиков, калибровка по продажам, спрос без покрытия и симулятор пошлин.",
@@ -53,6 +57,7 @@ const COPY: Record<Locale, { title: string; intro: string; health: string; calib
     policy: "Симулятор пошлин",
     dutyApply: "Пересчитать",
     loading: "Загрузка…",
+    indexing: "Индексация (Bing/Yandex)",
   },
   uz: {
     title: "Dvigatel diagnostikasi",
@@ -63,6 +68,7 @@ const COPY: Record<Locale, { title: string; intro: string; health: string; calib
     policy: "Boj simulyatori",
     dutyApply: "Qayta hisoblash",
     loading: "Yuklanmoqda…",
+    indexing: "Indeksatsiya (Bing/Yandex)",
   },
   en: {
     title: "Engine Ops",
@@ -73,6 +79,7 @@ const COPY: Record<Locale, { title: string; intro: string; health: string; calib
     policy: "Policy simulator",
     dutyApply: "Recompute",
     loading: "Loading…",
+    indexing: "Indexing (Bing/Yandex)",
   },
 };
 
@@ -92,6 +99,7 @@ export default function AdminEnginePage() {
   const [calib, setCalib] = useState<Calibration | null>(null);
   const [leads, setLeads] = useState<Leads | null>(null);
   const [sim, setSim] = useState<PolicySim | null>(null);
+  const [search, setSearch] = useState<SearchStats | null>(null);
   const [duty, setDuty] = useState(10);
   const [loading, setLoading] = useState(true);
   const [inBusy, setInBusy] = useState(false);
@@ -115,6 +123,7 @@ export default function AdminEnginePage() {
       fetch("/api/admin/market/health").then((r) => r.json()).then((d) => d?.ok && setHealth(d)),
       fetch("/api/admin/calibration").then((r) => r.json()).then((d) => d?.ok && setCalib(d)),
       fetch("/api/admin/leads/match").then((r) => r.json()).then((d) => d?.ok && setLeads(d)),
+      fetch("/api/admin/search-stats").then((r) => r.json()).then((d) => d?.ok && setSearch(d)),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -209,6 +218,36 @@ export default function AdminEnginePage() {
                     <span key={f.fuel}>{f.fuel} {f.deltaUsd >= 0 ? "+" : ""}{usd(f.deltaUsd)}</span>
                   ))}
                 </div>
+              </div>
+            ) : <p className="text-sm text-muted-foreground">—</p>}
+          </Card>
+
+          <Card title={t.indexing}>
+            {search ? (
+              <div className="space-y-2 text-sm">
+                <div className="font-mono text-foreground">
+                  Yandex:{" "}
+                  {!search.yandex?.configured ? (
+                    <span className="text-muted-foreground">not configured</span>
+                  ) : !search.yandex.verified ? (
+                    <span className="text-[var(--danger)]">not verified</span>
+                  ) : search.yandex.loaded ? (
+                    <span className="text-[var(--success)]">SQI {search.yandex.sqi ?? "—"} · {search.yandex.searchablePages ?? "—"} pages</span>
+                  ) : (
+                    <span className="text-[var(--warning)]">verified · indexing pending</span>
+                  )}
+                </div>
+                <div className="font-mono text-foreground">
+                  Bing:{" "}
+                  {!search.bing?.configured ? (
+                    <span className="text-muted-foreground">not configured</span>
+                  ) : search.bing.verified ? (
+                    <span className="text-[var(--success)]">verified</span>
+                  ) : (
+                    <span className="text-[var(--danger)]">not verified</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Google: no public API — see Search Console. IndexNow pushes new cars to Bing/Yandex automatically.</p>
               </div>
             ) : <p className="text-sm text-muted-foreground">—</p>}
           </Card>
