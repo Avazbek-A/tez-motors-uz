@@ -46,9 +46,14 @@ async function main() {
   if (LIMIT) todo = todo.slice(0, LIMIT);
   console.log(`cars needing a pano (have series id, no pano yet): ${todo.length}\n`);
 
-  // existing pano ids already on OTHER cars — a freshly-found pano matching one of
-  // these is a shared/featured placeholder (the series has no own 360), not real.
-  const existing = {}; cars.forEach((c) => { const p = c.spec_data?.pano_id; if (p) existing[p] = (existing[p] || 0) + 1; });
+  // Map each pano id → the SET of AutoHome series it belongs to (across cars that
+  // already have one + the ones we find below). A real 360° is tied to exactly ONE
+  // series, so a pano spanning several DIFFERENT series is a generic featured/
+  // placeholder pano (not this model's interior) → drop it. But the same pano shared
+  // across catalog trims/years of the SAME series is legitimate → keep it for all.
+  const panoSeries = {};
+  const addPanoSeries = (pano, series) => { (panoSeries[pano] ||= new Set()).add(String(series)); };
+  cars.forEach((c) => { const p = c.spec_data?.pano_id; if (p) addPanoSeries(p, c.specs?.autohome_id); });
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ userAgent: UA, locale: "zh-CN" });
@@ -63,11 +68,12 @@ async function main() {
       console.log(`  ${c.slug}  series ${c.specs.autohome_id} → pano ${pano}`);
     }
   } finally { await browser.close(); }
-  // a real per-series pano is UNIQUE — drop ones repeated within this run OR already used elsewhere
-  const freq = {}; pairs.forEach((p) => (freq[p.pano] = (freq[p.pano] || 0) + 1));
-  const unique = pairs.filter((p) => freq[p.pano] === 1 && !existing[p.pano]);
+  // Reliable = the pano maps to a SINGLE AutoHome series (same-series trims may share
+  // it); drop only panos that span several different series (generic placeholders).
+  pairs.forEach((p) => addPanoSeries(p.pano, p.c.specs.autohome_id));
+  const unique = pairs.filter((p) => panoSeries[p.pano].size === 1);
   const dropped = pairs.length - unique.length;
-  console.log(`\npano found: ${pairs.length} | unique/reliable: ${unique.length} | shared/placeholder dropped: ${dropped}`);
+  console.log(`\npano found: ${pairs.length} | reliable (single-series): ${unique.length} | cross-series placeholder dropped: ${dropped}`);
   // PASS 2 — write uniques
   let set = 0;
   if (WRITE) for (const { c, pano } of unique) {
