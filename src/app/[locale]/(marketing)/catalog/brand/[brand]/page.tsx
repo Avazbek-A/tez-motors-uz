@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { SITE_CONFIG } from "@/lib/constants";
-import { brandFromSlug, brandSlug, getInventoryBrands } from "@/lib/brands";
+import { brandFromSlug } from "@/lib/brands";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
@@ -40,16 +40,10 @@ const COPY_BY_LOCALE: Record<
   }),
 };
 
-// Valid brand slugs come from live inventory; dynamicParams=false makes any OTHER
-// slug a true 404 at the routing level (before render) instead of a soft 200
-// not-found. Known brands still render dynamically (locale from headers/cookies).
-// A new brand gets its page on the next deploy (the catalog filter covers it live).
-export const dynamicParams = false;
-export async function generateStaticParams() {
-  const brands = await getInventoryBrands();
-  return brands.map((b) => ({ brand: brandSlug(b) }));
-}
-
+// Naturally dynamic (locale from headers/cookies; brand resolved from live inventory).
+// NOTE: do NOT use `dynamicParams=false` + generateStaticParams here — under the
+// parent [locale] dynamic segment it 404s EVERY brand (valid included) unless the
+// params also enumerate locale. An unknown brand → graceful soft-404 via notFound().
 export async function generateMetadata(
   { params }: { params: Promise<{ brand: string }> },
 ): Promise<Metadata> {

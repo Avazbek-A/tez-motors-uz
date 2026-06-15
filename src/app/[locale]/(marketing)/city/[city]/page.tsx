@@ -82,12 +82,10 @@ async function resolveLocale(): Promise<SeoLocale> {
   );
 }
 
-// Only the 7 known cities are valid routes; anything else 404s (no soft-404).
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return DELIVERY_CITIES.map((c) => ({ city: c.slug }));
-}
+// Naturally dynamic (locale from headers/cookies). Do NOT use `dynamicParams=false`
+// + generateStaticParams here: under the parent [locale] dynamic segment those
+// params omit `locale`, so NO real path matches and EVERY city (valid included)
+// 404s. Unknown city → graceful soft-404 via notFound() in the page.
 
 export async function generateMetadata(
   { params }: { params: Promise<{ city: string }> },
