@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 import type { Car, CarFilters } from "@/types/car";
 
 type SortOption = "default" | "price_asc" | "price_desc" | "year_desc" | "name_asc";
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
+type Facets = { brands: string[]; body_types: string[]; fuel_types: string[] };
 
 interface CatalogContentInnerProps {
   /**
@@ -85,6 +86,36 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
   const [sortBy, setSortBy] = useState<SortOption>(
     (searchParams.get("sort") as SortOption) || "default"
   );
+
+  // Filter facets from LIVE inventory: every in-stock brand shows up (no more
+  // hardcoded list missing brands) and body/fuel options with zero cars are
+  // hidden. Seeded with the static lists, replaced once /api/cars/facets returns.
+  const [facets, setFacets] = useState<Facets>({
+    brands: [...CAR_BRANDS],
+    body_types: BODY_TYPES.map((b) => b.value),
+    fuel_types: FUEL_TYPES.map((f) => f.value),
+  });
+  useEffect(() => {
+    let live = true;
+    fetch("/api/cars/facets")
+      .then((r) => r.json())
+      .then((d) => {
+        if (live && d && Array.isArray(d.brands) && d.brands.length) {
+          setFacets({ brands: d.brands, body_types: d.body_types || [], fuel_types: d.fuel_types || [] });
+        }
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
+
+  // Anchor to scroll back to when the page changes (so the next page starts at
+  // the top of the results, not wherever the pagination buttons left the view).
+  const resultsTopRef = useRef<HTMLDivElement>(null);
+  const goToPage = (next: number) => {
+    setPage(next);
+    syncToUrl(filters, sortBy, next);
+    resultsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Sync filters to URL
   const syncToUrl = useCallback((newFilters: CarFilters, newSort: SortOption, newPage = 1) => {
@@ -190,7 +221,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
         </div>
 
         {/* Filter toggle for mobile + count + sort */}
-        <div className="flex items-center justify-between mb-6">
+        <div ref={resultsTopRef} className="flex items-center justify-between mb-6 scroll-mt-24">
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
@@ -235,52 +266,43 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
               </div>
             )}
 
-            {/* Brand filter */}
+            {/* Brand filter — a dropdown populated from live inventory (48 brands),
+                so it stays compact and always lists every in-stock brand. */}
             <div>
               <h4 className="text-sm font-semibold mb-3">{dictionary.catalog.filters.brand}</h4>
-              <div className="space-y-1">
-                <button
-                  onClick={() => updateFilters({ ...filters, brand: undefined })}
-                  className={cn(
-                    "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
-                    !filters.brand ? "bg-neon-blue/15 text-neon-blue font-semibold" : "text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  {dictionary.catalog.filters.allBrands}
-                </button>
-                {CAR_BRANDS.map((brand) => (
-                  <button
-                    key={brand}
-                    onClick={() => updateFilters({ ...filters, brand: filters.brand === brand ? undefined : brand })}
-                    className={cn(
-                      "w-full text-left px-3 py-2 rounded-lg text-sm transition-colors",
-                      filters.brand === brand ? "bg-neon-blue/15 text-neon-blue font-semibold" : "text-white/60 hover:bg-white/5"
-                    )}
-                  >
-                    {brand}
-                  </button>
+              <select
+                value={filters.brand || ""}
+                onChange={(e) => updateFilters({ ...filters, brand: e.target.value || undefined })}
+                className="w-full h-10 rounded-lg border border-white/10 bg-card text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-neon-blue"
+              >
+                <option value="">{dictionary.catalog.filters.allBrands}</option>
+                {facets.brands.map((brand) => (
+                  <option key={brand} value={brand}>{brand}</option>
                 ))}
-              </div>
+              </select>
             </div>
 
             {/* Body type filter */}
             <div>
               <h4 className="text-sm font-semibold mb-3">{dictionary.catalog.filters.bodyType}</h4>
               <div className="flex flex-wrap gap-2">
-                {BODY_TYPES.map((bt) => (
-                  <button
-                    key={bt.value}
-                    onClick={() => updateFilters({ ...filters, body_type: filters.body_type === bt.value ? undefined : bt.value })}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                      filters.body_type === bt.value
-                        ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                        : "border-white/10 text-white/60 hover:bg-white/5"
-                    )}
-                  >
-                    {bt.label[locale]}
-                  </button>
-                ))}
+                {facets.body_types.map((value) => {
+                  const label = BODY_TYPES.find((b) => b.value === value)?.label[locale] || value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => updateFilters({ ...filters, body_type: filters.body_type === value ? undefined : value })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                        filters.body_type === value
+                          ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
+                          : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -288,20 +310,23 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
             <div>
               <h4 className="text-sm font-semibold mb-3">{dictionary.catalog.filters.fuelType}</h4>
               <div className="flex flex-wrap gap-2">
-                {FUEL_TYPES.map((ft) => (
-                  <button
-                    key={ft.value}
-                    onClick={() => updateFilters({ ...filters, fuel_type: filters.fuel_type === ft.value ? undefined : ft.value })}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                      filters.fuel_type === ft.value
-                        ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                        : "border-white/10 text-white/60 hover:bg-white/5"
-                    )}
-                  >
-                    {ft.label[locale]}
-                  </button>
-                ))}
+                {facets.fuel_types.map((value) => {
+                  const label = FUEL_TYPES.find((f) => f.value === value)?.label[locale] || value;
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => updateFilters({ ...filters, fuel_type: filters.fuel_type === value ? undefined : value })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                        filters.fuel_type === value
+                          ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
+                          : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -437,35 +462,47 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
           </div>
         </div>
 
-        {!loading && total > PAGE_SIZE && (
-          <div className="mt-10 flex items-center justify-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setPage((p) => {
-                const next = Math.max(1, p - 1);
-                syncToUrl(filters, sortBy, next);
-                return next;
-              })}
-              disabled={page === 1}
-            >
-              Prev
-            </Button>
-            <span className="text-sm text-white/60">
-              Page <span className="font-mono">{page}</span> of <span className="font-mono">{Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
-            </span>
-            <Button
-              variant="outline"
-              onClick={() => setPage((p) => {
-                const next = p * PAGE_SIZE >= total ? p : p + 1;
-                syncToUrl(filters, sortBy, next);
-                return next;
-              })}
-              disabled={page * PAGE_SIZE >= total}
-            >
-              Next
-            </Button>
-          </div>
-        )}
+        {!loading && total > PAGE_SIZE && (() => {
+          const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+          // Windowed page list: 1 … (p-1) p (p+1) … last — clickable so you can
+          // jump straight to a page instead of stepping one at a time.
+          const nums: (number | "…")[] = [];
+          for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) nums.push(i);
+            else if (nums[nums.length - 1] !== "…") nums.push("…");
+          }
+          const prevLabel = locale === "ru" ? "Назад" : locale === "uz" ? "Orqaga" : "Prev";
+          const nextLabel = locale === "ru" ? "Вперёд" : locale === "uz" ? "Oldinga" : "Next";
+          return (
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
+              <Button variant="outline" onClick={() => goToPage(Math.max(1, page - 1))} disabled={page === 1}>
+                {prevLabel}
+              </Button>
+              {nums.map((n, i) =>
+                n === "…" ? (
+                  <span key={`gap-${i}`} className="px-1 text-white/40 select-none">…</span>
+                ) : (
+                  <button
+                    key={n}
+                    onClick={() => goToPage(n)}
+                    aria-current={n === page ? "page" : undefined}
+                    className={cn(
+                      "min-w-10 h-10 px-2 rounded-lg text-sm font-mono transition-colors border",
+                      n === page
+                        ? "bg-neon-blue/15 border-neon-blue text-neon-blue font-semibold"
+                        : "border-white/10 text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    {n}
+                  </button>
+                )
+              )}
+              <Button variant="outline" onClick={() => goToPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages}>
+                {nextLabel}
+              </Button>
+            </div>
+          );
+        })()}
 
         {/* Recently viewed */}
         <RecentlyViewed />
