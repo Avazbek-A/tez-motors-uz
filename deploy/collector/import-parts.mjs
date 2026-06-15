@@ -12,6 +12,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { isJunkPart } from "./parts-quality.mjs";
 
 const WRITE = process.argv.includes("--write");
 const IN = process.env.PARTS_JSON || "./olx-parts.json";
@@ -59,9 +60,10 @@ async function main() {
   console.log(`read ${rows.length} collected parts from ${IN}`);
 
   const records = [];
-  let rehosted = 0, noPhoto = 0, failedPhoto = 0;
+  let rehosted = 0, noPhoto = 0, failedPhoto = 0, junk = 0;
   for (const r of rows) {
     if (!r.name_ru) continue;
+    if (isJunkPart(r.name_ru, r.price_usd)) { junk++; continue; } // drop car ads / mis-priced noise
     if (!r.images) { noPhoto++; continue; } // catalogue entries must have a photo
     let img;
     try { img = await rehost(r.images); rehosted++; } catch { failedPhoto++; await sleep(150); continue; }
@@ -86,7 +88,7 @@ async function main() {
       fits_year_to: r.fits_year_to || null,
     });
   }
-  console.log(`prepared ${records.length} drafts (rehosted ${rehosted} photos · no-photo ${noPhoto} · photo-failed ${failedPhoto})`);
+  console.log(`prepared ${records.length} drafts (rehosted ${rehosted} · junk-skipped ${junk} · no-photo ${noPhoto} · photo-failed ${failedPhoto})`);
   if (!WRITE) { console.log("(dry-run; pass --write to insert)"); return; }
 
   let ok = 0;
