@@ -122,10 +122,9 @@ export function OrganizationSchema() {
       areaServed: { "@type": "Country", name: "Uzbekistan" },
     },
     sameAs: [
-      SITE_CONFIG.telegram,
+      SITE_CONFIG.telegramChannel,
       SITE_CONFIG.instagram,
       "https://www.instagram.com/tezmotors_uz",
-      "https://t.me/tezmotors",
     ],
   };
 

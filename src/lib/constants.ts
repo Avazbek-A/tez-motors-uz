@@ -7,7 +7,10 @@ export const SITE_CONFIG = {
   phone: "+998 90 858 89 89",
   phoneRaw: "+998908588989",
   email: "tezglobalmotors@gmail.com",
-  telegram: "https://t.me/tezmotors",
+  // Contact = a chat with the dealer's number (not the @tezmotors channel) — the
+  // "Написать в Telegram" buttons should open a conversation, like WhatsApp does.
+  telegram: "https://t.me/+998908588989",
+  telegramChannel: "https://t.me/tezmotors", // marketing channel (new-car posts) — "follow us" / SEO sameAs
   instagram: "https://instagram.com/tezmotors_uz",
   whatsapp: "https://wa.me/998908588989",
   address: "г. Ташкент, Чиланзарский район, ул. Катартал, 25",
