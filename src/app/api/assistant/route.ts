@@ -63,13 +63,14 @@ export async function POST(request: NextRequest) {
     const data = assistantSchema.parse(body);
     const locale = data.locale || "ru";
 
-    const ok = await verifyTurnstile(data.turnstile_token, getClientIp(request));
-    if (!ok) {
-      return NextResponse.json(
-        { success: false, error: "Captcha verification failed" },
-        { status: 400 },
-      );
-    }
+    // Turnstile is a SOFT signal here, not a hard gate. The widget is INVISIBLE, so a
+    // legitimate visitor whose challenge silently fails (flagged IP / VPN / privacy
+    // browser / ad-blocker / flaky Cloudflare reachability) gets NO checkbox to retry —
+    // hard-rejecting them with 400 "Captcha verification failed" breaks the assistant
+    // for real users (the reported "подбор с ИИ не работает"). Abuse is already bounded
+    // by the per-IP rate limiter above (15 / 10 min). So we verify and record the
+    // result for lead-quality flagging, but never reject the request on it.
+    const captchaPassed = await verifyTurnstile(data.turnstile_token, getClientIp(request));
 
     const supabase = createServiceClient();
 
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
         lead_score: leadScore,
         stage,
         thread_id: threadId,
+        captcha_passed: captchaPassed,
       };
       const { data: inquiry, error } = await supabase
         .from("inquiries")
