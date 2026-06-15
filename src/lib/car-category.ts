@@ -19,7 +19,7 @@ export interface CarCategory {
   lengthMm: number | null;
   trunkL: number | null;
   groundClearanceMm: number | null;
-  driveType: "AWD" | "RWD" | "FWD" | null;
+  driveType: "awd" | "rwd" | "fwd" | null;
   /** Human use-case tags the assistant matches against client intent. */
   useCases: string[];
 }
@@ -92,9 +92,9 @@ export function categorizeCar(car: Car): CarCategory {
   const seats = num(param(car, /^(Number of )?[Ss]eats|Seating/i)) ?? inferSeats(body);
   const driveType = ((): CarCategory["driveType"] => {
     const dt = (car.drivetrain || "") + " " + (param(car, /Drive (type|form)|Drivetrain|Driven wheels/i) || "");
-    if (/awd|4wd|all.?wheel|four.?wheel|quattro|xdrive/i.test(dt)) return "AWD";
-    if (/rwd|rear.?wheel/i.test(dt)) return "RWD";
-    if (/fwd|front.?wheel/i.test(dt)) return "FWD";
+    if (/awd|4wd|all.?wheel|four.?wheel|quattro|xdrive/i.test(dt)) return "awd";
+    if (/rwd|rear.?wheel/i.test(dt)) return "rwd";
+    if (/fwd|front.?wheel/i.test(dt)) return "fwd";
     return null;
   })();
 
@@ -130,7 +130,7 @@ export function categorizeCar(car: Car): CarCategory {
   if (seatsN >= 5 && (isSUV || body.includes("minivan") || (trunkL ?? 0) >= 450)) tags.add("family");
   if (sizeClass === "compact" || (L > 0 && L < 4400)) tags.add("city");
   if (body.includes("sedan") && (segment === "premium" || segment === "luxury")) tags.add("business");
-  if (isSUV && ((groundClearanceMm ?? 0) >= 190 || driveType === "AWD")) tags.add("off-road");
+  if (isSUV && ((groundClearanceMm ?? 0) >= 190 || driveType === "awd")) tags.add("off-road");
   if (performance === "sporty" || performance === "high-performance") tags.add("performance");
   if (powertrain === "electric" && (rangeKm ?? 0) >= 450) tags.add("long-range");
   if (powertrain === "petrol" || powertrain === "diesel" || powertrain === "hybrid") tags.add("long-distance");

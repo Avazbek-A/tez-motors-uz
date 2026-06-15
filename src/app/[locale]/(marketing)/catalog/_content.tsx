@@ -22,7 +22,19 @@ import type { Car, CarFilters } from "@/types/car";
 
 type SortOption = "default" | "price_asc" | "price_desc" | "year_desc" | "name_asc";
 const PAGE_SIZE = 24;
-type Facets = { brands: string[]; body_types: string[]; fuel_types: string[] };
+type Facets = {
+  brands: string[]; body_types: string[]; fuel_types: string[];
+  transmissions: string[]; drivetrains: string[]; seats: number[];
+  year_min: number | null; year_max: number | null;
+};
+
+const TRANS_LABELS: Record<string, Record<string, string>> = {
+  automatic: { ru: "Автомат", uz: "Avtomat", en: "Automatic" },
+  manual: { ru: "Механика", uz: "Mexanika", en: "Manual" },
+  cvt: { ru: "Вариатор", uz: "Variator", en: "CVT" },
+  robot: { ru: "Робот", uz: "Robot", en: "Robot" },
+  dct: { ru: "DCT", uz: "DCT", en: "DCT" },
+};
 
 interface CatalogContentInnerProps {
   /**
@@ -53,7 +65,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
   const seeded =
     (initialCars?.length ?? 0) > 0 &&
     !initialFilters &&
-    !["brand", "body_type", "fuel_type", "price_min", "price_max", "monthly_max", "q", "sort", "page"].some(
+    !["brand", "body_type", "fuel_type", "price_min", "price_max", "monthly_max", "mileage_max", "year_min", "year_max", "transmission", "drivetrain", "seats_min", "range_min", "power_min", "q", "sort", "page"].some(
       (k) => searchParams.get(k),
     );
 
@@ -80,6 +92,13 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     // Used-car section pins listing_type via initialFilters; mileage_max is a user filter.
     listing_type: searchParams.get("listing_type") || initialFilters?.listing_type || undefined,
     mileage_max: searchParams.get("mileage_max") ? parseInt(searchParams.get("mileage_max")!) : initialFilters?.mileage_max,
+    year_min: searchParams.get("year_min") ? parseInt(searchParams.get("year_min")!) : initialFilters?.year_min,
+    year_max: searchParams.get("year_max") ? parseInt(searchParams.get("year_max")!) : initialFilters?.year_max,
+    transmission: searchParams.get("transmission") || initialFilters?.transmission || undefined,
+    drivetrain: searchParams.get("drivetrain") || initialFilters?.drivetrain || undefined,
+    seats_min: searchParams.get("seats_min") ? parseInt(searchParams.get("seats_min")!) : initialFilters?.seats_min,
+    range_min: searchParams.get("range_min") ? parseInt(searchParams.get("range_min")!) : initialFilters?.range_min,
+    power_min: searchParams.get("power_min") ? parseInt(searchParams.get("power_min")!) : initialFilters?.power_min,
     search: searchParams.get("q") || undefined,
   }));
 
@@ -94,6 +113,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     brands: [...CAR_BRANDS],
     body_types: BODY_TYPES.map((b) => b.value),
     fuel_types: FUEL_TYPES.map((f) => f.value),
+    transmissions: [], drivetrains: [], seats: [], year_min: null, year_max: null,
   });
   useEffect(() => {
     let live = true;
@@ -101,7 +121,11 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
       .then((r) => r.json())
       .then((d) => {
         if (live && d && Array.isArray(d.brands) && d.brands.length) {
-          setFacets({ brands: d.brands, body_types: d.body_types || [], fuel_types: d.fuel_types || [] });
+          setFacets({
+            brands: d.brands, body_types: d.body_types || [], fuel_types: d.fuel_types || [],
+            transmissions: d.transmissions || [], drivetrains: d.drivetrains || [], seats: d.seats || [],
+            year_min: d.year_min ?? null, year_max: d.year_max ?? null,
+          });
         }
       })
       .catch(() => {});
@@ -127,6 +151,13 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     if (newFilters.price_max) params.set("price_max", String(newFilters.price_max));
     if (newFilters.monthly_max) params.set("monthly_max", String(newFilters.monthly_max));
     if (newFilters.mileage_max) params.set("mileage_max", String(newFilters.mileage_max));
+    if (newFilters.year_min) params.set("year_min", String(newFilters.year_min));
+    if (newFilters.year_max) params.set("year_max", String(newFilters.year_max));
+    if (newFilters.transmission) params.set("transmission", newFilters.transmission);
+    if (newFilters.drivetrain) params.set("drivetrain", newFilters.drivetrain);
+    if (newFilters.seats_min) params.set("seats_min", String(newFilters.seats_min));
+    if (newFilters.range_min) params.set("range_min", String(newFilters.range_min));
+    if (newFilters.power_min) params.set("power_min", String(newFilters.power_min));
     if (newFilters.search) params.set("q", newFilters.search);
     if (newSort !== "default") params.set("sort", newSort);
     if (newPage > 1) params.set("page", String(newPage));
@@ -169,6 +200,13 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
     if (filters.monthly_max) params.set("monthly_max", String(filters.monthly_max));
     if (filters.listing_type) params.set("listing_type", filters.listing_type);
     if (filters.mileage_max) params.set("mileage_max", String(filters.mileage_max));
+    if (filters.year_min) params.set("year_min", String(filters.year_min));
+    if (filters.year_max) params.set("year_max", String(filters.year_max));
+    if (filters.transmission) params.set("transmission", filters.transmission);
+    if (filters.drivetrain) params.set("drivetrain", filters.drivetrain);
+    if (filters.seats_min) params.set("seats_min", String(filters.seats_min));
+    if (filters.range_min) params.set("range_min", String(filters.range_min));
+    if (filters.power_min) params.set("power_min", String(filters.power_min));
     if (sortBy !== "default") params.set("sort", sortBy);
 
     fetch(`/api/cars?${params.toString()}`)
@@ -407,6 +445,141 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* Year range */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Год" : locale === "uz" ? "Yil" : "Year"}</h4>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder={facets.year_min ? `от ${facets.year_min}` : (locale === "ru" ? "от" : "from")}
+                  value={filters.year_min || ""}
+                  onChange={(e) => updateFilters({ ...filters, year_min: e.target.value ? parseInt(e.target.value) : undefined })}
+                  className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                />
+                <span className="text-white/60 self-center">—</span>
+                <input
+                  type="number"
+                  placeholder={facets.year_max ? `до ${facets.year_max}` : (locale === "ru" ? "до" : "to")}
+                  value={filters.year_max || ""}
+                  onChange={(e) => updateFilters({ ...filters, year_max: e.target.value ? parseInt(e.target.value) : undefined })}
+                  className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                />
+              </div>
+            </div>
+
+            {/* Drivetrain */}
+            {facets.drivetrains.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Привод" : locale === "uz" ? "Uzatma" : "Drivetrain"}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {facets.drivetrains.map((dt) => (
+                    <button
+                      key={dt}
+                      onClick={() => updateFilters({ ...filters, drivetrain: filters.drivetrain === dt ? undefined : dt })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border uppercase",
+                        filters.drivetrain === dt ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      {dt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Seats (min) */}
+            {facets.seats.filter((n) => n >= 4).length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Мест" : locale === "uz" ? "O'rindiqlar" : "Seats"}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {[...new Set(facets.seats.filter((n) => n >= 4))].sort((a, b) => a - b).map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => updateFilters({ ...filters, seats_min: filters.seats_min === n ? undefined : n })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
+                        filters.seats_min === n ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      {n}+
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Power (min hp) */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Мощность" : locale === "uz" ? "Quvvat" : "Power"}</h4>
+              <div className="flex flex-wrap gap-2">
+                {[150, 250, 400].map((hp) => (
+                  <button
+                    key={hp}
+                    onClick={() => updateFilters({ ...filters, power_min: filters.power_min === hp ? undefined : hp })}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
+                      filters.power_min === hp ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    {hp}+ {locale === "ru" ? "л.с." : "hp"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Electric range (min km) */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Запас хода (электро)" : locale === "uz" ? "Yurish masofasi (elektr)" : "Electric range"}</h4>
+              <div className="flex flex-wrap gap-2">
+                {[400, 500, 600].map((km) => (
+                  <button
+                    key={km}
+                    onClick={() => updateFilters({ ...filters, range_min: filters.range_min === km ? undefined : km })}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
+                      filters.range_min === km ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                    )}
+                  >
+                    {km}+ {locale === "ru" ? "км" : "km"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Transmission */}
+            {facets.transmissions.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Коробка" : locale === "uz" ? "Uzatmalar qutisi" : "Transmission"}</h4>
+                <div className="flex flex-wrap gap-2">
+                  {facets.transmissions.map((tr) => (
+                    <button
+                      key={tr}
+                      onClick={() => updateFilters({ ...filters, transmission: filters.transmission === tr ? undefined : tr })}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+                        filters.transmission === tr ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                      )}
+                    >
+                      {TRANS_LABELS[tr]?.[locale] || tr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mileage (max) */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">{locale === "ru" ? "Пробег, до (км)" : locale === "uz" ? "Probeg, gacha (km)" : "Max mileage (km)"}</h4>
+              <input
+                type="number"
+                placeholder={locale === "ru" ? "напр. 50000" : "e.g. 50000"}
+                value={filters.mileage_max || ""}
+                onChange={(e) => updateFilters({ ...filters, mileage_max: e.target.value ? parseInt(e.target.value) : undefined })}
+                className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+              />
             </div>
 
             {activeFilterCount > 0 && (

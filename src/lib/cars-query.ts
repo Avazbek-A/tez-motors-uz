@@ -71,6 +71,13 @@ export interface CarsPageOpts {
   listingType?: string | null;
   /** Max mileage (km) — used-car filter. */
   mileageMax?: number | null;
+  yearMin?: number | null;
+  yearMax?: number | null;
+  transmission?: string | null;
+  drivetrain?: string | null; // AWD | RWD | FWD
+  seatsMin?: number | null;
+  rangeMin?: number | null; // min electric range (km)
+  powerMin?: number | null; // min horsepower
   hotOnly?: boolean;
   search?: string | null;
   /** Pre-resolved trigram match ids (caller runs the RPC once). */
@@ -106,6 +113,13 @@ export async function fetchCarsPage(
   if (opts.priceMax != null) query = query.lte("price_usd", opts.priceMax);
   if (opts.listingType === "new" || opts.listingType === "used") query = query.eq("listing_type", opts.listingType);
   if (opts.mileageMax != null) query = query.lte("mileage", opts.mileageMax);
+  if (opts.yearMin != null) query = query.gte("year", opts.yearMin);
+  if (opts.yearMax != null) query = query.lte("year", opts.yearMax);
+  if (opts.transmission) query = query.eq("transmission", opts.transmission);
+  if (opts.drivetrain) query = query.eq("drivetrain", opts.drivetrain);
+  if (opts.seatsMin != null) query = query.gte("seats", opts.seatsMin);
+  if (opts.rangeMin != null) query = query.gte("range_km", opts.rangeMin);
+  if (opts.powerMin != null) query = query.gte("engine_power", opts.powerMin);
   if (opts.hotOnly) query = query.eq("is_hot_offer", true);
   if (opts.search) {
     if (opts.searchIds && opts.searchIds.length > 0) {

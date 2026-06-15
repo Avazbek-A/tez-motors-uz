@@ -14,6 +14,8 @@ export interface Car {
   transmission: "automatic" | "manual" | "cvt" | "robot" | "dct";
   drivetrain: "fwd" | "rwd" | "awd" | null;
   mileage: number;
+  seats?: number | null;
+  range_km?: number | null;
   color: string | null;
   description_ru: string | null;
   description_uz: string | null;
@@ -66,6 +68,11 @@ export interface CarFilters {
   listing_type?: string;
   /** Max mileage (km) — used-car filter. */
   mileage_max?: number;
+  transmission?: string;
+  drivetrain?: string; // awd | rwd | fwd
+  seats_min?: number;
+  range_min?: number; // min electric range (km)
+  power_min?: number; // min horsepower
   search?: string;
 }
 

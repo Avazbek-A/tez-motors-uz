@@ -107,6 +107,13 @@ export async function GET(request: NextRequest) {
   const lt = searchParams.get("listing_type");
   const listingType = lt === "new" || lt === "used" ? lt : null;
   const mileageMax = parseIntSafe(searchParams.get("mileage_max"), 0, 2_000_000);
+  const yearMin = parseIntSafe(searchParams.get("year_min"), 1980, 2100);
+  const yearMax = parseIntSafe(searchParams.get("year_max"), 1980, 2100);
+  const transmission = searchParams.get("transmission")?.slice(0, 24) || null;
+  const drivetrain = searchParams.get("drivetrain")?.slice(0, 8) || null;
+  const seatsMin = parseIntSafe(searchParams.get("seats_min"), 1, 12);
+  const rangeMin = parseIntSafe(searchParams.get("range_min"), 0, 2_000);
+  const powerMin = parseIntSafe(searchParams.get("power_min"), 0, 5_000);
   const rawSearch = searchParams.get("search") ?? searchParams.get("q");
   const search = rawSearch ? sanitizeSearch(rawSearch) : null;
   const sort = searchParams.get("sort");
@@ -155,6 +162,13 @@ export async function GET(request: NextRequest) {
           priceMax,
           listingType,
           mileageMax,
+          yearMin,
+          yearMax,
+          transmission,
+          drivetrain,
+          seatsMin,
+          rangeMin,
+          powerMin,
           hotOnly: hotOnly === "true",
           search,
           searchIds,
@@ -190,6 +204,13 @@ export async function GET(request: NextRequest) {
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
     if (listingType) query = query.eq("listing_type", listingType);
     if (mileageMax !== null) query = query.lte("mileage", mileageMax);
+    if (yearMin !== null) query = query.gte("year", yearMin);
+    if (yearMax !== null) query = query.lte("year", yearMax);
+    if (transmission) query = query.eq("transmission", transmission);
+    if (drivetrain) query = query.eq("drivetrain", drivetrain);
+    if (seatsMin !== null) query = query.gte("seats", seatsMin);
+    if (rangeMin !== null) query = query.gte("range_km", rangeMin);
+    if (powerMin !== null) query = query.gte("engine_power", powerMin);
     if (hotOnly === "true") query = query.eq("is_hot_offer", true);
     if (search) {
       if (searchIds && searchIds.length > 0) {

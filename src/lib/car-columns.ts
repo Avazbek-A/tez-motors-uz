@@ -26,6 +26,8 @@ export const PUBLIC_CAR_COLUMNS = [
   "transmission",
   "drivetrain",
   "mileage",
+  "seats",
+  "range_km",
   "listing_type",
   "vin",
   "owners_count",
