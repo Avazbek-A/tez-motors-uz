@@ -72,10 +72,17 @@ export const DELIVERY_CITIES = [
   { slug: "nukus", ru: "Нукус", uz: "Nukus", en: "Nukus", days: "2–3" },
 ] as const;
 
+// Fallback brand list (catalog filter + brand landing pages derive the live list
+// from inventory via getInventoryBrands(); this is the offline fallback). Kept in
+// sync with the normalized brands actually in stock (2026-06-15).
 export const CAR_BRANDS = [
-  "BYD", "Chery", "Haval", "Geely", "Changan", "JETOUR", "Tank",
-  "Li Auto", "NIO", "Zeekr", "Exeed", "Hongqi", "Dongfeng", "GAC",
-  "Great Wall", "MG", "Omoda", "Jaecoo", "Voyah", "XPeng",
+  "Aito", "Audi", "Avatr", "Beijing", "BMW", "Buick", "BYD", "Changan", "Chery",
+  "Denza", "Dongfeng", "GAC", "Geely", "Genesis", "Haval", "Hechuang", "Honda",
+  "Hongqi", "ICar", "Kia", "Lamborghini", "Leapmotor", "Li Auto", "Lynk&Co",
+  "Maextro", "Mazda", "Mercedes-Benz", "MG", "Neta", "NIO", "Onvo", "Porsche",
+  "Qiyuan", "Roewe", "Shenlan", "Stelato", "Tank", "Tesla", "Toyota",
+  "Volkswagen", "Volvo", "VOYAH", "Xiaomi", "XPeng", "Yangwang", "YUANHANG",
+  "Zeekr", "Zhiji",
 ] as const;
 
 export const BODY_TYPES = [

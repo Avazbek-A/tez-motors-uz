@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { CAR_BRANDS, SITE_CONFIG } from "@/lib/constants";
+import { SITE_CONFIG } from "@/lib/constants";
+import { brandSlug, getInventoryBrands, brandFromSlug } from "@/lib/brands";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
@@ -13,12 +14,10 @@ import CatalogContent from "../../_content";
  * Each brand gets its own canonical URL, title, description, and h1 so
  * Google can rank it independently for brand-led queries ("BYD в
  * Ташкенте"). The body is the standard catalog grid pre-filtered to that
- * brand, so filter/search interactions still work as expected.
+ * brand, so filter/search interactions still work as expected. The brand list
+ * is derived from live inventory (every in-stock brand → its own page), with
+ * URL-safe slugs (brandSlug handles spaces / "&" e.g. Lynk&Co → lynk-co).
  */
-
-const SLUG_TO_BRAND = Object.fromEntries(
-  CAR_BRANDS.map((b) => [b.toLowerCase().replace(/\s+/g, "-"), b]),
-) as Record<string, (typeof CAR_BRANDS)[number]>;
 
 const COPY_BY_LOCALE: Record<
   SeoLocale,
@@ -41,15 +40,16 @@ const COPY_BY_LOCALE: Record<
   }),
 };
 
-export function generateStaticParams() {
-  return Object.keys(SLUG_TO_BRAND).map((brand) => ({ brand }));
+export async function generateStaticParams() {
+  const brands = await getInventoryBrands();
+  return brands.map((b) => ({ brand: brandSlug(b) }));
 }
 
 export async function generateMetadata(
   { params }: { params: Promise<{ brand: string }> },
 ): Promise<Metadata> {
   const { brand: slug } = await params;
-  const brand = SLUG_TO_BRAND[slug];
+  const brand = await brandFromSlug(slug);
   if (!brand) return { title: "Brand not found" };
 
   const requestHeaders = await headers();
@@ -72,7 +72,7 @@ export default async function BrandPage(
   { params }: { params: Promise<{ brand: string }> },
 ) {
   const { brand: slug } = await params;
-  const brand = SLUG_TO_BRAND[slug];
+  const brand = await brandFromSlug(slug);
   if (!brand) notFound();
 
   const requestHeaders = await headers();

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { CAR_BRANDS, SITE_CONFIG } from "@/lib/constants";
+import { brandSlug } from "@/lib/brands";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { localizedPath } from "@/lib/locale-path";
@@ -117,7 +118,7 @@ export default async function TashkentPage() {
                 key={brand}
                 href={localizedPath(
                   locale,
-                  `/catalog/brand/${brand.toLowerCase().replace(/\s+/g, "-")}`,
+                  `/catalog/brand/${brandSlug(brand)}`,
                 )}
                 className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
               >

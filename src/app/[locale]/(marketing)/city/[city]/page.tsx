@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CAR_BRANDS, DELIVERY_CITIES, SITE_CONFIG } from "@/lib/constants";
+import { brandSlug } from "@/lib/brands";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { localizedPath } from "@/lib/locale-path";
@@ -135,7 +136,7 @@ export default async function CityPage({ params }: { params: Promise<{ city: str
             {CAR_BRANDS.map((brand) => (
               <Link
                 key={brand}
-                href={localizedPath(locale, `/catalog/brand/${brand.toLowerCase().replace(/\s+/g, "-")}`)}
+                href={localizedPath(locale, `/catalog/brand/${brandSlug(brand)}`)}
                 className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
               >
                 {brand}
