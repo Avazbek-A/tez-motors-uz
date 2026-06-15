@@ -50,7 +50,10 @@ export default async function CatalogPage() {
   let initialTotal = 0;
   try {
     const supabase = await createClient();
-    const r = await fetchCarsPage(supabase, { page: 1, pageSize: 12, sort: "default" });
+    // Keep in sync with PAGE_SIZE in _content.tsx — a mismatch makes the first
+    // (server-rendered) page a different size than client-fetched pages, which
+    // skips cars when you go to page 2.
+    const r = await fetchCarsPage(supabase, { page: 1, pageSize: 24, sort: "default" });
     initialCars = r.cars as Car[];
     initialTotal = r.total;
   } catch {
