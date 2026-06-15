@@ -31,7 +31,10 @@ const OR_KEY = env.OPENROUTER_API_KEY || env.LLM_API_KEY;
 const U = env.NEXT_PUBLIC_SUPABASE_URL, K = env.SUPABASE_SERVICE_ROLE_KEY;
 const H = { apikey: K, authorization: `Bearer ${K}`, "content-type": "application/json" };
 
-const isFree = (m) => m.id.endsWith(":free") || (m.pricing?.prompt === "0" && m.pricing?.completion === "0");
+// STRICT free check — must carry the `:free` suffix (matches the app's paid guard
+// in llm.ts). The account has credit, so anything else would be billed. Never pick
+// a non-:free model.
+const isFree = (m) => typeof m.id === "string" && m.id.endsWith(":free");
 const isVision = (m) => JSON.stringify(m.architecture?.input_modalities || m.architecture?.modality || "").includes("image");
 const sizeB = (id) => { const m = id.match(/(\d+)\s*b\b/i); return m ? parseInt(m[1], 10) : 0; };
 
@@ -60,14 +63,26 @@ async function probe(id) {
   } catch { return false; }
 }
 
-async function tg(text) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
-  try {
-    await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+// Notify the owner over BOTH Telegram + email (each fails open; email no-ops until
+// RESEND_API_KEY/EMAIL_FROM/DEALER_EMAIL are set). Used for refresh changes AND the
+// critical "free models unavailable" alert.
+async function notify(title, lines = []) {
+  const text = [title, ...lines].join("\n").slice(0, 3500);
+  const jobs = [];
+  const chat = env.TELEGRAM_ERROR_CHAT_ID || env.TELEGRAM_CHAT_ID;
+  if (env.TELEGRAM_BOT_TOKEN && chat) {
+    jobs.push(fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, parse_mode: "HTML", disable_web_page_preview: true }),
-    });
-  } catch {}
+      body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+    }).catch(() => {}));
+  }
+  if (env.RESEND_API_KEY && env.EMAIL_FROM && env.DEALER_EMAIL) {
+    jobs.push(fetch("https://api.resend.com/emails", {
+      method: "POST", headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify({ from: env.EMAIL_FROM, to: env.DEALER_EMAIL, subject: `[Tez Motors] ${title}`.slice(0, 180), text }),
+    }).catch(() => {}));
+  }
+  await Promise.allSettled(jobs);
 }
 
 async function main() {
@@ -85,12 +100,14 @@ async function main() {
   const next = { ...cur };
   const fields = { chat: ["chat", "chatFallback"], reason: ["reason", "reasonFallback"], vision: ["vision", "visionFallback"] };
   const changes = [];
+  const down = []; // tiers with NO live free candidate → free models stopped
 
   for (const [tier, [pKey, fKey]] of Object.entries(fields)) {
     const ranked = TIERS[tier](free).map((m) => m.id);
     // pick the first N live candidates for [primary, fallback]
     const picks = [];
     for (const id of ranked) { if (picks.length >= 2) break; if (await live(id)) picks.push(id); }
+    if (!picks.length && !(cur[pKey] && freeIds.has(cur[pKey]) && (await live(cur[pKey])))) down.push(tier);
     for (const [i, key] of [pKey, fKey].entries()) {
       const current = cur[key];
       const keep = current && freeIds.has(current) && (await live(current));
@@ -100,7 +117,17 @@ async function main() {
     }
   }
 
-  if (!changes.length) { console.log("no changes — all current models are free + live ✓"); return; }
+  // CRITICAL: free models stopped for a tier → alert the owner (Telegram + email).
+  if (down.length) {
+    console.log("FREE MODELS DOWN for tiers: " + down.join(", "));
+    await notify("🚨 OpenRouter FREE models unavailable", [
+      ...down.map((t) => `• ${t}: no live free NVIDIA model found`),
+      "AI replies are falling back to the deterministic template.",
+      "Nothing switched to a paid model. Check OpenRouter free-tier status.",
+    ]);
+  }
+
+  if (!changes.length) { console.log("no model changes — current picks are free + live ✓"); return; }
   console.log("CHANGES:\n  " + changes.join("\n  "));
   if (!WRITE) { console.log("(dry-run; pass --write to apply)"); return; }
 
@@ -108,6 +135,6 @@ async function main() {
   next.updated_at = new Date().toISOString();
   const r = await fetch(`${U}/rest/v1/site_settings`, { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ id: "llm_models", values: next }) });
   console.log(r.ok ? "applied ✓" : "FAIL " + r.status);
-  if (r.ok) await tg("🤖 <b>LLM models auto-refreshed</b> (OpenRouter free)\n" + changes.map((c) => "• " + c).join("\n"));
+  if (r.ok) await notify("🤖 LLM models auto-refreshed (OpenRouter free)", changes.map((c) => "• " + c));
 }
 main().catch((e) => { console.error("FATAL", e); process.exit(1); });

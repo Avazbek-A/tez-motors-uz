@@ -19,6 +19,15 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 export type LlmTier = "chat" | "reason" | "vision";
 
+/**
+ * Hard paid-guard: a model is callable ONLY if it's an OpenRouter free variant
+ * (`:free` suffix). The dealer is cost-averse and the account HAS credit, so a
+ * non-free id would actually be billed — we never call one. A misconfigured paid
+ * model is skipped (→ fall back / alert), never charged.
+ */
+export const isFreeModel = (id: string | undefined | null): boolean =>
+  typeof id === "string" && id.trim().endsWith(":free");
+
 export interface TierModels {
   chat: string;
   chatFallback: string;

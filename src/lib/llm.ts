@@ -33,7 +33,8 @@
  * fallback chain runs entirely on OpenRouter's GPUs (nothing on local hardware, so
  * the Vostro never heats up). Local Ollama remains only a dev/offline option.
  */
-import { getTierModels, tierPair, type LlmTier } from "@/lib/llm-models";
+import { getTierModels, tierPair, isFreeModel, type LlmTier } from "@/lib/llm-models";
+import { alertDealer } from "@/lib/error-report";
 
 export interface AssistantCarLite {
   brand: string;
@@ -170,13 +171,21 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
   const provider = resolveProvider();
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = process.env.LLM_API_URL || (provider === "openai" ? OLLAMA_URL : ANTHROPIC_URL);
-  const models = tierPair(args.tier, await getTierModels());
+  const onOpenRouter = /openrouter\.ai/i.test(url);
+  const all = tierPair(args.tier, await getTierModels());
+  // PAID GUARD: on OpenRouter, only EVER call free (:free) models — the account has
+  // credit, so a paid id would be billed. A misconfigured non-free model is skipped
+  // (never charged) and the owner is alerted. (Local Ollama / other has no billing.)
+  const models = onOpenRouter ? all.filter(isFreeModel) : all.filter(Boolean);
+  if (onOpenRouter && all.some((m) => m && !isFreeModel(m))) {
+    void alertDealer("LLM paid-guard: skipped a NON-free model", [`tier=${args.tier}`, `not free: ${all.filter((m) => m && !isFreeModel(m)).join(", ")}`, "Only :free ids are called. Fix site_settings('llm_models')."], { key: "llm-nonfree" });
+  }
   const timeout = TIER_TIMEOUT_MS[args.tier];
 
   for (const model of models) {
     if (!model) continue;
     const req = buildChatRequest(provider, { system: args.system, messages: args.messages, maxTokens: args.maxTokens, apiKey, url, model });
-    if (/openrouter\.ai/i.test(req.url)) {
+    if (onOpenRouter) {
       req.headers["HTTP-Referer"] = "https://tezmotors.uz";
       req.headers["X-Title"] = "Tez Motors";
     }
@@ -193,6 +202,11 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
     } catch (err) {
       console.error("LLM call failed", model, err instanceof Error ? err.message : err);
     }
+  }
+  // Whole free chain failed → the owner needs to know the free models are down
+  // (replies fell back to the deterministic template). Throttled; never blocks.
+  if (onOpenRouter && models.length > 0) {
+    void alertDealer("OpenRouter FREE models unavailable", [`tier=${args.tier}`, `tried: ${models.join(", ")}`, "AI replies are falling back to the template. Check OpenRouter free-tier status / daily cap / rate limits."], { key: "llm-free-down" });
   }
   return null;
 }
@@ -260,12 +274,15 @@ export async function llmVision(args: { system: string; user: string; images: st
   if (!llmConfigured() || resolveProvider() !== "openai" || args.images.length === 0) return null;
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = openaiChatUrl(process.env.LLM_API_URL || OLLAMA_URL);
-  const models = tierPair("vision", await getTierModels());
+  const onOpenRouter = /openrouter\.ai/i.test(url);
+  const all = tierPair("vision", await getTierModels());
+  // PAID GUARD (see callChat): on OpenRouter only call :free vision models.
+  const models = onOpenRouter ? all.filter(isFreeModel) : all.filter(Boolean);
   for (const model of models) {
     if (!model) continue;
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
-    if (/openrouter\.ai/i.test(url)) {
+    if (onOpenRouter) {
       headers["HTTP-Referer"] = "https://tezmotors.uz";
       headers["X-Title"] = "Tez Motors";
     }
@@ -284,6 +301,9 @@ export async function llmVision(args: { system: string; user: string; images: st
     } catch (err) {
       console.error("LLM vision failed", model, err instanceof Error ? err.message : err);
     }
+  }
+  if (onOpenRouter && models.length > 0) {
+    void alertDealer("OpenRouter FREE models unavailable", ["tier=vision", `tried: ${models.join(", ")}`, "Vision (spec-screenshot) extraction fell back to none. Check OpenRouter free-tier status."], { key: "llm-free-down" });
   }
   return null;
 }
