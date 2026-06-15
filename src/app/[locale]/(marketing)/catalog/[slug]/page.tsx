@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
@@ -94,7 +95,8 @@ export default async function Page(
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
   const { slug } = await params;
   const car = await fetchCar(slug);
-  const aggregate = await fetchAggregate(car?.id ?? null);
+  if (!car) notFound(); // unknown car slug → real 404, not a soft-200 shell
+  const aggregate = await fetchAggregate(car.id);
 
   return (
     <>
