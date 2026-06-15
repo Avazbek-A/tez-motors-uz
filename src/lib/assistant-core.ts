@@ -138,7 +138,10 @@ export async function recommendCars(
 
   const ceiling = parseBudgetCeiling(opts.message);
 
-  let carQuery = supabase.from("cars").select("*").neq("inventory_status", "sold");
+  // Only recommend PRICED cars: ~13 available cars have price_usd=0 (no price set
+  // yet). They sort first under "price ascending" and can't be budget-matched, so
+  // they used to dominate every reply and render as "$0"/"$X". Exclude them here.
+  let carQuery = supabase.from("cars").select("*").neq("inventory_status", "sold").gt("price_usd", 0);
   if (ids && ids.length > 0) carQuery = carQuery.in("id", ids);
   if (ceiling !== null) carQuery = carQuery.lte("price_usd", ceiling);
   carQuery = carQuery
@@ -154,6 +157,7 @@ export async function recommendCars(
       .from("cars")
       .select("*")
       .neq("inventory_status", "sold")
+      .gt("price_usd", 0)
       .order("is_hot_offer", { ascending: false })
       .order("price_usd", { ascending: true })
       .limit(MAX_ASSISTANT_CARS);
