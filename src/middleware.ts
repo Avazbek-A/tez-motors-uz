@@ -70,9 +70,10 @@ export const config = {
   // Bypass middleware for root-level files that must NOT be redirected
   // to a locale-prefixed path: API, Next assets, favicons, images,
   // robots/sitemap/llms (search-engine + AI-crawler files), the PWA
-  // manifest, the OG image, and the search-engine verification files
-  // (Yandex / Google / Bing all want a static file at the bare root).
+  // manifest, the OG image, the search-engine verification files
+  // (Yandex / Google / Bing all want a static file at the bare root), and the
+  // IndexNow key file (<hex>.txt — must resolve at the exact root URL).
   matcher: [
-    "/((?!api|_next|favicon\\.ico|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image|yandex_|google[a-f0-9]+\\.html|BingSiteAuth\\.xml|pinterest-).*)",
+    "/((?!api|_next|favicon\\.ico|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image|yandex_|google[a-f0-9]+\\.html|BingSiteAuth\\.xml|pinterest-|[a-f0-9]{16,}\\.txt).*)",
   ],
 };
