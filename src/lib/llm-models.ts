@@ -13,7 +13,9 @@
  *   - vision : spec-sheet screenshots (CN/RU/UZ in images) — multimodal
  * All defaults are OpenRouter FREE models (no spend), verified live on the key.
  */
-import { createServiceClient } from "@/lib/supabase/server";
+// Import from /service (NOT /server) — /server pulls in next/headers (cookies),
+// which breaks the build if this module is ever reached from a client bundle.
+import { createServiceClient } from "@/lib/supabase/service";
 
 export type LlmTier = "chat" | "reason" | "vision";
 
