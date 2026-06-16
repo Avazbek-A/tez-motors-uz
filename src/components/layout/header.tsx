@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, X } from "lucide-react";
+import { ChevronDown, Menu, Phone, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
 import { NAV_LINKS } from "@/lib/constants";
@@ -15,12 +15,24 @@ import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
 import { localizedPath } from "@/lib/locale-path";
 import { ThemeToggle } from "@/components/theme-toggle";
 
+// The desktop bar only has room for ~6 inline links. The logo already links home,
+// and the secondary pages collapse into an "Ещё" dropdown so the 10-item nav never
+// overflows / overlaps the logo and right-side controls.
+const DESKTOP_HIDE = new Set(["/"]); // home → handled by the logo
+const DESKTOP_MORE = new Set(["/about", "/blog", "/contacts"]);
+const MORE_LABEL: Record<string, string> = { ru: "Ещё", uz: "Yana", en: "More" };
+
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { locale, dictionary } = useLocale();
   const settings = useSiteSettings();
+
+  // Split the nav for the desktop bar (mobile menu still shows everything).
+  const primaryLinks = NAV_LINKS.filter((l) => !DESKTOP_HIDE.has(l.href) && !DESKTOP_MORE.has(l.href));
+  const moreLinks = NAV_LINKS.filter((l) => DESKTOP_MORE.has(l.href));
+  const moreActive = moreLinks.some((l) => l.href === pathname);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -42,8 +54,10 @@ export function Header() {
             : "bg-transparent"
         )}
       >
-        <div className="container-custom">
-          <div className="flex items-center justify-between h-16 lg:h-24">
+        {/* Header gets its own wider container (the site's container-custom caps at
+            1280px, which is too narrow for a full nav + controls). */}
+        <div className="mx-auto w-full max-w-[1600px] px-6 lg:px-10">
+          <div className="flex items-center justify-between gap-6 h-16 lg:h-24">
             {/* Logo */}
             <Link href={localizedPath(locale, "/")} className="flex items-center gap-3 shrink-0 group">
               <div className="w-10 h-10 border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center rounded-none transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
@@ -56,10 +70,10 @@ export function Header() {
               </div>
             </Link>
 
-            {/* Desktop Nav — only when there's room (xl+); 10 links overflow on a
-                normal laptop at lg, so below xl we fall back to the hamburger. */}
-            <nav className="hidden xl:flex items-center gap-4 2xl:gap-6 min-w-0">
-              {NAV_LINKS.map((link) => (
+            {/* Desktop Nav — shown at xl+ (below that → hamburger). Primary links
+                inline; secondary pages live in the "Ещё" dropdown so nothing wraps. */}
+            <nav className="hidden xl:flex items-center gap-5 2xl:gap-7 min-w-0">
+              {primaryLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={localizedPath(locale, link.href)}
@@ -73,13 +87,46 @@ export function Header() {
                   {link.label[locale]}
                 </Link>
               ))}
+
+              {/* "Ещё" overflow dropdown (hover / keyboard focus) */}
+              {moreLinks.length > 0 && (
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className={cn(
+                      "flex items-center gap-1 py-1 text-xs font-semibold tracking-[0.1em] uppercase whitespace-nowrap transition-colors duration-300",
+                      moreActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                    aria-haspopup="true"
+                  >
+                    {MORE_LABEL[locale] ?? MORE_LABEL.en}
+                    <ChevronDown className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-180" />
+                  </button>
+                  <div className="invisible absolute right-0 top-full pt-3 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                    <div className="min-w-[190px] rounded-md border border-border bg-background/95 backdrop-blur-lg shadow-lg py-2">
+                      {moreLinks.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={localizedPath(locale, link.href)}
+                          className={cn(
+                            "block px-4 py-2.5 text-xs font-semibold tracking-[0.1em] uppercase transition-colors",
+                            pathname === link.href ? "text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                          )}
+                        >
+                          {link.label[locale]}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </nav>
 
             {/* Right side */}
             <div className="flex items-center gap-3 shrink-0">
               {/* Inline search needs ~200px — only show it once the full nav has
                   comfortable room (2xl). Below that it lives in the mobile menu. */}
-              <div className="hidden 2xl:block w-44">
+              <div className="hidden 2xl:block w-40">
                 <SearchAutocomplete
                   placeholder={locale === "ru" ? "Поиск..." : "Search..."}
                 />
