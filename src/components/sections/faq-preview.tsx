@@ -49,7 +49,7 @@ export function FAQPreview({ faqs }: FAQPreviewProps) {
                   onClick={() => setOpenIndex(isOpen ? null : index)}
                   className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] transition-colors"
                 >
-                  <span className="font-semibold text-white pr-4">{getQuestion(faq)}</span>
+                  <span className="font-semibold text-foreground pr-4">{getQuestion(faq)}</span>
                   <ChevronDown
                     className={cn(
                       "w-5 h-5 shrink-0 transition-all duration-200",

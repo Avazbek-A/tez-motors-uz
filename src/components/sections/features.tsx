@@ -42,7 +42,7 @@ export function Features() {
                   <div className="w-14 h-14 flex items-center justify-center mb-6 bg-primary/10 border border-white/10 transition-all duration-300">
                     <Icon className="w-7 h-7 text-primary transition-all duration-300" />
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-3">{item.title}</h3>
+                  <h3 className="text-lg font-bold text-foreground mb-3">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                 </div>
               </TiltCard>

@@ -55,7 +55,7 @@ export function ProcessTimeline() {
                     <div className="text-xs font-bold text-[var(--fg-3)] mb-1 font-mono tracking-[0.16em]">
                       {String(step.step).padStart(2, "0")}
                     </div>
-                    <h3 className="text-lg font-bold text-white mb-2">
+                    <h3 className="text-lg font-bold text-foreground mb-2">
                       {step.title[locale as keyof typeof step.title]}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">

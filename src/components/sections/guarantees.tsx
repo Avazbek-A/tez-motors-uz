@@ -33,7 +33,7 @@ export function Guarantees() {
             return (
               <NeonBorder key={index} color={color} animated>
                 <div
-                  className={`bg-card p-8 text-white group
+                  className={`bg-card p-8 text-foreground group
                     hover:bg-muted transition-all duration-300 hover:-translate-y-1
                     ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
                   style={{ animationDelay: `${index * 100}ms` }}

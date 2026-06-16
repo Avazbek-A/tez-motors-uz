@@ -63,7 +63,7 @@ export function PricingComparison() {
                 <div className="p-4 text-center text-sm font-semibold font-mono text-neon-green bg-neon-green/[0.05] border-x border-neon-green/15">
                   {formatPrice(row.ours)}
                 </div>
-                <div className="p-4 text-center text-sm font-mono text-white/30">
+                <div className="p-4 text-center text-sm font-mono text-foreground/40">
                   {formatPrice(row.theirs)}
                 </div>
               </div>
@@ -71,12 +71,12 @@ export function PricingComparison() {
 
             {/* Total row */}
             <div className="grid grid-cols-3 border-t border-border bg-muted">
-              <div className="p-4 text-sm font-bold text-white/70">{dictionary.pricing.total}</div>
+              <div className="p-4 text-sm font-bold text-foreground/80">{dictionary.pricing.total}</div>
               <div className="p-4 text-center bg-neon-green/[0.08] border-x border-neon-green/15">
                 <span className="text-xl font-bold font-mono text-neon-green">{formatPrice(ourTotal)}</span>
               </div>
               <div className="p-4 text-center">
-                <span className="text-xl font-bold font-mono text-white/30 line-through">{formatPrice(theirTotal)}</span>
+                <span className="text-xl font-bold font-mono text-foreground/40 line-through">{formatPrice(theirTotal)}</span>
               </div>
             </div>
 

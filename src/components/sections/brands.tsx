@@ -69,7 +69,7 @@ export function Brands() {
                   className="w-full h-full object-contain"
                 />
               </div>
-              <p className="text-sm font-semibold text-white/70 group-hover:text-foreground transition-colors duration-300">
+              <p className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors duration-300">
                 {brand.name}
               </p>
             </Link>

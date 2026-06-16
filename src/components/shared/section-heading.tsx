@@ -38,7 +38,7 @@ export function SectionHeading({
       {subtitle && (
         <p
           className={cn(
-            "mt-4 text-lg max-w-2xl text-white/60",
+            "mt-4 text-lg max-w-2xl text-muted-foreground",
             centered && "mx-auto"
           )}
         >

@@ -70,7 +70,7 @@ export function VideoReviews() {
 
                 {/* Info */}
                 <div className="p-4">
-                  <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
+                  <h3 className="text-foreground font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
                     {video.title[locale as keyof typeof video.title]}
                   </h3>
                   <p className="text-muted-foreground text-xs">{video.car}</p>
