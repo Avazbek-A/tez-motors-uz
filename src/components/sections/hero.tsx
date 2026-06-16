@@ -11,7 +11,7 @@ export function Hero() {
   const { dictionary, locale } = useLocale();
 
   return (
-    <section className="relative h-screen w-full flex items-center justify-center overflow-hidden pt-16 lg:pt-24">
+    <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
       {/* Cinematic Background Video */}
       <div className="absolute inset-0 w-full h-full z-0">
         <video
@@ -29,13 +29,15 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
       </div>
 
-      <div className="container-custom relative z-10 text-center flex flex-col items-center">
+      {/* py clears the fixed header (top) + the scroll indicator (bottom); with
+          min-h-screen the section grows on short viewports instead of clipping. */}
+      <div className="container-custom relative z-10 text-center flex flex-col items-center py-28 md:py-32">
         {/* Minimalist Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8"
+          className="mb-5 sm:mb-6"
         >
           <span className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase text-white">
             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
@@ -50,9 +52,11 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           className="max-w-4xl mx-auto"
         >
-          <h1 className="text-5xl sm:text-6xl md:text-8xl font-light tracking-tighter text-white leading-[1.0]">
-            {dictionary.hero.title} <br />
-            <span className="font-display italic font-light text-[var(--accent)]">{dictionary.hero.titleAccent}</span>
+          {/* Capped at 7xl + balanced wrapping so the long RU/UZ titles
+              ("…в Узбекистан", "…O'zbekistonga") don't overflow or clip. */}
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight text-white leading-[1.06] [text-wrap:balance]">
+            {dictionary.hero.title}{" "}
+            <span className="block font-display italic font-light text-[var(--accent)] leading-[1.1]">{dictionary.hero.titleAccent}</span>
           </h1>
         </motion.div>
 
@@ -61,7 +65,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-8 text-lg md:text-xl text-white/60 max-w-2xl font-light tracking-wide leading-relaxed"
+          className="mt-5 sm:mt-6 text-base md:text-lg text-white/60 max-w-2xl font-light tracking-wide leading-relaxed"
         >
           {dictionary.hero.subtitle}
         </motion.p>
@@ -71,7 +75,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-12 flex flex-col sm:flex-row gap-6 w-full sm:w-auto"
+          className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto"
         >
           <Button size="xl" className="group h-14 px-8 bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-bright)] tracking-[0.12em] uppercase text-sm rounded-none" asChild>
             <Link href={localizedPath(locale, "/catalog")}>
@@ -87,12 +91,13 @@ export function Hero() {
         </motion.div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator — only on tall (lg) viewports so it never overlaps the
+          content on short screens; non-interactive so it can't block clicks. */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1, duration: 1 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        className="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2 hidden lg:flex flex-col items-center gap-2"
       >
         <span className="text-xs uppercase tracking-widest text-white/50">Scroll</span>
         <div className="w-px h-12 bg-gradient-to-b from-white/50 to-transparent animate-pulse" />

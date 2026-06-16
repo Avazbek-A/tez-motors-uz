@@ -179,7 +179,10 @@ export default async function RootLayout({
             <TawkChat /> component, with deferred loading. Don't double-load
             here — that was costing every visitor a 100kB+ duplicate fetch. */}
         <LocaleProvider initialLocale={locale} initialDictionary={dictionary}>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          {/* Dark is the brand default; the toggle explicitly switches to the
+              Day (light) theme. enableSystem off so new visitors get the intended
+              dark identity regardless of their OS preference. */}
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
             {children}
           </ThemeProvider>
         </LocaleProvider>

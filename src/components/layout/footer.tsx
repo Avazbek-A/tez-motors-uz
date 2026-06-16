@@ -16,7 +16,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative bg-[var(--bg-0)] text-white overflow-hidden">
+    <footer className="dark relative bg-[var(--bg-0)] text-white overflow-hidden">
       {/* Top metallic rule — recurring brand motif */}
       <div
         className="absolute top-0 left-0 right-0 h-px opacity-60"
