@@ -38,7 +38,7 @@ async function classify(items) {
   const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 3000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
     signal: AbortSignal.timeout(90000),
   });
   if (!r.ok) throw new Error(`llm ${r.status}`);
@@ -58,8 +58,10 @@ async function main() {
 
   const cleaned = []; // surviving parts with cleaned fields
   const drop = [];
-  for (let b = 0; b < parts.length; b += 10) {
-    const batch = parts.slice(b, b + 10);
+  // Batch of 6: small enough that the JSON response never truncates against max_tokens
+  // (bigger batches lost rows to mid-array truncation on the reasoning models).
+  for (let b = 0; b < parts.length; b += 6) {
+    const batch = parts.slice(b, b + 6);
     let res;
     try { res = await classify(batch.map((p, k) => ({ i: k, name: p.name_ru, brand: p.brand, category: p.category }))); }
     catch (e) { console.log(`\nbatch ${b} skipped (${e.message}) — leaving as-is`); continue; }
