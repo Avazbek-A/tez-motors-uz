@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  *  loading states, avatars. Size via width/height or a wrapping `scale-*`. */
 export function TezMark({ className, width = 28, height = 32 }: { className?: string; width?: number; height?: number }) {
   return (
-    <svg width={width} height={height} viewBox="0 0 90 104" fill="none" aria-hidden="true" className={className}>
+    <svg width={width} height={height} viewBox="0 8 90 88" fill="none" aria-hidden="true" className={className}>
       <defs>
         <linearGradient id="tez-mark" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#eff3f7" />
@@ -47,15 +47,15 @@ export function TezLogo({
     <Link
       href={href}
       aria-label="Tez Motors"
-      className={cn("inline-flex items-center gap-3 text-foreground shrink-0 group", className)}
+      className={cn("inline-flex items-center gap-2.5 text-foreground shrink-0 group", className)}
     >
+      {/* viewBox is cropped tight to the strokes (no dead padding) + sized in CSS so
+          the mark scales per platform: ~34px on phones → ~48px on desktop. */}
       <svg
-        width="32"
-        height="36"
-        viewBox="0 0 90 104"
+        viewBox="0 8 90 88"
         fill="none"
         aria-hidden="true"
-        className="shrink-0"
+        className="h-[34px] w-auto sm:h-10 lg:h-12 shrink-0"
       >
         <defs>
           <linearGradient id="tez-chevron" x1="0" y1="0" x2="1" y2="1">
@@ -70,7 +70,7 @@ export function TezLogo({
       </svg>
       <span
         className={cn(
-          "whitespace-nowrap text-[17px] font-bold tracking-[0.12em] uppercase transition-colors",
+          "whitespace-nowrap text-xl lg:text-2xl font-bold tracking-[0.14em] uppercase transition-colors leading-none",
           wordmarkClassName
         )}
       >
