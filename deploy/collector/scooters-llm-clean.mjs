@@ -27,7 +27,13 @@ const env = loadEnv();
 const U = env.NEXT_PUBLIC_SUPABASE_URL, K = env.SUPABASE_SERVICE_ROLE_KEY;
 const H = { apikey: K, authorization: `Bearer ${K}`, "content-type": "application/json" };
 const OR_KEY = env.OPENROUTER_API_KEY;
-const MODEL = process.env.LLM_CLEAN_MODEL || "nvidia/nemotron-3-nano-30b-a3b:free";
+// FREE models only (never a paid model — hard rule). They rotate / 404 / 429, so we
+// try a chain and stick with whichever is answering. Override with LLM_CLEAN_MODELS
+// (comma-separated). All must end in ':free'.
+const MODELS = (process.env.LLM_CLEAN_MODELS ||
+  "nvidia/nemotron-nano-9b-v2:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-3-nano-30b-a3b:free,google/gemma-4-31b-it:free")
+  .split(",").map((s) => s.trim()).filter((s) => s.endsWith(":free"));
+let preferred = 0; // index into MODELS that last worked — avoids re-probing dead ones
 
 async function classify(items) {
   const sys = "You are a light-EV catalogue editor for a dealer in Uzbekistan. For each raw OLX listing decide if it is a GENUINE electric scooter or electric bike FOR SALE (NOT a spare part, accessory, charger, wheel, kids' push-scooter, or unrelated ad) and write a clean catalogue entry. Output ONLY a JSON object {\"results\":[...]} — no prose, no markdown.";
@@ -35,22 +41,26 @@ async function classify(items) {
     `Return {"results":[...]} with one object per listing index:\n` +
     `{"i":<index>,"keep":<true only if a real e-scooter/e-bike>,"kind":"<escooter|ebike>","brand":"<brand name, e.g. Kugoo/Ninebot/Xiaomi; if unknown use 'Generic'>","model":"<short clean model name, no prices/phones/ALLCAPS spam>","motor_power_w":<integer watts or null>,"battery_wh":<integer Wh or null>,"range_km":<integer or null>,"top_speed_kmh":<integer or null>,"foldable":<true|false|null>}\n\nListings:\n` +
     items.map((it) => `${it.i}. "${it.name}" (current kind: ${it.kind})`).join("\n");
-  // Free models rate-limit on bursts (429). Retry with exponential backoff so a
-  // momentary per-minute cap doesn't drop the whole batch.
-  let r;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
-      body: JSON.stringify({ model: MODEL, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
-      signal: AbortSignal.timeout(90000),
-    });
-    if (r.status !== 429) break;
-    const wait = Number(r.headers.get("retry-after")) * 1000 || 6000 * (attempt + 1);
-    await new Promise((res) => setTimeout(res, Math.min(wait, 30000)));
+  // Try the model chain, starting from the last one that worked. 404/5xx → next
+  // model immediately (provider down). 429 → one short backoff, then next model.
+  let txt = null, lastErr = "none";
+  for (let off = 0; off < MODELS.length && txt == null; off++) {
+    const idx = (preferred + off) % MODELS.length;
+    const model = MODELS[idx];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
+        body: JSON.stringify({ model, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+        signal: AbortSignal.timeout(90000),
+      });
+      if (r.ok) { txt = (await r.json()).choices?.[0]?.message?.content || ""; preferred = idx; break; }
+      lastErr = `${model} ${r.status}`;
+      if (r.status === 429 && attempt === 0) { await new Promise((res) => setTimeout(res, Math.min(Number(r.headers.get("retry-after")) * 1000 || 7000, 20000))); continue; }
+      break; // 404/5xx/second-429 → next model
+    }
   }
-  if (!r.ok) throw new Error(`llm ${r.status}`);
-  const txt = (await r.json()).choices?.[0]?.message?.content || "";
+  if (txt == null) throw new Error(`llm all models failed (${lastErr})`);
   const m = txt.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("no json in response");
   const obj = JSON.parse(m[0]);
@@ -63,7 +73,7 @@ const intOrNull = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) 
 async function main() {
   if (!OR_KEY) { console.error("FATAL: OPENROUTER_API_KEY unset"); process.exit(1); }
   const parts = await (await fetch(`${U}/rest/v1/scooters?select=id,brand,model,kind,price_usd,images&is_published=eq.false&limit=5000`, { headers: H })).json();
-  console.log(`draft scooters: ${parts.length} | model: ${MODEL}`);
+  console.log(`draft scooters: ${parts.length} | model chain: ${MODELS.join(" → ")}`);
 
   const cleaned = [];
   const drop = [];

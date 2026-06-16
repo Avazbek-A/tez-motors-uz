@@ -27,7 +27,12 @@ const env = loadEnv();
 const U = env.NEXT_PUBLIC_SUPABASE_URL, K = env.SUPABASE_SERVICE_ROLE_KEY;
 const H = { apikey: K, authorization: `Bearer ${K}`, "content-type": "application/json" };
 const OR_KEY = env.OPENROUTER_API_KEY;
-const MODEL = process.env.LLM_CLEAN_MODEL || "nvidia/nemotron-3-nano-30b-a3b:free";
+// FREE models only (never a paid model — hard rule). They rotate / 404 / 429, so we
+// try a chain and stick with whichever is answering. Override with LLM_CLEAN_MODELS.
+const MODELS = (process.env.LLM_CLEAN_MODELS ||
+  "nvidia/nemotron-nano-9b-v2:free,meta-llama/llama-3.3-70b-instruct:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-3-nano-30b-a3b:free,google/gemma-4-31b-it:free")
+  .split(",").map((s) => s.trim()).filter((s) => s.endsWith(":free"));
+let preferred = 0;
 
 async function classify(items) {
   const sys = "You are a spare-parts catalogue editor for a car dealer in Uzbekistan. For each raw OLX listing decide if it is a GENUINE auto spare PART for sale (NOT a whole car, NOT a service/repair offer, NOT tires-only, NOT junk) and write a clean professional catalogue entry. Output ONLY a JSON object of the form {\"results\":[...]} — no prose, no markdown.";
@@ -35,14 +40,26 @@ async function classify(items) {
     `Return {"results":[...]} with one object per listing index:\n` +
     `{"i":<index>,"keep":<true only if a real spare part>,"name_ru":"<clean concise Russian part name — no seller notes, prices, phones, ALLCAPS spam>","name_en":"<short English name>","oem":<the manufacturer part NUMBER (alphanumeric code) if present in the title, else null — NOT a brand name>,"category":"<one of: ${CATS.join(", ")}>"}\n\nListings:\n` +
     items.map((it) => `${it.i}. "${it.name}" (brand: ${it.brand || "?"}, current cat: ${it.category})`).join("\n");
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
-    signal: AbortSignal.timeout(90000),
-  });
-  if (!r.ok) throw new Error(`llm ${r.status}`);
-  const txt = (await r.json()).choices?.[0]?.message?.content || "";
+  // Try the model chain, starting from the last one that worked. 404/5xx → next
+  // model immediately; 429 → one short backoff, then next model.
+  let txt = null, lastErr = "none";
+  for (let off = 0; off < MODELS.length && txt == null; off++) {
+    const idx = (preferred + off) % MODELS.length;
+    const model = MODELS[idx];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
+        body: JSON.stringify({ model, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+        signal: AbortSignal.timeout(90000),
+      });
+      if (r.ok) { txt = (await r.json()).choices?.[0]?.message?.content || ""; preferred = idx; break; }
+      lastErr = `${model} ${r.status}`;
+      if (r.status === 429 && attempt === 0) { await new Promise((res) => setTimeout(res, Math.min(Number(r.headers.get("retry-after")) * 1000 || 7000, 20000))); continue; }
+      break;
+    }
+  }
+  if (txt == null) throw new Error(`llm all models failed (${lastErr})`);
   const m = txt.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("no json in response");
   const obj = JSON.parse(m[0]);
@@ -54,7 +71,7 @@ const norm = (s) => String(s || "").toLowerCase().replace(/[^a-zа-я0-9]+/g, ""
 async function main() {
   if (!OR_KEY) { console.error("FATAL: OPENROUTER_API_KEY unset"); process.exit(1); }
   const parts = await (await fetch(`${U}/rest/v1/parts?select=id,name_ru,category,brand,price_usd,images,fits_brands&is_published=eq.false&limit=5000`, { headers: H })).json();
-  console.log(`draft parts: ${parts.length} | model: ${MODEL}`);
+  console.log(`draft parts: ${parts.length} | model chain: ${MODELS.join(" → ")}`);
 
   const cleaned = []; // surviving parts with cleaned fields
   const drop = [];
@@ -79,6 +96,7 @@ async function main() {
       });
     }
     process.stdout.write(".");
+    await new Promise((res) => setTimeout(res, 2500)); // gentle pacing — stay under the free per-minute cap
   }
   console.log(`\nclassified → keep ${cleaned.length}, drop ${drop.length}`);
 
