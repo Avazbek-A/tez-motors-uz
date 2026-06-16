@@ -88,7 +88,9 @@ function offerPrice(offer) {
   if (!pv || typeof pv !== "object") return { uzs: null, label: "" };
   const cur = String(pv.currency || "").toUpperCase();
   let uzs = null;
-  if (typeof pv.value === "number") uzs = cur === "USD" ? pv.value * USD_UZS : pv.value; // assume UZS otherwise
+  // у.е. (UYE) ≈ USD 1:1 in the UZ market, so convert it like USD; only true сум
+  // (UZS) is used as-is. (Treating UYE as сум collapsed у.е.-priced parts to ~$0.)
+  if (typeof pv.value === "number") uzs = (cur === "USD" || cur === "UYE") ? pv.value * USD_UZS : pv.value;
   return { uzs, label: pv.label || "" };
 }
 

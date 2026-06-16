@@ -58,7 +58,11 @@ function offerPrice(offer) {
   const pv = pp?.value;
   if (!pv || typeof pv !== "object" || typeof pv.value !== "number") return null;
   const cur = String(pv.currency || "").toUpperCase();
-  return cur === "USD" ? pv.value : pv.value / USD_UZS; // OLX cars are mostly UZS
+  // UZ cars are quoted in у.е. (UYE) ≈ USD 1:1 — use that value directly. Only true
+  // сум (UZS) prices get divided by the FX rate. (Mis-handling UYE made every
+  // dollar-priced car collapse to ~$1.)
+  if (cur === "USD" || cur === "UYE") return pv.value;
+  return pv.value / USD_UZS;
 }
 const digits = (s) => { const n = parseInt(String(s ?? "").replace(/[^\d]/g, ""), 10); return Number.isFinite(n) ? n : null; };
 function photoUrls(offer) {

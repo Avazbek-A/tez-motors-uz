@@ -49,7 +49,9 @@ function offerPrice(offer) {
   const pv = pp?.value;
   if (!pv || typeof pv !== "object" || typeof pv.value !== "number") return null;
   const cur = String(pv.currency || "").toUpperCase();
-  return cur === "USD" ? pv.value : pv.value / USD_UZS;
+  // у.е. (UYE) ≈ USD 1:1 in the UZ market; only true сум (UZS) gets FX-divided.
+  if (cur === "USD" || cur === "UYE") return pv.value;
+  return pv.value / USD_UZS;
 }
 function photoUrls(offer) {
   return (offer?.photos || []).slice(0, MAX_PHOTOS)
