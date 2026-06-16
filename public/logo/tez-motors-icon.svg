@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98 112" width="98" height="112" role="img" aria-label="Tez Motors icon">
+  <defs>
+    <linearGradient id="tm-metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eff3f7"></stop>
+      <stop offset="0.42" stop-color="#bfc9d6"></stop>
+      <stop offset="0.72" stop-color="#8995a6"></stop>
+      <stop offset="1" stop-color="#dae0e7"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M14 20 L50 56 L14 92" fill="none" stroke="url(#tm-metal)" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter"></path>
+  <path d="M48 20 L84 56 L48 92" fill="none" stroke="url(#tm-metal)" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter" opacity="0.5"></path>
+</svg>

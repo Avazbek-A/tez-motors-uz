@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { TezMark } from "@/components/layout/tez-logo";
 import { useLocale } from "@/i18n/locale-context";
 import { locales, type Locale } from "@/i18n/config";
 
@@ -153,8 +154,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
           {!collapsed && (
             <Link href="/admin" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-lime flex items-center justify-center">
-                <span className="text-navy font-black text-sm">TM</span>
+              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                <TezMark width={18} height={20} />
               </div>
               <span className="font-bold text-white">{c.admin}</span>
             </Link>

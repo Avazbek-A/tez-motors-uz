@@ -8,6 +8,7 @@ import { useSiteSettings } from "@/lib/site-settings-context";
 import { SocialLinks } from "@/components/shared/social-links";
 import { Newsletter } from "@/components/shared/newsletter";
 import { localizedPath } from "@/lib/locale-path";
+import { TezLogo } from "@/components/layout/tez-logo";
 
 export function Footer() {
   const { locale, dictionary } = useLocale();
@@ -26,12 +27,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <Link href={localizedPath(locale, "/")} className="flex items-center gap-2 group">
-              <div className="w-10 h-10 rounded-none border border-[var(--accent)] flex items-center justify-center text-[var(--accent)] group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)] transition-colors">
-                <span className="font-bold text-lg tracking-tight">TM</span>
-              </div>
-              <span className="font-bold text-xl tracking-[0.16em] uppercase text-white group-hover:text-[var(--accent)] transition-colors">Tez Motors</span>
-            </Link>
+            <TezLogo href={localizedPath(locale, "/")} className="text-white" />
             <p className="text-white/40 text-sm leading-relaxed">
               {dictionary.footer.description}
             </p>

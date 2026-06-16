@@ -5,6 +5,9 @@ export const alt = "Tez Motors — Import cars from China to Uzbekistan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// Platinum monochrome brand identity (matches the Vanguard logo + site theme).
+const PLATINUM = "linear-gradient(135deg, #eff3f7 0%, #bfc9d6 42%, #8995a6 72%, #dae0e7 100%)";
+
 export default function Image() {
   return new ImageResponse(
     (
@@ -16,46 +19,53 @@ export default function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background:
-            "linear-gradient(135deg, #0a0a0f 0%, #101024 50%, #1a0f2e 100%)",
-          color: "white",
+          background: "linear-gradient(135deg, #08090b 0%, #101216 55%, #07080a 100%)",
           fontFamily: "sans-serif",
           padding: 80,
         }}
       >
+        {/* Chevron mark */}
         <div
           style={{
-            fontSize: 128,
+            display: "flex",
+            fontSize: 150,
             fontWeight: 900,
-            letterSpacing: -4,
-            background: "linear-gradient(90deg, #00d4ff, #8b5cf6)",
+            lineHeight: 1,
+            letterSpacing: 8,
+            background: PLATINUM,
             backgroundClip: "text",
             color: "transparent",
-            display: "flex",
           }}
         >
-          Tez Motors
+          »
+        </div>
+        {/* Wordmark */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: 8,
+            fontSize: 104,
+            fontWeight: 800,
+            letterSpacing: 8,
+            color: "#f6f5f2",
+          }}
+        >
+          TEZ MOTORS
         </div>
         <div
           style={{
-            fontSize: 40,
-            marginTop: 24,
-            opacity: 0.75,
+            display: "flex",
+            fontSize: 38,
+            marginTop: 28,
+            opacity: 0.6,
             textAlign: "center",
-            display: "flex",
             maxWidth: 1000,
+            color: "#dce0e6",
           }}
         >
-          Import cars from China to Uzbekistan
+          Импорт авто из Китая в Узбекистан
         </div>
-        <div
-          style={{
-            fontSize: 28,
-            marginTop: 40,
-            opacity: 0.5,
-            display: "flex",
-          }}
-        >
+        <div style={{ display: "flex", fontSize: 28, marginTop: 36, opacity: 0.4, color: "#aab3bf" }}>
           tezmotors.uz
         </div>
       </div>

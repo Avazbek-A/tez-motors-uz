@@ -10,6 +10,7 @@ import { NAV_LINKS } from "@/lib/constants";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "./language-switcher";
+import { TezLogo } from "./tez-logo";
 import { SocialLinks } from "@/components/shared/social-links";
 import { SearchAutocomplete } from "@/components/shared/search-autocomplete";
 import { localizedPath } from "@/lib/locale-path";
@@ -58,17 +59,8 @@ export function Header() {
             1280px, which is too narrow for a full nav + controls). */}
         <div className="mx-auto w-full max-w-[1600px] px-6 lg:px-10">
           <div className="flex items-center justify-between gap-6 h-16 lg:h-24">
-            {/* Logo */}
-            <Link href={localizedPath(locale, "/")} className="flex items-center gap-3 shrink-0 group">
-              <div className="w-10 h-10 border border-[var(--accent)] text-[var(--accent)] flex items-center justify-center rounded-none transition-colors duration-300 group-hover:bg-[var(--accent)] group-hover:text-[var(--accent-foreground)]">
-                <span className="font-bold text-base tracking-tight">TM</span>
-              </div>
-              <div className="hidden sm:block">
-                <span className="font-semibold text-xl tracking-[0.16em] uppercase transition-colors">
-                  Tez Motors
-                </span>
-              </div>
-            </Link>
+            {/* Logo — the "Vanguard" chevron + wordmark (wordmark hidden on phones) */}
+            <TezLogo href={localizedPath(locale, "/")} wordmarkClassName="hidden sm:inline" />
 
             {/* Desktop Nav — shown at xl+ (below that → hamburger). Primary links
                 inline; secondary pages live in the "Ещё" dropdown so nothing wraps. */}

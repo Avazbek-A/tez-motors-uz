@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
+import { TezMark } from "@/components/layout/tez-logo";
 import { CarCard } from "@/components/catalog/car-card";
 import { FindMyCar } from "@/components/assistant/find-my-car";
 import type { Car } from "@/types/car";
@@ -81,8 +82,8 @@ export default function MiniAppPage() {
   return (
     <div className="px-4 py-5 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-5 h-5 text-primary" />
-        <h1 className="text-xl font-bold text-foreground">Tez Motors</h1>
+        <TezMark width={18} height={20} />
+        <h1 className="text-xl font-bold text-foreground tracking-[0.12em] uppercase">Tez Motors</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-5">
         {welcome

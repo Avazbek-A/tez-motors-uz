@@ -6,6 +6,7 @@ import { Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-context";
+import { TezMark } from "@/components/layout/tez-logo";
 import type { Locale } from "@/i18n/config";
 
 const COPY: Record<Locale, {
@@ -80,8 +81,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-lime flex items-center justify-center mx-auto mb-4">
-            <span className="text-navy font-black text-2xl">TM</span>
+          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+            <TezMark width={32} height={36} />
           </div>
           <h1 className="text-2xl font-bold text-white">{t.title}</h1>
           <p className="text-white/50 text-sm mt-1">{t.subtitle}</p>
