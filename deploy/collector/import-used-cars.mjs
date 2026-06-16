@@ -96,8 +96,10 @@ async function main() {
       year: r.year,
       price_usd: r.price_usd,
       listing_type: "used",
-      is_published: true,            // user chose "publish as classifieds"
-      inventory_status: "available", // visible; in_stock stays false (not Tez stock)
+      // cars has NO is_published column — public visibility is inventory_status.
+      // 'available' => the generated is_available=true => shown on /used. in_stock
+      // stays false (default) so these never count as Tez's own stock.
+      inventory_status: "available",
       mileage: r.mileage ?? 0,
       transmission: r.transmission || "automatic",
       fuel_type: r.fuel_type || "petrol",
