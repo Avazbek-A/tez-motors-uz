@@ -111,7 +111,14 @@ export async function fetchCarsPage(
   if (opts.fuelType) query = query.eq("fuel_type", opts.fuelType);
   if (opts.priceMin != null) query = query.gte("price_usd", opts.priceMin);
   if (opts.priceMax != null) query = query.lte("price_usd", opts.priceMax);
-  if (opts.listingType === "new" || opts.listingType === "used") query = query.eq("listing_type", opts.listingType);
+  // Public catalog defaults to NEW cars; the used classifieds live only on /used
+  // (which passes listing_type='used' explicitly). Admin (includeAll) sees both so
+  // the dealer can manage every listing.
+  if (opts.listingType === "new" || opts.listingType === "used") {
+    query = query.eq("listing_type", opts.listingType);
+  } else if (!opts.includeAll) {
+    query = query.eq("listing_type", "new");
+  }
   if (opts.mileageMax != null) query = query.lte("mileage", opts.mileageMax);
   if (opts.yearMin != null) query = query.gte("year", opts.yearMin);
   if (opts.yearMax != null) query = query.lte("year", opts.yearMax);

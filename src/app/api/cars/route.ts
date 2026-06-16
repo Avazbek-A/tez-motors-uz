@@ -202,7 +202,11 @@ export async function GET(request: NextRequest) {
     if (fuelType) query = query.eq("fuel_type", fuelType);
     if (priceMin !== null) query = query.gte("price_usd", priceMin);
     if (priceMax !== null) query = query.lte("price_usd", priceMax);
+    // Public catalog defaults to NEW; used classifieds only via explicit
+    // listing_type=used (the /used section). By-id fetches (ids) are exempt so a
+    // used car can still be loaded directly (favourites, related, detail).
     if (listingType) query = query.eq("listing_type", listingType);
+    else if (!all && !ids) query = query.eq("listing_type", "new");
     if (mileageMax !== null) query = query.lte("mileage", mileageMax);
     if (yearMin !== null) query = query.gte("year", yearMin);
     if (yearMax !== null) query = query.lte("year", yearMax);
