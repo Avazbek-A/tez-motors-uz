@@ -35,12 +35,20 @@ async function classify(items) {
     `Return {"results":[...]} with one object per listing index:\n` +
     `{"i":<index>,"keep":<true only if a real e-scooter/e-bike>,"kind":"<escooter|ebike>","brand":"<brand name, e.g. Kugoo/Ninebot/Xiaomi; if unknown use 'Generic'>","model":"<short clean model name, no prices/phones/ALLCAPS spam>","motor_power_w":<integer watts or null>,"battery_wh":<integer Wh or null>,"range_km":<integer or null>,"top_speed_kmh":<integer or null>,"foldable":<true|false|null>}\n\nListings:\n` +
     items.map((it) => `${it.i}. "${it.name}" (current kind: ${it.kind})`).join("\n");
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
-    signal: AbortSignal.timeout(90000),
-  });
+  // Free models rate-limit on bursts (429). Retry with exponential backoff so a
+  // momentary per-minute cap doesn't drop the whole batch.
+  let r;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
+      body: JSON.stringify({ model: MODEL, max_tokens: 4000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+      signal: AbortSignal.timeout(90000),
+    });
+    if (r.status !== 429) break;
+    const wait = Number(r.headers.get("retry-after")) * 1000 || 6000 * (attempt + 1);
+    await new Promise((res) => setTimeout(res, Math.min(wait, 30000)));
+  }
   if (!r.ok) throw new Error(`llm ${r.status}`);
   const txt = (await r.json()).choices?.[0]?.message?.content || "";
   const m = txt.match(/\{[\s\S]*\}/);
@@ -81,6 +89,7 @@ async function main() {
       });
     }
     process.stdout.write(".");
+    await new Promise((res) => setTimeout(res, 2500)); // gentle pacing — stay under the free per-minute cap
   }
   console.log(`\nclassified → keep ${cleaned.length}, drop ${drop.length}`);
 
