@@ -30,22 +30,23 @@ const OR_KEY = env.OPENROUTER_API_KEY;
 const MODEL = process.env.LLM_CLEAN_MODEL || "nvidia/nemotron-3-nano-30b-a3b:free";
 
 async function classify(items) {
-  const sys = "You are a spare-parts catalogue editor for a car dealer in Uzbekistan. For each raw OLX listing decide if it is a GENUINE auto spare PART for sale (NOT a whole car, NOT a service/repair offer, NOT tires-only, NOT junk) and write a clean professional catalogue entry. Output ONLY a JSON array — no prose, no markdown.";
+  const sys = "You are a spare-parts catalogue editor for a car dealer in Uzbekistan. For each raw OLX listing decide if it is a GENUINE auto spare PART for sale (NOT a whole car, NOT a service/repair offer, NOT tires-only, NOT junk) and write a clean professional catalogue entry. Output ONLY a JSON object of the form {\"results\":[...]} — no prose, no markdown.";
   const user =
-    `Return a JSON array with one object per listing index:\n` +
-    `{"i":<index>,"keep":<true only if a real spare part>,"name_ru":"<clean concise Russian part name — no seller notes, prices, phones, ALLCAPS spam>","name_en":"<short English name>","oem":<OEM/part number string if present in the title, else null>,"category":"<one of: ${CATS.join(", ")}>"}\n\nListings:\n` +
+    `Return {"results":[...]} with one object per listing index:\n` +
+    `{"i":<index>,"keep":<true only if a real spare part>,"name_ru":"<clean concise Russian part name — no seller notes, prices, phones, ALLCAPS spam>","name_en":"<short English name>","oem":<the manufacturer part NUMBER (alphanumeric code) if present in the title, else null — NOT a brand name>,"category":"<one of: ${CATS.join(", ")}>"}\n\nListings:\n` +
     items.map((it) => `${it.i}. "${it.name}" (brand: ${it.brand || "?"}, current cat: ${it.category})`).join("\n");
   const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { authorization: `Bearer ${OR_KEY}`, "content-type": "application/json", "HTTP-Referer": "https://tezmotors.uz", "X-Title": "Tez Motors" },
-    body: JSON.stringify({ model: MODEL, max_tokens: 2200, temperature: 0.1, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 3000, temperature: 0.1, response_format: { type: "json_object" }, messages: [{ role: "system", content: sys }, { role: "user", content: user }] }),
     signal: AbortSignal.timeout(90000),
   });
   if (!r.ok) throw new Error(`llm ${r.status}`);
   const txt = (await r.json()).choices?.[0]?.message?.content || "";
-  const m = txt.match(/\[[\s\S]*\]/);
+  const m = txt.match(/\{[\s\S]*\}/);
   if (!m) throw new Error("no json in response");
-  return JSON.parse(m[0]);
+  const obj = JSON.parse(m[0]);
+  return Array.isArray(obj.results) ? obj.results : Array.isArray(obj) ? obj : [];
 }
 
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-zа-я0-9]+/g, "");
