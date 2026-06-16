@@ -15,27 +15,29 @@ import { writeFileSync } from "node:fs";
 // per model (keeps the run focused); BROAD = wider set used for the brand-level searches.
 // Expand these to scale the catalogue in later runs.
 const CORE = {
-  engine: ["масляный фильтр", "воздушный фильтр"],
-  brakes: ["тормозные колодки"],
-  suspension: ["амортизатор"],
-  electrical: ["аккумулятор", "фара"],
-  body: ["бампер"],
+  engine: ["масляный фильтр", "воздушный фильтр", "салонный фильтр", "свечи зажигания", "ремень грм"],
+  brakes: ["тормозные колодки", "тормозные диски"],
+  suspension: ["амортизатор", "шаровая опора", "ступичный подшипник"],
+  electrical: ["аккумулятор", "стартер", "генератор", "фара"],
+  body: ["бампер", "капот", "зеркало боковое"],
 };
 const BROAD = {
-  engine: ["масляный фильтр", "воздушный фильтр", "салонный фильтр", "свечи зажигания"],
-  brakes: ["тормозные колодки", "тормозные диски"],
-  suspension: ["амортизатор", "шаровая опора"],
-  electrical: ["аккумулятор", "стартер", "фара"],
-  body: ["бампер", "зеркало боковое"],
+  ...CORE,
+  suspension: ["амортизатор", "шаровая опора", "ступичный подшипник", "рычаг", "стойка стабилизатора"],
+  electrical: ["аккумулятор", "стартер", "генератор", "фара", "катушка зажигания"],
+  body: ["бампер", "капот", "крыло", "зеркало боковое", "решётка радиатора"],
+  interior: ["коврики салона", "чехлы сидений"],
+  other: ["щётки стеклоочистителя", "шрус", "пыльник шруса"],
 };
 
 // Popular UZ cars → fitment. (brand + specific models for the high-volume ones.)
 const MODELS = [
-  { brand: "Chevrolet", models: ["Cobalt", "Nexia", "Spark", "Lacetti", "Gentra", "Malibu"] },
-  { brand: "Ravon", models: ["R3", "R4"] },
+  { brand: "Chevrolet", models: ["Cobalt", "Nexia", "Spark", "Lacetti", "Gentra", "Malibu", "Captiva", "Tracker", "Onix", "Damas", "Equinox"] },
+  { brand: "Ravon", models: ["R2", "R3", "R4", "Gentra", "Nexia"] },
+  { brand: "Daewoo", models: ["Matiz", "Nexia", "Lacetti", "Damas"] },
 ];
-// Chinese brands Tez Motors sells — brand-level (model-specific parts are rarer on OLX).
-const CN_BRANDS = ["BYD", "Chery", "Changan", "Haval"];
+// Chinese brands Tez Motors sells + other popular UZ brands — brand-level searches.
+const CN_BRANDS = ["BYD", "Chery", "Changan", "Haval", "Geely", "JETOUR", "Exeed", "Kia", "Hyundai", "Toyota", "Nissan", "Lada"];
 
 const searches = [];
 const seen = new Set();

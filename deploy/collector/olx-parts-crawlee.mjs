@@ -33,6 +33,9 @@ const API = "https://www.olx.uz/api/v1/offers/";
 const OUT = process.env.OLX_PARTS_OUT || "./olx-parts.csv";
 const PER_SEARCH = Number(process.env.OLX_PARTS_PER_SEARCH || 20);
 const USD_UZS = Number(process.env.USD_UZS || 12600);
+// OLX auto-parts category (310). Scoping to it kills car-for-sale noise AT SOURCE:
+// a part query with no real matches returns EMPTY instead of model-name car ads.
+const OLX_CATEGORY = process.env.OLX_PARTS_CATEGORY || "310";
 
 const PART_CATEGORIES = ["engine", "body", "electrical", "suspension", "brakes", "interior", "other"];
 
@@ -173,7 +176,7 @@ async function main() {
 
   await crawler.run(
     searches.map((s) => ({
-      url: `${API}?offset=0&limit=${Math.min(PER_SEARCH, 40)}&query=${encodeURIComponent(s.q)}`,
+      url: `${API}?offset=0&limit=${Math.min(PER_SEARCH, 40)}&query=${encodeURIComponent(s.q)}&category_id=${OLX_CATEGORY}`,
       userData: { search: s },
     })),
   );
