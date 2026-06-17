@@ -80,6 +80,15 @@ describe("toAssistantCarLite", () => {
       monthly_usd: estimatedMonthlyFrom(30000),
       body_type: "suv",
       fuel_type: "hybrid",
+      // Spec fields added with the catalog category columns (null when unset).
+      drive: null,
+      horsepower: null,
+      range_km: null,
+      seats: 5,
+      segment: "mid-range",
+      size_class: null,
+      use_cases: ["family", "long-distance", "first-car", "eco"],
+      zero_to_100_s: null,
     });
   });
 });
