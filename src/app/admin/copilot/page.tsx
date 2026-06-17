@@ -107,7 +107,7 @@ export default function AdminCopilotPage() {
       const res = await fetch("/api/admin/copilot", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text, threadId: threadId.current, confirm }),
+        body: JSON.stringify({ message: text, threadId: threadId.current, confirm, locale }),
       });
       const data = await res.json();
       setMessages((m) => [...m, { role: "assistant", text: data.reply || "…", proposed: data.proposed, executed: data.executed }]);

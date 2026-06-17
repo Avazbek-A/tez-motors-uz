@@ -43,17 +43,17 @@ function extractQty(text: string): number | null {
   return m2 ? Number(m2[1]) : null;
 }
 
-/** Keyword sets per intent (RU + EN). Order matters: earlier = higher priority. */
+/** Keyword sets per intent (RU + EN + UZ). Order matters: earlier = higher priority. */
 const RULES: { intent: Intent; re: RegExp }[] = [
-  { intent: "markdown_car", re: /(mark\s*down|markdown|уцен|снизь|снизить цену|скинь цен|drop\s*price|сделай скидк|discount.*car)/i },
-  { intent: "advance_order", re: /(advance order|продвинь заказ|переведи заказ|обнови заказ|статус заказа|move order|order.*to (sourcing|transit|customs|delivered)|TM-[A-Z0-9]{8})/i },
-  { intent: "draft_po", re: /(draft.*po|purchase order|закуп|закаж.*поставщик|заявк.*поставщик|order.*from supplier|создай заказ поставщику|нужно ввезти|нужно заказать)/i },
-  { intent: "cash_position", re: /(cash|деньги|баланс|капитал|сколько.*денег|money|финанс|депозит|deposit|runway|оборот)/i },
-  { intent: "demand", re: /(demand|спрос|что.*везти|что.*заказать|what.*import|популярн|hot|востребован|чего хотят)/i },
-  { intent: "aged_stock", re: /(aged|stale|залежал|застоял|давно.*лот|старые маш|что.*уценить|aging|долго стоит)/i },
-  { intent: "lead_summary", re: /(lead|лид|заявк|inquir|клиент.*нов|новые обращ|hot lead|горяч)/i },
-  { intent: "business_summary", re: /(сводк|обзор|brief|как дела|статус бизнес|что важн|сегодня|итог|overview|summary)/i },
-  { intent: "help", re: /(help|помощ|что ты умеешь|команд|what can you)/i },
+  { intent: "markdown_car", re: /(mark\s*down|markdown|уцен|снизь|снизить цену|скинь цен|drop\s*price|сделай скидк|discount.*car|narx.{0,6}tushir|chegirma|arzonlashtir)/i },
+  { intent: "advance_order", re: /(advance order|продвинь заказ|переведи заказ|обнови заказ|статус заказа|move order|order.*to (sourcing|transit|customs|delivered)|TM-[A-Z0-9]{8}|buyurtma.{0,6}(o.?tkaz|holat|yangila))/i },
+  { intent: "draft_po", re: /(draft.*po|purchase order|закуп|закаж.*поставщик|заявк.*поставщик|order.*from supplier|создай заказ поставщику|нужно ввезти|нужно заказать|yetkazib beruvchi|ta.?minotchi|buyurtma ber)/i },
+  { intent: "cash_position", re: /(cash|деньги|баланс|капитал|сколько.*денег|money|финанс|депозит|deposit|runway|оборот|\bpul\b|mablag|balans|qancha pul)/i },
+  { intent: "demand", re: /(demand|спрос|что.*везти|что.*заказать|what.*import|популярн|hot|востребован|чего хотят|talab|qaysi.*olib)/i },
+  { intent: "aged_stock", re: /(aged|stale|залежал|застоял|давно.*лот|старые маш|что.*уценить|aging|долго стоит|sitting in stock|in stock|qolib ket|ombor|eskirgan|turib qol)/i },
+  { intent: "lead_summary", re: /(lead|лид|заявк|inquir|клиент.*нов|новые обращ|hot lead|горяч|so.?rov|yangi mijoz)/i },
+  { intent: "business_summary", re: /(сводк|обзор|brief|как дела|статус бизнес|что важн|сегодня|итог|overview|summary|xulosa|umumiy|hisobot|biznes)/i },
+  { intent: "help", re: /(help|помощ|что ты умеешь|команд|what can you|yordam|nima qila ol)/i },
 ];
 
 /** Deterministic classification — always available, the fallback + source of truth. */

@@ -25,6 +25,7 @@ const schema = z.object({
   // threadId can only collide within its own actor namespace.
   threadId: z.string().min(1).max(80).regex(/^[\w-]+$/).optional(),
   confirm: z.boolean().optional(),
+  locale: z.enum(["ru", "uz", "en"]).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     threadId,
     message: parsed.data.message,
     confirm: parsed.data.confirm,
+    locale: parsed.data.locale,
   });
   return NextResponse.json(turn);
 }
