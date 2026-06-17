@@ -30,6 +30,8 @@ import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 import { reserveCarAndCreateOrder } from "@/lib/reservation";
 import { resolveReplyLocale } from "@/lib/detect-locale";
+import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
+import { getUsdUzsRate } from "@/lib/fx-rate";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -49,6 +51,7 @@ interface TgMessage {
   from?: TgUser;
   text?: string;
   contact?: TgContact;
+  reply_to_message?: { text?: string };
 }
 interface TgCallbackQuery {
   id: string;
@@ -66,13 +69,19 @@ interface ReplyMarkup {
   keyboard?: { text: string; request_contact?: boolean }[][];
   resize_keyboard?: boolean;
   one_time_keyboard?: boolean;
+  force_reply?: boolean;
+  input_field_placeholder?: string;
 }
 
 /** Inline keyboard with a Telegram Mini App launch button (web_app). Requires
  *  the bot's domain to be configured in BotFather; see HANDOFF.md. */
 function appButton(locale: BotLocale): ReplyMarkup {
   const label = locale === "uz" ? "🚗 Ilovani ochish" : locale === "en" ? "🚗 Open the app" : "🚗 Открыть приложение";
-  return { inline_keyboard: [[{ text: label, web_app: { url: `${siteUrl()}/${locale}/app` } }]] };
+  const customs = locale === "uz" ? "🧮 Rastamojkani hisoblash" : locale === "en" ? "🧮 Estimate customs" : "🧮 Рассчитать растаможку";
+  return { inline_keyboard: [
+    [{ text: label, web_app: { url: `${siteUrl()}/${locale}/app` } }],
+    [{ text: customs, callback_data: "cu|go" }],
+  ] };
 }
 
 function siteUrl(): string {
@@ -361,13 +370,27 @@ async function captureLead(
 
 // ---- Update handling -------------------------------------------------------
 
+// Customs ("растаможка") wizard — stateless inline-button flow. Each callback
+// advances a step; the final price step is a force_reply (see customs-bot-flow).
+async function handleCustomsCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId || typeof cb.data !== "string") return;
+  const locale = botLocale(cb.from?.language_code);
+  const step = cb.data === "cu|go" ? customsStart(locale) : customsStep(cb.data, locale);
+  if (step) await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
+}
+
 async function handleUpdate(update: TgUpdate): Promise<void> {
   // Inline-button callbacks (Phase AS — reserve in chat). Operator confirm
   // callbacks are handled elsewhere; here we only act on customer "rsv:" data.
   if (update.callback_query) {
     const cb = update.callback_query;
-    if (typeof cb.data === "string" && cb.data.startsWith("rsv:") && !isOperatorChat(cb.message?.chat?.id ?? 0)) {
+    const cbChat = cb.message?.chat?.id ?? 0;
+    if (typeof cb.data === "string" && cb.data.startsWith("rsv:") && !isOperatorChat(cbChat)) {
       await handleReserveCallback(cb);
+    } else if (typeof cb.data === "string" && cb.data.startsWith("cu|") && !isOperatorChat(cbChat)) {
+      await handleCustomsCallback(cb);
     } else {
       await tgAnswerCallback(cb.id);
     }
@@ -409,6 +432,14 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
   const text = (message.text || "").trim().slice(0, 500);
   if (!text) return;
 
+  // 1.5) Customs wizard — a reply to the price prompt carries the embedded state
+  //      [cu:kind|age|origin|cc], so we compute statelessly (no per-chat row).
+  if (message.reply_to_message?.text && CUST_MARKER.test(message.reply_to_message.text)) {
+    const usdUzs = await getUsdUzsRate(createServiceClient()).catch(() => 12600);
+    const step = customsPriceReply(message.reply_to_message.text, text, locale, usdUzs);
+    if (step) { await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup); return; }
+  }
+
   // 2) /start → welcome + share-contact keyboard, then a Mini App launch button.
   if (text === "/start" || text.startsWith("/start")) {
     await tgSend(chatId, COPY[locale].welcome, contactKeyboard(locale));
@@ -429,6 +460,14 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
       await captureLead(chatId, locale, { name: from.first_name || "Telegram", phone: normalized });
       return;
     }
+  }
+
+  // 3.5) Customs wizard — explicit command or a "растаможка" mention opens it
+  //      (a no-forced-sub-gate competitor to @autodeklarantbot).
+  if (text.startsWith("/rastamozhka") || text.startsWith("/customs") || isCustomsTrigger(text)) {
+    const s = customsStart(resolveReplyLocale(text, locale));
+    await tgSend(chatId, s.text, s.replyMarkup as ReplyMarkup);
+    return;
   }
 
   // 4) Free text → grounded recommendation + qualification (shared closer
