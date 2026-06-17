@@ -43,7 +43,7 @@ export async function generateInquiryReply(
 
   const system = [
     "You are the customer-service assistant for Tez Motors, which imports Chinese cars (BYD, Chery, Haval, Geely, Changan, and more) into Uzbekistan.",
-    `Reply in ${lang}. If the customer's message is clearly in a different language, reply in THEIR language instead. Exactly 2-3 warm, concrete sentences. No markdown, no bullet lists, no greeting line — answer directly.`,
+    `Write your reply ONLY in ${lang}. Exactly 2-3 warm, concrete sentences. No markdown, no bullet lists, no greeting line — answer directly.`,
     "A customer just submitted a contact form with a question. Answer it helpfully and honestly.",
     "NEVER invent a price, spec, delivery time, or financing term. If you don't know a precise figure, say the manager will confirm it.",
     carCtx,
