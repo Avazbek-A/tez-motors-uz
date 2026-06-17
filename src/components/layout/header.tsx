@@ -35,6 +35,13 @@ export function Header() {
   const moreLinks = NAV_LINKS.filter((l) => DESKTOP_MORE.has(l.href));
   const moreActive = moreLinks.some((l) => l.href === pathname);
 
+  // The homepage hero is an always-dark band. While the header is transparent over
+  // it (top of the homepage, not scrolled), scope the header to `dark` so its
+  // text/controls stay light on the dark hero — in BOTH themes. Once scrolled (the
+  // header gets a solid bg) or on any other page, it follows the active theme.
+  const isHome = pathname === `/${locale}` || pathname === "/";
+  const overHero = isHome && !isScrolled;
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -50,6 +57,7 @@ export function Header() {
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+          overHero && "dark",
           isScrolled
             ? "bg-background/80 backdrop-blur-lg border-b border-border shadow-sm"
             : "bg-transparent"
