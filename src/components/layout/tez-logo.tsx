@@ -37,7 +37,8 @@ export function TezMark({ className, width = 28, height = 32 }: { className?: st
 // Per-placement sizing. Header is the hero lockup (scales up on desktop); footer
 // is a deliberately modest mark so it doesn't dominate the column.
 const LOGO_SIZES = {
-  header: { mark: "h-[34px] sm:h-10 lg:h-12", word: "text-xl lg:text-2xl" },
+  // Mobile is smaller so the wordmark fits alongside the lang switcher + controls.
+  header: { mark: "h-7 sm:h-10 lg:h-12", word: "text-sm sm:text-xl lg:text-2xl" },
   footer: { mark: "h-9", word: "text-lg" },
 } as const;
 

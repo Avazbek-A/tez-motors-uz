@@ -67,8 +67,8 @@ export function Header() {
             1280px, which is too narrow for a full nav + controls). */}
         <div className="mx-auto w-full max-w-[1600px] px-6 lg:px-10">
           <div className="flex items-center justify-between gap-6 h-16 lg:h-24">
-            {/* Logo — the "Vanguard" chevron + wordmark (wordmark hidden on phones) */}
-            <TezLogo href={localizedPath(locale, "/")} wordmarkClassName="hidden sm:inline" />
+            {/* Logo — the "Vanguard" chevron + wordmark (smaller on phones so it fits) */}
+            <TezLogo href={localizedPath(locale, "/")} />
 
             {/* Desktop Nav — shown at xl+ (below that → hamburger). Primary links
                 inline; secondary pages live in the "Ещё" dropdown so nothing wraps. */}

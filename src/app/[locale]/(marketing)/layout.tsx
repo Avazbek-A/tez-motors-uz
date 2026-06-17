@@ -1,9 +1,7 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { TelegramButton } from "@/components/shared/telegram-button";
-import { WhatsAppButton } from "@/components/shared/whatsapp-button";
+import { ContactFab } from "@/components/shared/contact-fab";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
-import { CallbackWidget } from "@/components/shared/callback-widget";
 import { FavoritesPill } from "@/components/shared/favorites-pill";
 import { CookieConsent } from "@/components/shared/cookie-consent";
 import { TawkChat } from "@/components/shared/tawk-chat";
@@ -30,11 +28,9 @@ export default async function LocaleMarketingLayout({
       <Header />
       <main id="main" className="flex-1">{children}</main>
       <Footer />
-      {/* Floating contact stack — Telegram is the primary touch point in
-          Uzbekistan; WhatsApp is kept as a secondary option above it. */}
-      <TelegramButton />
-      <WhatsAppButton />
-      <CallbackWidget />
+      {/* Single expandable contact FAB (Telegram / WhatsApp / call-back) —
+          replaces the old 3-button floating stack. */}
+      <ContactFab />
       <FavoritesPill />
       <ScrollToTop />
       <CookieConsent />

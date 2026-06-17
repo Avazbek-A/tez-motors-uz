@@ -170,7 +170,7 @@ export default function CarDetailPage() {
   ];
 
   return (
-    <div className="pt-24 pb-16">
+    <div className="pt-24 pb-28 lg:pb-16">
       <div className="container-custom">
         <Breadcrumbs
           items={[
@@ -447,7 +447,7 @@ export default function CarDetailPage() {
                 </Button>
               )}
               {car.spec_data && (car.spec_data.trims?.length ?? 0) > 0 && (
-                <Button type="button" asChild className="w-full mb-4">
+                <Button type="button" variant="outline" asChild className="w-full mb-4">
                   <Link href={localizedPath(locale, `/catalog/${car.slug}/spec`)}>
                     {locale === "uz" ? "To'liq texnik tavsif" : locale === "en" ? "View full spec sheet" : "Полная спецификация"}
                   </Link>
@@ -543,6 +543,29 @@ export default function CarDetailPage() {
         open={showReserve}
         onClose={() => setShowReserve(false)}
       />
+
+      {/* Mobile sticky price + primary CTA — desktop already has the sticky
+          sidebar; on phones the sidebar is far below the gallery, so surface
+          price + a one-tap contact here. pr-20 clears the floating contact FAB. */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-border bg-background/95 backdrop-blur-lg px-4 py-2.5 pr-20">
+        <div className="min-w-0">
+          {car.price_usd > 0 ? (
+            <>
+              <span className="block text-[10px] uppercase tracking-wide text-muted-foreground leading-none">{dictionary.common.from}</span>
+              <span className="block text-lg font-mono font-bold text-foreground truncate">{formatPrice(car.price_usd)}</span>
+            </>
+          ) : (
+            <span className="block text-sm font-semibold text-foreground">{dictionary.common.priceOnRequest}</span>
+          )}
+        </div>
+        {tgHref && (
+          <Button asChild size="sm" className="shrink-0">
+            <a href={tgHref} target="_blank" rel="noopener noreferrer">
+              {locale === "ru" ? "Написать" : locale === "uz" ? "Yozish" : "Message"}
+            </a>
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

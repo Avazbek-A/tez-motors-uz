@@ -40,7 +40,8 @@ export default async function HomePage() {
       .from("reviews")
       .select("*")
       .eq("is_published", true)
-      .order("order_position"),
+      .order("order_position")
+      .limit(6), // homepage shows a teaser row; full list lives on /reviews
     supabase
       .from("faqs")
       .select("*")

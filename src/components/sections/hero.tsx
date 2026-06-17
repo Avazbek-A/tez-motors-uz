@@ -6,24 +6,37 @@ import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 
 export function Hero() {
   const { dictionary, locale } = useLocale();
+  // Respect prefers-reduced-motion: skip the autoplay video entirely (the dark
+  // cinematic gradient below is a clean static fallback). Also avoids loading the
+  // heavy external clip for those users.
+  const [playVideo, setPlayVideo] = useState(false);
+  useEffect(() => {
+    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setPlayVideo(true);
+  }, []);
 
   return (
     <section className="dark relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] text-white">
-      {/* Cinematic Background Video */}
+      {/* Cinematic background — video when motion is allowed; otherwise the layered
+          dark gradient alone (a clean, static premium fallback). */}
       <div className="absolute inset-0 w-full h-full z-0">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="object-cover w-full h-full scale-105"
-        >
-          {/* Using a premium driving stock video placeholder. Replace with actual brand video later. */}
-          <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-a-car-on-a-mountain-road-250-large.mp4" type="video/mp4" />
-        </video>
+        {/* Base layer — always present, shows when the video is off / still loading. */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#101216] via-[#0a0a0c] to-[#07080a]" />
+        {playVideo && (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            // TODO: replace this stock placeholder with self-hosted brand footage.
+            className="absolute inset-0 object-cover w-full h-full scale-105"
+          >
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-a-car-on-a-mountain-road-250-large.mp4" type="video/mp4" />
+          </video>
+        )}
         {/* Dark elegant overlay to make text pop */}
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
