@@ -11,7 +11,7 @@ export function Hero() {
   const { dictionary, locale } = useLocale();
 
   return (
-    <section className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
+    <section className="dark relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] text-white">
       {/* Cinematic Background Video */}
       <div className="absolute inset-0 w-full h-full z-0">
         <video

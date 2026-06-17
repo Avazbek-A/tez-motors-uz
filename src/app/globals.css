@@ -23,11 +23,12 @@
   --bg-3: #eef0f3;
   --bg-4: #e3e6ea;
 
-  /* ===== Foreground — near-black, stepped down by opacity. */
+  /* ===== Foreground — near-black, stepped down by opacity. (Muted = fg-3 is
+     bumped vs the dark theme so small light-mode body text clears WCAG AA.) */
   --fg-1: #141519;
-  --fg-2: rgba(20, 21, 25, 0.66);
-  --fg-3: rgba(20, 21, 25, 0.46);
-  --fg-4: rgba(20, 21, 25, 0.26);
+  --fg-2: rgba(20, 21, 25, 0.72);
+  --fg-3: rgba(20, 21, 25, 0.56);
+  --fg-4: rgba(20, 21, 25, 0.34);
 
   /* ===== Hairlines & borders — dark-on-light. */
   --line-1: rgba(20, 21, 25, 0.08);
