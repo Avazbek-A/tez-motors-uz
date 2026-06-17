@@ -379,7 +379,7 @@ export default function CarDetailPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full mb-4"
+                  className="w-full mb-4 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center"
                   onClick={() => {
                     setFinancing(true);
                     const monthly = formatPrice(estimatedMonthlyFrom(car.price_usd));
@@ -440,20 +440,20 @@ export default function CarDetailPage() {
               {car.in_stock && car.inventory_status === "available" && (
                 <Button
                   type="button"
-                  className="w-full mb-4"
+                  className="w-full mb-4 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center"
                   onClick={() => setShowReserve(true)}
                 >
                   {locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать"}
                 </Button>
               )}
               {car.spec_data && (car.spec_data.trims?.length ?? 0) > 0 && (
-                <Button type="button" variant="outline" asChild className="w-full mb-4">
+                <Button type="button" variant="outline" asChild className="w-full mb-4 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                   <Link href={localizedPath(locale, `/catalog/${car.slug}/spec`)}>
                     {locale === "uz" ? "To'liq texnik tavsif" : locale === "en" ? "View full spec sheet" : "Полная спецификация"}
                   </Link>
                 </Button>
               )}
-              <Button type="button" variant="outline" asChild className="w-full mb-4">
+              <Button type="button" variant="outline" asChild className="w-full mb-4 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                 <Link
                   href={localizedPath(
                     locale,
@@ -469,7 +469,7 @@ export default function CarDetailPage() {
                 </Link>
               </Button>
               {/* High intent: viewing a model but wanting a different spec → import it to order. */}
-              <Button type="button" variant="outline" asChild className="w-full mb-4">
+              <Button type="button" variant="outline" asChild className="w-full mb-4 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                 <Link href={localizedPath(locale, `/order?brand=${encodeURIComponent(car.brand)}`)}>
                   {locale === "uz"
                     ? "Boshqa rang yoki komplektatsiya kerakmi? Buyurtma bering →"
