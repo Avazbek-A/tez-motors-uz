@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
       supplier: parsed.data.supplier ?? null,
       purchase_order_id: parsed.data.purchase_order_id ?? null,
       shipment_id: parsed.data.shipment_id ?? null,
-      spent_on: parsed.data.spent_on ?? null,
+      // spent_on is NOT NULL (DB default today). An explicit null would override
+      // the default and violate the constraint, so fall back to today's date.
+      spent_on: parsed.data.spent_on || new Date().toISOString().slice(0, 10),
       channel: parsed.data.channel ?? null,
     })
     .select("id")
