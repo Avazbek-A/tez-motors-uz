@@ -1,54 +1,58 @@
 import { describe, it, expect } from "vitest";
-import { computeCustomsUz, resolveVehicleKind, BRV_SUM } from "../customs-uz";
+import { computeCustomsUz, dutyRate, utilizationBrv, resolveVehicleKind, resolveVehicleAge } from "../customs-uz";
 
-describe("computeCustomsUz", () => {
-  it("electric: no duty, 12% VAT, 120 BRV util, 2.5 BRV clearance, $300 cert", () => {
-    const r = computeCustomsUz({ priceUsd: 33000, kind: "electric", usdUzs: 12600 });
-    const by = Object.fromEntries(r.lines.map((l) => [l.key, l]));
-    expect(by.duty).toBeUndefined(); // exempt → no duty line
-    expect(by.vat.usdValue).toBe(Math.round(33000 * 0.12)); // 3960
-    expect(by.util.sumValue).toBe(120 * BRV_SUM); // 49,440,000
-    expect(by.util.usdValue).toBe(Math.round((120 * BRV_SUM) / 12600)); // ~3924
-    expect(by.clearance.sumValue).toBe(2.5 * BRV_SUM); // 1,030,000
-    expect(by.certificate.usdValue).toBe(300);
-    expect(r.totalUsd).toBe(33000 + r.customsCostUsd);
+// All cells below were probed directly from @autodeklarantbot at $20,000,
+// 2000 cc, USD/UZS = 12012.12 — `customsCostUsd` must match its "Растаможка $".
+const BOT = (over: Partial<Parameters<typeof computeCustomsUz>[0]>) =>
+  computeCustomsUz({ priceUsd: 20000, engineCc: 2000, usdUzs: 12012.12, ...over } as Parameters<typeof computeCustomsUz>[0]).customsCostUsd;
+
+describe("computeCustomsUz — validated against @autodeklarantbot", () => {
+  it("petrol, certified China, new (≤1yr): 15% + $1/cc → $14,260", () => {
+    expect(BOT({ kind: "petrol", age: "new", origin: "certified" })).toBe(14260);
   });
-
-  it("petrol ICE 1800cc: duty = 15% + $1/cc, ICE util 120 BRV, $690 certs", () => {
-    const r = computeCustomsUz({ priceUsd: 20000, kind: "petrol", engineCc: 1800, usdUzs: 12600 });
-    const by = Object.fromEntries(r.lines.map((l) => [l.key, l]));
-    expect(by.duty.usdValue).toBe(Math.round(20000 * 0.15 + 1800)); // 4800
-    expect(by.vat.usdValue).toBe(2400);
-    expect(by.util.detail).toBe("120 БРВ"); // <2000cc tier
-    expect(by.certificate.usdValue).toBe(690);
+  it("petrol, certified, 1–3yr: 30% + $2.5/cc → $20,980", () => {
+    expect(BOT({ kind: "petrol", age: "used1to3", origin: "certified" })).toBe(20980);
   });
-
-  it("ICE utilization tiers scale with engine size", () => {
-    const u = (cc: number) => computeCustomsUz({ priceUsd: 20000, kind: "petrol", engineCc: cc }).lines.find((l) => l.key === "util")!;
-    expect(u(1500).detail).toBe("120 БРВ");
-    expect(u(2500).detail).toBe("180 БРВ");
-    expect(u(3600).detail).toBe("300 БРВ");
+  it("petrol, certified, >3yr: 40% + $3/cc, util 330 BRV → $29,485", () => {
+    expect(BOT({ kind: "petrol", age: "used3plus", origin: "certified" })).toBe(29485);
   });
-
-  it("phev is treated as duty-exempt like electric", () => {
-    const r = computeCustomsUz({ priceUsd: 30000, kind: "phev" });
-    expect(r.lines.find((l) => l.key === "duty")).toBeUndefined();
+  it("petrol, FTA origin (Russia), 1–3yr: 0% duty → $8,660", () => {
+    expect(BOT({ kind: "petrol", age: "used1to3", origin: "fta" })).toBe(8660);
   });
-
-  it("delivery is folded into the customs (VAT/duty) base", () => {
-    const a = computeCustomsUz({ priceUsd: 20000, kind: "electric", usdUzs: 12600 });
-    const b = computeCustomsUz({ priceUsd: 20000, kind: "electric", deliveryUsd: 2000, usdUzs: 12600 });
-    expect(b.customsValueUsd).toBe(22000);
-    const vatA = a.lines.find((l) => l.key === "vat")!.usdValue;
-    const vatB = b.lines.find((l) => l.key === "vat")!.usdValue;
-    expect(vatB).toBeGreaterThan(vatA); // VAT rises with delivery in the base
+  it("electric, 1–3yr: 0% duty, 120 BRV util → $6,602", () => {
+    expect(BOT({ kind: "electric", age: "used1to3", origin: "certified" })).toBe(6602);
   });
+  it("hybrid, certified, 1–3yr: 30% + $0/cc → $15,380", () => {
+    expect(BOT({ kind: "hybrid", age: "used1to3", origin: "certified" })).toBe(15380);
+  });
+});
 
-  it("resolveVehicleKind maps free-form fuel strings", () => {
+describe("rate structure", () => {
+  it("no certificate doubles the certified duty rate", () => {
+    expect(dutyRate("petrol", "new", "uncertified")).toEqual({ pct: 30, perCc: 2 });
+    expect(dutyRate("petrol", "used1to3", "uncertified")).toEqual({ pct: 60, perCc: 5 });
+  });
+  it("FTA origin and electric are duty-exempt", () => {
+    expect(dutyRate("petrol", "used3plus", "fta")).toEqual({ pct: 0, perCc: 0 });
+    expect(dutyRate("electric", "used1to3", "uncertified")).toEqual({ pct: 0, perCc: 0 });
+  });
+  it("hybrid keeps the percent but drops the per-cc term", () => {
+    expect(dutyRate("hybrid", "used1to3", "certified")).toEqual({ pct: 30, perCc: 0 });
+  });
+  it("utilization is cc-tiered with a >3yr surcharge; EV flat", () => {
+    expect(utilizationBrv("petrol", "new", 1999)).toBe(120);
+    expect(utilizationBrv("petrol", "new", 2000)).toBe(180);
+    expect(utilizationBrv("petrol", "used3plus", 2000)).toBe(330);
+    expect(utilizationBrv("electric", "new", 0)).toBe(120);
+  });
+  it("resolveVehicleAge buckets by years", () => {
+    expect(resolveVehicleAge(2026, 2026)).toBe("new");
+    expect(resolveVehicleAge(2024, 2026)).toBe("used1to3");
+    expect(resolveVehicleAge(2020, 2026)).toBe("used3plus");
+  });
+  it("resolveVehicleKind maps fuel strings", () => {
     expect(resolveVehicleKind("электро")).toBe("electric");
-    expect(resolveVehicleKind("Бензин")).toBe("petrol");
-    expect(resolveVehicleKind("дизель")).toBe("diesel");
     expect(resolveVehicleKind("гибрид")).toBe("hybrid");
-    expect(resolveVehicleKind("plug-in hybrid")).toBe("phev");
+    expect(resolveVehicleKind("Бензин")).toBe("petrol");
   });
 });
