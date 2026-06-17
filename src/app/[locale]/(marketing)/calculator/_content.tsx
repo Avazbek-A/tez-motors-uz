@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { Calculator, CreditCard, ChevronDown, Loader2, CheckCircle, Send, Zap, Fuel, Leaf, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,18 @@ import type { Locale } from "@/i18n/config";
 import { computeCustomsUz, resolveVehicleKind, type VehicleKind, type CustomsResult } from "@/lib/customs-uz";
 import { formatPrice, cn } from "@/lib/utils";
 
-// Vehicle types mirror Gonzo's tabs (Электро / ДВС / Гибрид / Послед. гибрид).
+// Vehicle types mirror Gonzo's 4 tabs (Электро / ДВС / Гибрид / Послед. гибрид).
+// Petrol + diesel share one "ДВС" button — they compute identically in
+// customs-uz — which also balances the selector into a clean 2×2 grid.
 const KINDS: { value: VehicleKind; icon: React.ComponentType<{ className?: string }>; label: Record<Locale, string> }[] = [
   { value: "electric", icon: Zap, label: { ru: "Электро", uz: "Elektro", en: "Electric" } },
-  { value: "petrol", icon: Fuel, label: { ru: "Бензин", uz: "Benzin", en: "Petrol" } },
-  { value: "diesel", icon: Fuel, label: { ru: "Дизель", uz: "Dizel", en: "Diesel" } },
+  { value: "petrol", icon: Fuel, label: { ru: "Бензин / Дизель", uz: "Benzin / Dizel", en: "Petrol / Diesel" } },
   { value: "hybrid", icon: Leaf, label: { ru: "Гибрид", uz: "Gibrid", en: "Hybrid" } },
   { value: "phev", icon: Plug, label: { ru: "Послед. гибрид", uz: "Ketma-ket gibrid", en: "Plug-in / REEV" } },
 ];
+
+// Diesel folds into the petrol ("ДВС") button — identical customs treatment.
+const uiKind = (k: VehicleKind): VehicleKind => (k === "diesel" ? "petrol" : k);
 
 const LINE_LABEL: Record<CustomsResult["lines"][number]["key"], Record<Locale, string>> = {
   duty: { ru: "Таможенная пошлина", uz: "Bojxona boji", en: "Customs duty" },
@@ -50,8 +54,10 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
   const [engineL, setEngineL] = useState("2.0");
   const [delivery, setDelivery] = useState("");
   const [result, setResult] = useState<CustomsResult | null>(null);
+  const [calculated, setCalculated] = useState(false); // first explicit "Рассчитать" → then live
   const [catalogCars, setCatalogCars] = useState<CarOption[]>([]);
   const [selectedCarId, setSelectedCarId] = useState<string>("");
+  const resultRef = useRef<HTMLDivElement>(null);
 
   // Lead capture on the computed estimate
   const [lead, setLead] = useState({ name: "", phone: "" });
@@ -103,9 +109,25 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     if (!car) return;
     setSelectedCarId(carId);
     setCarPrice(String(car.price_usd));
-    setKind(resolveVehicleKind(car.fuel_type));
+    setKind(uiKind(resolveVehicleKind(car.fuel_type)));
     if (car.engine_volume) setEngineL(String(car.engine_volume));
   }, [catalogCars]);
+
+  // Live recompute: once the user has calculated once, the breakdown updates as
+  // they tweak inputs — instant feedback without re-clicking. (result stays the
+  // single source of truth.)
+  useEffect(() => {
+    if (!calculated) return;
+    const price = parseFloat(carPrice);
+    if (isNaN(price) || price <= 0) { setResult(null); return; }
+    setResult(computeCustomsUz({
+      priceUsd: price,
+      kind,
+      engineCc: needsEngine(kind) ? Math.round((parseFloat(engineL) || 0) * 1000) : 0,
+      deliveryUsd: parseFloat(delivery) || 0,
+      usdUzs,
+    }));
+  }, [calculated, kind, carPrice, engineL, delivery, usdUzs]);
 
   const handleCarSelect = (carId: string) => {
     setSelectedCarId(carId);
@@ -113,9 +135,8 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     const car = catalogCars.find((c) => c.id === carId);
     if (car) {
       setCarPrice(String(car.price_usd));
-      setKind(resolveVehicleKind(car.fuel_type));
+      setKind(uiKind(resolveVehicleKind(car.fuel_type)));
       if (car.engine_volume) setEngineL(String(car.engine_volume));
-      setResult(null);
       setLeadSuccess(false);
     }
   };
@@ -124,16 +145,15 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     e.preventDefault();
     const price = parseFloat(carPrice);
     if (isNaN(price) || price <= 0) return;
-    const res = computeCustomsUz({
-      priceUsd: price,
-      kind,
-      engineCc: needsEngine(kind) ? Math.round((parseFloat(engineL) || 0) * 1000) : 0,
-      deliveryUsd: parseFloat(delivery) || 0,
-      usdUzs,
-    });
-    setResult(res);
+    setCalculated(true); // the live-recompute effect derives `result` from here on
     setLeadSuccess(false);
     setLeadError(null);
+    // Mobile: the result sits below a long form — bring it into view.
+    setTimeout(() => {
+      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 120);
   };
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
@@ -225,14 +245,14 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
                 {/* Vehicle type */}
                 <div>
                   <label className="text-sm font-semibold mb-3 block text-foreground">{t.vehicleType}</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {KINDS.map((k) => {
                       const Icon = k.icon;
                       return (
                         <button
                           key={k.value}
                           type="button"
-                          onClick={() => { setKind(k.value); setResult(null); }}
+                          onClick={() => setKind(k.value)}
                           className={cn(
                             "flex flex-col items-center gap-1 px-2 py-3 rounded-xl text-xs font-medium border transition-all text-center",
                             kind === k.value ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40"
@@ -297,7 +317,7 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
             </div>
 
             {/* Result */}
-            <div className="animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+            <div ref={resultRef} className="animate-fade-in-up scroll-mt-24" style={{ animationDelay: "100ms" }}>
               {result ? (
                 <div className="space-y-4">
                   <div className="bg-card rounded-2xl border border-border overflow-hidden">
