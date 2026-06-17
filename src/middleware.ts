@@ -36,7 +36,9 @@ export function middleware(request: NextRequest) {
     pathname === "/favicon.ico" ||
     pathname === "/icon.png" ||
     pathname === "/apple-icon.png" ||
-    pathname.startsWith("/images")
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/icons") ||
+    pathname.startsWith("/logo")
   ) {
     return NextResponse.next();
   }
@@ -98,6 +100,6 @@ export const config = {
   // (Yandex / Google / Bing all want a static file at the bare root), and the
   // IndexNow key file (<hex>.txt — must resolve at the exact root URL).
   matcher: [
-    "/((?!api|_next|favicon\\.ico|icon\\.png|apple-icon\\.png|images|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image|yandex_|google[a-f0-9]+\\.html|BingSiteAuth\\.xml|pinterest-|[a-f0-9]{16,}\\.txt).*)",
+    "/((?!api|_next|favicon\\.ico|icon\\.png|apple-icon\\.png|images|icons|logo|robots\\.txt|sitemap\\.xml|llms\\.txt|manifest\\.webmanifest|opengraph-image|yandex_|google[a-f0-9]+\\.html|BingSiteAuth\\.xml|pinterest-|[a-f0-9]{16,}\\.txt).*)",
   ],
 };
