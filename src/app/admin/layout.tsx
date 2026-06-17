@@ -146,26 +146,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={cn(
-          // `dark` keeps the sidebar a permanent dark band in both themes (classic
-          // dark-sidebar + light-content admin), so its white text stays valid.
-          "dark fixed inset-y-0 left-0 z-50 bg-navy text-white transition-all duration-300 flex flex-col",
+          // Sidebar follows the theme: light surface in Day, dark in Night.
+          "fixed inset-y-0 left-0 z-50 bg-card text-foreground border-r border-border transition-all duration-300 flex flex-col",
           collapsed ? "w-16" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           {!collapsed && (
             <Link href="/admin" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center">
                 <TezMark width={18} height={20} />
               </div>
-              <span className="font-bold text-white">{c.admin}</span>
+              <span className="font-bold text-foreground">{c.admin}</span>
             </Link>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-white/10 transition-colors"
+            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
           >
             <ChevronLeft className={cn("w-4 h-4 transition-transform", collapsed && "rotate-180")} />
           </button>
@@ -176,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {navGroups.map((group) => (
             <div key={group.section.en} className="space-y-1">
               {!collapsed && (
-                <p className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-white/30">{group.section[locale]}</p>
+                <p className="px-3 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{group.section[locale]}</p>
               )}
               {group.items.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
@@ -190,7 +189,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all",
                       isActive
                         ? "bg-[var(--accent-tint)] text-[var(--accent)] shadow-[inset_2px_0_0_0_var(--accent)]"
-                        : "text-white/60 hover:text-white hover:bg-white/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
                     <item.icon className="w-5 h-5 shrink-0" />
@@ -203,17 +202,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Back to site + Logout */}
-        <div className="p-3 border-t border-white/10 space-y-1">
+        <div className="p-3 border-t border-border space-y-1">
           <Link
             href="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           >
             <ExternalLink className="w-5 h-5 shrink-0" />
             {!collapsed && <span>{c.backToSite}</span>}
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/60 hover:text-red-300 hover:bg-red-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
           >
             <LogOut className="w-5 h-5 shrink-0" />
             {!collapsed && <span>{c.logout}</span>}
