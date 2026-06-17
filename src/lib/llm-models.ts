@@ -153,7 +153,7 @@ const PROVIDER_TIER_MODEL: Record<string, Partial<Record<LlmTier, string>>> = {
   groq:        { chat: "llama-3.3-70b-versatile", reason: "llama-3.3-70b-versatile" },
   nvidia:      { chat: "meta/llama-3.3-70b-instruct", reason: "deepseek-ai/deepseek-r1", vision: "meta/llama-3.2-90b-vision-instruct" },
   gemini:      { chat: "gemini-2.5-flash", reason: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
-  siliconflow: { chat: "Qwen/Qwen3-8B", reason: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" },
+  siliconflow: { chat: "Qwen/Qwen3-8B", reason: "Qwen/Qwen3-8B" }, // DeepSeek-R1-Distill is "disabled" on SiliconFlow free now (403); Qwen3-8B verified live
 };
 
 // Provider preference order per tier (best first). "openrouter" expands to the
