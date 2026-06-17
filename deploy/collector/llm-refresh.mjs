@@ -38,7 +38,10 @@ const isFree = (m) => typeof m.id === "string" && m.id.endsWith(":free");
 const isVision = (m) => JSON.stringify(m.architecture?.input_modalities || m.architecture?.modality || "").includes("image");
 const sizeB = (id) => { const m = id.match(/(\d+)\s*b\b/i); return m ? parseInt(m[1], 10) : 0; };
 
-// Tier candidate rankers over the free catalog (NVIDIA-first, by need).
+// Tier candidate rankers over the free catalog (NVIDIA-first, by need) — used to
+// REPLACE a broken pick (keep-if-working/replace-if-broken stays NVIDIA-first +
+// low-churn). The broader cross-family ranker below (scoreModel) is used only to
+// SUGGEST upgrades to the owner, never to auto-switch.
 const TIERS = {
   chat: (free) => free
     .filter((m) => /nvidia|nemotron/i.test(m.id) && !isVision(m) && !/content-safety|guard|safety/i.test(m.id))
@@ -50,6 +53,72 @@ const TIERS = {
     .filter((m) => /nvidia|nemotron/i.test(m.id) && isVision(m) && !/content-safety|guard|safety/i.test(m.id))
     .sort((a, b) => (/omni|reasoning/i.test(b.id) ? 1 : 0) - (/omni|reasoning/i.test(a.id) ? 1 : 0)), // prefer omni/reasoning
 };
+
+// ---- Cross-family upgrade scorer (for weekly SUGGESTIONS, all free families) --
+// Newer/stronger families rank higher; sizes/context add to it. Chat favors
+// speed (smaller), reason/vision favor strength. Transparent + easy to retune.
+const FAMILIES = [
+  { re: /deepseek/i, rank: 9, name: "DeepSeek" },
+  { re: /qwen-?3|qwen3/i, rank: 8, name: "Qwen3" },
+  { re: /llama-?4|llama4/i, rank: 8, name: "Llama 4" },
+  { re: /gpt-oss/i, rank: 7, name: "GPT-OSS" },
+  { re: /llama-?3\.3/i, rank: 7, name: "Llama 3.3" },
+  { re: /glm-?4/i, rank: 7, name: "GLM-4" },
+  { re: /nemotron/i, rank: 6, name: "Nemotron" },
+  { re: /gemma-?3/i, rank: 6, name: "Gemma 3" },
+  { re: /mistral|mixtral|magistral|devstral/i, rank: 6, name: "Mistral" },
+  { re: /qwen-?2\.5|qwen2/i, rank: 5, name: "Qwen2.5" },
+];
+const family = (id) => FAMILIES.find((f) => f.re.test(id)) || { rank: 3, name: "other" };
+const ctxOf = (m) => Number(m.context_length || m.top_provider?.context_length || 0) || 0;
+const TEXT_OK = (m) => !isVision(m) && !/guard|safety|moderat|embed|rerank|tts|whisper|audio|image-gen/i.test(m.id);
+
+function scoreModel(m, tier) {
+  const fam = family(m.id).rank;
+  const size = sizeB(m.id);
+  const ctx = ctxOf(m);
+  if (tier === "reason") return fam * 100 + Math.min(size, 700) + ctx / 100000;
+  if (tier === "vision") return fam * 100 + Math.min(size, 200) + ctx / 100000;
+  const speed = size === 0 ? 8 : size <= 12 ? 10 : size <= 30 ? 8 : size <= 70 ? 4 : 1; // chat: prefer fast
+  return fam * 100 + speed * 5 + ctx / 200000;
+}
+function poolFor(tier, free) {
+  return tier === "vision" ? free.filter((m) => isVision(m) && !/guard|safety/i.test(m.id)) : free.filter(TEXT_OK);
+}
+function rankTier(tier, free) {
+  return poolFor(tier, free).map((m) => ({ id: m.id, score: scoreModel(m, tier), m })).sort((a, b) => b.score - a.score);
+}
+function topByTier(free) {
+  const t = {};
+  for (const tier of ["chat", "reason", "vision"]) t[tier] = rankTier(tier, free).slice(0, 5).map((x) => x.id);
+  return t;
+}
+// One upgrade suggestion per tier: the best LIVE free model that meaningfully
+// beats the current primary. `live` is the shared probe (cached). Never switches
+// — only advises the owner.
+async function buildSuggestions(free, picks, live) {
+  const out = [];
+  for (const tier of ["chat", "reason", "vision"]) {
+    const ranked = rankTier(tier, free);
+    if (!ranked.length) continue;
+    const current = picks[tier];
+    const curScore = ranked.find((x) => x.id === current)?.score ?? 0;
+    for (const cand of ranked) {
+      if (cand.id === current) break;          // current is already at/above here
+      if (cand.score <= curScore * 1.05) break; // nothing meaningfully better remains
+      if (!(await live(cand.id))) continue;     // must actually answer
+      const f = family(cand.id), size = sizeB(cand.id), ctx = ctxOf(cand.m);
+      out.push({
+        tier,
+        current: current || "—",
+        suggest: cand.id,
+        reason: `${f.name}${size ? `, ${size}B` : ""}${ctx ? `, ${Math.round(ctx / 1000)}k ctx` : ""} — сильнее текущей (${tier === "chat" ? "быстрее/умнее" : "мощнее"})`,
+      });
+      break; // one per tier
+    }
+  }
+  return out;
+}
 
 async function probe(id) {
   try {
@@ -93,6 +162,7 @@ async function main() {
   console.log(`OpenRouter: ${models.length} models, ${free.length} free`);
 
   const cur = (await (await fetch(`${U}/rest/v1/site_settings?id=eq.llm_models&select=values`, { headers: H })).json())[0]?.values || {};
+  const prevCatalog = (await (await fetch(`${U}/rest/v1/site_settings?id=eq.llm_catalog&select=values`, { headers: H })).json())[0]?.values || {};
   const freeIds = new Set(free.map((m) => m.id));
   const probeCache = new Map();
   const live = async (id) => { if (!id) return false; if (!probeCache.has(id)) probeCache.set(id, await probe(id)); return probeCache.get(id); };
@@ -127,6 +197,32 @@ async function main() {
     ]);
   }
 
+  // ---- Weekly upgrade scan: rank the WHOLE free catalog per tier, suggest the
+  // best live model that beats the current primary, persist for the admin
+  // dashboard, and digest NEW suggestions to the owner (never auto-switch). -----
+  const suggestions = await buildSuggestions(free, next, live);
+  const catalog = { scanned_at: new Date().toISOString(), free_count: free.length, suggestions, top: topByTier(free) };
+  if (WRITE) {
+    const rc = await fetch(`${U}/rest/v1/site_settings`, { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ id: "llm_catalog", values: catalog }) });
+    console.log(rc.ok ? "catalog saved ✓" : "catalog save FAIL " + rc.status);
+  }
+  if (suggestions.length) {
+    console.log("SUGGESTIONS:\n  " + suggestions.map((s) => `${s.tier}: ${s.current} → ${s.suggest} (${s.reason})`).join("\n  "));
+    // Only ping on suggestions we haven't already advised (avoid weekly repeats).
+    const prevKeys = new Set((prevCatalog.suggestions || []).map((s) => `${s.tier}:${s.suggest}`));
+    const fresh = suggestions.filter((s) => !prevKeys.has(`${s.tier}:${s.suggest}`));
+    if (WRITE && fresh.length) {
+      await notify("💡 Новые бесплатные AI-модели (можно улучшить)", [
+        ...fresh.map((s) => `• ${s.tier}: ${s.suggest}\n  ${s.reason}`),
+        "",
+        "Открыть: Админ → AI-модели. Применить — там же или скажите мне.",
+      ]);
+    }
+  } else {
+    console.log("no upgrade suggestions — current picks lead the free catalog ✓");
+  }
+
+  // ---- Apply keep/replace pick changes ---------------------------------------
   if (!changes.length) { console.log("no model changes — current picks are free + live ✓"); return; }
   console.log("CHANGES:\n  " + changes.join("\n  "));
   if (!WRITE) { console.log("(dry-run; pass --write to apply)"); return; }

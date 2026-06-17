@@ -35,6 +35,13 @@
  */
 import { getTierModels, tierChain, isFreeModel, type LlmTier } from "@/lib/llm-models";
 import { alertDealer } from "@/lib/error-report";
+import { recordLlmCall, type LlmFailure } from "@/lib/llm-telemetry";
+
+/** Classify a thrown fetch error as a timeout vs a generic error (for telemetry). */
+function failReason(err: unknown): "timeout" | "error" {
+  const name = err instanceof Error ? err.name : "";
+  return name === "TimeoutError" || name === "AbortError" ? "timeout" : "error";
+}
 
 export interface AssistantCarLite {
   brand: string;
@@ -74,7 +81,7 @@ function systemPrompt(locale: string): string {
   const lang = LOCALE_NAME[locale] || "Russian";
   return [
     "You are the sales assistant for Tez Motors, a company that imports Chinese cars into Uzbekistan.",
-    `Reply in ${lang}. Keep it to 2-4 short sentences, warm and concrete, no markdown, no bullet lists.`,
+    `Reply in ${lang}. If the customer's latest message is clearly written in a different language, reply in THEIR language instead — always mirror the customer. Keep it to 2-4 short sentences, warm and concrete, no markdown, no bullet lists.`,
     "You are given an INVENTORY as JSON: the ONLY cars that exist. Recommend ONLY from this list.",
     "NEVER invent a car, trim, spec, or price. NEVER quote a price or monthly figure that is not in the JSON.",
     // Each car carries categorization fields — USE them to match the client's real need:
@@ -194,8 +201,15 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
   }
   const timeout = TIER_TIMEOUT_MS[args.tier];
 
+  // Telemetry: track every model tried + why it failed, so the dashboard can
+  // show how often a call had to switch off its primary (free models rotate).
+  const started = Date.now();
+  const failures: LlmFailure[] = [];
+  let attempts = 0;
+
   for (const model of models) {
     if (!model) continue;
+    attempts += 1;
     const req = buildChatRequest(provider, { system: args.system, messages: args.messages, maxTokens: args.maxTokens, apiKey, url, model });
     if (onOpenRouter) {
       req.headers["HTTP-Referer"] = "https://tezmotors.uz";
@@ -206,17 +220,26 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         console.error("LLM non-OK", provider, model, res.status, body.slice(0, 300));
+        failures.push({ model, reason: "non_ok", status: res.status });
         continue; // try the tier fallback
       }
       const text = parseChatResponse(provider, await res.json());
-      if (text) return text;
+      if (text) {
+        void recordLlmCall({ tier: args.tier, answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
+        return text;
+      }
       console.error("LLM empty content", model);
+      failures.push({ model, reason: "empty" });
     } catch (err) {
       console.error("LLM call failed", model, err instanceof Error ? err.message : err);
+      failures.push({ model, reason: failReason(err) });
     }
   }
-  // Whole free chain failed → the owner needs to know the free models are down
-  // (replies fell back to the deterministic template). Throttled; never blocks.
+  // Whole chain failed → record it (answeredModel=null) so the dashboard shows
+  // template fallbacks, then alert the owner the free models are down.
+  if (attempts > 0) {
+    void recordLlmCall({ tier: args.tier, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
+  }
   if (onOpenRouter && models.length > 0) {
     void alertDealer("OpenRouter FREE models unavailable", [`tier=${args.tier}`, `tried: ${models.join(", ")}`, "AI replies are falling back to the template. Check OpenRouter free-tier status / daily cap / rate limits."], { key: "llm-free-down" });
   }
@@ -290,8 +313,12 @@ export async function llmVision(args: { system: string; user: string; images: st
   const all = tierChain("vision", await getTierModels());
   // PAID GUARD (see callChat): on OpenRouter only call :free vision models.
   const models = onOpenRouter ? all.filter(isFreeModel) : all.filter(Boolean);
+  const started = Date.now();
+  const failures: LlmFailure[] = [];
+  let attempts = 0;
   for (const model of models) {
     if (!model) continue;
+    attempts += 1;
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (apiKey) headers["authorization"] = `Bearer ${apiKey}`;
     if (onOpenRouter) {
@@ -307,12 +334,20 @@ export async function llmVision(args: { system: string; user: string; images: st
     });
     try {
       const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(TIER_TIMEOUT_MS.vision) });
-      if (!res.ok) { console.error("LLM vision non-OK", model, res.status); continue; }
+      if (!res.ok) { console.error("LLM vision non-OK", model, res.status); failures.push({ model, reason: "non_ok", status: res.status }); continue; }
       const text = parseChatResponse("openai", await res.json());
-      if (text) return text;
+      if (text) {
+        void recordLlmCall({ tier: "vision", answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
+        return text;
+      }
+      failures.push({ model, reason: "empty" });
     } catch (err) {
       console.error("LLM vision failed", model, err instanceof Error ? err.message : err);
+      failures.push({ model, reason: failReason(err) });
     }
+  }
+  if (attempts > 0) {
+    void recordLlmCall({ tier: "vision", answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
   }
   if (onOpenRouter && models.length > 0) {
     void alertDealer("OpenRouter FREE models unavailable", ["tier=vision", `tried: ${models.join(", ")}`, "Vision (spec-screenshot) extraction fell back to none. Check OpenRouter free-tier status."], { key: "llm-free-down" });

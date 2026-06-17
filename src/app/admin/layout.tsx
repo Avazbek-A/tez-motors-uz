@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Car, MessageSquare, Star, HelpCircle,
-  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone, Landmark, Building2, Workflow, Gift, Users2
+  Settings, ChevronLeft, Menu, LogOut, BarChart3, ExternalLink, Users, FileText, Wrench, Package, ScrollText, Boxes, Columns3, Calculator, TrendingUp, Wallet, Truck, Activity, LineChart, Megaphone, AlertTriangle, Ship, Banknote, Bot, Contact, ListChecks, Send, Target, Container, Receipt, Gauge, Tag, ShieldCheck, FileSpreadsheet, Hourglass, Sparkles, Cable, Share2, Bike, Factory, Phone, Landmark, Building2, Workflow, Gift, Users2, Cpu
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -101,6 +101,7 @@ const navGroups: NavGroup[] = [
     section: { ru: "Система", uz: "Tizim", en: "System" },
     items: [
       { href: "/admin/setup", label: { ru: "Настройка", uz: "Sozlash", en: "Setup" }, icon: Cable },
+      { href: "/admin/llm", label: { ru: "AI-модели", uz: "AI-modellar", en: "AI Models" }, icon: Cpu },
       { href: "/admin/tenants", label: { ru: "Арендаторы", uz: "Ijarachilar", en: "Tenants" }, icon: Building2 },
       { href: "/admin/users", label: { ru: "Пользователи", uz: "Foydalanuvchilar", en: "Users" }, icon: Users },
       { href: "/admin/export", label: { ru: "Экспорт", uz: "Eksport", en: "Export" }, icon: FileSpreadsheet },
