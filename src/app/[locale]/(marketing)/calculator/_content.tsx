@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 
-import { Calculator, CreditCard, ChevronDown, Loader2, CheckCircle, Send, Zap, Fuel, Leaf, Plug, AlertTriangle, BadgeCheck, Car, Bike, Settings, Truck } from "lucide-react";
+import { Calculator, CreditCard, ChevronDown, Loader2, CheckCircle, Send, Zap, Fuel, Leaf, Plug, AlertTriangle, BadgeCheck, Car, Bike, Settings, Truck, Bus, Caravan, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SectionHeading } from "@/components/shared/section-heading";
@@ -12,7 +12,8 @@ import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 import {
   computeCustomsUz, resolveVehicleKind, resolveVehicleAge,
-  type VehicleKind, type VehicleAge, type OriginClass, type VehicleCategory, type CustomsResult,
+  type VehicleKind, type VehicleAge, type OriginClass, type VehicleCategory,
+  type BusCapacity, type EcoClass, type FuraPart, type FuraAge, type CustomsResult,
 } from "@/lib/customs-uz";
 import { formatPrice, cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ const CATS: Opt<VehicleCategory>[] = [
   { value: "moto", icon: Bike, label: { ru: "Мото / скутер", uz: "Moto / skuter", en: "Moto / scooter" } },
   { value: "engine", icon: Settings, label: { ru: "Мотор", uz: "Motor", en: "Engine" } },
   { value: "truck", icon: Truck, label: { ru: "Мини-грузовик", uz: "Mini yuk", en: "Mini-truck" } },
+  { value: "bus", icon: Bus, label: { ru: "Автобус", uz: "Avtobus", en: "Bus" } },
+  { value: "fura", icon: Caravan, label: { ru: "Фура", uz: "Fura", en: "Semi-truck" } },
 ];
 const CAR_KINDS: Opt<VehicleKind>[] = [
   { value: "electric", icon: Zap, label: { ru: "Электро", uz: "Elektro", en: "Electric" } },
@@ -35,7 +38,7 @@ const MOTO_KINDS: Opt<VehicleKind>[] = [
   { value: "petrol", icon: Fuel, label: { ru: "Бензин", uz: "Benzin", en: "Petrol" } },
   { value: "electric", icon: Zap, label: { ru: "Электро", uz: "Elektro", en: "Electric" } },
 ];
-const TRUCK_KINDS: Opt<VehicleKind>[] = [
+const ICE_EV_KINDS: Opt<VehicleKind>[] = [
   { value: "petrol", icon: Fuel, label: { ru: "ДВС", uz: "ICE", en: "ICE" } },
   { value: "electric", icon: Zap, label: { ru: "Электро", uz: "Elektro", en: "Electric" } },
 ];
@@ -44,13 +47,27 @@ const CAR_AGES: Opt<VehicleAge>[] = [
   { value: "used1to3", label: { ru: "1–3 года", uz: "1–3 yil", en: "1–3 years" } },
   { value: "used3plus", label: { ru: "Более 3 лет", uz: "3 yildan ortiq", en: ">3 years" } },
 ];
-const TRUCK_AGES: Opt<VehicleAge>[] = [
+const TWO_AGES: Opt<VehicleAge>[] = [
   { value: "used1to3", label: { ru: "До 3 лет", uz: "3 yilgacha", en: "≤3 years" } },
   { value: "used3plus", label: { ru: "Более 3 лет", uz: "3 yildan ortiq", en: ">3 years" } },
 ];
 const ENGINE_AGES: Opt<VehicleAge>[] = [
   { value: "new", label: { ru: "Новый", uz: "Yangi", en: "New" } },
   { value: "used3plus", label: { ru: "Б/У", uz: "Ishlatilgan", en: "Used" } },
+];
+const CAPS: Opt<BusCapacity>[] = [
+  { value: "small", label: { ru: "10–59 мест", uz: "10–59 o'rin", en: "10–59 seats" } },
+  { value: "large", label: { ru: "60+ мест", uz: "60+ o'rin", en: "60+ seats" } },
+];
+const FURA_PARTS: Opt<FuraPart>[] = [
+  { value: "tractor", label: { ru: "Тягач", uz: "Tyagach", en: "Tractor" } },
+  { value: "semitrailer", label: { ru: "Полуприцеп", uz: "Yarim tirkama", en: "Semi-trailer" } },
+];
+const FURA_AGES: Opt<FuraAge>[] = [
+  { value: "a1", label: { ru: "До 3 лет", uz: "3 yilgacha", en: "≤3 yr" } },
+  { value: "a2", label: { ru: "3–5 лет", uz: "3–5 yil", en: "3–5 yr" } },
+  { value: "a3", label: { ru: "5–7 лет", uz: "5–7 yil", en: "5–7 yr" } },
+  { value: "a4", label: { ru: "Более 7", uz: "7+", en: ">7 yr" } },
 ];
 const ORIGINS: { value: OriginClass; label: Tri; hint: Tri }[] = [
   { value: "fta", label: { ru: "СНГ / ЕАЭС", uz: "MDH / EOII", en: "CIS / EAEU" }, hint: { ru: "0% пошлины (с сертификатом СТ-1)", uz: "0% boj (ST-1 bilan)", en: "0% duty (with ST-1 certificate)" } },
@@ -80,6 +97,10 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
   const [kind, setKind] = useState<VehicleKind>("electric");
   const [age, setAge] = useState<VehicleAge>("new");
   const [origin, setOrigin] = useState<OriginClass>("certified");
+  const [capacity, setCapacity] = useState<BusCapacity>("small");
+  const [eco, setEco] = useState<EcoClass>("euro5plus");
+  const [furaPart, setFuraPart] = useState<FuraPart>("tractor");
+  const [furaAge, setFuraAge] = useState<FuraAge>("a1");
   const [carPrice, setCarPrice] = useState("");
   const [engineL, setEngineL] = useState("2.0");
   const [delivery, setDelivery] = useState("");
@@ -96,22 +117,39 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
   const [leadError, setLeadError] = useState<string | null>(null);
 
   // Per-category option sets + which controls show.
-  const kindOpts = category === "car" ? CAR_KINDS : category === "moto" ? MOTO_KINDS : category === "truck" ? TRUCK_KINDS : [];
-  const ageOpts = category === "car" ? CAR_AGES : category === "truck" ? TRUCK_AGES : category === "engine" ? ENGINE_AGES : [];
-  const showOrigin = category !== "engine" && !isElectricKind(kind);
+  const kindOpts = category === "car" ? CAR_KINDS : category === "moto" ? MOTO_KINDS : (category === "truck" || category === "bus") ? ICE_EV_KINDS : [];
+  const ageOpts = category === "car" ? CAR_AGES : (category === "truck" || category === "bus") ? TWO_AGES : category === "engine" ? ENGINE_AGES : [];
+  const isFuraTractor = category === "fura" && furaPart === "tractor";
+  const showEco = (category === "bus" && !isElectricKind(kind)) || isFuraTractor;
+  const ecoOpts: EcoClass[] = category === "fura" ? ["euro5plus", "euro4", "below4"] : ["euro5plus", "euro4"];
+  const showOrigin = (category === "car" || category === "moto" || category === "truck" || category === "bus") && !isElectricKind(kind);
   const showEngine = category === "car" && carNeedsEngine(kind);
   const showAge = ageOpts.length > 0;
+
+  const buildInput = (price: number) => {
+    const deliveryUsd = parseFloat(delivery) || 0;
+    if (category === "bus") return { priceUsd: price, category, kind, age, capacity, eco, origin, engineCc: 2000, deliveryUsd, usdUzs };
+    if (category === "fura") return { priceUsd: price, category, kind: "diesel" as VehicleKind, furaPart, furaAge, eco, engineCc: 12000, deliveryUsd, usdUzs };
+    return { priceUsd: price, category, kind, age, origin, engineCc: showEngine ? Math.round((parseFloat(engineL) || 0) * 1000) : 0, deliveryUsd, usdUzs };
+  };
 
   const t = {
     vehicle: locale === "ru" ? "Тип транспорта" : locale === "uz" ? "Transport turi" : "Vehicle",
     engine: locale === "ru" ? "Объём двигателя (л)" : locale === "uz" ? "Dvigatel hajmi (l)" : "Engine volume (L)",
     delivery: locale === "ru" ? "Доставка (USD, необяз.)" : locale === "uz" ? "Yetkazib berish (USD, ixtiyoriy)" : "Delivery (USD, optional)",
     type: locale === "ru" ? "Тип топлива" : locale === "uz" ? "Yoqilg'i turi" : "Fuel type",
+    capLabel: locale === "ru" ? "Вместимость" : locale === "uz" ? "Sig'imi" : "Capacity",
+    ecoLabel: locale === "ru" ? "Эко-класс" : locale === "uz" ? "Eko-sinf" : "Emission class",
+    partLabel: locale === "ru" ? "Часть фуры" : locale === "uz" ? "Fura qismi" : "Semi-truck part",
     ageLabel: category === "engine" ? (locale === "ru" ? "Состояние" : locale === "uz" ? "Holati" : "Condition") : (locale === "ru" ? "Возраст" : locale === "uz" ? "Yoshi" : "Age"),
     originLabel: locale === "ru" ? "Происхождение / сертификат" : locale === "uz" ? "Kelib chiqishi / sertifikat" : "Origin / certificate",
     customsCost: locale === "ru" ? "Стоимость растаможки" : locale === "uz" ? "Rastamojka narxi" : "Customs total",
     grandTotal: locale === "ru" ? "Итого под ключ" : locale === "uz" ? "Hammasi, под ключ" : "All-in total",
     carPriceRow: locale === "ru" ? "Стоимость" : locale === "uz" ? "Narxi" : "Price",
+    banned: locale === "ru" ? "Ввоз тягачей ниже эко-класса Евро-4 в Узбекистан запрещён." : locale === "uz" ? "Yevro-4 dan past tyagachlarni import qilish taqiqlangan." : "Importing tractors below Euro-4 into Uzbekistan is banned.",
+    eco5: locale === "ru" ? "Евро-5 и выше" : locale === "uz" ? "Yevro-5+" : "Euro-5+",
+    eco4: locale === "ru" ? "Евро-4" : "Euro-4",
+    ecoBelow: locale === "ru" ? "Ниже Евро-4" : locale === "uz" ? "Yevro-4 dan past" : "Below Euro-4",
     note: locale === "ru"
       ? "* Расчёт по тарифам РУз. Сертификация ~$300–690 — отдельно. Точную сумму подтвердит брокер."
       : locale === "uz"
@@ -124,6 +162,7 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     leadErr: locale === "ru" ? "Не удалось отправить. Попробуйте ещё раз." : locale === "uz" ? "Yuborilmadi. Qayta urinib ko'ring." : "Could not send. Please try again.",
     sum: locale === "ru" ? "сум" : locale === "uz" ? "so'm" : "UZS",
   };
+  const ecoText = (e: EcoClass) => (e === "euro5plus" ? t.eco5 : e === "euro4" ? t.eco4 : t.ecoBelow);
   const fmtSum = (n: number) => `${n.toLocaleString("ru-RU")} ${t.sum}`;
 
   useEffect(() => {
@@ -136,11 +175,8 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     if (!carId) return;
     const car = catalogCars.find((c) => c.id === carId);
     if (!car) return;
-    setCategory("car");
-    setSelectedCarId(carId);
-    setCarPrice(String(car.price_usd));
-    setKind(uiKind(resolveVehicleKind(car.fuel_type)));
-    setAge(resolveVehicleAge(car.year));
+    setCategory("car"); setSelectedCarId(carId); setCarPrice(String(car.price_usd));
+    setKind(uiKind(resolveVehicleKind(car.fuel_type))); setAge(resolveVehicleAge(car.year));
     if (car.engine_volume) setEngineL(String(car.engine_volume));
   }, [catalogCars]);
 
@@ -149,21 +185,18 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     if (!calculated) return;
     const price = parseFloat(carPrice);
     if (isNaN(price) || price <= 0) { setResult(null); return; }
-    setResult(computeCustomsUz({
-      priceUsd: price, category, kind, age, origin,
-      engineCc: showEngine ? Math.round((parseFloat(engineL) || 0) * 1000) : 0,
-      deliveryUsd: parseFloat(delivery) || 0, usdUzs,
-    }));
-  }, [calculated, category, kind, age, origin, carPrice, engineL, delivery, usdUzs, showEngine]);
+    setResult(computeCustomsUz(buildInput(price)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculated, category, kind, age, origin, capacity, eco, furaPart, furaAge, carPrice, engineL, delivery, usdUzs]);
 
   const pickCategory = (c: VehicleCategory) => {
-    setCategory(c);
-    setSelectedCarId("");
-    // Reset to valid defaults for the new category.
+    setCategory(c); setSelectedCarId(""); setEco("euro5plus");
     if (c === "car") { setKind("electric"); setAge("new"); }
     else if (c === "moto") { setKind("petrol"); }
     else if (c === "engine") { setKind("petrol"); setAge("new"); }
     else if (c === "truck") { setKind("petrol"); setAge("used1to3"); }
+    else if (c === "bus") { setKind("petrol"); setAge("used1to3"); setCapacity("small"); }
+    else if (c === "fura") { setFuraPart("tractor"); setFuraAge("a1"); }
   };
 
   const handleCarSelect = (carId: string) => {
@@ -171,10 +204,8 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     if (!carId) return;
     const car = catalogCars.find((c) => c.id === carId);
     if (car) {
-      setCategory("car");
-      setCarPrice(String(car.price_usd));
-      setKind(uiKind(resolveVehicleKind(car.fuel_type)));
-      setAge(resolveVehicleAge(car.year));
+      setCategory("car"); setCarPrice(String(car.price_usd));
+      setKind(uiKind(resolveVehicleKind(car.fuel_type))); setAge(resolveVehicleAge(car.year));
       if (car.engine_volume) setEngineL(String(car.engine_volume));
       setLeadSuccess(false);
     }
@@ -184,19 +215,14 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     e.preventDefault();
     const price = parseFloat(carPrice);
     if (isNaN(price) || price <= 0) return;
-    setCalculated(true);
-    setLeadSuccess(false);
-    setLeadError(null);
-    setTimeout(() => {
-      if (typeof window !== "undefined" && window.innerWidth < 1024) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
+    setCalculated(true); setLeadSuccess(false); setLeadError(null);
+    setTimeout(() => { if (typeof window !== "undefined" && window.innerWidth < 1024) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 120);
   };
 
   const handleLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!result) return;
-    setLeadSubmitting(true);
-    setLeadError(null);
+    setLeadSubmitting(true); setLeadError(null);
     const selectedCar = catalogCars.find((c) => c.id === selectedCarId);
     const catLabel = CATS.find((c) => c.value === category)?.label[locale];
     const carLabel = selectedCar ? `${selectedCar.brand} ${selectedCar.model} ${selectedCar.year}` : `${catLabel}, ${formatPrice(result.customsValueUsd)}`;
@@ -207,12 +233,7 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
         body: JSON.stringify({
           name: lead.name, phone: lead.phone, type: "calculator", source_page: "calculator",
           car_id: selectedCar?.id || undefined, message,
-          metadata: {
-            car: carLabel, category, vehicle_kind: kind, age, origin,
-            engine_l: showEngine ? engineL : undefined,
-            car_price_usd: result.customsValueUsd, customs_cost_usd: result.customsCostUsd, total_usd: result.totalUsd,
-            breakdown: result.lines.map((l) => ({ key: l.key, usd: l.usdValue, sum: l.sumValue })),
-          },
+          metadata: { car: carLabel, category, vehicle_kind: kind, age, origin, capacity, eco, fura_part: furaPart, fura_age: furaAge, car_price_usd: result.customsValueUsd, customs_cost_usd: result.customsCostUsd, total_usd: result.totalUsd },
           turnstile_token: leadToken ?? undefined,
         }),
       });
@@ -222,14 +243,8 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
     finally { setLeadSubmitting(false); }
   };
 
-  const segBtn = (active: boolean) => cn(
-    "px-3 py-2.5 rounded-xl text-xs font-medium border transition-all text-center",
-    active ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
-  );
-  const iconBtn = (active: boolean) => cn(
-    "flex flex-col items-center gap-1 px-2 py-3 rounded-xl text-xs font-medium border transition-all text-center",
-    active ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40",
-  );
+  const segBtn = (active: boolean) => cn("px-3 py-2.5 rounded-xl text-xs font-medium border transition-all text-center", active ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40");
+  const iconBtn = (active: boolean) => cn("flex flex-col items-center gap-1 px-2 py-3 rounded-xl text-xs font-medium border transition-all text-center", active ? "bg-primary/15 border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted/40");
 
   return (
     <div className="pt-24 pb-16">
@@ -251,36 +266,71 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
           <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="animate-fade-in-up">
               <form onSubmit={handleCalculate} className="bg-card rounded-2xl border border-border p-8 space-y-6">
-                {/* Vehicle category */}
                 <div>
                   <label className="text-sm font-semibold mb-3 block text-foreground">{t.vehicle}</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     {CATS.map((c) => { const Icon = c.icon!; return (
-                      <button key={c.value} type="button" onClick={() => pickCategory(c.value)} className={iconBtn(category === c.value)}>
-                        <Icon className="w-4 h-4" />{c.label[locale]}
-                      </button>); })}
+                      <button key={c.value} type="button" onClick={() => pickCategory(c.value)} className={iconBtn(category === c.value)}><Icon className="w-4 h-4" />{c.label[locale]}</button>); })}
                   </div>
                 </div>
 
-                {/* Fuel / type (not for engine) */}
-                {kindOpts.length > 0 && (
+                {/* Фура part */}
+                {category === "fura" && (
                   <div>
-                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.type}</label>
-                    <div className={cn("grid gap-2", kindOpts.length >= 4 ? "grid-cols-2" : "grid-cols-2")}>
-                      {kindOpts.map((k) => { const Icon = k.icon; return (
-                        <button key={k.value} type="button" onClick={() => setKind(k.value)} className={iconBtn(kind === k.value)}>
-                          {Icon && <Icon className="w-4 h-4" />}{k.label[locale]}
-                        </button>); })}
+                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.partLabel}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {FURA_PARTS.map((f) => (<button key={f.value} type="button" onClick={() => setFuraPart(f.value)} className={segBtn(furaPart === f.value)}>{f.label[locale]}</button>))}
                     </div>
                   </div>
                 )}
 
-                {/* Age / condition */}
+                {/* Bus capacity */}
+                {category === "bus" && (
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.capLabel}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {CAPS.map((c) => (<button key={c.value} type="button" onClick={() => setCapacity(c.value)} className={segBtn(capacity === c.value)}>{c.label[locale]}</button>))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fuel / type */}
+                {kindOpts.length > 0 && (
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.type}</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {kindOpts.map((k) => { const Icon = k.icon; return (
+                        <button key={k.value} type="button" onClick={() => setKind(k.value)} className={iconBtn(kind === k.value)}>{Icon && <Icon className="w-4 h-4" />}{k.label[locale]}</button>); })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Фура tractor age (4 bands) */}
+                {isFuraTractor && (
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.ageLabel}</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {FURA_AGES.map((a) => (<button key={a.value} type="button" onClick={() => setFuraAge(a.value)} className={segBtn(furaAge === a.value)}>{a.label[locale]}</button>))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Age / condition (car/truck/bus/engine) */}
                 {showAge && (
                   <div>
                     <label className="text-sm font-semibold mb-3 block text-foreground">{t.ageLabel}</label>
                     <div className={cn("grid gap-2", ageOpts.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
                       {ageOpts.map((a) => (<button key={a.value} type="button" onClick={() => setAge(a.value)} className={segBtn(age === a.value)}>{a.label[locale]}</button>))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Eco-class (bus ICE / фура tractor) */}
+                {showEco && (
+                  <div>
+                    <label className="text-sm font-semibold mb-3 block text-foreground">{t.ecoLabel}</label>
+                    <div className={cn("grid gap-2", ecoOpts.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
+                      {ecoOpts.map((e) => (<button key={e} type="button" onClick={() => setEco(e)} className={segBtn(eco === e)}>{ecoText(e)}</button>))}
                     </div>
                   </div>
                 )}
@@ -336,7 +386,12 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
             </div>
 
             <div ref={resultRef} className="animate-fade-in-up scroll-mt-24" style={{ animationDelay: "100ms" }}>
-              {result ? (
+              {result?.banned ? (
+                <div className="bg-card rounded-2xl border border-[var(--danger,#ef4444)]/40 p-8 flex items-center gap-4">
+                  <Ban className="w-10 h-10 text-[var(--danger,#ef4444)] shrink-0" />
+                  <p className="text-foreground font-semibold">{t.banned}</p>
+                </div>
+              ) : result ? (
                 <div className="space-y-4">
                   <div className="bg-card rounded-2xl border border-border overflow-hidden">
                     <div className="p-6 border-b border-border"><h3 className="text-lg font-bold text-foreground">{dictionary.calculator.result.title}</h3></div>
