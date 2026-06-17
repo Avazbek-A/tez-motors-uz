@@ -34,28 +34,38 @@ export function TezMark({ className, width = 28, height = 32 }: { className?: st
  *   <TezLogo ... className="text-white" />                        // dark footer
  *   <TezLogo ... wordmarkClassName="hidden sm:inline" />          // hide wordmark on phones
  */
+// Per-placement sizing. Header is the hero lockup (scales up on desktop); footer
+// is a deliberately modest mark so it doesn't dominate the column.
+const LOGO_SIZES = {
+  header: { mark: "h-[34px] sm:h-10 lg:h-12", word: "text-xl lg:text-2xl" },
+  footer: { mark: "h-9", word: "text-lg" },
+} as const;
+
 export function TezLogo({
   className,
   wordmarkClassName,
   href = "/",
+  size = "header",
 }: {
   className?: string;
   wordmarkClassName?: string;
   href?: string;
+  size?: keyof typeof LOGO_SIZES;
 }) {
+  const s = LOGO_SIZES[size];
   return (
     <Link
       href={href}
       aria-label="Tez Motors"
       className={cn("inline-flex items-center gap-2.5 text-foreground shrink-0 group", className)}
     >
-      {/* viewBox is cropped tight to the strokes (no dead padding) + sized in CSS so
-          the mark scales per platform: ~34px on phones → ~48px on desktop. */}
+      {/* viewBox is cropped tight to the strokes (no dead padding); height is set
+          per placement via `size` so the mark fills its space without dominating. */}
       <svg
         viewBox="0 8 90 88"
         fill="none"
         aria-hidden="true"
-        className="h-[34px] w-auto sm:h-10 lg:h-12 shrink-0"
+        className={cn("w-auto shrink-0", s.mark)}
       >
         <defs>
           <linearGradient id="tez-chevron" x1="0" y1="0" x2="1" y2="1">
@@ -70,7 +80,8 @@ export function TezLogo({
       </svg>
       <span
         className={cn(
-          "whitespace-nowrap text-xl lg:text-2xl font-bold tracking-[0.14em] uppercase transition-colors leading-none",
+          "whitespace-nowrap font-bold tracking-[0.14em] uppercase transition-colors leading-none",
+          s.word,
           wordmarkClassName
         )}
       >

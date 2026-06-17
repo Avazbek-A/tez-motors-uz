@@ -27,7 +27,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <TezLogo href={localizedPath(locale, "/")} className="text-white" />
+            <TezLogo href={localizedPath(locale, "/")} size="footer" className="text-white" />
             <p className="text-white/40 text-sm leading-relaxed">
               {dictionary.footer.description}
             </p>
