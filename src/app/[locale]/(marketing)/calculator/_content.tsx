@@ -123,14 +123,19 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
   const showEco = (category === "bus" && !isElectricKind(kind)) || isFuraTractor;
   const ecoOpts: EcoClass[] = category === "fura" ? ["euro5plus", "euro4", "below4"] : ["euro5plus", "euro4"];
   const showOrigin = (category === "car" || category === "moto" || category === "truck" || category === "bus") && !isElectricKind(kind);
-  const showEngine = category === "car" && carNeedsEngine(kind);
+  // Engine cc only changes the result for: car ICE/hybrid, >3y buses (20%+$2/cc),
+  // and >7y фура tractors (70%+$3/cc). Ask it exactly there; default elsewhere.
+  const busNeedsCc = category === "bus" && !isElectricKind(kind) && age === "used3plus";
+  const furaNeedsCc = isFuraTractor && furaAge === "a4";
+  const showEngine = (category === "car" && carNeedsEngine(kind)) || busNeedsCc || furaNeedsCc;
   const showAge = ageOpts.length > 0;
+  const ccFromInput = () => Math.round((parseFloat(engineL) || 0) * 1000);
 
   const buildInput = (price: number) => {
     const deliveryUsd = parseFloat(delivery) || 0;
-    if (category === "bus") return { priceUsd: price, category, kind, age, capacity, eco, origin, engineCc: 2000, deliveryUsd, usdUzs };
-    if (category === "fura") return { priceUsd: price, category, kind: "diesel" as VehicleKind, furaPart, furaAge, eco, engineCc: 12000, deliveryUsd, usdUzs };
-    return { priceUsd: price, category, kind, age, origin, engineCc: showEngine ? Math.round((parseFloat(engineL) || 0) * 1000) : 0, deliveryUsd, usdUzs };
+    if (category === "bus") return { priceUsd: price, category, kind, age, capacity, eco, origin, engineCc: busNeedsCc ? ccFromInput() : 2000, deliveryUsd, usdUzs };
+    if (category === "fura") return { priceUsd: price, category, kind: "diesel" as VehicleKind, furaPart, furaAge, eco, engineCc: furaNeedsCc ? ccFromInput() : 12000, deliveryUsd, usdUzs };
+    return { priceUsd: price, category, kind, age, origin, engineCc: (category === "car" && carNeedsEngine(kind)) ? ccFromInput() : 0, deliveryUsd, usdUzs };
   };
 
   const t = {
@@ -370,7 +375,7 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
                 {showEngine && (
                   <div>
                     <label className="text-sm font-semibold mb-2 block text-foreground">{t.engine}</label>
-                    <Input type="number" step="0.1" placeholder="2.0" value={engineL} onChange={(e) => setEngineL(e.target.value)} min="0" max="8" className="h-14 text-lg" />
+                    <Input type="number" step="0.1" placeholder={category === "fura" ? "12.0" : "2.0"} value={engineL} onChange={(e) => setEngineL(e.target.value)} min="0" max="20" className="h-14 text-lg" />
                   </div>
                 )}
 

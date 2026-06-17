@@ -234,7 +234,7 @@ export function customsStep(data: string, loc: string): BotStep | null {
   }
   if (step === "bf") {
     const [, , cap, age, fuel] = p;
-    if (fuel === "ev") return pricePrompt(`bus|${cap}|${age}|ev|euro5plus|certified`, l);
+    if (fuel === "ev") return pricePrompt(`bus|${cap}|${age}|ev|euro5plus|certified|2000`, l);
     const ecos: EcoClass[] = ["euro5plus", "euro4"];
     return { text: T.pickEco[l], replyMarkup: { inline_keyboard: [ecos.map((e) => ({ text: ECO_LABEL[e][l], callback_data: `cu|be|${cap}|${age}|${e}` }))] } };
   }
@@ -245,12 +245,18 @@ export function customsStep(data: string, loc: string): BotStep | null {
   }
   if (step === "bo") {
     const [, , cap, age, eco, origin] = p;
-    return pricePrompt(`bus|${cap}|${age}|ice|${eco}|${origin}`, l);
+    // Engine cc only changes the result for >3y buses (20% + $2/cc) — ask it there.
+    if (age === "gt3") return { text: T.pickEngine[l], replyMarkup: ccKeyboard(BUS_CC, `cu|bg|${cap}|${age}|${eco}|${origin}`, l) };
+    return pricePrompt(`bus|${cap}|${age}|ice|${eco}|${origin}|2000`, l);
+  }
+  if (step === "bg") {
+    const [, , cap, age, eco, origin, cc] = p;
+    return pricePrompt(`bus|${cap}|${age}|ice|${eco}|${origin}|${cc}`, l);
   }
 
   // ── Фура flow: part → (tractor: age → eco) → price; below-Euro-4 BANNED ──
   if (step === "fp") {
-    if (p[2] === "semitrailer") return pricePrompt(`fura|semitrailer|a1|euro5plus`, l);
+    if (p[2] === "semitrailer") return pricePrompt(`fura|semitrailer|a1|euro5plus|12000`, l);
     const ages: FuraAge[] = ["a1", "a2", "a3", "a4"];
     return { text: T.pickFuraAge[l], replyMarkup: { inline_keyboard: chunk(ages.map((a) => ({ text: FURA_AGE[a][l], callback_data: `cu|fa|tractor|${a}` })), 2) } };
   }
@@ -262,14 +268,28 @@ export function customsStep(data: string, loc: string): BotStep | null {
   if (step === "fe") {
     const [, , , age, eco] = p;
     if (eco === "below4") return { text: T.banned[l] }; // import prohibited — no calc
-    return pricePrompt(`fura|tractor|${age}|${eco}`, l);
+    // Engine cc only changes the result for >7y tractors (70% + $3/cc) — ask it there.
+    if (age === "a4") return { text: T.pickEngine[l], replyMarkup: ccKeyboard(FURA_CC, `cu|fg|${age}|${eco}`, l) };
+    return pricePrompt(`fura|tractor|${age}|${eco}|12000`, l);
+  }
+  if (step === "fg") {
+    const [, , age, eco, cc] = p;
+    return pricePrompt(`fura|tractor|${age}|${eco}|${cc}`, l);
   }
   return null;
 }
 
+// The state marker must survive into reply_to_message.text (for stateless
+// recovery) but shouldn't clutter the prompt — a <tg-spoiler> hides it visually
+// while keeping the characters in the plain text Telegram quotes back.
 function pricePrompt(state: string, l: Loc): BotStep {
-  return { text: `${T.askPrice[l]}\n\n[cu:${state}]`, replyMarkup: { force_reply: true, input_field_placeholder: T.pricePh[l] } };
+  return { text: `${T.askPrice[l]}\n\n<tg-spoiler>[cu:${state}]</tg-spoiler>`, replyMarkup: { force_reply: true, input_field_placeholder: T.pricePh[l] } };
 }
+
+const BUS_CC = [2000, 2500, 3000, 4000, 6000];
+const FURA_CC = [8000, 10000, 12000, 14000, 16000];
+const ccLabel = (cc: number, l: Loc) => `${(cc / 1000).toFixed(cc % 1000 ? 1 : 0)} ${l === "en" ? "L" : "л"}`;
+const ccKeyboard = (ccs: number[], prefix: string, l: Loc): Markup => ({ inline_keyboard: chunk(ccs.map((cc) => ({ text: ccLabel(cc, l), callback_data: `${prefix}|${cc}` })), 3) });
 
 export const CUST_MARKER = /\[cu:([a-z0-9|]+)\]/i;
 
@@ -297,14 +317,14 @@ export function customsPriceReply(promptText: string, userText: string, loc: str
     r = computeCustomsUz({ priceUsd: price, category: "truck", kind, age: va, origin: origin as OriginClass, usdUzs });
     header = `${T.cat.truck[l]} · ${TRUCK_FUEL[fuel === "ev" ? "ev" : "ice"][l]} · ${TRUCK_AGE[age === "gt3" ? "gt3" : "le3"][l]}${kind === "electric" ? "" : ` · ${ORIGIN_LABEL[r.origin][l]}`}`;
   } else if (parts[0] === "bus") {
-    const [, cap, age, fuel, eco, origin] = parts; // cap small|large, age le3|gt3, fuel ice|ev
+    const [, cap, age, fuel, eco, origin, cc] = parts; // cap small|large, age le3|gt3, fuel ice|ev
     const kind: VehicleKind = fuel === "ev" ? "electric" : "petrol";
     const va: VehicleAge = age === "gt3" ? "used3plus" : "used1to3";
-    r = computeCustomsUz({ priceUsd: price, category: "bus", kind, age: va, capacity: cap as BusCapacity, eco: eco as EcoClass, origin: origin as OriginClass, engineCc: 2000, usdUzs });
+    r = computeCustomsUz({ priceUsd: price, category: "bus", kind, age: va, capacity: cap as BusCapacity, eco: eco as EcoClass, origin: origin as OriginClass, engineCc: Number(cc) || 2000, usdUzs });
     header = `${T.cat.bus[l]} · ${CAP_LABEL[cap as BusCapacity][l]} · ${TRUCK_AGE[age === "gt3" ? "gt3" : "le3"][l]} · ${BUS_FUEL[fuel === "ev" ? "ev" : "ice"][l]}`;
   } else if (parts[0] === "fura") {
-    const [, part, age, eco] = parts;
-    r = computeCustomsUz({ priceUsd: price, category: "fura", kind: "diesel", furaPart: part as FuraPart, furaAge: age as FuraAge, eco: eco as EcoClass, engineCc: 12000, usdUzs });
+    const [, part, age, eco, cc] = parts;
+    r = computeCustomsUz({ priceUsd: price, category: "fura", kind: "diesel", furaPart: part as FuraPart, furaAge: age as FuraAge, eco: eco as EcoClass, engineCc: Number(cc) || 12000, usdUzs });
     header = `${T.cat.fura[l]} · ${FURA_PART[part as FuraPart][l]}${part === "tractor" ? ` · ${FURA_AGE[age as FuraAge][l]} · ${ECO_LABEL[eco as EcoClass][l]}` : ""}`;
   } else {
     const [kind, age, origin, cc] = parts;
