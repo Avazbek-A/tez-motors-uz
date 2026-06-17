@@ -36,8 +36,8 @@ export function RecentlyViewed() {
     <section className="py-12 bg-background">
       <div className="container-custom">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-white">{title}</h2>
-          <Button variant="ghost" size="sm" onClick={clearViewed} className="text-white/60 hover:text-neon-pink">
+          <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+          <Button variant="ghost" size="sm" onClick={clearViewed} className="text-muted-foreground hover:text-neon-pink">
             <X className="w-4 h-4" />
             {locale === "ru" ? "Очистить" : "Clear"}
           </Button>

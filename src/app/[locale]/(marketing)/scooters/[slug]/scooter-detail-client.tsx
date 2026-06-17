@@ -92,29 +92,29 @@ export default function ScooterDetailClient({ scooter: s }: { scooter: Scooter }
               {s.stock_qty > 0 ? t.inStock : t.outOfStock}
             </span>
           </div>
-          <h1 className="text-3xl font-bold text-white">{s.brand} {s.model}</h1>
-          <p className="text-2xl font-bold font-mono mt-3 text-white">{s.price_usd ? `$${s.price_usd.toLocaleString("en-US")}` : "—"}</p>
+          <h1 className="text-3xl font-bold text-foreground">{s.brand} {s.model}</h1>
+          <p className="text-2xl font-bold font-mono mt-3 text-foreground">{s.price_usd ? `$${s.price_usd.toLocaleString("en-US")}` : "—"}</p>
 
           {specs.length > 0 && (
             <div className="mt-6">
-              <p className="text-sm font-medium mb-2 text-white/80">{t.specs}</p>
+              <p className="text-sm font-medium mb-2 text-muted-foreground">{t.specs}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {specs.map((sp, i) => (
                   <div key={i} className="bg-card border border-border rounded-lg p-3">
                     <sp.icon className="w-4 h-4 text-[var(--accent)] mb-1" />
                     <p className="text-[11px] text-muted-foreground">{sp.label}</p>
-                    <p className="text-sm font-medium text-white">{sp.value}</p>
+                    <p className="text-sm font-medium text-foreground">{sp.value}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {description && <p className="mt-6 text-white/70 whitespace-pre-wrap">{description}</p>}
+          {description && <p className="mt-6 text-muted-foreground whitespace-pre-wrap">{description}</p>}
 
           {/* Inquiry */}
           <form onSubmit={submit} className="mt-8 space-y-3 bg-card border border-border rounded-lg p-4">
-            <p className="font-semibold text-white">{t.inquire}</p>
+            <p className="font-semibold text-foreground">{t.inquire}</p>
             {status === "sent" ? (
               <p className="text-neon-green text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4" /> {t.sent}</p>
             ) : (

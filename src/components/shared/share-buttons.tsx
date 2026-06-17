@@ -61,7 +61,7 @@ export function ShareButtons({ title, url, className }: ShareButtonsProps) {
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <span className="text-xs text-white/60 flex items-center gap-1">
+      <span className="text-xs text-muted-foreground flex items-center gap-1">
         <Share2 className="w-3.5 h-3.5" />
         Share:
       </span>
@@ -72,14 +72,14 @@ export function ShareButtons({ title, url, className }: ShareButtonsProps) {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`${sc.shareOn} ${link.name}`}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 bg-white/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground bg-foreground/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
         >
           {link.icon}
         </a>
       ))}
       <button
         onClick={copyLink}
-        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 bg-white/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
+        className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground bg-foreground/5 hover:bg-neon-blue/10 hover:text-neon-blue transition-all"
         aria-label={sc.copyLink}
       >
         {copied ? <Check className="w-4 h-4 text-neon-green" /> : <LinkIcon className="w-4 h-4" />}

@@ -41,14 +41,14 @@ export function Newsletter() {
   };
 
   return (
-    <div className="bg-card border border-neon-blue/20 rounded-2xl p-8 text-white">
+    <div className="bg-card border border-neon-blue/20 rounded-2xl p-8 text-foreground">
       <div className="flex items-start gap-4 mb-4">
         <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center shrink-0">
           <Mail className="w-6 h-6 text-neon-blue" />
         </div>
         <div>
           <h3 className="font-bold text-lg">{t.title}</h3>
-          <p className="text-white/60 text-sm mt-1">{t.subtitle}</p>
+          <p className="text-muted-foreground text-sm mt-1">{t.subtitle}</p>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export function Newsletter() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t.placeholder}
             required
-            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue flex-1"
+            className="bg-foreground/5 border-border text-foreground placeholder:text-foreground/30 focus:ring-neon-blue focus:border-neon-blue flex-1"
           />
           <Button type="submit" size="default" disabled={loading} className="shrink-0 bg-neon-blue/20 border border-neon-blue/50 text-neon-blue hover:bg-neon-blue/30">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.button}

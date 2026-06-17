@@ -28,7 +28,7 @@ export function SectionHeading({
       <Heading
         className={cn(
           "text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight text-foreground",
-          light && "text-white"
+          light && "text-foreground"
         )}
       >
         {title}

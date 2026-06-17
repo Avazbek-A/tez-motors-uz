@@ -55,7 +55,7 @@ export function WhyChina() {
             return (
               <div
                 key={index}
-                className={`bg-card p-6 border border-border hover:border-white/20 transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
+                className={`bg-card p-6 border border-border hover:border-foreground/20 transition-all duration-300 hover:-translate-y-0.5 relative overflow-hidden ${
                   isVisible ? "animate-fade-in-up" : "opacity-0"
                 }`}
                 style={{ animationDelay: `${index * 80}ms` }}
@@ -63,10 +63,10 @@ export function WhyChina() {
                 {/* Accent hairline at top */}
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
-                <div className="w-12 h-12 bg-primary/10 border border-white/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-primary/10 border border-border flex items-center justify-center mb-4">
                   <Icon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-base font-bold text-white mb-2">{item.title}</h3>
+                <h3 className="text-base font-bold text-foreground mb-2">{item.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
               </div>
             );

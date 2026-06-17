@@ -42,7 +42,7 @@ export function VideoReviews() {
 
   return (
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-foreground/[0.02] to-transparent" />
 
       <div className="container-custom relative z-10">
         <SectionHeading title={title} subtitle={subtitle} light />
@@ -55,12 +55,12 @@ export function VideoReviews() {
               maxTilt={8}
             >
               <div
-                className="group bg-card border border-border overflow-hidden hover:border-white/20 transition-all duration-300 cursor-pointer"
+                className="group bg-card border border-border overflow-hidden hover:border-border transition-all duration-300 cursor-pointer"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* Thumbnail */}
-                <div className="aspect-video bg-gradient-to-br from-white/[0.04] to-white/[0.02] flex items-center justify-center relative">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-white/15 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300 group-hover:scale-110">
+                <div className="aspect-video bg-gradient-to-br from-foreground/[0.04] to-foreground/[0.02] flex items-center justify-center relative">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 border border-border flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300 group-hover:scale-110">
                     <Play className="w-7 h-7 text-primary ml-1" />
                   </div>
                   <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white/80 text-xs font-mono px-2 py-1 border border-white/10">

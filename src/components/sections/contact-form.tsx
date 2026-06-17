@@ -53,8 +53,8 @@ export function ContactForm() {
   return (
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
       <ParticleBackground particleCount={50} color="191, 201, 214" connectionDistance={100} />
-      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-white/[0.025] to-transparent" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/[0.02] rounded-full blur-3xl" />
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-foreground/[0.025] to-transparent" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-foreground/[0.02] rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
         <SectionHeading

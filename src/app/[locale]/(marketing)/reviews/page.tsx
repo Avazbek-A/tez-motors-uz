@@ -171,7 +171,7 @@ export default function ReviewsPage() {
                 <Star key={i} className="w-4 h-4 fill-primary text-primary" />
               ))}
             </div>
-            <p className="text-xs text-white/60 mt-1"><span className="font-mono">{reviews.length}</span> {t.reviewsCount}</p>
+            <p className="text-xs text-muted-foreground mt-1"><span className="font-mono">{reviews.length}</span> {t.reviewsCount}</p>
           </div>
           <Button onClick={() => setShowForm(!showForm)}>
             {t.leaveReview}
@@ -204,7 +204,7 @@ export default function ReviewsPage() {
                         className="p-0.5"
                       >
                         <Star className={`w-7 h-7 transition-colors ${
-                          i < (hoverRating || rating) ? "fill-primary text-primary" : "text-white/20"
+                          i < (hoverRating || rating) ? "fill-primary text-primary" : "text-foreground/20"
                         }`} />
                       </button>
                     ))}
@@ -239,11 +239,11 @@ export default function ReviewsPage() {
             {reviews.map((review, index) => (
               <div
                 key={review.id}
-                className="bg-card border border-border p-6 shadow-sm hover:border-white/20 transition-colors duration-300 animate-fade-in-up"
+                className="bg-card border border-border p-6 shadow-sm hover:border-border transition-colors duration-300 animate-fade-in-up"
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <Quote className="w-8 h-8 text-white/15 mb-4" />
-                <p className="text-white/80 text-sm leading-relaxed mb-6">
+                <Quote className="w-8 h-8 text-foreground/15 mb-4" />
+                <p className="text-foreground/80 text-sm leading-relaxed mb-6">
                   {getReviewText(review)}
                 </p>
                 {review.video_url && (
@@ -259,9 +259,9 @@ export default function ReviewsPage() {
                 )}
                 <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div>
-                    <p className="font-semibold text-white">{review.client_name}</p>
+                    <p className="font-semibold text-foreground">{review.client_name}</p>
                     {review.car_description && (
-                      <p className="text-xs text-white/60">{review.car_description}</p>
+                      <p className="text-xs text-muted-foreground">{review.car_description}</p>
                     )}
                   </div>
                   <div className="flex gap-0.5">

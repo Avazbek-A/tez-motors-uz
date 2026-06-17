@@ -71,7 +71,7 @@ export default function FeedbackPage() {
             <div className="flex gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
                 <button key={i} type="button" onClick={() => setRating(i + 1)} onMouseEnter={() => setHover(i + 1)} onMouseLeave={() => setHover(0)} className="p-0.5">
-                  <Star className={`w-9 h-9 transition-colors ${i < (hover || rating) ? "fill-primary text-primary" : "text-white/20"}`} />
+                  <Star className={`w-9 h-9 transition-colors ${i < (hover || rating) ? "fill-primary text-primary" : "text-foreground/20"}`} />
                 </button>
               ))}
             </div>

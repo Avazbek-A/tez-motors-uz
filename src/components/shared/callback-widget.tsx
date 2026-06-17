@@ -74,12 +74,12 @@ export function CallbackWidget() {
         <div className="fixed bottom-24 right-6 z-50 w-80 animate-fade-in-up">
           <div className="bg-card rounded-2xl border border-neon-blue/20 overflow-hidden">
             {/* Header */}
-            <div className="bg-neon-blue/10 border-b border-neon-blue/20 text-white p-4 flex items-center justify-between">
+            <div className="bg-neon-blue/10 border-b border-neon-blue/20 text-foreground p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Phone className="w-5 h-5 text-neon-blue" />
                 <span className="font-semibold text-sm">{t.title}</span>
               </div>
-              <button onClick={() => setIsOpen(false)} className="text-white/60 hover:text-white">
+              <button onClick={() => setIsOpen(false)} className="text-foreground/60 hover:text-foreground">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -89,7 +89,7 @@ export function CallbackWidget() {
               {isSuccess ? (
                 <div className="text-center py-4">
                   <CheckCircle className="w-10 h-10 text-neon-green mx-auto mb-2" />
-                  <p className="font-semibold text-sm text-white">{t.success}</p>
+                  <p className="font-semibold text-sm text-foreground">{t.success}</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-3">
@@ -98,7 +98,7 @@ export function CallbackWidget() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="h-10 text-sm bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue focus:ring-neon-blue/30"
+                    className="h-10 text-sm bg-foreground/5 border-border text-foreground placeholder:text-muted-foreground focus:border-neon-blue focus:ring-neon-blue/30"
                   />
                   <Input
                     type="tel"
@@ -106,7 +106,7 @@ export function CallbackWidget() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    className="h-10 text-sm bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-neon-blue focus:ring-neon-blue/30"
+                    className="h-10 text-sm bg-foreground/5 border-border text-foreground placeholder:text-muted-foreground focus:border-neon-blue focus:ring-neon-blue/30"
                   />
                   <Turnstile onToken={setTurnstileToken} />
                   {error && (

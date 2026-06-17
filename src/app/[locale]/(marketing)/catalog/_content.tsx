@@ -244,7 +244,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
         {/* Search bar */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               placeholder={dictionary.catalog.filters.search}
               value={searchText}
@@ -272,13 +272,13 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
             )}
           </Button>
           <div className="flex items-center gap-3 ml-auto">
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-muted-foreground">
               <span className="font-mono">{loading ? "..." : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)}`} / {total}</span> {dictionary.catalog.filters.results}
             </p>
             <select
               value={sortBy}
               onChange={(e) => updateSort(e.target.value as SortOption)}
-              className="h-9 rounded-lg border border-white/10 px-3 text-xs bg-card text-white focus:outline-none focus:ring-2 focus:ring-neon-blue"
+              className="h-9 rounded-lg border border-border px-3 text-xs bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-neon-blue"
             >
               <option value="default">{locale === "ru" ? "По умолчанию" : "Default"}</option>
               <option value="price_asc">{locale === "ru" ? "Цена ↑" : "Price ↑"}</option>
@@ -311,7 +311,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
               <select
                 value={filters.brand || ""}
                 onChange={(e) => updateFilters({ ...filters, brand: e.target.value || undefined })}
-                className="w-full h-10 rounded-lg border border-white/10 bg-card text-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                className="w-full h-10 rounded-lg border border-border bg-card text-foreground px-3 text-sm focus:outline-none focus:ring-2 focus:ring-neon-blue"
               >
                 <option value="">{dictionary.catalog.filters.allBrands}</option>
                 {facets.brands.map((brand) => (
@@ -334,7 +334,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
                         filters.body_type === value
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                          : "border-white/10 text-white/60 hover:bg-white/5"
+                          : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {label}
@@ -358,7 +358,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
                         filters.fuel_type === value
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                          : "border-white/10 text-white/60 hover:bg-white/5"
+                          : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {label}
@@ -378,15 +378,15 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                     placeholder="Min"
                     value={filters.price_min || ""}
                     onChange={(e) => updateFilters({ ...filters, price_min: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                    className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                   />
-                  <span className="text-white/60 self-center">—</span>
+                  <span className="text-muted-foreground self-center">—</span>
                   <input
                     type="number"
                     placeholder="Max"
                     value={filters.price_max || ""}
                     onChange={(e) => updateFilters({ ...filters, price_max: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                    className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                   />
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -403,7 +403,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                         "px-2 py-1 rounded-md text-[11px] font-mono font-medium border transition-colors",
                         filters.price_min === range.min && filters.price_max === range.max
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                          : "border-white/10 text-white/60 hover:bg-white/5"
+                          : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {range.label}
@@ -425,7 +425,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                     placeholder={locale === "ru" ? "До $/мес" : locale === "uz" ? "$/oygacha" : "Up to $/mo"}
                     value={filters.monthly_max || ""}
                     onChange={(e) => updateFilters({ ...filters, monthly_max: e.target.value ? parseInt(e.target.value) : undefined })}
-                    className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                    className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                   />
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -437,7 +437,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                         "px-2 py-1 rounded-md text-[11px] font-mono font-medium border transition-colors",
                         filters.monthly_max === m
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                          : "border-white/10 text-white/60 hover:bg-white/5"
+                          : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       ${m}/{locale === "ru" ? "мес" : locale === "uz" ? "oy" : "mo"}
@@ -456,15 +456,15 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                   placeholder={facets.year_min ? `от ${facets.year_min}` : (locale === "ru" ? "от" : "from")}
                   value={filters.year_min || ""}
                   onChange={(e) => updateFilters({ ...filters, year_min: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                  className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                 />
-                <span className="text-white/60 self-center">—</span>
+                <span className="text-muted-foreground self-center">—</span>
                 <input
                   type="number"
                   placeholder={facets.year_max ? `до ${facets.year_max}` : (locale === "ru" ? "до" : "to")}
                   value={filters.year_max || ""}
                   onChange={(e) => updateFilters({ ...filters, year_max: e.target.value ? parseInt(e.target.value) : undefined })}
-                  className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                  className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
                 />
               </div>
             </div>
@@ -480,7 +480,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                       onClick={() => updateFilters({ ...filters, drivetrain: filters.drivetrain === dt ? undefined : dt })}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border uppercase",
-                        filters.drivetrain === dt ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                        filters.drivetrain === dt ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {dt}
@@ -501,7 +501,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                       onClick={() => updateFilters({ ...filters, seats_min: filters.seats_min === n ? undefined : n })}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
-                        filters.seats_min === n ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                        filters.seats_min === n ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {n}+
@@ -521,7 +521,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                     onClick={() => updateFilters({ ...filters, power_min: filters.power_min === hp ? undefined : hp })}
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
-                      filters.power_min === hp ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                      filters.power_min === hp ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-border text-muted-foreground hover:bg-foreground/5"
                     )}
                   >
                     {hp}+ {locale === "ru" ? "л.с." : "hp"}
@@ -540,7 +540,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                     onClick={() => updateFilters({ ...filters, range_min: filters.range_min === km ? undefined : km })}
                     className={cn(
                       "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors border",
-                      filters.range_min === km ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                      filters.range_min === km ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-border text-muted-foreground hover:bg-foreground/5"
                     )}
                   >
                     {km}+ {locale === "ru" ? "км" : "km"}
@@ -560,7 +560,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                       onClick={() => updateFilters({ ...filters, transmission: filters.transmission === tr ? undefined : tr })}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-                        filters.transmission === tr ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-white/10 text-white/60 hover:bg-white/5"
+                        filters.transmission === tr ? "bg-neon-blue/15 border-neon-blue text-neon-blue" : "border-border text-muted-foreground hover:bg-foreground/5"
                       )}
                     >
                       {TRANS_LABELS[tr]?.[locale] || tr}
@@ -578,7 +578,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                 placeholder={locale === "ru" ? "напр. 50000" : "e.g. 50000"}
                 value={filters.mileage_max || ""}
                 onChange={(e) => updateFilters({ ...filters, mileage_max: e.target.value ? parseInt(e.target.value) : undefined })}
-                className="w-full h-9 rounded-lg border border-white/10 bg-card text-white px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
+                className="w-full h-9 rounded-lg border border-border bg-card text-foreground px-3 text-xs focus:outline-none focus:ring-2 focus:ring-neon-blue"
               />
             </div>
 
@@ -595,17 +595,17 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
             {loading ? (
               <div className="text-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto mb-3" />
-                <p className="text-white/60">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
+                <p className="text-muted-foreground">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
               </div>
             ) : cars.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-white/60 text-lg">{dictionary.catalog.noResults}</p>
+                <p className="text-muted-foreground text-lg">{dictionary.catalog.noResults}</p>
                 <Button variant="outline" onClick={resetFilters} className="mt-4">
                   {dictionary.catalog.filters.reset}
                 </Button>
                 {/* High-intent moment: nothing in stock matched — offer to import it. */}
-                <div className="mt-8 pt-6 border-t border-white/10 max-w-md mx-auto">
-                  <p className="text-white/70 text-sm">
+                <div className="mt-8 pt-6 border-t border-border max-w-md mx-auto">
+                  <p className="text-muted-foreground text-sm">
                     {locale === "uz"
                       ? "Kerakli mashinani topmadingizmi? Biz uni Xitoydan buyurtma asosida olib kelamiz."
                       : locale === "en"
@@ -653,7 +653,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
               </Button>
               {nums.map((n, i) =>
                 n === "…" ? (
-                  <span key={`gap-${i}`} className="px-1 text-white/40 select-none">…</span>
+                  <span key={`gap-${i}`} className="px-1 text-muted-foreground select-none">…</span>
                 ) : (
                   <button
                     key={n}
@@ -663,7 +663,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
                       "min-w-10 h-10 px-2 rounded-lg text-sm font-mono transition-colors border",
                       n === page
                         ? "bg-neon-blue/15 border-neon-blue text-neon-blue font-semibold"
-                        : "border-white/10 text-white/60 hover:bg-white/5"
+                        : "border-border text-muted-foreground hover:bg-foreground/5"
                     )}
                   >
                     {n}

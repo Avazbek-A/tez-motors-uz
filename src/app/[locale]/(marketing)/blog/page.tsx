@@ -70,7 +70,7 @@ export default async function BlogPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {items.map((post) => (
-            <article key={post.id} className="border border-border bg-card overflow-hidden shadow-sm transition-colors hover:border-white/20">
+            <article key={post.id} className="border border-border bg-card overflow-hidden shadow-sm transition-colors hover:border-border">
               {post.cover_image && (
                 <div className="relative h-52 w-full">
                   <Image
@@ -86,13 +86,13 @@ export default async function BlogPage() {
                 <p className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--fg-3)]">
                   {post.published_at ? formatDate(post.published_at, locale === "uz" ? "uz-UZ" : locale === "en" ? "en-US" : "ru-RU") : ""}
                 </p>
-                <h2 className="text-xl font-semibold text-white">
+                <h2 className="text-xl font-semibold text-foreground">
                   <Link href={localizedPath(locale, `/blog/${post.slug}`)} className="hover:text-primary transition-colors">
                     {getTitle(post)}
                   </Link>
                 </h2>
                 <div
-                  className="prose prose-invert prose-sm max-w-none text-white/60 line-clamp-4"
+                  className="prose prose-invert prose-sm max-w-none text-muted-foreground line-clamp-4"
                   dangerouslySetInnerHTML={{ __html: renderMarkdown(getBody(post).slice(0, 500)) }}
                 />
                 <Link href={localizedPath(locale, `/blog/${post.slug}`)} className="inline-flex text-sm font-medium text-primary hover:underline">
@@ -104,7 +104,7 @@ export default async function BlogPage() {
         </div>
 
         {items.length === 0 && (
-          <div className="border border-border bg-card p-8 text-center text-white/60">
+          <div className="border border-border bg-card p-8 text-center text-muted-foreground">
             {locale === "ru" ? "Пока нет опубликованных постов." : "No published posts yet."}
           </div>
         )}

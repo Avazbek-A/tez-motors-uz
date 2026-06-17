@@ -144,7 +144,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
           {selectedIds.length > 0 && (
             <button
               onClick={shareComparison}
-              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-white/60 hover:text-white hover:border-white/20 text-sm transition-colors mt-2"
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 text-sm transition-colors mt-2"
             >
               <Share2 className="w-4 h-4" />
               {copied
@@ -158,7 +158,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
           <table className="w-full min-w-[700px]">
             <thead>
               <tr>
-                <th className="p-4 text-left w-40 text-sm font-semibold text-white/60" />
+                <th className="p-4 text-left w-40 text-sm font-semibold text-muted-foreground" />
                 {selectedCars.map((car, index) => (
                   <th key={car.id} className="p-4 text-center min-w-[200px]">
                     <div className="relative group">
@@ -183,7 +183,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                           </div>
                         )}
                       </div>
-                      <Link href={localizedPath(locale, `/catalog/${car.slug}`)} className="font-bold text-white hover:text-neon-blue transition-colors">
+                      <Link href={localizedPath(locale, `/catalog/${car.slug}`)} className="font-bold text-foreground hover:text-neon-blue transition-colors">
                         {car.brand} {car.model}
                       </Link>
                       <div className="flex justify-center gap-1 mt-1">
@@ -194,7 +194,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                       </div>
                       <button
                         onClick={() => setShowPicker(index)}
-                        className="mt-2 text-xs text-white/60 hover:text-neon-blue transition-colors"
+                        className="mt-2 text-xs text-muted-foreground hover:text-neon-blue transition-colors"
                       >
                         {locale === "ru" ? "Заменить" : "Change"}
                       </button>
@@ -205,7 +205,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                   <th className="p-4 text-center min-w-[200px]">
                     <button
                       onClick={() => setShowPicker(selectedIds.length)}
-                      className="w-full h-32 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center text-white/60 hover:border-neon-blue hover:text-neon-blue transition-colors"
+                      className="w-full h-32 border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center text-muted-foreground hover:border-neon-blue hover:text-neon-blue transition-colors"
                     >
                       <Plus className="w-8 h-8 mb-1" />
                       <span className="text-sm">{locale === "ru" ? "Добавить" : "Add"}</span>
@@ -216,13 +216,13 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
             </thead>
             <tbody>
               {specRows.map((row, i) => (
-                <tr key={i} className={i % 2 === 0 ? "bg-white/[0.02]" : ""}>
-                  <td className="p-4 text-sm font-semibold text-white">{row.label}</td>
+                <tr key={i} className={i % 2 === 0 ? "bg-foreground/[0.02]" : ""}>
+                  <td className="p-4 text-sm font-semibold text-foreground">{row.label}</td>
                   {selectedCars.map((car) => {
                     const val = row.render(car);
                     const isPrice = row.label.includes("Цена") || row.label.includes("Price");
                     return (
-                      <td key={car.id} className={cn("p-4 text-center text-sm text-white", isPrice ? "font-mono font-bold text-neon-blue text-lg" : "font-mono")}>
+                      <td key={car.id} className={cn("p-4 text-center text-sm text-foreground", isPrice ? "font-mono font-bold text-neon-blue text-lg" : "font-mono")}>
                         {val}
                       </td>
                     );
@@ -250,21 +250,21 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
         {showPicker !== null && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPicker(null)} />
-            <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto p-6 shadow-2xl">
-              <h3 className="text-lg font-bold text-white mb-4">{locale === "ru" ? "Выберите автомобиль" : "Select a car"}</h3>
+            <div className="animate-fade-in relative bg-card border border-border rounded-2xl w-full max-w-lg max-h-[70vh] overflow-y-auto p-6 shadow-2xl">
+              <h3 className="text-lg font-bold text-foreground mb-4">{locale === "ru" ? "Выберите автомобиль" : "Select a car"}</h3>
               <div className="space-y-2">
                 {allCars.filter((c) => !selectedIds.includes(c.id)).map((car) => (
                   <button
                     key={car.id}
                     onClick={() => showPicker < selectedIds.length ? replaceCar(showPicker, car.id) : addCar(car.id)}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-foreground/5 transition-colors text-left"
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-neon-blue/10 to-neon-purple/10 flex items-center justify-center shrink-0">
                       <CarFront className="w-5 h-5 text-neon-blue/20" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm text-white">{car.brand} {car.model}</p>
-                      <p className="text-xs text-white/60 font-mono">{car.year} &middot; {formatPrice(car.price_usd)}</p>
+                      <p className="font-medium text-sm text-foreground">{car.brand} {car.model}</p>
+                      <p className="text-xs text-muted-foreground font-mono">{car.year} &middot; {formatPrice(car.price_usd)}</p>
                     </div>
                     <Badge variant="secondary" className="text-[10px]">{car.body_type}</Badge>
                   </button>

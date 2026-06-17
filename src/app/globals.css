@@ -103,6 +103,32 @@
   --accent-foreground: #0d0d10;
   --accent-tint: rgba(191, 201, 214, 0.12);
   --accent-line: rgba(191, 201, 214, 0.42);
+
+  /* Re-declare the bridge HERE too (not only in :root): custom-property var()
+     substitution is resolved on the element that declares the bridge. When `.dark`
+     sits on a DESCENDANT (e.g. the header over the hero, the footer, the hero
+     band) — not on <html> — the :root bridge stays computed with the light raw
+     tokens. Redeclaring it under `.dark` makes foreground/muted/etc. re-flip to
+     the dark raw tokens for any dark-scoped subtree. */
+  --background: var(--bg-1);
+  --foreground: var(--fg-1);
+  --card: var(--bg-2);
+  --card-foreground: var(--fg-1);
+  --popover: var(--bg-3);
+  --popover-foreground: var(--fg-1);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+  --secondary: var(--bg-3);
+  --secondary-foreground: var(--fg-1);
+  --muted: var(--bg-3);
+  --muted-foreground: var(--fg-3);
+  --accent-color: var(--bg-3);
+  --accent-foreground-color: var(--fg-1);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--line-2);
+  --input: var(--line-2);
+  --ring: var(--accent);
 }
 
 @theme inline {

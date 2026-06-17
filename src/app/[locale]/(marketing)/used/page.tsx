@@ -61,8 +61,8 @@ export default async function UsedCarsPage() {
       <div className="pt-24">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">{c.title}</h1>
-          <p className="mt-4 text-base md:text-lg text-white/70 max-w-3xl">{c.intro}</p>
-          <p className="mt-4 text-xs md:text-sm text-white/40 max-w-3xl border-l-2 border-white/10 pl-3">{c.disclaimer}</p>
+          <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-3xl">{c.intro}</p>
+          <p className="mt-4 text-xs md:text-sm text-muted-foreground max-w-3xl border-l-2 border-border pl-3">{c.disclaimer}</p>
         </div>
       </div>
       <CatalogContent initialFilters={{ listing_type: "used" }} basePath="/used" />

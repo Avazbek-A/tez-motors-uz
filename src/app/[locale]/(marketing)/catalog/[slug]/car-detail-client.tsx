@@ -65,7 +65,7 @@ export default function CarDetailPage() {
     return (
       <div className="pt-32 pb-16 text-center container-custom">
         <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto mb-3" />
-        <p className="text-white/60">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
+        <p className="text-muted-foreground">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
       </div>
     );
   }
@@ -73,11 +73,11 @@ export default function CarDetailPage() {
   if (!car) {
     return (
       <div className="pt-32 pb-16 text-center container-custom max-w-md mx-auto">
-        <div className="text-6xl font-black text-white/[0.04] mb-6">404</div>
-        <h1 className="text-xl font-bold mb-3 text-white">
+        <div className="text-6xl font-black text-foreground/[0.04] mb-6">404</div>
+        <h1 className="text-xl font-bold mb-3 text-foreground">
           {locale === "ru" ? "Автомобиль не найден" : locale === "uz" ? "Avtomobil topilmadi" : "Car not found"}
         </h1>
-        <p className="text-white/50 text-sm mb-8">
+        <p className="text-muted-foreground text-sm mb-8">
           {locale === "ru" ? "Возможно, этот автомобиль уже продан или ссылка устарела." : "This car may have been sold or the link is outdated."}
         </p>
         <Button asChild>
@@ -194,7 +194,7 @@ export default function CarDetailPage() {
             </div>
 
             {car.video_url && (
-              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "120ms" }}>
+              <div className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up" style={{ animationDelay: "120ms" }}>
                 <div className="aspect-video">
                   <iframe
                     title={`${car.brand} ${car.model} video`}
@@ -208,8 +208,8 @@ export default function CarDetailPage() {
             )}
 
             {car.spec_data?.pano_id && (
-              <div id="car-360" className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up scroll-mt-24" style={{ animationDelay: "110ms" }}>
-                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-white font-bold text-lg">
+              <div id="car-360" className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up scroll-mt-24" style={{ animationDelay: "110ms" }}>
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-foreground font-bold text-lg">
                   <span className="text-neon-blue">360°</span>
                   {locale === "ru" ? "Обзор" : locale === "uz" ? "Ko‘rinish" : "Walkthrough"}
                 </div>
@@ -224,8 +224,8 @@ export default function CarDetailPage() {
             )}
 
             {car.spec_data?.video_mid && (
-              <div className="bg-card rounded-2xl border border-white/10 overflow-hidden animate-fade-in-up" style={{ animationDelay: "115ms" }}>
-                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-white font-bold text-lg">
+              <div className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in-up" style={{ animationDelay: "115ms" }}>
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-foreground font-bold text-lg">
                   <span className="text-neon-blue">▶</span>
                   {locale === "ru" ? "Видеообзор" : locale === "uz" ? "Video sharh" : "Video overview"}
                 </div>
@@ -242,25 +242,25 @@ export default function CarDetailPage() {
             )}
 
             {description && (
-              <div className="bg-card rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-                <h2 className="font-bold text-lg mb-3 flex items-center gap-2 text-white">
+              <div className="bg-card rounded-2xl border border-border p-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+                <h2 className="font-bold text-lg mb-3 flex items-center gap-2 text-foreground">
                   <Info className="w-5 h-5 text-neon-blue" />
                   {locale === "ru" ? "Описание" : locale === "uz" ? "Tavsif" : "Description"}
                 </h2>
-                <p className="text-white/60 leading-relaxed">{description}</p>
+                <p className="text-muted-foreground leading-relaxed">{description}</p>
               </div>
             )}
 
-            <div className="bg-card rounded-2xl border border-white/10 p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
-              <h2 className="font-bold text-lg mb-4 text-white">
+            <div className="bg-card rounded-2xl border border-border p-6 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
+              <h2 className="font-bold text-lg mb-4 text-foreground">
                 {locale === "ru" ? "Характеристики" : locale === "uz" ? "Xususiyatlar" : "Specifications"}
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {specs.map((spec, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-foreground/5">
                     <spec.icon className="w-5 h-5 text-neon-blue shrink-0" />
                     <div>
-                      <p className="text-xs text-white/60 uppercase tracking-wider">{spec.label}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{spec.label}</p>
                       <p className="text-sm font-mono font-semibold">{spec.value}</p>
                     </div>
                   </div>
@@ -274,10 +274,10 @@ export default function CarDetailPage() {
                   ([k]) => !["source", "confidence", "autohome_id"].includes(k),
                 );
                 return visibleSpecs.length > 0 ? (
-                <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {visibleSpecs.map(([key, value]) => (
-                    <div key={key} className="p-3 rounded-xl bg-white/5">
-                      <p className="text-xs text-white/60 capitalize">{key.replace(/_/g, " ")}</p>
+                    <div key={key} className="p-3 rounded-xl bg-foreground/5">
+                      <p className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, " ")}</p>
                       <p className="text-sm font-mono font-semibold">{String(value)}</p>
                     </div>
                   ))}
@@ -288,24 +288,24 @@ export default function CarDetailPage() {
           </div>
 
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-card rounded-2xl border border-white/10 p-6 sticky top-24 animate-slide-in-right">
+            <div className="bg-card rounded-2xl border border-border p-6 sticky top-24 animate-slide-in-right">
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   {car.listing_type === "used" ? <Badge variant="warning">{locale === "ru" ? "С пробегом" : locale === "uz" ? "Probegli" : "Used"}</Badge> : car.mileage === 0 && <Badge>New</Badge>}
                   {car.fuel_type === "electric" && <Badge variant="info">EV</Badge>}
                   {car.fuel_type === "phev" && <Badge variant="info">PHEV</Badge>}
                 </div>
-                <h1 className="text-2xl font-bold text-white">
+                <h1 className="text-2xl font-bold text-foreground">
                   {car.brand} {car.model}
                 </h1>
-                <p className="text-white/60">{car.year}</p>
+                <p className="text-muted-foreground">{car.year}</p>
               </div>
 
               <div className="bg-neon-blue/10 rounded-xl p-4 mb-4">
-                {car.price_usd > 0 && <p className="text-xs text-white/60 mb-1">{dictionary.common.from}</p>}
+                {car.price_usd > 0 && <p className="text-xs text-muted-foreground mb-1">{dictionary.common.from}</p>}
                 {discount > 0 ? (
                   <>
-                    <p className="text-sm text-white/45 line-through">{formatPrice(car.original_price_usd!)}</p>
+                    <p className="text-sm text-foreground/45 line-through">{formatPrice(car.original_price_usd!)}</p>
                     <p className="text-3xl font-mono font-bold text-neon-blue">
                       {formatPrice(car.price_usd)} <span className="text-sm text-amber-300">-{discount}%</span>
                     </p>
@@ -314,14 +314,14 @@ export default function CarDetailPage() {
                   <p className="text-3xl font-mono font-bold text-neon-blue">{car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}</p>
                 )}
                 {car.price_uzs && (
-                  <p className="text-sm text-white/60 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     ~ {formatPrice(car.price_uzs, "UZS")}
                   </p>
                 )}
                 {car.price_usd > 0 && (
-                  <p className="text-xs text-white/70 mt-2">
+                  <p className="text-xs text-foreground/70 mt-2">
                     {dictionary.common.from}{" "}
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold text-foreground">
                       {formatPrice(estimatedMonthlyFrom(car.price_usd))}{dictionary.common.perMonth}
                     </span>
                   </p>
@@ -334,30 +334,30 @@ export default function CarDetailPage() {
               {car.spec_data?.customs_usd ? (
                 <div className="rounded-xl border border-amber-400/25 bg-amber-400/5 p-4 mb-4">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm text-white/70">{dictionary.common.customs}</span>
+                    <span className="text-sm text-foreground/70">{dictionary.common.customs}</span>
                     <span className="text-xl font-mono font-bold text-amber-300">≈ {formatPrice(car.spec_data.customs_usd)}</span>
                   </div>
                   {car.price_usd > 0 && (
-                    <p className="mt-1 text-xs text-white/55">
+                    <p className="mt-1 text-xs text-foreground/55">
                       {formatPrice(car.price_usd)} + {formatPrice(car.spec_data.customs_usd)} ≈{" "}
-                      <span className="font-semibold text-white/85">
+                      <span className="font-semibold text-foreground/85">
                         {formatPrice(car.price_usd + car.spec_data.customs_usd)} {dictionary.common.allIn}
                       </span>
                     </p>
                   )}
-                  <p className="mt-1 text-[11px] text-white/40">{dictionary.common.customsNote}</p>
+                  <p className="mt-1 text-[11px] text-foreground/40">{dictionary.common.customsNote}</p>
                 </div>
               ) : null}
 
               {/* Per-trim CIP-Tashkent prices (authoritative Gonzo list). */}
               {car.spec_data?.gonzo_trims?.length ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 mb-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-white/50 mb-2">{dictionary.common.trimsCip}</p>
+                <div className="rounded-xl border border-border bg-foreground/[0.02] p-4 mb-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">{dictionary.common.trimsCip}</p>
                   <ul className="space-y-1.5">
                     {car.spec_data.gonzo_trims.map((tr, i) => (
                       <li key={i} className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="text-white/70 truncate">{tr.label}</span>
-                        <span className="font-mono font-semibold text-white whitespace-nowrap">{formatPrice(tr.price_usd)}</span>
+                        <span className="text-foreground/70 truncate">{tr.label}</span>
+                        <span className="font-mono font-semibold text-foreground whitespace-nowrap">{formatPrice(tr.price_usd)}</span>
                       </li>
                     ))}
                   </ul>
@@ -368,7 +368,7 @@ export default function CarDetailPage() {
               {(car.spec_data?.trims?.length ?? 0) > 1 && (
                 <Link
                   href={localizedPath(locale, `/catalog/${car.slug}/spec`)}
-                  className="flex items-center justify-center gap-2 w-full mb-4 rounded-xl border border-white/15 px-4 py-2.5 text-sm font-medium text-white/90 hover:bg-white/5 transition-colors"
+                  className="flex items-center justify-center gap-2 w-full mb-4 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground/90 hover:bg-foreground/5 transition-colors"
                 >
                   <Layers className="w-4 h-4" />
                   {dictionary.common.compareTrims}
@@ -415,7 +415,7 @@ export default function CarDetailPage() {
                   href={waHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full mb-4 text-sm text-white/60 hover:text-white transition-colors"
+                  className="flex items-center justify-center gap-2 w-full mb-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <MessageCircle className="w-4 h-4" />
                   {locale === "ru" ? "или в WhatsApp" : locale === "uz" ? "yoki WhatsAppda" : "or on WhatsApp"}
@@ -424,11 +424,11 @@ export default function CarDetailPage() {
 
               <ShareButtons
                 title={`${car.brand} ${car.model} ${car.year} — ${formatPrice(car.price_usd)} | Tez Motors`}
-                className="mb-6 pb-4 border-b border-white/10"
+                className="mb-6 pb-4 border-b border-border"
               />
 
               <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="text-sm text-white/60">
+                <div className="text-sm text-muted-foreground">
                   {locale === "ru" ? "Сохранить в избранное" : "Save to favorites"}
                 </div>
                 <FavoriteButton carId={car.id} />
@@ -488,7 +488,7 @@ export default function CarDetailPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <h3 className="font-semibold">{dictionary.catalog.orderCar}</h3>
                   {car.inventory_status !== "available" && (
-                    <div className="rounded-xl bg-white/5 border border-white/10 p-3 text-sm text-white/60">
+                    <div className="rounded-xl bg-foreground/5 border border-border p-3 text-sm text-muted-foreground">
                       {car.inventory_status === "reserved" ? "This car is currently reserved." : "This car is sold."}
                     </div>
                   )}

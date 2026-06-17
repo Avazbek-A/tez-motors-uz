@@ -47,8 +47,8 @@ export function SocialLinks({ isScrolled }: { isScrolled: boolean }) {
           className={cn(
             "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
             isScrolled
-              ? "text-white/60 hover:text-neon-blue hover:bg-neon-blue/10"
-              : "text-white/60 hover:text-neon-blue hover:bg-neon-blue/10"
+              ? "text-foreground/60 hover:text-neon-blue hover:bg-neon-blue/10"
+              : "text-foreground/60 hover:text-neon-blue hover:bg-neon-blue/10"
           )}
         >
           {link.icon}

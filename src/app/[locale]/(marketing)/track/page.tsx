@@ -173,7 +173,7 @@ export default function TrackOrderPage() {
         <div className="max-w-2xl mx-auto">
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 mb-12">
             <div className="relative flex-1">
-              <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+              <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
@@ -184,7 +184,7 @@ export default function TrackOrderPage() {
               />
             </div>
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/60" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -202,9 +202,9 @@ export default function TrackOrderPage() {
 
           {notFound && searched && (
             <div className="text-center py-12 bg-card border border-border">
-              <Package className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/60 text-sm">{t.notFound}</p>
-              <p className="text-xs text-white/40 mt-2">{t.notFoundHint}</p>
+              <Package className="w-12 h-12 text-foreground/20 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">{t.notFound}</p>
+              <p className="text-xs text-muted-foreground/70 mt-2">{t.notFoundHint}</p>
             </div>
           )}
 
@@ -217,24 +217,24 @@ export default function TrackOrderPage() {
                     <span className="inline-block text-xs font-mono font-medium px-2.5 py-1 border border-primary/30 bg-primary/10 text-primary mb-2 tracking-[0.08em]">
                       {order.reference_code}
                     </span>
-                    <p className="font-semibold text-white">
+                    <p className="font-semibold text-foreground">
                       {order.car
                         ? `${order.car.brand} ${order.car.model} ${order.car.year}`
                         : order.customer_name}
                     </p>
                     {order.amount_usd != null && (
-                      <p className="text-sm text-white/50 mt-1">
-                        {t.deposit}: <span className="font-mono text-white/70">${order.amount_usd.toLocaleString()}</span>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {t.deposit}: <span className="font-mono text-foreground/70">${order.amount_usd.toLocaleString()}</span>
                       </p>
                     )}
                     {order.notes && (
-                      <p className="text-sm text-white/50 mt-1 flex items-start gap-1.5">
+                      <p className="text-sm text-muted-foreground mt-1 flex items-start gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                         {order.notes}
                       </p>
                     )}
                   </div>
-                  <p className="text-xs text-white/40 shrink-0">
+                  <p className="text-xs text-muted-foreground/70 shrink-0">
                     {t.placed}: <span className="font-mono">{new Date(order.created_at).toLocaleDateString(dateLocale)}</span>
                   </p>
                 </div>
@@ -257,7 +257,7 @@ export default function TrackOrderPage() {
                   payment rail is configured (DepositButton returns null). */}
               {order.status === "ordered" && (
                 <div className="px-5 py-4 border-b border-border bg-primary/[0.06]">
-                  <p className="text-sm text-white/70 mb-3">{t.depositPrompt}</p>
+                  <p className="text-sm text-foreground/70 mb-3">{t.depositPrompt}</p>
                   <DepositButton referenceCode={order.reference_code} phone={phone} />
                 </div>
               )}
@@ -280,7 +280,7 @@ export default function TrackOrderPage() {
                                 ? "bg-primary/15 text-primary border border-primary/30"
                                 : isCurrent
                                 ? "bg-primary text-primary-foreground border border-primary"
-                                : "bg-white/[0.04] text-white/30 border border-white/[0.08]",
+                                : "bg-foreground/[0.04] text-muted-foreground/60 border border-border",
                             )}
                           >
                             <Icon className="w-4 h-4" />
@@ -289,7 +289,7 @@ export default function TrackOrderPage() {
                             <div
                               className={cn(
                                 "w-px h-10",
-                                isComplete ? "bg-primary/30" : "bg-white/[0.06]",
+                                isComplete ? "bg-primary/30" : "bg-border",
                               )}
                             />
                           )}
@@ -298,7 +298,7 @@ export default function TrackOrderPage() {
                           <p
                             className={cn(
                               "font-medium text-sm",
-                              isComplete || isCurrent ? "text-white" : "text-white/30",
+                              isComplete || isCurrent ? "text-foreground" : "text-muted-foreground/50",
                             )}
                           >
                             {step.label[locale as keyof typeof step.label]}
@@ -307,7 +307,7 @@ export default function TrackOrderPage() {
                             <p className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-primary mt-1">{t.currentStatus}</p>
                           )}
                           {note && (
-                            <p className="text-xs text-white/50 mt-1">{note}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{note}</p>
                           )}
                         </div>
                       </div>
@@ -321,12 +321,12 @@ export default function TrackOrderPage() {
           {/* Help text */}
           {!searched && (
             <div className="text-center mt-8">
-              <div className="flex items-center justify-center gap-3 text-white/30">
+              <div className="flex items-center justify-center gap-3 text-muted-foreground/50">
                 <Truck className="w-5 h-5" />
                 <Clock className="w-5 h-5" />
                 <Ship className="w-5 h-5" />
               </div>
-              <p className="text-sm text-white/30 mt-3">{t.helpText}</p>
+              <p className="text-sm text-muted-foreground/50 mt-3">{t.helpText}</p>
             </div>
           )}
         </div>

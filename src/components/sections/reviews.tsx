@@ -33,18 +33,18 @@ export function Reviews({ reviews }: ReviewsProps) {
           {reviews.map((review, index) => (
             <div
               key={review.id}
-              className={`bg-card border border-border p-6 hover:border-white/20 transition-all duration-300 ${
+              className={`bg-card border border-border p-6 hover:border-foreground/20 transition-all duration-300 ${
                 isVisible ? "animate-fade-in-up" : "opacity-0"
               }`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <Quote className="w-8 h-8 text-white/25 mb-4" />
-              <p className="text-white/70 text-sm leading-relaxed mb-6">
+              <Quote className="w-8 h-8 text-foreground/25 mb-4" />
+              <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                 {getReviewText(review)}
               </p>
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <div>
-                  <p className="font-semibold text-white">{review.client_name}</p>
+                  <p className="font-semibold text-foreground">{review.client_name}</p>
                   {review.car_description && (
                     <p className="text-xs text-muted-foreground">{review.car_description}</p>
                   )}

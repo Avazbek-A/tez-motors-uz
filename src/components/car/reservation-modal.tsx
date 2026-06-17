@@ -100,13 +100,13 @@ export function ReservationModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/10 bg-card p-6">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-bold">Reserve {carName}</h3>
-            <p className="text-sm text-white/50">Hold the car with a deposit request</p>
+            <p className="text-sm text-muted-foreground">Hold the car with a deposit request</p>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white">
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -116,10 +116,10 @@ export function ReservationModal({
             <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
             <p className="font-semibold">{T.sent}</p>
             {referenceCode && (
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-                <p className="text-xs uppercase tracking-wide text-white/50">{T.refLabel}</p>
+              <div className="mt-4 rounded-xl border border-border bg-foreground/5 p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{T.refLabel}</p>
                 <p className="mt-1 text-2xl font-mono font-bold tracking-wider text-neon-blue">{referenceCode}</p>
-                <p className="mt-2 text-xs text-white/50">{T.refHint}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{T.refHint}</p>
               </div>
             )}
             {referenceCode && (

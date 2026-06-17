@@ -183,7 +183,7 @@ export default function AccountPage() {
           <div className="mx-auto max-w-md space-y-4 border border-border bg-card p-6 shadow-sm">
             {step === "phone" ? (
               <>
-                <label className="block text-sm font-medium text-white/70">
+                <label className="block text-sm font-medium text-muted-foreground">
                   {t("Номер телефона", "Telefon raqami", "Phone number")}
                 </label>
                 <Input
@@ -192,7 +192,7 @@ export default function AccountPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                 />
-                <label className="block text-sm font-medium text-white/70">
+                <label className="block text-sm font-medium text-muted-foreground">
                   {t("Имя (необязательно)", "Ism (ixtiyoriy)", "Name (optional)")}
                 </label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -204,7 +204,7 @@ export default function AccountPage() {
               </>
             ) : (
               <>
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground">
                   {t("Мы отправили код на", "Kod yuborildi:", "We sent a code to")} {phone}
                 </p>
                 <Input
@@ -219,7 +219,7 @@ export default function AccountPage() {
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Войти", "Kirish", "Sign in")}
                 </Button>
                 <button
-                  className="w-full text-center text-sm text-white/50 hover:text-white/80"
+                  className="w-full text-center text-sm text-foreground/50 hover:text-foreground/80"
                   onClick={() => {
                     setStep("phone");
                     setError(null);
@@ -266,7 +266,7 @@ export default function AccountPage() {
             {t("Мои заказы", "Buyurtmalarim", "My orders")}
           </h2>
           {orders.length === 0 ? (
-            <p className="text-sm text-white/50">{t("Заказов пока нет.", "Hozircha buyurtmalar yo'q.", "No orders yet.")}</p>
+            <p className="text-sm text-muted-foreground">{t("Заказов пока нет.", "Hozircha buyurtmalar yo'q.", "No orders yet.")}</p>
           ) : (
             <div className="space-y-3">
               {orders.map((o) => {
@@ -280,7 +280,7 @@ export default function AccountPage() {
                       <p className="font-medium">
                         {car ? `${car.brand} ${car.model} ${car.year}` : t("Заказ", "Buyurtma", "Order")}
                       </p>
-                      <p className="font-mono text-sm text-white/50">#{o.reference_code}</p>
+                      <p className="font-mono text-sm text-muted-foreground">#{o.reference_code}</p>
                     </div>
                     <Link
                       href={localizedPath(locale, "/track")}
@@ -306,7 +306,7 @@ export default function AccountPage() {
               {warranties.map((w, i) => {
                 const st = warrantyStatus(w.warranty_until, nowMs);
                 const stLabel = st === "active" ? t("действует", "amal qiladi", "active") : st === "expiring" ? t("истекает", "tugayapti", "expiring") : st === "expired" ? t("истекла", "tugagan", "expired") : "—";
-                const tone = st === "active" ? "text-[var(--success)]" : st === "expiring" ? "text-[var(--warning)]" : "text-white/50";
+                const tone = st === "active" ? "text-[var(--success)]" : st === "expiring" ? "text-[var(--warning)]" : "text-muted-foreground";
                 return (
                   <div key={i} className="border border-border bg-card p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -314,7 +314,7 @@ export default function AccountPage() {
                       <span className={`text-xs font-mono uppercase ${tone}`}>{stLabel}{w.warranty_until ? ` · ${w.warranty_until}` : ""}</span>
                     </div>
                     {w.services && w.services.length > 0 && (
-                      <ul className="mt-2 space-y-1 text-sm text-white/60">
+                      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
                         {w.services.slice(0, 5).map((s, j) => (
                           <li key={j}>• {s.date} — {s.description}</li>
                         ))}
@@ -334,7 +334,7 @@ export default function AccountPage() {
             {t("Мой гараж", "Mening garajim", "My garage")}
           </h2>
           {cars.length === 0 ? (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-muted-foreground">
               {t("В избранном пока пусто.", "Sevimlilar bo'sh.", "No favorites yet.")}{" "}
               <Link href={localizedPath(locale, "/catalog")} className="text-primary hover:underline">
                 {t("Перейти в каталог", "Katalogga o'tish", "Browse catalog")}
@@ -356,7 +356,7 @@ export default function AccountPage() {
             {t("Сохранённые поиски", "Saqlangan qidiruvlar", "Saved searches")}
           </h2>
           {searches.length === 0 ? (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-muted-foreground">
               {t("Нет сохранённых поисков.", "Saqlangan qidiruvlar yo'q.", "No saved searches.")}
             </p>
           ) : (
@@ -370,7 +370,7 @@ export default function AccountPage() {
                     {s.label || t("Поиск", "Qidiruv", "Search")}
                   </span>
                   <button
-                    className="text-sm text-white/40 hover:text-neon-pink"
+                    className="text-sm text-muted-foreground hover:text-neon-pink"
                     onClick={() => removeSearch(s.id)}
                   >
                     {t("Удалить", "O'chirish", "Remove")}
@@ -381,7 +381,7 @@ export default function AccountPage() {
           )}
         </section>
 
-        <p className="flex items-center gap-2 font-mono text-xs text-white/40">
+        <p className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
           <Phone className="h-3 w-3" />
           {me.customer?.phone}
         </p>

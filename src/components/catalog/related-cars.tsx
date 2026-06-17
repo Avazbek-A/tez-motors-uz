@@ -48,9 +48,9 @@ export function RelatedCars({ currentCar, maxCount = 4 }: RelatedCarsProps) {
   const title = locale === "ru" ? "Похожие автомобили" : locale === "uz" ? "O'xshash avtomobillar" : "Similar Cars";
 
   return (
-    <section className="mt-16 pt-12 border-t border-white/[0.06]">
+    <section className="mt-16 pt-12 border-t border-border">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-2xl font-bold text-white">{title}</h2>
+        <h2 className="text-2xl font-bold text-foreground">{title}</h2>
         <Button variant="outline" size="sm" asChild>
           <Link href={localizedPath(locale, "/catalog")}>
             {locale === "ru" ? "Все авто" : "All cars"}

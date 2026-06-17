@@ -23,7 +23,7 @@ export function LanguageSwitcher({ isScrolled }: { isScrolled: boolean }) {
   };
 
   return (
-    <div className="flex items-center gap-0.5 rounded-lg overflow-hidden border border-white/10 bg-white/5">
+    <div className="flex items-center gap-0.5 rounded-lg overflow-hidden border border-border bg-foreground/5">
       {locales.map((l) => (
         <button
           key={l}
@@ -32,7 +32,7 @@ export function LanguageSwitcher({ isScrolled }: { isScrolled: boolean }) {
             "px-2 py-1 text-xs font-semibold transition-all",
             locale === l
               ? "bg-neon-blue/20 text-neon-blue"
-              : "text-white/50 hover:text-white hover:bg-white/10"
+              : "text-foreground/50 hover:text-foreground hover:bg-foreground/10"
           )}
         >
           {localeLabels[l]}

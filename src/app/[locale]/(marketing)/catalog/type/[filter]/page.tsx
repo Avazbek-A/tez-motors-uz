@@ -232,7 +232,7 @@ export default async function FilterPage(
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
             {c.title}
           </h1>
-          <p className="mt-4 text-base md:text-lg text-white/70 max-w-3xl">
+          <p className="mt-4 text-base md:text-lg text-foreground/70 max-w-3xl">
             {c.intro}
           </p>
         </div>

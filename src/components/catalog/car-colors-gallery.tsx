@@ -66,9 +66,9 @@ export function CarColorsGallery({
   const row = (kind: "ext" | "int", list: CarColor[], label: string) =>
     list.length > 0 && (
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/50">
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
           <span>{label}</span>
-          {sel?.kind === kind && selected && <span className="text-white/80 normal-case tracking-normal">· {colorName(selected, locale)}</span>}
+          {sel?.kind === kind && selected && <span className="text-foreground/80 normal-case tracking-normal">· {colorName(selected, locale)}</span>}
         </div>
         <div className="flex flex-wrap gap-2">
           {list.map((c, i) => {
@@ -81,7 +81,7 @@ export function CarColorsGallery({
                 title={colorName(c, locale)}
                 aria-label={colorName(c, locale)}
                 className={`w-8 h-8 rounded-full border transition-all ${
-                  active ? "border-neon-blue ring-2 ring-neon-blue/40 scale-110" : "border-white/20 hover:border-white/50"
+                  active ? "border-neon-blue ring-2 ring-neon-blue/40 scale-110" : "border-border hover:border-foreground/50"
                 } ${hasImgs(c) ? "" : "opacity-60"}`}
                 style={swatchStyle(c.hex)}
               />
@@ -99,7 +99,7 @@ export function CarColorsGallery({
     <div className="space-y-4">
       <CarGallery key={galleryKey} images={shown} brand={brand} model={model} />
       {intNoPhotos && (
-        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
+        <div className="rounded-xl border border-border bg-foreground/5 px-3 py-2 text-xs text-muted-foreground">
           {t(
             "Фото интерьера для этого цвета недоступны — показано фото кузова.",
             "Bu rang uchun salon rasmlari yo‘q — kuzov rasmi ko‘rsatilgan.",
@@ -112,7 +112,7 @@ export function CarColorsGallery({
           )}
         </div>
       )}
-      <div className="space-y-3 rounded-2xl bg-white/5 border border-white/10 p-4">
+      <div className="space-y-3 rounded-2xl bg-foreground/5 border border-border p-4">
         {row("ext", ext, t("Цвет кузова", "Kuzov rangi", "Exterior color"))}
         {row("int", int, t("Цвет салона", "Salon rangi", "Interior color"))}
       </div>

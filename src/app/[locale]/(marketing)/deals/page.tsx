@@ -74,10 +74,10 @@ export default async function DealsPage() {
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">{c.title}</h1>
-        <p className="mt-4 text-base md:text-lg text-white/70 max-w-3xl">{c.intro}</p>
+        <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-3xl">{c.intro}</p>
 
         {cars.length === 0 ? (
-          <div className="mt-10 text-white/60">
+          <div className="mt-10 text-muted-foreground">
             <p>{c.empty}</p>
             <Link href={`/${locale}/catalog`} className="inline-block mt-4 text-primary hover:underline">{c.cta} →</Link>
           </div>

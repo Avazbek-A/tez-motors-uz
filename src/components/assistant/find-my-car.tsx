@@ -117,14 +117,14 @@ export function FindMyCar() {
   };
 
   return (
-    <div className="bg-card border border-neon-blue/20 rounded-2xl p-6 sm:p-8 text-white">
+    <div className="bg-card border border-neon-blue/20 rounded-2xl p-6 sm:p-8 text-foreground">
       <div className="flex items-start gap-4 mb-5">
         <div className="w-12 h-12 rounded-xl bg-neon-blue/10 border border-neon-blue/20 flex items-center justify-center shrink-0">
           <Sparkles className="w-6 h-6 text-neon-blue" />
         </div>
         <div>
           <h3 className="font-bold text-lg">{t.title}</h3>
-          <p className="text-white/60 text-sm mt-1">{t.subtitle}</p>
+          <p className="text-muted-foreground text-sm mt-1">{t.subtitle}</p>
         </div>
       </div>
 
@@ -148,7 +148,7 @@ export function FindMyCar() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t.placeholder}
             maxLength={500}
-            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue flex-1"
+            className="bg-foreground/5 border-border text-foreground placeholder:text-muted-foreground focus:ring-neon-blue focus:border-neon-blue flex-1"
           />
           <Button
             type="submit"
@@ -159,21 +159,21 @@ export function FindMyCar() {
           </Button>
         </div>
 
-        <p className="text-white/40 text-xs">{t.leadHint}</p>
+        <p className="text-muted-foreground text-xs">{t.leadHint}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t.namePh}
             maxLength={100}
-            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue"
+            className="bg-foreground/5 border-border text-foreground placeholder:text-muted-foreground focus:ring-neon-blue focus:border-neon-blue"
           />
           <Input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder={t.phonePh}
             maxLength={20}
-            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:ring-neon-blue focus:border-neon-blue"
+            className="bg-foreground/5 border-border text-foreground placeholder:text-muted-foreground focus:ring-neon-blue focus:border-neon-blue"
           />
         </div>
       </form>
@@ -183,8 +183,8 @@ export function FindMyCar() {
       )}
 
       {reply && (
-        <div className="mt-5 bg-white/5 border border-white/10 rounded-xl p-4">
-          <p className="text-sm text-white/90 leading-relaxed whitespace-pre-line">{reply}</p>
+        <div className="mt-5 bg-foreground/5 border border-border rounded-xl p-4">
+          <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{reply}</p>
         </div>
       )}
 
@@ -197,7 +197,7 @@ export function FindMyCar() {
 
       {cars.length > 0 && (
         <div className="mt-6">
-          <h4 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wide">{t.resultsTitle}</h4>
+          <h4 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">{t.resultsTitle}</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {cars.map((car) => (
               <CarCard key={car.id} car={car} />

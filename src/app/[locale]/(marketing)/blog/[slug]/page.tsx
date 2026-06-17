@@ -85,7 +85,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <p className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--fg-3)]">
             {post.published_at ? formatDate(post.published_at, locale === "uz" ? "uz-UZ" : locale === "en" ? "en-US" : "ru-RU") : ""}
           </p>
-          <h1 className="text-3xl md:text-5xl font-bold text-white">{title}</h1>
+          <h1 className="text-3xl md:text-5xl font-bold text-foreground">{title}</h1>
           {post.cover_image && (
             <div className="relative w-full aspect-[16/9] border border-border overflow-hidden">
               <Image
@@ -101,7 +101,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </header>
 
         <div
-          className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-white/70 prose-li:text-white/70 prose-a:text-primary"
+          className="prose max-w-none prose-headings:text-foreground prose-p:text-foreground/70 prose-li:text-foreground/70 prose-a:text-primary"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
         />
       </div>

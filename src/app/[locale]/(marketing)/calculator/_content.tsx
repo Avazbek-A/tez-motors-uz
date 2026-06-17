@@ -233,7 +233,7 @@ export default function CalculatorContent() {
             onClick={() => setActiveTab("import")}
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-              activeTab === "import" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-white/60 hover:bg-white/5"
+              activeTab === "import" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-foreground/60 hover:bg-foreground/5"
             )}
           >
             <Calculator className="w-4 h-4" />
@@ -243,7 +243,7 @@ export default function CalculatorContent() {
             onClick={() => setActiveTab("financing")}
             className={cn(
               "flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all",
-              activeTab === "financing" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-white/60 hover:bg-white/5"
+              activeTab === "financing" ? "bg-neon-blue text-white shadow-lg shadow-neon-blue/25" : "bg-background text-foreground/60 hover:bg-foreground/5"
             )}
           >
             <CreditCard className="w-4 h-4" />
@@ -261,7 +261,7 @@ export default function CalculatorContent() {
           <div
             className="animate-fade-in-up"
           >
-            <form onSubmit={handleCalculate} className="bg-card rounded-2xl border border-white/10 p-8 space-y-6">
+            <form onSubmit={handleCalculate} className="bg-card rounded-2xl border border-border p-8 space-y-6">
               {/* Car picker from catalog */}
               {catalogCars.length > 0 && (
                 <div>
@@ -272,7 +272,7 @@ export default function CalculatorContent() {
                     <select
                       value={selectedCarId}
                       onChange={(e) => handleCarSelect(e.target.value)}
-                      className="w-full h-12 rounded-xl border border-white/10 bg-background text-white px-4 pr-10 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-neon-blue cursor-pointer"
+                      className="w-full h-12 rounded-xl border border-border bg-background text-foreground px-4 pr-10 text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-neon-blue cursor-pointer"
                     >
                       <option value="">
                         {locale === "ru" ? "— Или введите вручную —" : locale === "uz" ? "— Yoki qo'lda kiriting —" : "— Or enter manually —"}
@@ -283,7 +283,7 @@ export default function CalculatorContent() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40 pointer-events-none" />
                   </div>
                 </div>
               )}
@@ -331,7 +331,7 @@ export default function CalculatorContent() {
                         "px-4 py-3 rounded-xl text-sm font-medium border transition-all",
                         fuelType === ft.value
                           ? "bg-neon-blue/15 border-neon-blue text-neon-blue"
-                          : "border-white/10 text-white/60 hover:bg-white/5"
+                          : "border-border text-foreground/60 hover:bg-foreground/5"
                       )}
                     >
                       {ft.label[locale]}
@@ -367,25 +367,25 @@ export default function CalculatorContent() {
           >
             {result ? (
               <div className="space-y-4">
-                <div className="bg-card rounded-2xl border border-white/10 overflow-hidden">
-                  <div className="bg-background text-white p-6">
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                  <div className="bg-background text-foreground p-6">
                     <h3 className="text-lg font-bold">{dictionary.calculator.result.title}</h3>
                   </div>
                   <div className="p-6 space-y-3">
                     {resultRows.map((row, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 border-b border-white/10 last:border-0">
-                        <span className="text-sm text-white/60">{row.label}</span>
-                        <span className="text-sm font-semibold text-white">{formatPrice(row.value)}</span>
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                        <span className="text-sm text-muted-foreground">{row.label}</span>
+                        <span className="text-sm font-semibold text-foreground">{formatPrice(row.value)}</span>
                       </div>
                     ))}
                   </div>
                   <div className="bg-neon-blue/10 p-6 border-t-2 border-neon-blue">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-lg text-white">{dictionary.calculator.result.total}</span>
+                      <span className="font-bold text-lg text-foreground">{dictionary.calculator.result.total}</span>
                       <span className="text-2xl font-bold text-neon-blue">{formatPrice(result.total)}</span>
                     </div>
                   </div>
-                  <div className="p-4 text-xs text-white/60 text-center">
+                  <div className="p-4 text-xs text-muted-foreground text-center">
                     {dictionary.calculator.result.note}
                   </div>
                 </div>
@@ -395,13 +395,13 @@ export default function CalculatorContent() {
                   {leadSuccess ? (
                     <div className="text-center py-4">
                       <CheckCircle className="w-12 h-12 text-neon-green mx-auto mb-3" />
-                      <p className="text-white font-semibold">{t.leadSuccess}</p>
+                      <p className="text-foreground font-semibold">{t.leadSuccess}</p>
                     </div>
                   ) : (
                     <form onSubmit={handleLeadSubmit} className="space-y-4">
                       <div>
-                        <h4 className="text-base font-bold text-white">{t.leadTitle}</h4>
-                        <p className="text-xs text-white/50 mt-1">{t.leadSubtitle}</p>
+                        <h4 className="text-base font-bold text-foreground">{t.leadTitle}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{t.leadSubtitle}</p>
                       </div>
                       <Input
                         placeholder={dictionary.contact.name}
@@ -435,10 +435,10 @@ export default function CalculatorContent() {
                 </div>
               </div>
             ) : (
-              <div className="bg-background rounded-2xl border border-white/10 border-dashed h-full flex items-center justify-center p-12 text-center">
+              <div className="bg-background rounded-2xl border border-border border-dashed h-full flex items-center justify-center p-12 text-center">
                 <div>
-                  <Calculator className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                  <p className="text-white/60">{dictionary.calculator.subtitle}</p>
+                  <Calculator className="w-16 h-16 text-foreground/20 mx-auto mb-4" />
+                  <p className="text-muted-foreground">{dictionary.calculator.subtitle}</p>
                 </div>
               </div>
             )}

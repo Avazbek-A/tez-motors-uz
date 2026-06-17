@@ -18,7 +18,7 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
   const { locale } = useLocale();
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-white/60 mb-6">
+    <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-muted-foreground mb-6">
       <Link href={localizedPath(locale, "/")} className="hover:text-neon-blue transition-colors flex items-center gap-1">
         <Home className="w-3.5 h-3.5" />
       </Link>

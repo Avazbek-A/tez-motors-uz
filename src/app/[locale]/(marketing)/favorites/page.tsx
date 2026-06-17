@@ -98,7 +98,7 @@ export default function FavoritesPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto" />
               </div>
             ) : cars.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-card p-8 text-center text-white/60">
+              <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
                 <Heart className="mx-auto mb-3 h-10 w-10 text-neon-pink/60" />
                 <p>{locale === "ru" ? "Пока нет избранных авто." : "No saved cars yet."}</p>
                 <Button asChild className="mt-4">
@@ -107,7 +107,7 @@ export default function FavoritesPage() {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-card p-4 text-sm text-white/60">
+                <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
                   <span><span className="font-mono">{cars.length}</span> {locale === "ru" ? "авто в списке" : "cars saved"}</span>
                   <Button
                     variant="outline"
@@ -128,24 +128,24 @@ export default function FavoritesPage() {
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-white/10 bg-card p-6 h-fit">
+          <div className="space-y-4 rounded-2xl border border-border bg-card p-6 h-fit">
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-neon-blue" />
               <h2 className="text-lg font-semibold">{locale === "ru" ? "Оповещение о снижении цены" : "Price-drop alert"}</h2>
             </div>
-            <p className="text-sm text-white/60">
+            <p className="text-sm text-muted-foreground">
               {locale === "ru"
                 ? "Получайте внутреннее уведомление для менеджера, когда цена уйдёт ниже вашего порога."
                 : "Get an internal dealer notification when a saved car drops below your target price."}
             </p>
             <div className="space-y-3">
-              <label className="text-sm font-medium text-white/70 block">
+              <label className="text-sm font-medium text-foreground/70 block">
                 {locale === "ru" ? "Автомобиль" : "Car"}
               </label>
               <select
                 value={selectedCarId}
                 onChange={(e) => setSelectedCarId(e.target.value)}
-                className="h-10 w-full rounded-lg border border-white/10 bg-white/5 px-3 text-sm text-white"
+                className="h-10 w-full rounded-lg border border-border bg-foreground/5 px-3 text-sm text-foreground"
               >
                 {cars.map((car) => (
                   <option key={car.id} value={car.id}>
@@ -166,7 +166,7 @@ export default function FavoritesPage() {
                 onChange={(e) => setTargetPrice(e.target.value)}
               />
               <Turnstile onToken={setTurnstileToken} />
-              {message && <p className="text-sm text-white/70">{message}</p>}
+              {message && <p className="text-sm text-foreground/70">{message}</p>}
               <Button onClick={submitWatch} className="w-full" disabled={!selectedCar || !email || !targetPrice}>
                 {locale === "ru" ? "Сохранить" : "Save watch"}
               </Button>

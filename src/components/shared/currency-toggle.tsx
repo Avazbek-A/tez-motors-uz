@@ -53,7 +53,7 @@ export function CurrencyToggle({ className }: { className?: string }) {
   const { currency, setCurrency } = useCurrency();
 
   return (
-    <div className={cn("flex items-center gap-0.5 rounded-lg overflow-hidden border border-border bg-white", className)}>
+    <div className={cn("flex items-center gap-0.5 rounded-lg overflow-hidden border border-border bg-background", className)}>
       <button
         onClick={() => setCurrency("USD")}
         className={cn(
