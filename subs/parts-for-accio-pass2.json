@@ -1,0 +1,716 @@
+[
+ {
+  "slug": "byd-han-spare-part",
+  "name_en": "BYD Han Spare Part",
+  "brand": "BYD",
+  "model": "Han"
+ },
+ {
+  "slug": "zeekr-007-spare-part",
+  "name_en": "Zeekr 007 Spare Part",
+  "brand": "Zeekr",
+  "model": "Zeekr 007"
+ },
+ {
+  "slug": "zeekr-001-spare-part",
+  "name_en": "Zeekr 001 Spare Part",
+  "brand": "Zeekr",
+  "model": "Zeekr 001"
+ },
+ {
+  "slug": "zeekr-001-spare-part-2",
+  "name_en": "Zeekr 001 Spare Part",
+  "brand": "Zeekr",
+  "model": "Zeekr 001"
+ },
+ {
+  "slug": "li-auto-l9-front-headlights-2",
+  "name_en": "Li Auto L9 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "bmw-i3-front-fender",
+  "name_en": "BMW i3 Front Fender",
+  "brand": "BMW",
+  "model": "BMW i3"
+ },
+ {
+  "slug": "bmw-i3-hood",
+  "name_en": "BMW i3 Hood",
+  "brand": "BMW",
+  "model": "BMW i3"
+ },
+ {
+  "slug": "bmw-ix-front-fender",
+  "name_en": "BMW iX Front Fender",
+  "brand": "BMW",
+  "model": "BMW iX"
+ },
+ {
+  "slug": "bmw-ix3-windshield",
+  "name_en": "BMW iX3 Windshield",
+  "brand": "BMW",
+  "model": "BMW iX3"
+ },
+ {
+  "slug": "bmw-ix3-bumper-trim",
+  "name_en": "BMW iX3 Bumper Trim",
+  "brand": "BMW",
+  "model": "BMW iX3"
+ },
+ {
+  "slug": "bmw-i4-front-fender",
+  "name_en": "BMW i4 Front Fender",
+  "brand": "BMW",
+  "model": "BMW i4"
+ },
+ {
+  "slug": "bmw-i4-front-headlights",
+  "name_en": "BMW i4 Front Headlights",
+  "brand": "BMW",
+  "model": "BMW i4"
+ },
+ {
+  "slug": "bmw-i4-hood",
+  "name_en": "BMW i4 Hood",
+  "brand": "BMW",
+  "model": "BMW i4"
+ },
+ {
+  "slug": "bmw-i5-hood",
+  "name_en": "BMW i5 Hood",
+  "brand": "BMW",
+  "model": "BMW i5"
+ },
+ {
+  "slug": "bmw-i5-radiator-grille",
+  "name_en": "BMW i5 Radiator Grille",
+  "brand": "BMW",
+  "model": "BMW i5"
+ },
+ {
+  "slug": "bmw-i5-rear-lights",
+  "name_en": "BMW i5 Rear Lights",
+  "brand": "BMW",
+  "model": "BMW i5"
+ },
+ {
+  "slug": "hongqi-eqm-5-fender",
+  "name_en": "Hongqi EQM-5 Fender",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "zeekr-windshield",
+  "name_en": "Zeekr Windshield",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-spare-part",
+  "name_en": "Zeekr Spare Part",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-fender",
+  "name_en": "Zeekr Fender",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-hood",
+  "name_en": "Zeekr Hood",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-bumper-trim",
+  "name_en": "Zeekr Bumper Trim",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-door",
+  "name_en": "Zeekr Door",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-side-mirror",
+  "name_en": "Zeekr Side Mirror",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-skid-plate",
+  "name_en": "Zeekr Skid Plate",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-brake-pads",
+  "name_en": "Zeekr Brake Pads",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-rear-lights",
+  "name_en": "Zeekr Rear Lights",
+  "brand": "Zeekr",
+  "model": ""
+ },
+ {
+  "slug": "zeekr-x-front-bumper",
+  "name_en": "Zeekr X Front Bumper",
+  "brand": "Zeekr",
+  "model": "Zeekr X"
+ },
+ {
+  "slug": "li-auto-l6-fender",
+  "name_en": "Li Auto L6 Fender",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-front-headlights",
+  "name_en": "Li Auto L6 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-front-headlights-2",
+  "name_en": "Li Auto L6 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-hood",
+  "name_en": "Li Auto L6 Hood",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-rear-bumper",
+  "name_en": "Li Auto L6 Rear Bumper",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-air-suspension-strut",
+  "name_en": "Li Auto L6 Air Suspension Strut",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-trunk-lid",
+  "name_en": "Li Auto L6 Trunk Lid",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-windshield",
+  "name_en": "Li Auto L6 Windshield",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l6-running-boards",
+  "name_en": "Li Auto L6 Running Boards",
+  "brand": "Li Auto",
+  "model": "L6"
+ },
+ {
+  "slug": "li-auto-l7-front-bumper",
+  "name_en": "Li Auto L7 Front Bumper",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-fender",
+  "name_en": "Li Auto L7 Fender",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-front-headlights",
+  "name_en": "Li Auto L7 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-front-headlights-2",
+  "name_en": "Li Auto L7 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-trunk-lid",
+  "name_en": "Li Auto L7 Trunk Lid",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-windshield",
+  "name_en": "Li Auto L7 Windshield",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l7-running-boards",
+  "name_en": "Li Auto L7 Running Boards",
+  "brand": "Li Auto",
+  "model": "L7"
+ },
+ {
+  "slug": "li-auto-l8-front-bumper",
+  "name_en": "Li Auto L8 Front Bumper",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-fender",
+  "name_en": "Li Auto L8 Fender",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-front-headlights",
+  "name_en": "Li Auto L8 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-front-headlights-2",
+  "name_en": "Li Auto L8 Front Headlights",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-door",
+  "name_en": "Li Auto L8 Door",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-hood",
+  "name_en": "Li Auto L8 Hood",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l8-rear-bumper",
+  "name_en": "Li Auto L8 Rear Bumper",
+  "brand": "Li Auto",
+  "model": "L8"
+ },
+ {
+  "slug": "li-auto-l9-door",
+  "name_en": "Li Auto L9 Door",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-l9-hood",
+  "name_en": "Li Auto L9 Hood",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-l9-rear-bumper",
+  "name_en": "Li Auto L9 Rear Bumper",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-air-suspension-strut",
+  "name_en": "Li Auto Air Suspension Strut",
+  "brand": "Li Auto",
+  "model": ""
+ },
+ {
+  "slug": "li-auto-l9-trunk-lid",
+  "name_en": "Li Auto L9 Trunk Lid",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-l9-windshield",
+  "name_en": "Li Auto L9 Windshield",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-l9-running-boards",
+  "name_en": "Li Auto L9 Running Boards",
+  "brand": "Li Auto",
+  "model": "L9"
+ },
+ {
+  "slug": "li-auto-mega-front-bumper",
+  "name_en": "Li Auto Mega Front Bumper",
+  "brand": "Li Auto",
+  "model": "Mega"
+ },
+ {
+  "slug": "li-auto-mega-windshield",
+  "name_en": "Li Auto Mega Windshield",
+  "brand": "Li Auto",
+  "model": "Mega"
+ },
+ {
+  "slug": "li-auto-mega-rear-bumper",
+  "name_en": "Li Auto Mega Rear Bumper",
+  "brand": "Li Auto",
+  "model": "Mega"
+ },
+ {
+  "slug": "li-auto-mega-windshield-2",
+  "name_en": "Li Auto Mega Windshield",
+  "brand": "Li Auto",
+  "model": "Mega"
+ },
+ {
+  "slug": "byd-seal-06-gt-front-bumper",
+  "name_en": "BYD Seal 06 GT Front Bumper",
+  "brand": "BYD",
+  "model": "Seal 06 GT"
+ },
+ {
+  "slug": "byd-seal-06-gt-front-fender",
+  "name_en": "BYD Seal 06 GT Front Fender",
+  "brand": "BYD",
+  "model": "Seal 06 GT"
+ },
+ {
+  "slug": "byd-seal-06-gt-front-headlights",
+  "name_en": "BYD Seal 06 GT Front Headlights",
+  "brand": "BYD",
+  "model": "Seal 06 GT"
+ },
+ {
+  "slug": "byd-seal-06-gt-hood",
+  "name_en": "BYD Seal 06 GT Hood",
+  "brand": "BYD",
+  "model": "Seal 06 GT"
+ },
+ {
+  "slug": "byd-chazor-a-c-condenser",
+  "name_en": "BYD Chazor A/C Condenser",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-radiator-grille",
+  "name_en": "BYD Chazor Radiator Grille",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-fog-light",
+  "name_en": "BYD Chazor Fog Light",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-stabilizer-link",
+  "name_en": "BYD Chazor Stabilizer Link",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-control-arm",
+  "name_en": "BYD Chazor Control Arm",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-door",
+  "name_en": "BYD Chazor Door",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-door-2",
+  "name_en": "BYD Chazor Door",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-trunk-lid",
+  "name_en": "BYD Chazor Trunk Lid",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-door-3",
+  "name_en": "BYD Chazor Door",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-radiator",
+  "name_en": "BYD Chazor Radiator",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-expansion-tank",
+  "name_en": "BYD Chazor Expansion Tank",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-airbag",
+  "name_en": "BYD Chazor Airbag",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-oil-cooler",
+  "name_en": "BYD Chazor Oil Cooler",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-lights",
+  "name_en": "BYD Chazor Rear Lights",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-wiper-blades",
+  "name_en": "BYD Chazor Wiper Blades",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-door-4",
+  "name_en": "BYD Chazor Door",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-bumper",
+  "name_en": "BYD Chazor Rear Bumper",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-trim-molding",
+  "name_en": "BYD Chazor Trim Molding",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-bumper-2",
+  "name_en": "BYD Chazor Rear Bumper",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-radiator-grille-2",
+  "name_en": "BYD Chazor Radiator Grille",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-trunk-lid-2",
+  "name_en": "BYD Chazor Trunk Lid",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-fog-light-2",
+  "name_en": "BYD Chazor Fog Light",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-front-headlights",
+  "name_en": "BYD Chazor Front Headlights",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-air-filter",
+  "name_en": "BYD Chazor Air Filter",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-control-arm-2",
+  "name_en": "BYD Chazor Control Arm",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-glass",
+  "name_en": "BYD Chazor Rear Glass",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-front-bumper",
+  "name_en": "BYD Chazor Front Bumper",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-shock-absorber",
+  "name_en": "BYD Chazor Rear Shock Absorber",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-front-shock-absorber",
+  "name_en": "BYD Chazor Front Shock Absorber",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-steering-rack",
+  "name_en": "BYD Chazor Steering Rack",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-brake-hose",
+  "name_en": "BYD Chazor Brake Hose",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-rear-shock-absorber-2",
+  "name_en": "BYD Chazor Rear Shock Absorber",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "byd-chazor-brake-pads",
+  "name_en": "BYD Chazor Brake Pads",
+  "brand": "BYD",
+  "model": "Chazor"
+ },
+ {
+  "slug": "hongqi-eqm-5-front-bumper",
+  "name_en": "Hongqi EQM-5 Front Bumper",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-rear-bumper",
+  "name_en": "Hongqi EQM-5 Rear Bumper",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-spare-part",
+  "name_en": "Hongqi EQM-5 Spare Part",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-rear-lights",
+  "name_en": "Hongqi EQM-5 Rear Lights",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-trunk-lid",
+  "name_en": "Hongqi EQM-5 Trunk Lid",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-radiator-grille",
+  "name_en": "Hongqi EQM-5 Radiator Grille",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-side-mirror",
+  "name_en": "Hongqi EQM-5 Side Mirror",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-windshield",
+  "name_en": "Hongqi EQM-5 Windshield",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-door",
+  "name_en": "Hongqi EQM-5 Door",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-suspension-parts",
+  "name_en": "Hongqi EQM-5 Suspension Parts",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "hongqi-eqm-5-front-headlights",
+  "name_en": "Hongqi EQM-5 Front Headlights",
+  "brand": "Hongqi",
+  "model": "EQM-5"
+ },
+ {
+  "slug": "byd-tang-l-front-bumper",
+  "name_en": "BYD Tang L Front Bumper",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-tang-l-front-fender",
+  "name_en": "BYD Tang L Front Fender",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-tang-l-front-headlights",
+  "name_en": "BYD Tang L Front Headlights",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-tang-l-hood",
+  "name_en": "BYD Tang L Hood",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-tang-l-door",
+  "name_en": "BYD Tang L Door",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-tang-l-rear-bumper",
+  "name_en": "BYD Tang L Rear Bumper",
+  "brand": "BYD",
+  "model": "Tang L"
+ },
+ {
+  "slug": "byd-han-front-bumper",
+  "name_en": "BYD Han Front Bumper",
+  "brand": "BYD",
+  "model": "Han"
+ },
+ {
+  "slug": "byd-han-front-fender",
+  "name_en": "BYD Han Front Fender",
+  "brand": "BYD",
+  "model": "Han"
+ },
+ {
+  "slug": "byd-han-rear-bumper",
+  "name_en": "BYD Han Rear Bumper",
+  "brand": "BYD",
+  "model": "Han"
+ }
+]

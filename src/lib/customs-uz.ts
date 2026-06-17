@@ -30,7 +30,11 @@ export const CLEARANCE_BRV = 2.5; // таможенный сбор за офор
 
 // Motorcycle (HS 8711) — simpler: no age, no per-cc, no utilization fee, and a
 // 1-BRV clearance. Duty is flat by origin/fuel. (Probed + validated from the bot.)
-export type VehicleCategory = "car" | "moto" | "engine" | "truck";
+export type VehicleCategory = "car" | "moto" | "engine" | "truck" | "bus" | "fura";
+export type BusCapacity = "small" | "large"; // 10–59 seats · 60+ seats
+export type EcoClass = "below4" | "euro4" | "euro5plus";
+export type FuraPart = "tractor" | "semitrailer";
+export type FuraAge = "a1" | "a2" | "a3" | "a4"; // ≤3y · 3–5y · 5–7y · >7y
 export const MOTO_DUTY_PCT = 20; // petrol, certified non-FTA (×2 if no certificate; FTA/electric → 0)
 export const MOTO_CLEARANCE_BRV = 1;
 // Engine/motor (HS 8407): new = duty-free, used = 30%; no utilization. (Probed.)
@@ -78,6 +82,13 @@ export interface CustomsInput {
   deliveryUsd?: number; // folded into the customs value
   usdUzs?: number; // FX for sum→USD (default DEFAULT_USD_UZS)
   brvSum?: number;
+  // Bus-only:
+  capacity?: BusCapacity; // 10–59 (small) | 60+ (large)
+  // Bus + фура:
+  eco?: EcoClass; // emission class
+  // Фура-only:
+  furaPart?: FuraPart; // tractor | semitrailer
+  furaAge?: FuraAge; // ≤3 | 3–5 | 5–7 | >7 years
 }
 
 export interface CustomsLine {
@@ -97,6 +108,7 @@ export interface CustomsResult {
   totalUsd: number; // value + customs cost
   usdUzs: number;
   brvSum: number;
+  banned?: boolean; // фура below Euro-4 — import prohibited
 }
 
 /** Compute the растаможка breakdown. Pure; matches @autodeklarantbot to the $. */
@@ -150,6 +162,53 @@ export function computeCustomsUz(input: CustomsInput): CustomsResult {
     lines.push({ key: "util", detail: `${utilBrvT} БРВ`, sumValue: utilSumT, usdValue: round0(toUsd(utilSumT)) });
     const feeSum = CLEARANCE_BRV * brv;
     lines.push({ key: "clearance", detail: `${CLEARANCE_BRV} БРВ`, sumValue: feeSum, usdValue: round0(toUsd(feeSum)) });
+    const cost = lines.reduce((s, l) => s + l.usdValue, 0);
+    return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(cost), totalUsd: round0(customsValue + cost), usdUzs, brvSum: brv };
+  }
+
+  // ── Bus path (HS 8702): льгота for new large/clean buses; age×eco×capacity. ──
+  if (input.category === "bus") {
+    const ev = kind === "electric" || kind === "phev";
+    const large = input.capacity === "large";
+    const young = age !== "used3plus"; // ≤3 years
+    const eco5 = (input.eco || "euro5plus") === "euro5plus";
+    let dutyPct = 0, dutyPerCc = 0, vatExempt = false;
+    if (ev) { /* duty 0 */ }
+    else if (young && large) { vatExempt = true; } // 60+ & ≤3y → льгота (duty + VAT)
+    else if (young) { dutyPct = eco5 ? 0 : origin === "uncertified" ? 60 : 30; } // 10–59 ≤3y: Euro-5 льгота, Euro-4 30/60%
+    else { dutyPct = origin === "uncertified" ? 40 : 20; dutyPerCc = origin === "uncertified" ? 4 : 2; } // >3y
+    const duty = customsValue * (dutyPct / 100) + cc * dutyPerCc;
+    if (dutyPct > 0 || dutyPerCc > 0) lines.push({ key: "duty", detail: dutyPerCc > 0 ? `${dutyPct}% + $${dutyPerCc}/см³` : `${dutyPct}%`, usdValue: round0(duty) });
+    if (!vatExempt) lines.push({ key: "vat", detail: "12%", usdValue: round0((customsValue + duty) * VAT_PCT) });
+    const utilBrvB = ev ? (young ? 70 : 150) : (young ? 120 : 150);
+    const utilSumB = utilBrvB * brv;
+    lines.push({ key: "util", detail: `${utilBrvB} БРВ`, sumValue: utilSumB, usdValue: round0(toUsd(utilSumB)) });
+    const feeSumB = CLEARANCE_BRV * brv;
+    lines.push({ key: "clearance", detail: `${CLEARANCE_BRV} БРВ`, sumValue: feeSumB, usdValue: round0(toUsd(feeSumB)) });
+    const cost = lines.reduce((s, l) => s + l.usdValue, 0);
+    return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(cost), totalUsd: round0(customsValue + cost), usdUzs, brvSum: brv };
+  }
+
+  // ── Фура path (HS 8701/8716): tractor age×eco lookup + semitrailer льгота; below Euro-4 BANNED. ──
+  if (input.category === "fura") {
+    const part = input.furaPart || "tractor";
+    const fa = input.furaAge || "a1";
+    const eco = input.eco || "euro5plus";
+    if (part === "tractor" && eco === "below4") {
+      return { kind, age, origin, customsValueUsd: round0(customsValue), lines: [], customsCostUsd: 0, totalUsd: round0(customsValue), usdUzs, brvSum: brv, banned: true };
+    }
+    let dutyPct = 0, dutyPerCc = 0, utilBrvF = 0;
+    if (part === "tractor") {
+      if (fa === "a4") { dutyPct = 70; dutyPerCc = 3; utilBrvF = 1360; } // >7y: punitive (eco-independent)
+      else if (eco === "euro5plus") { /* ≤7y Euro-5+ → льгота (0 duty, 0 util) */ }
+      else { dutyPct = fa === "a1" ? 5 : fa === "a2" ? 10 : 15; utilBrvF = fa === "a1" ? 670 : 1360; } // Euro-4 by age
+    } // semitrailer → льгота (0 duty, 0 util)
+    const duty = customsValue * (dutyPct / 100) + cc * dutyPerCc;
+    if (dutyPct > 0 || dutyPerCc > 0) lines.push({ key: "duty", detail: dutyPerCc > 0 ? `${dutyPct}% + $${dutyPerCc}/см³` : `${dutyPct}%`, usdValue: round0(duty) });
+    lines.push({ key: "vat", detail: "12%", usdValue: round0((customsValue + duty) * VAT_PCT) });
+    if (utilBrvF > 0) { const us = utilBrvF * brv; lines.push({ key: "util", detail: `${utilBrvF} БРВ`, sumValue: us, usdValue: round0(toUsd(us)) }); }
+    const feeSumF = CLEARANCE_BRV * brv;
+    lines.push({ key: "clearance", detail: `${CLEARANCE_BRV} БРВ`, sumValue: feeSumF, usdValue: round0(toUsd(feeSumF)) });
     const cost = lines.reduce((s, l) => s + l.usdValue, 0);
     return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(cost), totalUsd: round0(customsValue + cost), usdUzs, brvSum: brv };
   }

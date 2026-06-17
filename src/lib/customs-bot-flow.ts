@@ -7,14 +7,13 @@
  * user's reply quotes that prompt, so we recover the state from
  * reply_to_message.text — no per-chat DB row. Compute reuses customs-uz.
  *
- * Vehicle categories (mirrors the bot's menu):
- *   - car, moto — fully computed here (probed + validated).
- *   - truck (mini ≤5t), engine, fura, bus — commercial/complex (tonnage, eco-class,
- *     capacity). We route those to a declarant-quote LEAD step instead of shipping
- *     a shaky formula (and capture a high-value lead, like the bot's own upsell).
+ * All 6 categories are fully computed (each probed + validated to the $ vs the
+ * bot): car, moto, engine, mini-truck (≤5t), bus, фура — including the фура
+ * below-Euro-4 import ban.
  */
 import {
   computeCustomsUz, type VehicleKind, type VehicleAge, type OriginClass, type CustomsResult,
+  type BusCapacity, type EcoClass, type FuraPart, type FuraAge,
 } from "@/lib/customs-uz";
 
 type Loc = "ru" | "uz" | "en";
@@ -25,13 +24,13 @@ interface Btn { text: string; callback_data?: string; url?: string }
 interface Markup { inline_keyboard?: Btn[][]; force_reply?: boolean; input_field_placeholder?: string }
 export interface BotStep { text: string; replyMarkup?: Markup; lead?: boolean }
 
-const CATEGORIES: { cat: string; label: Tri; mode: "car" | "moto" | "engine" | "truck" | "lead"; note?: Tri }[] = [
+const CATEGORIES: { cat: string; label: Tri; mode: "car" | "moto" | "engine" | "truck" | "bus" | "fura" }[] = [
   { cat: "car", label: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, mode: "car" },
   { cat: "moto", label: { ru: "🏍 Мото / скутер", uz: "🏍 Moto / skuter", en: "🏍 Moto / scooter" }, mode: "moto" },
   { cat: "truck", label: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" }, mode: "truck" },
   { cat: "engine", label: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, mode: "engine" },
-  { cat: "bus", label: { ru: "🚍 Автобус", uz: "🚍 Avtobus", en: "🚍 Bus" }, mode: "lead" },
-  { cat: "fura", label: { ru: "🚛 Фура", uz: "🚛 Fura", en: "🚛 Semi-truck" }, mode: "lead", note: { ru: "Тариф зависит от эко-класса/тоннажа; ввоз ниже Евро-4 запрещён.", uz: "Tarif eko-klass/tonnajga bog'liq; Yevro-4 dan past import taqiqlangan.", en: "Tariff depends on eco-class/tonnage; below Euro-4 import is banned." } },
+  { cat: "bus", label: { ru: "🚍 Автобус", uz: "🚍 Avtobus", en: "🚍 Bus" }, mode: "bus" },
+  { cat: "fura", label: { ru: "🚛 Фура", uz: "🚛 Fura", en: "🚛 Semi-truck" }, mode: "fura" },
 ];
 
 const KIND_LABEL: Record<VehicleKind, Tri> = {
@@ -57,6 +56,29 @@ const TRUCK_AGE: Record<"le3" | "gt3", Tri> = {
   le3: { ru: "До 3 лет", uz: "3 yilgacha", en: "≤3 years" },
   gt3: { ru: "Более 3 лет", uz: "3 yildan ortiq", en: ">3 years" },
 };
+const CAP_LABEL: Record<BusCapacity, Tri> = {
+  small: { ru: "10–59 мест", uz: "10–59 o'rin", en: "10–59 seats" },
+  large: { ru: "60+ мест", uz: "60+ o'rin", en: "60+ seats" },
+};
+const BUS_FUEL: Record<"ice" | "ev", Tri> = {
+  ice: { ru: "⛽️ ДВС", uz: "⛽️ ICE", en: "⛽️ ICE" },
+  ev: { ru: "🔋 Электро", uz: "🔋 Elektro", en: "🔋 Electric" },
+};
+const ECO_LABEL: Record<EcoClass, Tri> = {
+  euro5plus: { ru: "Евро-5 и выше", uz: "Yevro-5 va yuqori", en: "Euro-5+" },
+  euro4: { ru: "Евро-4", uz: "Yevro-4", en: "Euro-4" },
+  below4: { ru: "Ниже Евро-4", uz: "Yevro-4 dan past", en: "Below Euro-4" },
+};
+const FURA_PART: Record<FuraPart, Tri> = {
+  tractor: { ru: "🚛 Тягач", uz: "🚛 Tyagach", en: "🚛 Tractor" },
+  semitrailer: { ru: "🚛 Полуприцеп", uz: "🚛 Yarim tirkama", en: "🚛 Semi-trailer" },
+};
+const FURA_AGE: Record<FuraAge, Tri> = {
+  a1: { ru: "До 3 лет", uz: "3 yilgacha", en: "≤3 years" },
+  a2: { ru: "3–5 лет", uz: "3–5 yil", en: "3–5 years" },
+  a3: { ru: "5–7 лет", uz: "5–7 yil", en: "5–7 years" },
+  a4: { ru: "Более 7 лет", uz: "7 yildan ortiq", en: ">7 years" },
+};
 const AGE_LABEL: Record<VehicleAge, Tri> = {
   new: { ru: "До 1 года", uz: "1 yilgacha", en: "≤1 year" },
   used1to3: { ru: "1–3 года", uz: "1–3 yil", en: "1–3 years" },
@@ -75,6 +97,12 @@ const T = {
   pickState: { ru: "Состояние двигателя:", uz: "Dvigatel holati:", en: "Engine condition:" },
   pickTruckFuel: { ru: "Тип топлива грузовика:", uz: "Yuk mashinasi yoqilg'isi:", en: "Truck fuel type:" },
   pickTruckAge: { ru: "Возраст грузовика:", uz: "Yuk mashinasi yoshi:", en: "Truck age:" },
+  pickCapacity: { ru: "Вместимость автобуса:", uz: "Avtobus sig'imi:", en: "Bus capacity:" },
+  pickFuel: { ru: "Тип топлива:", uz: "Yoqilg'i turi:", en: "Fuel type:" },
+  pickEco: { ru: "Экологический класс:", uz: "Ekologik sinf:", en: "Emission class:" },
+  pickFuraPart: { ru: "Часть фуры:", uz: "Fura qismi:", en: "Semi-truck part:" },
+  pickFuraAge: { ru: "Возраст тягача:", uz: "Tyagach yoshi:", en: "Tractor age:" },
+  banned: { ru: "❗️Ввоз тягачей ниже экологического класса Евро-4 в Узбекистан ЗАПРЕЩЁН.", uz: "❗️Yevro-4 dan past tyagachlarni Oʻzbekistonga import qilish TAQIQLANGAN.", en: "❗️Importing tractors below Euro-4 into Uzbekistan is BANNED." },
   pickOrigin: { ru: "Происхождение / сертификат СТ-1:", uz: "Kelib chiqishi / ST-1 sertifikati:", en: "Origin / ST-1 certificate:" },
   pickEngine: { ru: "Объём двигателя:", uz: "Dvigatel hajmi:", en: "Engine volume:" },
   askPrice: { ru: "Введите стоимость в USD (цена + доставка). Ответьте на это сообщение числом:", uz: "Narxni USD da kiriting (narx + yetkazib berish). Shu xabarga raqam bilan javob bering:", en: "Enter the price in USD (price + delivery). Reply to this message with a number:" },
@@ -90,7 +118,7 @@ const T = {
   fee: { ru: "Таможенный сбор", uz: "Bojxona yig'imi", en: "Clearance fee" },
   webBtn: { ru: "🌐 Точный расчёт на сайте", uz: "🌐 Saytda aniq hisob", en: "🌐 Exact estimate on the site" },
   note: { ru: "Оценка по тарифам РУз. Сертификация ~$300–690 отдельно.", uz: "OʻzR tariflari boʻyicha. Sertifikatlash ~$300–690 alohida.", en: "Per UZ tariffs. Certification ~$300–690 separate." },
-  cat: { car: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, moto: { ru: "🏍 Мото", uz: "🏍 Moto", en: "🏍 Moto" }, engine: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, truck: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" } } as Record<string, Tri>,
+  cat: { car: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, moto: { ru: "🏍 Мото", uz: "🏍 Moto", en: "🏍 Moto" }, engine: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, truck: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" }, bus: { ru: "🚍 Автобус", uz: "🚍 Avtobus", en: "🚍 Bus" }, fura: { ru: "🚛 Фура", uz: "🚛 Fura", en: "🚛 Semi-truck" } } as Record<string, Tri>,
 };
 
 const ENGINE_CC = [1500, 2000, 2500, 3000, 4000];
@@ -116,7 +144,14 @@ export function customsStep(data: string, loc: string): BotStep | null {
   if (step === "cat") {
     const cat = CATEGORIES.find((c) => c.cat === p[2]);
     if (!cat) return null;
-    if (cat.mode === "lead") return { text: `${cat.label[l]}\n\n${T.leadTitle[l]}${cat.note ? `\n⚠️ ${cat.note[l]}` : ""}\n\n${T.leadAsk[l]}`, lead: true };
+    if (cat.mode === "bus") {
+      const caps: BusCapacity[] = ["small", "large"];
+      return { text: T.pickCapacity[l], replyMarkup: { inline_keyboard: [caps.map((c) => ({ text: CAP_LABEL[c][l], callback_data: `cu|bc|${c}` }))] } };
+    }
+    if (cat.mode === "fura") {
+      const parts: FuraPart[] = ["tractor", "semitrailer"];
+      return { text: T.pickFuraPart[l], replyMarkup: { inline_keyboard: [parts.map((pt) => ({ text: FURA_PART[pt][l], callback_data: `cu|fp|${pt}` }))] } };
+    }
     if (cat.mode === "moto") {
       const fuels: ("petrol" | "electric")[] = ["petrol", "electric"];
       return { text: T.pickMotoFuel[l], replyMarkup: { inline_keyboard: [fuels.map((f) => ({ text: MOTO_FUEL[f][l], callback_data: `cu|mk|${f}` }))] } };
@@ -186,6 +221,49 @@ export function customsStep(data: string, loc: string): BotStep | null {
     const [, , fuel, age, origin] = p;
     return pricePrompt(`truck|${fuel}|${age}|${origin}`, l);
   }
+
+  // ── Bus flow: capacity → age → fuel → (ice: eco → origin) → price ──
+  if (step === "bc") {
+    const ages: ("le3" | "gt3")[] = ["le3", "gt3"];
+    return { text: T.pickAge[l], replyMarkup: { inline_keyboard: [ages.map((a) => ({ text: TRUCK_AGE[a][l], callback_data: `cu|ba|${p[2]}|${a}` }))] } };
+  }
+  if (step === "ba") {
+    const [, , cap, age] = p;
+    const fuels: ("ice" | "ev")[] = ["ice", "ev"];
+    return { text: T.pickFuel[l], replyMarkup: { inline_keyboard: [fuels.map((f) => ({ text: BUS_FUEL[f][l], callback_data: `cu|bf|${cap}|${age}|${f}` }))] } };
+  }
+  if (step === "bf") {
+    const [, , cap, age, fuel] = p;
+    if (fuel === "ev") return pricePrompt(`bus|${cap}|${age}|ev|euro5plus|certified`, l);
+    const ecos: EcoClass[] = ["euro5plus", "euro4"];
+    return { text: T.pickEco[l], replyMarkup: { inline_keyboard: [ecos.map((e) => ({ text: ECO_LABEL[e][l], callback_data: `cu|be|${cap}|${age}|${e}` }))] } };
+  }
+  if (step === "be") {
+    const [, , cap, age, eco] = p;
+    const origins: OriginClass[] = ["fta", "certified", "uncertified"];
+    return { text: T.pickOrigin[l], replyMarkup: { inline_keyboard: origins.map((o) => [{ text: ORIGIN_LABEL[o][l], callback_data: `cu|bo|${cap}|${age}|${eco}|${o}` }]) } };
+  }
+  if (step === "bo") {
+    const [, , cap, age, eco, origin] = p;
+    return pricePrompt(`bus|${cap}|${age}|ice|${eco}|${origin}`, l);
+  }
+
+  // ── Фура flow: part → (tractor: age → eco) → price; below-Euro-4 BANNED ──
+  if (step === "fp") {
+    if (p[2] === "semitrailer") return pricePrompt(`fura|semitrailer|a1|euro5plus`, l);
+    const ages: FuraAge[] = ["a1", "a2", "a3", "a4"];
+    return { text: T.pickFuraAge[l], replyMarkup: { inline_keyboard: chunk(ages.map((a) => ({ text: FURA_AGE[a][l], callback_data: `cu|fa|tractor|${a}` })), 2) } };
+  }
+  if (step === "fa") {
+    const age = p[3];
+    const ecos: EcoClass[] = ["euro5plus", "euro4", "below4"];
+    return { text: T.pickEco[l], replyMarkup: { inline_keyboard: ecos.map((e) => [{ text: ECO_LABEL[e][l], callback_data: `cu|fe|tractor|${age}|${e}` }]) } };
+  }
+  if (step === "fe") {
+    const [, , , age, eco] = p;
+    if (eco === "below4") return { text: T.banned[l] }; // import prohibited — no calc
+    return pricePrompt(`fura|tractor|${age}|${eco}`, l);
+  }
   return null;
 }
 
@@ -218,6 +296,16 @@ export function customsPriceReply(promptText: string, userText: string, loc: str
     const va: VehicleAge = age === "gt3" ? "used3plus" : "used1to3";
     r = computeCustomsUz({ priceUsd: price, category: "truck", kind, age: va, origin: origin as OriginClass, usdUzs });
     header = `${T.cat.truck[l]} · ${TRUCK_FUEL[fuel === "ev" ? "ev" : "ice"][l]} · ${TRUCK_AGE[age === "gt3" ? "gt3" : "le3"][l]}${kind === "electric" ? "" : ` · ${ORIGIN_LABEL[r.origin][l]}`}`;
+  } else if (parts[0] === "bus") {
+    const [, cap, age, fuel, eco, origin] = parts; // cap small|large, age le3|gt3, fuel ice|ev
+    const kind: VehicleKind = fuel === "ev" ? "electric" : "petrol";
+    const va: VehicleAge = age === "gt3" ? "used3plus" : "used1to3";
+    r = computeCustomsUz({ priceUsd: price, category: "bus", kind, age: va, capacity: cap as BusCapacity, eco: eco as EcoClass, origin: origin as OriginClass, engineCc: 2000, usdUzs });
+    header = `${T.cat.bus[l]} · ${CAP_LABEL[cap as BusCapacity][l]} · ${TRUCK_AGE[age === "gt3" ? "gt3" : "le3"][l]} · ${BUS_FUEL[fuel === "ev" ? "ev" : "ice"][l]}`;
+  } else if (parts[0] === "fura") {
+    const [, part, age, eco] = parts;
+    r = computeCustomsUz({ priceUsd: price, category: "fura", kind: "diesel", furaPart: part as FuraPart, furaAge: age as FuraAge, eco: eco as EcoClass, engineCc: 12000, usdUzs });
+    header = `${T.cat.fura[l]} · ${FURA_PART[part as FuraPart][l]}${part === "tractor" ? ` · ${FURA_AGE[age as FuraAge][l]} · ${ECO_LABEL[eco as EcoClass][l]}` : ""}`;
   } else {
     const [kind, age, origin, cc] = parts;
     r = computeCustomsUz({ priceUsd: price, kind: kind as VehicleKind, age: age as VehicleAge, origin: origin as OriginClass, engineCc: Number(cc), usdUzs });
