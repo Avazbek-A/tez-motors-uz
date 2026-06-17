@@ -51,7 +51,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = result.data;
+    // The uz/en columns are NOT NULL; the schema lets them be omitted. Fall back
+    // to the Russian text so an admin who fills only RU gets a usable FAQ in all
+    // locales instead of a not-null violation (or blank rows).
+    const d = result.data;
+    const data = {
+      ...d,
+      question_uz: d.question_uz || d.question_ru,
+      question_en: d.question_en || d.question_ru,
+      answer_uz: d.answer_uz || d.answer_ru,
+      answer_en: d.answer_en || d.answer_ru,
+    };
     const supabase = createServiceClient();
 
     const { data: faq, error } = await supabase
