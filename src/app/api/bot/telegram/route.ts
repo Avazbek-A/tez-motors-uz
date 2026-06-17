@@ -378,7 +378,10 @@ async function handleCustomsCallback(cb: TgCallbackQuery): Promise<void> {
   if (!chatId || typeof cb.data !== "string") return;
   const locale = botLocale(cb.from?.language_code);
   const step = cb.data === "cu|go" ? customsStart(locale) : customsStep(cb.data, locale);
-  if (step) await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
+  if (!step) return;
+  // Commercial/complex types (truck/engine/fura/bus) → capture a declarant-quote lead.
+  if (step.lead) await tgSend(chatId, step.text, contactKeyboard(locale));
+  else await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
 }
 
 async function handleUpdate(update: TgUpdate): Promise<void> {

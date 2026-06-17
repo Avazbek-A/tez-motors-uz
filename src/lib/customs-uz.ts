@@ -26,7 +26,13 @@ export const ORIGIN_CLASSES: OriginClass[] = ["fta", "certified", "uncertified"]
 export const BRV_SUM = 412_000; // БРВ — base calculation value, so'm
 export const DEFAULT_USD_UZS = 12_600; // sum→USD; the page overrides with the live rate
 export const VAT_PCT = 0.12; // НДС, applied to (customs value + duty)
-export const CLEARANCE_BRV = 2.5; // таможенный сбор за оформление
+export const CLEARANCE_BRV = 2.5; // таможенный сбор за оформление (cars)
+
+// Motorcycle (HS 8711) — simpler: no age, no per-cc, no utilization fee, and a
+// 1-BRV clearance. Duty is flat by origin/fuel. (Probed + validated from the bot.)
+export type VehicleCategory = "car" | "moto";
+export const MOTO_DUTY_PCT = 20; // petrol, certified non-FTA (×2 if no certificate; FTA/electric → 0)
+export const MOTO_CLEARANCE_BRV = 1;
 
 /** Duty base for a PETROL/DIESEL car, non-FTA origin WITH certificate, by age:
  *  [percent of customs value, USD per cm³]. No-cert doubles it; FTA → 0; EV → 0;
@@ -60,6 +66,7 @@ const round0 = (n: number) => Math.round(n);
 export interface CustomsInput {
   priceUsd: number;
   kind: VehicleKind;
+  category?: VehicleCategory; // "car" (default) | "moto"
   age?: VehicleAge; // default "new"
   origin?: OriginClass; // default "certified"
   engineCc?: number; // ICE/hybrid duty + utilization
@@ -101,6 +108,19 @@ export function computeCustomsUz(input: CustomsInput): CustomsResult {
   const customsValue = price + delivery;
   const toUsd = (sum: number) => sum / usdUzs;
   const lines: CustomsLine[] = [];
+
+  // ── Motorcycle path (HS 8711): flat duty, no per-cc, no utilization, 1-BRV fee.
+  if ((input.category || "car") === "moto") {
+    const exemptM = kind === "electric" || kind === "phev" || origin === "fta";
+    const dutyPctM = exemptM ? 0 : origin === "uncertified" ? MOTO_DUTY_PCT * 2 : MOTO_DUTY_PCT;
+    const dutyM = customsValue * (dutyPctM / 100);
+    if (dutyPctM > 0) lines.push({ key: "duty", detail: `${dutyPctM}%`, usdValue: round0(dutyM) });
+    lines.push({ key: "vat", detail: "12%", usdValue: round0((customsValue + dutyM) * VAT_PCT) });
+    const feeSumM = MOTO_CLEARANCE_BRV * brv;
+    lines.push({ key: "clearance", detail: `${MOTO_CLEARANCE_BRV} БРВ`, sumValue: feeSumM, usdValue: round0(toUsd(feeSumM)) });
+    const costM = lines.reduce((s, l) => s + l.usdValue, 0);
+    return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(costM), totalUsd: round0(customsValue + costM), usdUzs, brvSum: brv };
+  }
 
   // Customs duty (Таможенная пошлина).
   const rate = dutyRate(kind, age, origin);

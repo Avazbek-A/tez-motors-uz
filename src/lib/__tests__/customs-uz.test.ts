@@ -27,6 +27,23 @@ describe("computeCustomsUz — validated against @autodeklarantbot", () => {
   });
 });
 
+describe("motorcycle (HS 8711) — validated against @autodeklarantbot", () => {
+  const M = (over: Partial<Parameters<typeof computeCustomsUz>[0]>) =>
+    computeCustomsUz({ priceUsd: 5000, category: "moto", usdUzs: 12012.12, ...over } as Parameters<typeof computeCustomsUz>[0]);
+  it("petrol certified: 20% duty, no util, 1-BRV fee → ~$1,754", () => {
+    const r = M({ kind: "petrol", origin: "certified" });
+    expect(r.lines.find((l) => l.key === "duty")!.detail).toBe("20%");
+    expect(r.lines.find((l) => l.key === "util")).toBeUndefined(); // no utilization for motos
+    expect(r.customsCostUsd).toBe(1754);
+  });
+  it("petrol no certificate: duty ×2 (40%) → ~$2,874", () => {
+    expect(M({ kind: "petrol", origin: "uncertified" }).customsCostUsd).toBe(2874);
+  });
+  it("electric: 0% duty → ~$634", () => {
+    expect(M({ kind: "electric", origin: "certified" }).customsCostUsd).toBe(634);
+  });
+});
+
 describe("rate structure", () => {
   it("no certificate doubles the certified duty rate", () => {
     expect(dutyRate("petrol", "new", "uncertified")).toEqual({ pct: 30, perCc: 2 });
