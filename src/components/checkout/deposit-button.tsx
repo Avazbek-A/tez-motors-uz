@@ -66,7 +66,7 @@ export function DepositButton({
             type="button"
             onClick={() => pay("payme")}
             disabled={loading !== null}
-            className="w-full gap-2"
+            className="w-full gap-2 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center"
           >
             {loading === "payme" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
             {t("Оплатить через Payme", "Payme orqali to'lash", "Pay with Payme")}
@@ -78,7 +78,7 @@ export function DepositButton({
             onClick={() => pay("click")}
             disabled={loading !== null}
             variant={paymeEnabled ? "outline" : "default"}
-            className="w-full gap-2"
+            className="w-full gap-2 h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center"
           >
             {loading === "click" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
             {t("Оплатить через Click", "Click orqali to'lash", "Pay with Click")}

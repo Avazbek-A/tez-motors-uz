@@ -9,6 +9,7 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { TezMark } from "@/components/layout/tez-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useLocale } from "@/i18n/locale-context";
 import { locales, type Locale } from "@/i18n/config";
 
@@ -145,7 +146,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-navy text-white transition-all duration-300 flex flex-col",
+          // `dark` keeps the sidebar a permanent dark band in both themes (classic
+          // dark-sidebar + light-content admin), so its white text stays valid.
+          "dark fixed inset-y-0 left-0 z-50 bg-navy text-white transition-all duration-300 flex flex-col",
           collapsed ? "w-16" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -239,7 +242,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Language switcher (RU / UZ / EN) — shared NEXT_LOCALE cookie */}
             <div className="flex items-center rounded-lg border border-border overflow-hidden text-xs font-medium">
               {locales.map((l) => (
@@ -248,7 +251,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   onClick={() => setLocale(l)}
                   className={cn(
                     "px-2.5 py-1 uppercase transition-colors",
-                    locale === l ? "bg-navy text-white" : "text-muted-foreground hover:bg-muted",
+                    locale === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
                   )}
                   aria-pressed={locale === l}
                 >
@@ -256,8 +259,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </button>
               ))}
             </div>
-            <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center">
-              <span className="text-white text-xs font-bold">A</span>
+            <ThemeToggle />
+            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+              <span className="text-xs font-bold">A</span>
             </div>
           </div>
         </header>

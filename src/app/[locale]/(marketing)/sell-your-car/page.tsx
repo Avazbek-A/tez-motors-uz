@@ -130,7 +130,7 @@ export default function SellYourCarPage() {
                 <AlertCircle className="w-4 h-4" />{error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t.submit}
             </Button>
           </form>

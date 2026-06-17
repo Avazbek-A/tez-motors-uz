@@ -88,15 +88,15 @@ export default function AdminTeamPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-white/50 text-sm">{t.empty}</p>
+        <p className="text-muted-foreground text-sm">{t.empty}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+            <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">{t.colRep}</th>
                 <th className="px-3 py-2">{t.colRole}</th>
@@ -108,21 +108,21 @@ export default function AdminTeamPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-t border-white/5">
+                <tr key={r.id} className="border-t border-border">
                   <td className="px-3 py-2 font-medium">{r.email}</td>
-                  <td className="px-3 py-2 text-white/60">{r.role}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.role}</td>
                   <td className="px-3 py-2">{r.assigned}</td>
                   <td className="px-3 py-2">{r.closed}</td>
                   <td className="px-3 py-2">
                     {r.close_rate_pct != null ? (
-                      <span className={r.close_rate_pct >= 40 ? "text-lime" : r.close_rate_pct >= 20 ? "text-yellow-400" : "text-white/60"}>
+                      <span className={r.close_rate_pct >= 40 ? "text-lime" : r.close_rate_pct >= 20 ? "text-yellow-400" : "text-muted-foreground"}>
                         {r.close_rate_pct}%
                       </span>
                     ) : (
                       "—"
                     )}
                   </td>
-                  <td className="px-3 py-2 text-white/70">
+                  <td className="px-3 py-2 text-muted-foreground">
                     ${r.commission_accrued_usd.toLocaleString("en-US")} / ${r.commission_paid_usd.toLocaleString("en-US")}
                   </td>
                 </tr>

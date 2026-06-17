@@ -221,7 +221,7 @@ export default function ReviewsPage() {
                     <AlertCircle className="w-4 h-4 shrink-0" />{submitError}
                   </p>
                 )}
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                <Button type="submit" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={isSubmitting}>
                   {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />{t.submit}</>}
                 </Button>
               </form>

@@ -312,7 +312,7 @@ function FunnelBars({ funnel, t }: { funnel: FunnelData["funnel"]; t: (typeof CO
                 {i > 0 && <span className="text-muted-foreground font-normal text-xs ml-2">{stepPct}% {t.ofPrev}</span>}
               </span>
             </div>
-            <div className="h-3 bg-white/[0.04] rounded-full overflow-hidden">
+            <div className="h-3 bg-muted rounded-full overflow-hidden">
               <div
                 className={cn("h-full bg-gradient-to-r rounded-full transition-all duration-700", s.color)}
                 style={{ width: `${Math.max(pctOfTop, s.value > 0 ? 4 : 0)}%` }}
@@ -536,7 +536,7 @@ export default function AdminAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <DepositsChart points={funnel.deposits} uzsSuffix={t.uzsSuffix} />
-                <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between text-sm">
+                <div className="pt-3 mt-2 border-t border-border flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t.totalNd} ({funnel.days}d)</span>
                   <span className="font-bold text-emerald-400">{formatUzs(funnel.depositsTotalUzs, t.uzsSuffix)}</span>
                 </div>
@@ -563,7 +563,7 @@ export default function AdminAnalyticsPage() {
                       return funnel.bySource.map((s) => (
                         <div key={s.source} className="flex items-center gap-3">
                           <span className="text-xs font-medium w-28 shrink-0 truncate" title={s.source}>{s.source}</span>
-                          <div className="flex-1 h-6 bg-white/[0.04] rounded-lg overflow-hidden">
+                          <div className="flex-1 h-6 bg-muted rounded-lg overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-lg flex items-center justify-end px-2 transition-all duration-700"
                               style={{ width: `${(s.count / max) * 100}%`, minWidth: "1.75rem" }}
@@ -599,7 +599,7 @@ export default function AdminAnalyticsPage() {
                       <span className="w-16 text-right">{t.rate}</span>
                     </div>
                     {funnel.bySalesperson.map((rep) => (
-                      <div key={rep.id} className="flex items-center text-sm py-1.5 border-t border-white/5">
+                      <div key={rep.id} className="flex items-center text-sm py-1.5 border-t border-border">
                         <span className="flex-1 truncate" title={rep.label}>{rep.label}</span>
                         <span className="w-16 text-right font-medium">{rep.total}</span>
                         <span className="w-16 text-right font-medium">{rep.closed}</span>
@@ -653,7 +653,7 @@ export default function AdminAnalyticsPage() {
               {brandEntries.map(([brand, count]) => (
                 <div key={brand} className="flex items-center gap-3">
                   <span className="text-sm font-medium w-20 shrink-0 truncate">{brand}</span>
-                  <div className="flex-1 h-7 bg-white/[0.04] rounded-lg overflow-hidden">
+                  <div className="flex-1 h-7 bg-muted rounded-lg overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-neon-blue to-neon-blue rounded-lg flex items-center justify-end px-2 transition-all duration-700"
                       style={{ width: `${(count / maxBrandCount) * 100}%`, minWidth: "2rem" }}
@@ -680,7 +680,7 @@ export default function AdminAnalyticsPage() {
               {bodyEntries.map(([type, count]) => (
                 <div key={type} className="flex items-center gap-3">
                   <span className="text-sm font-medium w-24 shrink-0 capitalize">{type}</span>
-                  <div className="flex-1 h-7 bg-white/[0.04] rounded-lg overflow-hidden">
+                  <div className="flex-1 h-7 bg-muted rounded-lg overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-neon-purple to-neon-purple rounded-lg flex items-center justify-end px-2 transition-all duration-700"
                       style={{ width: `${(count / maxBodyCount) * 100}%`, minWidth: "2rem" }}
@@ -767,7 +767,7 @@ export default function AdminAnalyticsPage() {
                       <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", color)}>{t[labelKey]}</span>
                       <span className="font-bold">{count} <span className="text-muted-foreground font-normal text-xs">({pct}%)</span></span>
                     </div>
-                    <div className="h-2 bg-white/[0.04] rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-neon-blue to-neon-blue rounded-full transition-all duration-700"
                         style={{ width: `${pct}%` }}
@@ -776,7 +776,7 @@ export default function AdminAnalyticsPage() {
                   </div>
                 );
               })}
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-sm">
+              <div className="pt-2 border-t border-border flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{t.conversionRate}</span>
                 <span className="font-bold text-green-400">{conversionRate}%</span>
               </div>

@@ -142,7 +142,7 @@ export default function AdminFinancingPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-white/60">
+      <div className="flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
       </div>
     );
@@ -156,23 +156,23 @@ export default function AdminFinancingPage() {
           <h1 className="text-xl font-bold">{t.financingTitle}</h1>
         </div>
         {apps.length === 0 ? (
-          <p className="text-white/50 text-sm">{t.noApplications}</p>
+          <p className="text-muted-foreground text-sm">{t.noApplications}</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+              <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
                 <tr><th className="px-3 py-2">{t.colCustomer}</th><th className="px-3 py-2">{t.colTerms}</th><th className="px-3 py-2">{t.colEmployment}</th><th className="px-3 py-2">{t.colStatus}</th></tr>
               </thead>
               <tbody>
                 {apps.map((a) => (
-                  <tr key={a.id} className="border-t border-white/5">
-                    <td className="px-3 py-2"><div className="font-medium">{a.customer_name}</div><div className="text-white/50">{a.customer_phone}</div></td>
-                    <td className="px-3 py-2 text-white/70">
+                  <tr key={a.id} className="border-t border-border">
+                    <td className="px-3 py-2"><div className="font-medium">{a.customer_name}</div><div className="text-muted-foreground">{a.customer_phone}</div></td>
+                    <td className="px-3 py-2 text-muted-foreground">
                       {a.term_months ? t.months(a.term_months) : "—"}{a.down_pct != null ? t.downPct(a.down_pct) : ""}{a.estimated_monthly ? t.perMonth(Math.round(a.estimated_monthly)) : ""}
                     </td>
-                    <td className="px-3 py-2 text-white/60">{a.employment || "—"}{a.income_band ? ` · ${a.income_band}` : ""}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{a.employment || "—"}{a.income_band ? ` · ${a.income_band}` : ""}</td>
                     <td className="px-3 py-2">
-                      <select value={a.status} onChange={(e) => setStatus("financing", a.id, e.target.value)} className="rounded border border-white/15 bg-black/20 px-2 py-1 text-xs">
+                      <select value={a.status} onChange={(e) => setStatus("financing", a.id, e.target.value)} className="rounded border border-border bg-muted px-2 py-1 text-xs">
                         {APP_STATUSES.map((s) => <option key={s} value={s}>{t.appStatus[s] ?? s}</option>)}
                       </select>
                     </td>
@@ -190,21 +190,21 @@ export default function AdminFinancingPage() {
           <h2 className="text-lg font-bold">{t.insuranceTitle}</h2>
         </div>
         {ins.length === 0 ? (
-          <p className="text-white/50 text-sm">{t.noInsuranceLeads}</p>
+          <p className="text-muted-foreground text-sm">{t.noInsuranceLeads}</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+              <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
                 <tr><th className="px-3 py-2">{t.colCustomer}</th><th className="px-3 py-2">{t.colType}</th><th className="px-3 py-2">{t.colEstPremium}</th><th className="px-3 py-2">{t.colStatus}</th></tr>
               </thead>
               <tbody>
                 {ins.map((l) => (
-                  <tr key={l.id} className="border-t border-white/5">
-                    <td className="px-3 py-2"><div className="font-medium">{l.customer_name || "—"}</div><div className="text-white/50">{l.customer_phone}</div></td>
-                    <td className="px-3 py-2 uppercase text-white/70">{l.type}</td>
-                    <td className="px-3 py-2 text-white/70">{l.estimated_premium_usd ? t.perYear(Math.round(l.estimated_premium_usd)) : "—"}</td>
+                  <tr key={l.id} className="border-t border-border">
+                    <td className="px-3 py-2"><div className="font-medium">{l.customer_name || "—"}</div><div className="text-muted-foreground">{l.customer_phone}</div></td>
+                    <td className="px-3 py-2 uppercase text-muted-foreground">{l.type}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{l.estimated_premium_usd ? t.perYear(Math.round(l.estimated_premium_usd)) : "—"}</td>
                     <td className="px-3 py-2">
-                      <select value={l.status} onChange={(e) => setStatus("insurance", l.id, e.target.value)} className="rounded border border-white/15 bg-black/20 px-2 py-1 text-xs">
+                      <select value={l.status} onChange={(e) => setStatus("insurance", l.id, e.target.value)} className="rounded border border-border bg-muted px-2 py-1 text-xs">
                         {INS_STATUSES.map((s) => <option key={s} value={s}>{t.insStatus[s] ?? s}</option>)}
                       </select>
                     </td>

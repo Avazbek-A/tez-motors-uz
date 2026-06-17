@@ -167,7 +167,7 @@ export default function FavoritesPage() {
               />
               <Turnstile onToken={setTurnstileToken} />
               {message && <p className="text-sm text-foreground/70">{message}</p>}
-              <Button onClick={submitWatch} className="w-full" disabled={!selectedCar || !email || !targetPrice}>
+              <Button onClick={submitWatch} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={!selectedCar || !email || !targetPrice}>
                 {locale === "ru" ? "Сохранить" : "Save watch"}
               </Button>
             </div>

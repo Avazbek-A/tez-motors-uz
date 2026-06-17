@@ -221,7 +221,7 @@ export default function ServicesContent() {
               </div>
               <Turnstile onToken={setTurnstileToken} />
               {submitError && <p className="text-sm text-neon-pink">{submitError}</p>}
-              <Button type="submit" disabled={submitting} className="w-full">
+              <Button type="submit" disabled={submitting} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : b.submit}
               </Button>
             </form>

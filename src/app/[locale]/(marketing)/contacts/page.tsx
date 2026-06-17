@@ -178,7 +178,7 @@ export default function ContactsPage() {
                     <AlertCircle className="w-4 h-4 shrink-0" />{formError}
                   </p>
                 )}
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                <Button type="submit" size="lg" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (

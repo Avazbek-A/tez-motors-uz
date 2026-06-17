@@ -198,7 +198,7 @@ export default function AccountPage() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
                 <Turnstile onToken={setTurnstileToken} />
                 {error && <p className="text-sm text-neon-pink">{error}</p>}
-                <Button onClick={requestOtp} className="w-full" disabled={busy || phone.length < 7}>
+                <Button onClick={requestOtp} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={busy || phone.length < 7}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Получить код", "Kod olish", "Get code")}
                 </Button>
               </>
@@ -215,7 +215,7 @@ export default function AccountPage() {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
                 />
                 {error && <p className="text-sm text-neon-pink">{error}</p>}
-                <Button onClick={verifyOtp} className="w-full" disabled={busy || code.length !== 6}>
+                <Button onClick={verifyOtp} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={busy || code.length !== 6}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("Войти", "Kirish", "Sign in")}
                 </Button>
                 <button

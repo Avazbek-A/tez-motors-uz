@@ -583,7 +583,7 @@ function CatalogContent({ initialFilters, basePath = "/catalog", initialCars, in
             </div>
 
             {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full">
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                 <X className="w-4 h-4" />
                 {dictionary.catalog.filters.reset}
               </Button>

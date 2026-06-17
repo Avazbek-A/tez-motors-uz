@@ -171,15 +171,15 @@ export default function AdminTenantsPage() {
         <h1 className="text-xl font-bold">{tx.title}</h1>
       </div>
 
-      <div className={`rounded-lg border p-3 text-sm ${enabled ? "border-lime/40 bg-lime/10" : "border-white/10 bg-white/5 text-white/60"}`}>
+      <div className={`rounded-lg border p-3 text-sm ${enabled ? "border-lime/40 bg-lime/10" : "border-border bg-card text-muted-foreground"}`}>
         {tx.modePrefix} <strong>{enabled ? tx.on : tx.off}</strong>.{" "}
         {enabled ? tx.modeOn : tx.modeOff}
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
-        <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={tx.slugPlaceholder} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tx.namePlaceholder} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
-        <input value={host} onChange={(e) => setHost(e.target.value)} placeholder={tx.hostPlaceholder} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
+      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-4">
+        <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={tx.slugPlaceholder} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={tx.namePlaceholder} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
+        <input value={host} onChange={(e) => setHost(e.target.value)} placeholder={tx.hostPlaceholder} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
         <button onClick={create} disabled={saving || slug.trim().length < 2 || name.trim().length < 1} className="inline-flex items-center gap-1 rounded bg-lime px-3 py-2 text-sm font-medium text-navy disabled:opacity-50">
           <Plus className="h-4 w-4" /> {tx.addTenant}
         </button>
@@ -187,27 +187,27 @@ export default function AdminTenantsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> {tx.loading}</div>
+        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {tx.loading}</div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+            <thead className="bg-card text-left text-xs uppercase text-muted-foreground">
               <tr><th className="px-3 py-2">{tx.thSlug}</th><th className="px-3 py-2">{tx.thName}</th><th className="px-3 py-2">{tx.thHost}</th><th className="px-3 py-2">{tx.thStatus}</th><th className="px-3 py-2"></th></tr>
             </thead>
             <tbody>
               {tenants.map((t) => {
                 const isDefault = t.id === defaultId;
                 return (
-                  <tr key={t.id} className="border-t border-white/5">
-                    <td className="px-3 py-2 font-mono">{t.slug}{isDefault && <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">{tx.default}</span>}</td>
+                  <tr key={t.id} className="border-t border-border">
+                    <td className="px-3 py-2 font-mono">{t.slug}{isDefault && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{tx.default}</span>}</td>
                     <td className="px-3 py-2">{t.name}</td>
-                    <td className="px-3 py-2 text-white/60">{t.primary_host || "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{t.primary_host || "—"}</td>
                     <td className="px-3 py-2">
                       <span className={t.status === "active" ? "text-lime" : "text-red-400"}>{t.status}</span>
                     </td>
                     <td className="px-3 py-2 text-right">
                       {!isDefault && (
-                        <button onClick={() => setStatus(t.id, t.status === "active" ? "suspended" : "active")} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">
+                        <button onClick={() => setStatus(t.id, t.status === "active" ? "suspended" : "active")} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">
                           {t.status === "active" ? tx.suspend : tx.activate}
                         </button>
                       )}

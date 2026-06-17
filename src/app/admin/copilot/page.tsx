@@ -128,11 +128,11 @@ export default function AdminCopilotPage() {
       <div className="flex-1 space-y-3 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--card)] p-4">
         {messages.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-            <div className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-[var(--accent)] text-white" : "bg-[var(--muted)] text-foreground"}`}>
+            <div className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${m.role === "user" ? "bg-[var(--accent)] text-primary-foreground" : "bg-[var(--muted)] text-foreground"}`}>
               {m.text}
               {m.proposed && (
                 <div className="mt-2 flex gap-2">
-                  <button onClick={() => send("да", true)} disabled={busy} className="inline-flex items-center gap-1 rounded bg-[var(--success)] px-2 py-1 text-xs text-white disabled:opacity-50">
+                  <button onClick={() => send("да", true)} disabled={busy} className="inline-flex items-center gap-1 rounded bg-[var(--success)] px-2 py-1 text-xs text-primary-foreground disabled:opacity-50">
                     <Check className="h-3 w-3" /> {t.confirm}
                   </button>
                   <button onClick={() => send("нет")} disabled={busy} className="inline-flex items-center gap-1 rounded bg-[var(--muted)] px-2 py-1 text-xs disabled:opacity-50">
@@ -161,7 +161,7 @@ export default function AdminCopilotPage() {
           placeholder={t.placeholder}
           className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
         />
-        <button type="submit" disabled={busy || !input.trim()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm text-white disabled:opacity-50">
+        <button type="submit" disabled={busy || !input.trim()} className="inline-flex items-center gap-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm text-primary-foreground disabled:opacity-50">
           <Send className="h-4 w-4" />
         </button>
       </form>

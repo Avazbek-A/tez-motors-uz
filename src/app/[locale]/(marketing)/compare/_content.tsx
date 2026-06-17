@@ -271,7 +271,7 @@ export default function CompareContent({ initialIds }: { initialIds?: string[] }
                 ))}
               </div>
               <div className="mt-4 pt-4 border-t">
-                <Button variant="outline" className="w-full" onClick={() => setShowPicker(null)}>
+                <Button variant="outline" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" onClick={() => setShowPicker(null)}>
                   {locale === "ru" ? "Закрыть" : "Close"}
                 </Button>
               </div>

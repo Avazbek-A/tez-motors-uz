@@ -99,7 +99,7 @@ export function ContactForm() {
                   <AlertCircle className="w-4 h-4 shrink-0" />{formError}
                 </p>
               )}
-              <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold" disabled={isSubmitting}>
+              <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-auto min-h-13 whitespace-normal py-2.5 leading-snug text-center" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" />{dictionary.contact.submit}</>}
               </Button>
             </form>

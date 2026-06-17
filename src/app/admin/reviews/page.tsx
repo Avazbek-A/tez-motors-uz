@@ -335,7 +335,7 @@ export default function AdminReviewsPage() {
                       <Star
                         key={i}
                         className={`w-4 h-4 ${
-                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-white/15"
+                          i < review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
                         }`}
                       />
                     ))}
@@ -446,7 +446,7 @@ function ReviewFormModal({ review, onClose, onSaved }: { review: Review | null; 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl">
+      <div className="animate-fade-in relative bg-card border border-border rounded-2xl w-full max-w-lg p-8 shadow-2xl">
         <h2 className="text-xl font-bold mb-6">
           {isEditing ? t.editReview : t.addReviewTitle}
         </h2>

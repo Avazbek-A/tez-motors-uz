@@ -353,7 +353,7 @@ export default function CalculatorContent() {
                 />
               </div>
 
-              <Button type="submit" size="xl" className="w-full">
+              <Button type="submit" size="xl" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                 <Calculator className="w-5 h-5" />
                 {dictionary.calculator.calculate}
               </Button>
@@ -423,7 +423,7 @@ export default function CalculatorContent() {
                       {leadError && (
                         <p className="text-sm text-red-400">{leadError}</p>
                       )}
-                      <Button type="submit" size="lg" className="w-full" disabled={leadSubmitting}>
+                      <Button type="submit" size="lg" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={leadSubmitting}>
                         {leadSubmitting ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (

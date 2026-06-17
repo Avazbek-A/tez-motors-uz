@@ -282,7 +282,7 @@ export default function OrderContent({ models }: { models: ModelCatalog[] }) {
                 </p>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading || !form.name || !form.phone}>
+              <Button type="submit" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={loading || !form.name || !form.phone}>
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (

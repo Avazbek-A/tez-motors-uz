@@ -54,15 +54,15 @@ export default function AdminAudiencesPage() {
         <Users2 className="h-5 w-5 text-lime" />
         <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
-      <p className="text-sm text-white/60 max-w-2xl">
+      <p className="text-sm text-muted-foreground max-w-2xl">
         {t.intro}
       </p>
       <div className="space-y-3">
         {AUDIENCE_KEYS.map((key) => (
-          <div key={key} className="flex items-center justify-between gap-4 rounded-lg border border-white/10 bg-white/5 p-4">
+          <div key={key} className="flex items-center justify-between gap-4 rounded-lg border border-border bg-card p-4">
             <div>
               <div className="font-medium">{t.audiences[key].label}</div>
-              <div className="text-xs text-white/50">{t.audiences[key].use}</div>
+              <div className="text-xs text-muted-foreground">{t.audiences[key].use}</div>
             </div>
             <a
               href={`/api/admin/audience/export?audience=${key}`}

@@ -434,7 +434,7 @@ export default function AdminInquiriesPage() {
             className={cn(
               "px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors",
               statusFilter === status
-                ? "bg-navy text-white"
+                ? "bg-primary text-primary-foreground"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             )}
           >
@@ -488,7 +488,7 @@ export default function AdminInquiriesPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
                           <span className="text-sm font-bold text-foreground">
                             {inquiry.name.charAt(0).toUpperCase()}
                           </span>
@@ -530,13 +530,13 @@ export default function AdminInquiriesPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedInquiry(null)} />
           <div
-            className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl"
+            className="animate-fade-in relative bg-card border border-border rounded-2xl w-full max-w-lg p-8 shadow-2xl"
           >
             <h2 className="text-xl font-bold mb-4">{t.detailsTitle}</h2>
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-white/[0.06] flex items-center justify-center">
-                  <span className="text-lg font-bold text-white">
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                  <span className="text-lg font-bold text-foreground">
                     {selectedInquiry.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -546,8 +546,8 @@ export default function AdminInquiriesPage() {
                 </div>
               </div>
               {selectedInquiry.message && (
-                <div className="bg-white/[0.04] rounded-xl p-4">
-                  <p className="text-sm text-white/80">{selectedInquiry.message}</p>
+                <div className="bg-muted rounded-xl p-4">
+                  <p className="text-sm text-foreground/80">{selectedInquiry.message}</p>
                 </div>
               )}
 
@@ -557,7 +557,7 @@ export default function AdminInquiriesPage() {
                   <textarea
                     value={selectedInquiry.notes ?? ""}
                     onChange={(e) => setSelectedInquiry({ ...selectedInquiry, notes: e.target.value })}
-                    className="w-full min-h-[96px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
+                    className="w-full min-h-[96px] rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground"
                     placeholder={t.notesPlaceholder}
                   />
                 </div>
@@ -583,7 +583,7 @@ export default function AdminInquiriesPage() {
                         className={cn(
                           "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
                           selectedInquiry.status === status
-                            ? "bg-navy text-white border-navy"
+                            ? "bg-primary text-primary-foreground border-primary"
                             : "border-border text-muted-foreground hover:bg-muted"
                         )}
                       >
@@ -595,25 +595,25 @@ export default function AdminInquiriesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.fieldType}</p>
-                  <p className="font-medium text-white">{t.typeLabels[selectedInquiry.type] || selectedInquiry.type}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.fieldType}</p>
+                  <p className="font-medium text-foreground">{t.typeLabels[selectedInquiry.type] || selectedInquiry.type}</p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.fieldStatus}</p>
-                  <p className="font-medium text-white">{t.statusLabels[selectedInquiry.status as StatusKey] || selectedInquiry.status}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.fieldStatus}</p>
+                  <p className="font-medium text-foreground">{t.statusLabels[selectedInquiry.status as StatusKey] || selectedInquiry.status}</p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.fieldSource}</p>
-                  <p className="font-medium text-white">{selectedInquiry.source_page || t.na}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.fieldSource}</p>
+                  <p className="font-medium text-foreground">{selectedInquiry.source_page || t.na}</p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.fieldDate}</p>
-                  <p className="font-medium text-white">{new Date(selectedInquiry.created_at).toLocaleString()}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.fieldDate}</p>
+                  <p className="font-medium text-foreground">{new Date(selectedInquiry.created_at).toLocaleString()}</p>
                 </div>
               </div>
               {/* Proactive AI sales: draft a reply, edit if needed, send in one tap. */}
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-border">
                 {!aiDraft ? (
                   <Button variant="outline" size="sm" onClick={generateAiDraft} disabled={aiDraftLoading} className="w-full">
                     {aiDraftLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> {t.draftAiReply}</>}
@@ -631,7 +631,7 @@ export default function AdminInquiriesPage() {
                     <textarea
                       value={aiDraft}
                       onChange={(e) => setAiDraft(e.target.value)}
-                      className="w-full min-h-[100px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
+                      className="w-full min-h-[100px] rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground"
                     />
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(aiDraft)} className="flex-1">{t.copy}</Button>
@@ -647,7 +647,7 @@ export default function AdminInquiriesPage() {
 
               {/* Acquisition → inventory: turn a trade-in into a used listing. */}
               {selectedInquiry.type === "trade_in" && !(selectedInquiry as { metadata?: Record<string, unknown> }).metadata?.converted_car_id && (
-                <div className="pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-border">
                   <Button
                     variant="outline"
                     size="sm"
@@ -682,7 +682,7 @@ export default function AdminInquiriesPage() {
                 </div>
               )}
 
-              <div className="flex justify-between pt-4 border-t border-white/10">
+              <div className="flex justify-between pt-4 border-t border-border">
                 <Button
                   variant="destructive"
                   size="sm"

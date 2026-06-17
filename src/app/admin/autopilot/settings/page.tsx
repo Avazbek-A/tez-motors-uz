@@ -140,7 +140,7 @@ export default function AutopilotSettingsPage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm text-white disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {t.save}</button>
+        <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-sm text-[var(--accent-foreground)] disabled:opacity-50">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {t.save}</button>
         {msg && <span className="text-sm text-muted-foreground">{msg}</span>}
       </div>
     </div>

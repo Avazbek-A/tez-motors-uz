@@ -122,7 +122,7 @@ export default function ScooterDetailClient({ scooter: s }: { scooter: Scooter }
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={t.name} required />
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t.phone} required />
                 <textarea value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder={t.msg} rows={3} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
-                <Button type="submit" disabled={status === "sending"} className="w-full">
+                <Button type="submit" disabled={status === "sending"} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                   {status === "sending" ? <Loader2 className="w-4 h-4 animate-spin" /> : t.send}
                 </Button>
                 {status === "error" && <p className="text-xs text-[var(--danger,#e11)]">{t.err}</p>}

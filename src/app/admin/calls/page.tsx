@@ -128,21 +128,21 @@ export default function AdminCallsPage() {
         <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
-      <div className="space-y-2 rounded-lg border border-white/10 bg-white/5 p-4">
+      <div className="space-y-2 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-wrap gap-2">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePlaceholder} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
-          <select value={direction} onChange={(e) => setDirection(e.target.value as "inbound" | "outbound")} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm">
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePlaceholder} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
+          <select value={direction} onChange={(e) => setDirection(e.target.value as "inbound" | "outbound")} className="rounded border border-border bg-muted px-3 py-2 text-sm">
             <option value="inbound">{t.inbound}</option>
             <option value="outbound">{t.outbound}</option>
           </select>
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder={t.durationPlaceholder} inputMode="numeric" className="w-32 rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
+          <input value={duration} onChange={(e) => setDuration(e.target.value)} placeholder={t.durationPlaceholder} inputMode="numeric" className="w-32 rounded border border-border bg-muted px-3 py-2 text-sm" />
         </div>
         <textarea
           value={transcript}
           onChange={(e) => setTranscript(e.target.value)}
           placeholder={t.transcriptPlaceholder}
           rows={3}
-          className="w-full rounded border border-white/15 bg-black/20 px-3 py-2 text-sm"
+          className="w-full rounded border border-border bg-muted px-3 py-2 text-sm"
         />
         <button onClick={logCall} disabled={saving || !phone.trim()} className="inline-flex items-center gap-1 rounded bg-lime px-3 py-2 text-sm font-medium text-navy disabled:opacity-50">
           <Plus className="h-4 w-4" /> {saving ? t.saving : t.logCall}
@@ -150,28 +150,28 @@ export default function AdminCallsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : calls.length === 0 ? (
-        <p className="text-white/50 text-sm">{t.noCalls}</p>
+        <p className="text-muted-foreground text-sm">{t.noCalls}</p>
       ) : (
         <div className="space-y-2">
           {calls.map((c) => (
-            <div key={c.id} className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm">
+            <div key={c.id} className="rounded-lg border border-border bg-card p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-medium">{c.customer_phone || "—"}</span>
-                <span className="flex items-center gap-2 text-xs text-white/50">
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="uppercase">{c.direction}</span>
                   {c.duration_sec != null && <span>{Math.round(c.duration_sec / 60)}{t.minutesSuffix}</span>}
                   {c.lead_score != null && (
-                    <span className={c.lead_score >= 60 ? "text-lime" : c.lead_score >= 30 ? "text-yellow-400" : "text-white/50"}>
+                    <span className={c.lead_score >= 60 ? "text-lime" : c.lead_score >= 30 ? "text-yellow-400" : "text-muted-foreground"}>
                       {t.scorePrefix} {c.lead_score}
                     </span>
                   )}
                 </span>
               </div>
-              {c.summary && <p className="mt-1 whitespace-pre-wrap text-white/70">{c.summary}</p>}
+              {c.summary && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{c.summary}</p>}
             </div>
           ))}
         </div>

@@ -354,7 +354,7 @@ export default function AdminOrdersPage() {
             onClick={() => setStatusFilter(status)}
             className={cn(
               "px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors",
-              statusFilter === status ? "bg-navy text-white" : "bg-muted text-muted-foreground hover:bg-muted/80",
+              statusFilter === status ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80",
             )}
           >
             {status === "all" ? t.all : t.status[status]}
@@ -395,7 +395,7 @@ export default function AdminOrdersPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
                           <Package className="w-5 h-5 text-muted-foreground" />
                         </div>
                         <div>
@@ -434,7 +434,7 @@ export default function AdminOrdersPage() {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelected(null)} />
-          <div className="animate-fade-in relative bg-card border border-white/10 rounded-2xl w-full max-w-lg p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="animate-fade-in relative bg-card border border-border rounded-2xl w-full max-w-lg p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">{t.orderHeading(selected.reference_code)}</h2>
               <Badge variant={statusVariant[selected.status] || "default"}>
@@ -444,23 +444,23 @@ export default function AdminOrdersPage() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.customer}</p>
-                  <p className="font-medium text-white">{selected.customer_name}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.customer}</p>
+                  <p className="font-medium text-foreground">{selected.customer_name}</p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.phone}</p>
-                  <p className="font-medium text-white">{selected.customer_phone}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.phone}</p>
+                  <p className="font-medium text-foreground">{selected.customer_phone}</p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.car}</p>
-                  <p className="font-medium text-white">
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.car}</p>
+                  <p className="font-medium text-foreground">
                     {carOf(selected) ? `${carOf(selected)!.brand} ${carOf(selected)!.model} ${carOf(selected)!.year}` : "—"}
                   </p>
                 </div>
-                <div className="bg-white/[0.04] rounded-lg p-3">
-                  <p className="text-white/40 text-xs">{t.email}</p>
-                  <p className="font-medium text-white break-all">{selected.customer_email || "—"}</p>
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-muted-foreground text-xs">{t.email}</p>
+                  <p className="font-medium text-foreground break-all">{selected.customer_email || "—"}</p>
                 </div>
               </div>
 
@@ -476,7 +476,7 @@ export default function AdminOrdersPage() {
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50",
                         selected.status === status
-                          ? "bg-navy text-white border-navy"
+                          ? "bg-primary text-primary-foreground border-primary"
                           : "border-border text-muted-foreground hover:bg-muted",
                       )}
                     >
@@ -492,7 +492,7 @@ export default function AdminOrdersPage() {
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full min-h-[72px] rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-white"
+                  className="w-full min-h-[72px] rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground"
                   placeholder={t.notePlaceholder}
                 />
                 <div className="flex justify-end mt-2">
@@ -523,34 +523,34 @@ export default function AdminOrdersPage() {
                       href={`/api/admin/orders/${selected.id}/documents/${type}?locale=ru`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+                      className="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
                     >
                       {label}
                     </a>
                   ))}
                 </div>
-                <p className="mt-1 text-[10px] text-white/40">{t.documentsHint}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">{t.documentsHint}</p>
               </div>
 
               {/* Event history */}
               <div>
                 <p className="text-sm font-medium mb-2">{t.history}</p>
                 {events.length === 0 ? (
-                  <p className="text-xs text-white/40">{t.noEvents}</p>
+                  <p className="text-xs text-muted-foreground">{t.noEvents}</p>
                 ) : (
                   <div className="space-y-2">
                     {events.map((ev) => (
-                      <div key={ev.id} className="flex items-start gap-2 text-sm bg-white/[0.03] rounded-lg p-3">
-                        <Clock className="w-3.5 h-3.5 text-white/40 mt-0.5 shrink-0" />
+                      <div key={ev.id} className="flex items-start gap-2 text-sm bg-muted rounded-lg p-3">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-white/80">{t.status[ev.status] || ev.status}</p>
+                          <p className="text-foreground">{t.status[ev.status] || ev.status}</p>
                           {ev.note && (
-                            <p className="text-xs text-white/50 mt-0.5 flex items-start gap-1">
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-start gap-1">
                               <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
                               {ev.note}
                             </p>
                           )}
-                          <p className="text-xs text-white/30 mt-0.5">{new Date(ev.created_at).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{new Date(ev.created_at).toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -558,7 +558,7 @@ export default function AdminOrdersPage() {
                 )}
               </div>
 
-              <div className="flex justify-between pt-4 border-t border-white/10">
+              <div className="flex justify-between pt-4 border-t border-border">
                 <Button variant="outline" onClick={() => setSelected(null)}>{t.close}</Button>
                 <Button asChild>
                   <a href={`tel:${selected.customer_phone}`}>

@@ -130,18 +130,18 @@ export default function AdminSuppliersPage() {
         <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
+      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-card p-4">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t.supplierNamePlaceholder}
-          className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm"
+          className="rounded border border-border bg-muted px-3 py-2 text-sm"
         />
         <input
           value={whatsapp}
           onChange={(e) => setWhatsapp(e.target.value)}
           placeholder={t.whatsappPlaceholder}
-          className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm"
+          className="rounded border border-border bg-muted px-3 py-2 text-sm"
         />
         <button
           onClick={add}
@@ -153,15 +153,15 @@ export default function AdminSuppliersPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : rows.length === 0 ? (
-        <p className="text-white/50 text-sm">{t.noSuppliers}</p>
+        <p className="text-muted-foreground text-sm">{t.noSuppliers}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+            <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">{t.thSupplier}</th>
                 <th className="px-3 py-2">{t.thCountry}</th>
@@ -174,9 +174,9 @@ export default function AdminSuppliersPage() {
             </thead>
             <tbody>
               {rows.map((s) => (
-                <tr key={s.id} className="border-t border-white/5">
+                <tr key={s.id} className="border-t border-border">
                   <td className="px-3 py-2 font-medium">{s.name}</td>
-                  <td className="px-3 py-2 text-white/60">{s.country || "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{s.country || "—"}</td>
                   <td className="px-3 py-2">{s.orders}</td>
                   <td className="px-3 py-2">{s.avg_unit_cost_usd ? `$${s.avg_unit_cost_usd.toLocaleString("en-US")}` : "—"}</td>
                   <td className="px-3 py-2">
@@ -188,10 +188,10 @@ export default function AdminSuppliersPage() {
                       "—"
                     )}
                   </td>
-                  <td className="px-3 py-2 text-white/60">
+                  <td className="px-3 py-2 text-muted-foreground">
                     {s.lead_time_days != null ? `${s.lead_time_days}d` : "—"} / {s.moq ?? "—"}
                   </td>
-                  <td className="px-3 py-2 text-white/60">
+                  <td className="px-3 py-2 text-muted-foreground">
                     {s.whatsapp ? (
                       <a href={`https://wa.me/${s.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-lime hover:underline">
                         {s.whatsapp}

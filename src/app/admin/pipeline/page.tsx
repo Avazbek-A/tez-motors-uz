@@ -283,9 +283,9 @@ export default function AdminPipelinePage() {
               onDragLeave={() => setDragOverCol((c) => (c === col.key ? null : c))}
               onDrop={() => onDrop(col.key)}
               className={cn(
-                "rounded-2xl border bg-white/[0.02] border-t-4 p-3 min-h-[200px] transition-colors",
+                "rounded-2xl border bg-card border-t-4 p-3 min-h-[200px] transition-colors",
                 col.accent,
-                dragOverCol === col.key ? "border-lime bg-lime/5" : "border-white/10",
+                dragOverCol === col.key ? "border-lime bg-lime/5" : "border-border",
               )}
             >
               <div className="flex items-center justify-between mb-3 px-1">
@@ -304,12 +304,12 @@ export default function AdminPipelinePage() {
                     onDragStart={() => setDragId(inq.id)}
                     onDragEnd={() => { setDragId(null); setDragOverCol(null); }}
                     className={cn(
-                      "group rounded-xl border border-white/10 bg-card p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md",
+                      "group rounded-xl border border-border bg-card p-3 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md",
                       dragId === inq.id && "opacity-50",
                     )}
                   >
                     <div className="flex items-start gap-2">
-                      <GripVertical className="w-4 h-4 text-white/20 mt-0.5 shrink-0 group-hover:text-white/40" />
+                      <GripVertical className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0 group-hover:text-foreground" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm truncate">{inq.name}</p>
@@ -319,7 +319,7 @@ export default function AdminPipelinePage() {
                         {inq.message && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{inq.message}</p>
                         )}
-                        <div className="flex items-center gap-3 mt-2 text-[11px] text-white/40">
+                        <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <User className="w-3 h-3" />
                             {repLabel(inq.assigned_to)}

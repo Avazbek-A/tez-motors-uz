@@ -90,13 +90,13 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto"
         >
-          <Button size="xl" className="group h-14 px-8 bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-bright)] tracking-[0.12em] uppercase text-sm rounded-none" asChild>
+          <Button size="xl" className="group h-14 h-auto min-h-14 whitespace-normal py-2.5 leading-snug text-center px-8 bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent-bright)] tracking-[0.12em] uppercase text-sm rounded-none" asChild>
             <Link href={localizedPath(locale, "/catalog")}>
               {dictionary.hero.cta}
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Link>
           </Button>
-          <Button size="xl" variant="outline" className="group h-14 px-8 bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white font-medium tracking-wide uppercase text-sm rounded-none transition-all duration-300" asChild>
+          <Button size="xl" variant="outline" className="group h-14 h-auto min-h-14 whitespace-normal py-2.5 leading-snug text-center px-8 bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white font-medium tracking-wide uppercase text-sm rounded-none transition-all duration-300" asChild>
             <Link href={localizedPath(locale, "/calculator")}>
               {dictionary.hero.ctaSecondary}
             </Link>

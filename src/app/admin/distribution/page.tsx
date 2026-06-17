@@ -132,8 +132,8 @@ export default function AdminDistributionPage() {
         <h1 className="text-xl font-bold">{t.title}</h1>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-white/5 p-4">
-        <p className="text-sm text-white/60 mb-2">
+      <div className="rounded-lg border border-border bg-card p-4">
+        <p className="text-sm text-muted-foreground mb-2">
           {t.feedsHint}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -143,7 +143,7 @@ export default function AdminDistributionPage() {
               href={f.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-white/15 px-3 py-1 text-xs hover:bg-white/10"
+              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs hover:bg-muted"
             >
               {f.label} <ExternalLink className="h-3 w-3" />
             </a>
@@ -152,7 +152,7 @@ export default function AdminDistributionPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> {t.loading}
         </div>
       ) : (
@@ -160,12 +160,12 @@ export default function AdminDistributionPage() {
           {cars.map((car) => {
             const carListings = listings.filter((l) => l.car_id === car.id);
             return (
-              <div key={car.id} className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div key={car.id} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="font-medium">
                     {car.brand} {car.model} {car.year ?? ""}
                     {car.price_usd ? (
-                      <span className="text-white/50"> — ${Math.round(car.price_usd).toLocaleString("en-US")}</span>
+                      <span className="text-muted-foreground"> — ${Math.round(car.price_usd).toLocaleString("en-US")}</span>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -174,7 +174,7 @@ export default function AdminDistributionPage() {
                         key={ch}
                         onClick={() => generate(car.id, ch)}
                         disabled={busy === `${car.id}:${ch}`}
-                        className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10 disabled:opacity-50"
+                        className="rounded border border-border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
                       >
                         {busy === `${car.id}:${ch}` ? "…" : `+ ${ch}`}
                       </button>
@@ -185,15 +185,15 @@ export default function AdminDistributionPage() {
                 {carListings.length > 0 && (
                   <div className="mt-3 space-y-2">
                     {carListings.map((l) => (
-                      <div key={l.id} className="rounded border border-white/10 bg-black/20 p-2 text-sm">
+                      <div key={l.id} className="rounded border border-border bg-muted p-2 text-sm">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs uppercase tracking-wide text-white/50">
+                          <span className="text-xs uppercase tracking-wide text-muted-foreground">
                             {l.channel} · {l.status}
                           </span>
                           <div className="flex gap-1">
                             <button
                               onClick={() => copy(l.id, l.body || "")}
-                              className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                              className="inline-flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs hover:bg-muted"
                             >
                               {copied === l.id ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {t.copy}
                             </button>
@@ -210,14 +210,14 @@ export default function AdminDistributionPage() {
                                 href={l.external_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center rounded bg-white/10 px-2 py-1 text-xs hover:bg-white/20"
+                                className="inline-flex items-center rounded bg-muted px-2 py-1 text-xs hover:bg-muted"
                               >
                                 <ExternalLink className="h-3 w-3" />
                               </a>
                             )}
                           </div>
                         </div>
-                        <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-xs text-white/80">{l.body}</pre>
+                        <pre className="mt-1 whitespace-pre-wrap break-words font-sans text-xs text-foreground">{l.body}</pre>
                       </div>
                     ))}
                   </div>

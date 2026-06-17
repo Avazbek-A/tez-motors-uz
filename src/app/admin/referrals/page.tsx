@@ -82,27 +82,27 @@ export default function AdminReferralsPage() {
       </div>
       {totals && (
         <div className="flex flex-wrap gap-3 text-sm">
-          <div className="rounded border border-white/10 bg-white/5 px-4 py-2">{totals.referrers} {t.referrers}</div>
-          <div className="rounded border border-white/10 bg-white/5 px-4 py-2">{totals.referred} {t.referred}</div>
-          <div className="rounded border border-white/10 bg-white/5 px-4 py-2 text-lime">{totals.converted} {t.converted}</div>
+          <div className="rounded border border-border bg-card px-4 py-2">{totals.referrers} {t.referrers}</div>
+          <div className="rounded border border-border bg-card px-4 py-2">{totals.referred} {t.referred}</div>
+          <div className="rounded border border-border bg-card px-4 py-2 text-lime">{totals.converted} {t.converted}</div>
         </div>
       )}
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> {t.loading}</div>
+        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {t.loading}</div>
       ) : rows.length === 0 ? (
-        <p className="text-white/50 text-sm">{t.empty}</p>
+        <p className="text-muted-foreground text-sm">{t.empty}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-white/10">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-left text-xs uppercase text-white/50">
+            <thead className="bg-muted text-left text-xs uppercase text-muted-foreground">
               <tr><th className="px-3 py-2">#</th><th className="px-3 py-2">{t.colReferrer}</th><th className="px-3 py-2 text-right">{t.colReferred}</th><th className="px-3 py-2 text-right">{t.colConverted}</th></tr>
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id} className="border-t border-white/5">
-                  <td className="px-3 py-2 text-white/40">{i + 1}</td>
-                  <td className="px-3 py-2"><div className="font-medium">{r.name || "—"}</div><div className="text-white/50">{r.phone || ""}</div></td>
-                  <td className="px-3 py-2 text-right font-mono text-white/70">{r.referred}</td>
+                <tr key={r.id} className="border-t border-border">
+                  <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+                  <td className="px-3 py-2"><div className="font-medium">{r.name || "—"}</div><div className="text-muted-foreground">{r.phone || ""}</div></td>
+                  <td className="px-3 py-2 text-right font-mono text-muted-foreground">{r.referred}</td>
                   <td className="px-3 py-2 text-right font-mono text-lime">{r.converted}</td>
                 </tr>
               ))}

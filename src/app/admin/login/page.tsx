@@ -78,19 +78,19 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy-dark via-navy to-navy-light flex items-center justify-center p-4">
+    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mx-auto mb-4">
             <TezMark width={32} height={36} />
           </div>
-          <h1 className="text-2xl font-bold text-white">{t.title}</h1>
-          <p className="text-white/50 text-sm mt-1">{t.subtitle}</p>
+          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleLogin} className="glass rounded-2xl p-8 space-y-5">
           <div>
-            <label className="text-sm font-medium text-white/70 mb-2 block">
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">
               {t.email}
             </label>
             <Input
@@ -99,13 +99,13 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@tezmotors.uz"
               autoComplete="username"
-              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime mb-4"
+              className="bg-muted border-border text-foreground placeholder:text-muted-foreground focus:ring-lime mb-4"
             />
-            <label className="text-sm font-medium text-white/70 mb-2 block">
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">
               {t.password}
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 type="password"
                 value={password}
@@ -113,7 +113,7 @@ export default function AdminLoginPage() {
                 placeholder={t.passwordPlaceholder}
                 required
                 autoComplete="current-password"
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:ring-lime"
+                className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground focus:ring-lime"
               />
             </div>
           </div>

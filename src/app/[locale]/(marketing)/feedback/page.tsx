@@ -76,7 +76,7 @@ export default function FeedbackPage() {
               ))}
             </div>
             <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t.placeholder} rows={3} />
-            <Button onClick={submit} disabled={state === "saving" || rating < 1} className="w-full">
+            <Button onClick={submit} disabled={state === "saving" || rating < 1} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
               {state === "saving" ? <Loader2 className="w-5 h-5 animate-spin" /> : t.submit}
             </Button>
           </div>

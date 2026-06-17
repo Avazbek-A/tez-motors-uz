@@ -125,7 +125,7 @@ export function ReservationModal({
             {referenceCode && (
               <DepositButton referenceCode={referenceCode} phone={phone} className="mt-4" />
             )}
-            <Button type="button" onClick={onClose} variant="outline" className="mt-3 w-full">
+            <Button type="button" onClick={onClose} variant="outline" className="mt-3 w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
               {T.close}
             </Button>
           </div>
@@ -142,7 +142,7 @@ export function ReservationModal({
                 <AlertCircle className="w-4 h-4" />{error}
               </p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center" disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit reservation"}
             </Button>
           </form>

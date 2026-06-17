@@ -135,7 +135,7 @@ export default function SignPage() {
             <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t.code} />
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phone} />
             {error && <p className="text-sm text-red-400 flex items-center gap-1.5"><AlertCircle className="w-4 h-4" />{error}</p>}
-            <Button onClick={() => open()} disabled={loading || !code || phone.length < 5} className="w-full">
+            <Button onClick={() => open()} disabled={loading || !code || phone.length < 5} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><FileSignature className="w-5 h-5" />{t.open}</>}
             </Button>
           </div>
@@ -166,7 +166,7 @@ export default function SignPage() {
                   <span>{t.agree}</span>
                 </label>
                 {error && <p className="text-sm text-red-400 flex items-center gap-1.5"><AlertCircle className="w-4 h-4" />{error}</p>}
-                <Button onClick={submit} disabled={submitting || !agree || name.trim().length < 2} className="w-full">
+                <Button onClick={submit} disabled={submitting || !agree || name.trim().length < 2} className="w-full h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center">
                   {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><FileSignature className="w-5 h-5" />{t.sign}</>}
                 </Button>
               </div>

@@ -255,30 +255,30 @@ export default function AdminAutomationPage() {
           <Plus className="h-4 w-4" /> {t.newJourney}
         </button>
       </div>
-      <p className="text-sm text-white/50">
+      <p className="text-sm text-muted-foreground">
         {t.intro1}<strong>{PAUSED_LABEL[locale]}</strong>{t.intro2}{" "}
-        {t.placeholders}<code className="text-white/70">{"{name} {car} {price} {ref}"}</code>.
+        {t.placeholders}<code className="text-foreground/70">{"{name} {car} {price} {ref}"}</code>.
       </p>
 
       {creating && (
-        <div className="space-y-3 rounded-lg border border-white/10 bg-white/5 p-4">
+        <div className="space-y-3 rounded-lg border border-border bg-card p-4">
           <div className="flex flex-wrap gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.journeyName} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm" />
-            <select value={trigger} onChange={(e) => setTrigger(e.target.value)} className="rounded border border-white/15 bg-black/20 px-3 py-2 text-sm">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.journeyName} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
+            <select value={trigger} onChange={(e) => setTrigger(e.target.value)} className="rounded border border-border bg-muted px-3 py-2 text-sm">
               {(triggers.length ? triggers : Object.keys(triggerLabels)).map((tr) => (
                 <option key={tr} value={tr}>{triggerLabels[tr] || tr}</option>
               ))}
             </select>
           </div>
           {steps.map((s, i) => (
-            <div key={i} className="rounded border border-white/10 bg-black/20 p-3 space-y-2">
-              <div className="flex items-center gap-2 text-xs text-white/50">
+            <div key={i} className="rounded border border-border bg-muted p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>{t.step} {i + 1}</span>
                 <label className="flex items-center gap-1">
                   {t.wait}
-                  <input type="number" min={0} value={s.delayHours} onChange={(e) => setStep(i, { delayHours: Number(e.target.value) })} className="w-20 rounded border border-white/15 bg-black/30 px-2 py-1" /> h
+                  <input type="number" min={0} value={s.delayHours} onChange={(e) => setStep(i, { delayHours: Number(e.target.value) })} className="w-20 rounded border border-border bg-card px-2 py-1" /> h
                 </label>
-                <select value={s.channel || "auto"} onChange={(e) => setStep(i, { channel: e.target.value })} className="rounded border border-white/15 bg-black/30 px-2 py-1">
+                <select value={s.channel || "auto"} onChange={(e) => setStep(i, { channel: e.target.value })} className="rounded border border-border bg-card px-2 py-1">
                   <option value="auto">auto</option>
                   <option value="telegram">telegram</option>
                   <option value="email">email</option>
@@ -288,22 +288,22 @@ export default function AdminAutomationPage() {
                   <button onClick={() => setSteps((st) => st.filter((_, j) => j !== i))} className="ml-auto text-red-400 hover:text-red-300"><Trash2 className="h-3.5 w-3.5" /></button>
                 )}
               </div>
-              <textarea value={s.body} onChange={(e) => setStep(i, { body: e.target.value })} placeholder={t.bodyPlaceholder} rows={2} className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-sm" />
+              <textarea value={s.body} onChange={(e) => setStep(i, { body: e.target.value })} placeholder={t.bodyPlaceholder} rows={2} className="w-full rounded border border-border bg-card px-2 py-1 text-sm" />
               <div className="flex flex-wrap items-center gap-2">
-                <input value={s.url || ""} onChange={(e) => setStep(i, { url: e.target.value })} placeholder={t.linkUrl} className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
-                <input value={s.buttonLabel || ""} onChange={(e) => setStep(i, { buttonLabel: e.target.value })} placeholder={t.buttonLabel} className="rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
-                <label className="flex items-center gap-1 text-xs text-white/60">
+                <input value={s.url || ""} onChange={(e) => setStep(i, { url: e.target.value })} placeholder={t.linkUrl} className="rounded border border-border bg-card px-2 py-1 text-xs" />
+                <input value={s.buttonLabel || ""} onChange={(e) => setStep(i, { buttonLabel: e.target.value })} placeholder={t.buttonLabel} className="rounded border border-border bg-card px-2 py-1 text-xs" />
+                <label className="flex items-center gap-1 text-xs text-muted-foreground">
                   <input type="checkbox" checked={!!s.ai} onChange={(e) => setStep(i, { ai: e.target.checked })} /> {t.aiPersonalize}
                 </label>
               </div>
               {s.ai && (
-                <input value={s.aiPrompt || ""} onChange={(e) => setStep(i, { aiPrompt: e.target.value })} placeholder={t.aiIntentPlaceholder} className="w-full rounded border border-white/15 bg-black/30 px-2 py-1 text-xs" />
+                <input value={s.aiPrompt || ""} onChange={(e) => setStep(i, { aiPrompt: e.target.value })} placeholder={t.aiIntentPlaceholder} className="w-full rounded border border-border bg-card px-2 py-1 text-xs" />
               )}
             </div>
           ))}
           <div className="flex items-center gap-2">
             {steps.length < 12 && (
-              <button onClick={() => setSteps((s) => [...s, { delayHours: 24, body: "" }])} className="rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10">{t.addStep}</button>
+              <button onClick={() => setSteps((s) => [...s, { delayHours: 24, body: "" }])} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">{t.addStep}</button>
             )}
             <button onClick={create} disabled={saving || !name.trim() || steps.some((s) => !s.body.trim())} className="rounded bg-lime px-3 py-1.5 text-sm font-medium text-navy disabled:opacity-50">
               {saving ? t.saving : t.createPaused}
@@ -314,30 +314,30 @@ export default function AdminAutomationPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> {t.loading}</div>
+        <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> {t.loading}</div>
       ) : journeys.length === 0 ? (
-        <p className="text-white/50 text-sm">{t.noJourneys}</p>
+        <p className="text-muted-foreground text-sm">{t.noJourneys}</p>
       ) : (
         <div className="space-y-2">
           {journeys.map((j) => (
-            <div key={j.id} className="rounded-lg border border-white/10 bg-white/5 p-3">
+            <div key={j.id} className="rounded-lg border border-border bg-card p-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <span className="font-medium">{j.name}</span>
-                  <span className="ml-2 text-xs text-white/50">{triggerLabels[j.trigger_event] || j.trigger_event} · {j.step_count} {t.steps}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{triggerLabels[j.trigger_event] || j.trigger_event} · {j.step_count} {t.steps}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-muted-foreground">
                     {j.enrolled_active} {t.active} · {j.enrolled_completed} {t.done}
                     {j.enrolled_converted > 0 && (
                       <span className="text-lime"> · {j.enrolled_converted} {t.converted} ({j.conversion_rate}%)</span>
                     )}
                   </span>
-                  <span className={`rounded px-2 py-0.5 text-xs ${j.status === "active" ? "bg-lime/20 text-lime" : "bg-white/10 text-white/60"}`}>{statusLabels[j.status] || j.status}</span>
-                  <button onClick={() => toggle(j)} className="rounded border border-white/15 p-1.5 hover:bg-white/10" title={j.status === "active" ? t.pause : t.activate}>
+                  <span className={`rounded px-2 py-0.5 text-xs ${j.status === "active" ? "bg-lime/20 text-lime" : "bg-muted text-muted-foreground"}`}>{statusLabels[j.status] || j.status}</span>
+                  <button onClick={() => toggle(j)} className="rounded border border-border p-1.5 hover:bg-muted" title={j.status === "active" ? t.pause : t.activate}>
                     {j.status === "active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                   </button>
-                  <button onClick={() => remove(j.id)} className="rounded border border-white/15 p-1.5 text-red-400 hover:bg-white/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => remove(j.id)} className="rounded border border-border p-1.5 text-red-400 hover:bg-muted"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             </div>

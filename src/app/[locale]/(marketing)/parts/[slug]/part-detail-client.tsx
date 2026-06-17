@@ -334,7 +334,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
                 href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1fb955] text-white font-semibold py-3 transition"
+                className="flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#1fb955] text-white font-semibold transition h-auto min-h-11 whitespace-normal py-2.5 leading-snug text-center"
               >
                 <MessageCircle className="w-5 h-5" />
                 {t.whatsapp}
