@@ -12,6 +12,7 @@ import { resolveTenantId } from "@/lib/tenant-context";
 import { enrollInJourneys } from "@/lib/automation/enroll";
 import { creditReferral } from "@/lib/automation/referral";
 import { scoreLead, leadTier } from "@/lib/lead-score";
+import { generateInquiryReply } from "@/lib/inquiry-reply";
 
 const checkRateLimit = createKvRateLimiter({ max: 5, windowMs: 10 * 60 * 1000, prefix: "inquiry" });
 
@@ -154,7 +155,22 @@ export async function POST(request: NextRequest) {
       type: data.type,
     }).catch(() => {});
 
-    return NextResponse.json({ success: true, id: inquiry.id }, { status: 201 });
+    // Instant AI auto-reply to the customer's question (free models). Awaited so
+    // the form can show it immediately; fail-open → null when there's no real
+    // question or the LLM chain is down, in which case the form shows its usual
+    // thank-you. Never blocks the save (insert already succeeded above).
+    const autoReply = await generateInquiryReply(supabase, {
+      name: data.name,
+      message: data.message,
+      locale: data.locale,
+      carId: data.car_id,
+      type: data.type,
+    }).catch(() => null);
+
+    return NextResponse.json(
+      { success: true, id: inquiry.id, ...(autoReply ? { autoReply } : {}) },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

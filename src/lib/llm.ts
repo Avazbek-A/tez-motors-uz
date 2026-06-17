@@ -33,7 +33,7 @@
  * fallback chain runs entirely on OpenRouter's GPUs (nothing on local hardware, so
  * the Vostro never heats up). Local Ollama remains only a dev/offline option.
  */
-import { getTierModels, tierPair, isFreeModel, type LlmTier } from "@/lib/llm-models";
+import { getTierModels, tierChain, isFreeModel, type LlmTier } from "@/lib/llm-models";
 import { alertDealer } from "@/lib/error-report";
 
 export interface AssistantCarLite {
@@ -184,7 +184,7 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = process.env.LLM_API_URL || (provider === "openai" ? OLLAMA_URL : ANTHROPIC_URL);
   const onOpenRouter = /openrouter\.ai/i.test(url);
-  const all = tierPair(args.tier, await getTierModels());
+  const all = tierChain(args.tier, await getTierModels());
   // PAID GUARD: on OpenRouter, only EVER call free (:free) models — the account has
   // credit, so a paid id would be billed. A misconfigured non-free model is skipped
   // (never charged) and the owner is alerted. (Local Ollama / other has no billing.)
@@ -287,7 +287,7 @@ export async function llmVision(args: { system: string; user: string; images: st
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = openaiChatUrl(process.env.LLM_API_URL || OLLAMA_URL);
   const onOpenRouter = /openrouter\.ai/i.test(url);
-  const all = tierPair("vision", await getTierModels());
+  const all = tierChain("vision", await getTierModels());
   // PAID GUARD (see callChat): on OpenRouter only call :free vision models.
   const models = onOpenRouter ? all.filter(isFreeModel) : all.filter(Boolean);
   for (const model of models) {

@@ -89,6 +89,30 @@ export function tierPair(tier: LlmTier, m: TierModels): [string, string] {
   return [m.chat, m.chatFallback];
 }
 
+/**
+ * Universal free fallbacks appended AFTER the configured primary+fallback. The
+ * free NVIDIA models rotate (transient 404/429), and a tier pair of just 2 left
+ * replies dropping to the deterministic template too often. These extra :free ids
+ * (verified live on the key) keep the buyer auto-reply producing real AI. All
+ * `:free`; the paid-guard filters anything else. Tier-appropriate (vision stays
+ * multimodal). Kept short so a total free-tier outage doesn't stack timeouts.
+ */
+const EXTRA_FREE_FALLBACKS: Record<LlmTier, string[]> = {
+  chat: ["nvidia/nemotron-nano-9b-v2:free", "meta-llama/llama-3.3-70b-instruct:free", "google/gemma-4-31b-it:free"],
+  reason: ["nvidia/nemotron-3-super-120b-a12b:free", "qwen/qwen3-next-80b-a3b-instruct:free", "meta-llama/llama-3.3-70b-instruct:free"],
+  vision: ["nvidia/nemotron-nano-12b-v2-vl:free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"],
+};
+
+/** Ordered model chain for a tier: configured primary + fallback, then the
+ *  universal free fallbacks — deduped. Try-next-on-failure resilience. */
+export function tierChain(tier: LlmTier, m: TierModels): string[] {
+  const [primary, fallback] = tierPair(tier, m);
+  const seen = new Set<string>();
+  return [primary, fallback, ...EXTRA_FREE_FALLBACKS[tier]].filter(
+    (x): x is string => !!x && !seen.has(x) && (seen.add(x), true),
+  );
+}
+
 /** Force the next getTierModels() to re-read the DB (called by the refresh cron after a write). */
 export function invalidateTierModelsCache(): void {
   cache = null;

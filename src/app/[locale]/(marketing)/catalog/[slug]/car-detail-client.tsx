@@ -47,6 +47,7 @@ export default function CarDetailPage() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [showReserve, setShowReserve] = useState(false);
   const [financing, setFinancing] = useState(false);
+  const [aiReply, setAiReply] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/cars/${params.slug}`)
@@ -136,15 +137,17 @@ export default function CarDetailPage() {
           turnstile_token: turnstileToken ?? undefined,
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setFormError(data.error || (locale === "ru" ? "Ошибка отправки. Попробуйте ещё раз." : "Failed to send. Please try again."));
         return;
       }
+      setAiReply(typeof data.autoReply === "string" ? data.autoReply : null);
       setIsSuccess(true);
       track(FUNNEL.inquirySubmit, { type: financing ? "financing" : "car_inquiry" });
       setForm({ name: "", phone: "", message: "" });
-      setTimeout(() => setIsSuccess(false), 5000);
+      // Keep the AI answer on screen to read; only auto-dismiss the plain thank-you.
+      if (!data.autoReply) setTimeout(() => setIsSuccess(false), 5000);
     } catch {
       setFormError(locale === "ru" ? "Нет соединения. Проверьте интернет." : "No connection. Check your internet.");
     } finally {
@@ -480,9 +483,15 @@ export default function CarDetailPage() {
               </Button>
 
               {isSuccess ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-12 h-12 text-neon-blue mx-auto mb-3" />
-                  <p className="font-semibold">{dictionary.contact.success}</p>
+                <div className="py-8">
+                  <CheckCircle className="w-12 h-12 text-primary mx-auto mb-3" />
+                  <p className="font-semibold text-center">{dictionary.contact.success}</p>
+                  {aiReply && (
+                    <div className="mt-4 flex gap-2.5 text-left text-sm text-muted-foreground bg-foreground/5 border border-border rounded-xl p-4">
+                      <MessageCircle className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
+                      <p className="leading-relaxed whitespace-pre-line">{aiReply}</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">

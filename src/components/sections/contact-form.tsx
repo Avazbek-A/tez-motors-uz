@@ -19,6 +19,7 @@ export function ContactForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [aiReply, setAiReply] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,12 +36,13 @@ export function ContactForm() {
           turnstile_token: turnstileToken ?? undefined,
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        setAiReply(typeof data.autoReply === "string" ? data.autoReply : null);
         setIsSuccess(true);
         setFormData({ name: "", phone: "", message: "" });
-        setTimeout(() => setIsSuccess(false), 5000);
+        if (!data.autoReply) setTimeout(() => setIsSuccess(false), 5000);
       } else {
-        const data = await res.json().catch(() => ({}));
         setFormError(data.error || dictionary.contact.error);
       }
     } catch {
@@ -65,9 +67,15 @@ export function ContactForm() {
 
         <div ref={ref} className={`max-w-xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
           {isSuccess ? (
-            <div className="bg-black/60 backdrop-blur-md border border-border p-10 text-center">
+            <div className="bg-black/60 backdrop-blur-md border border-border p-10">
               <CheckCircle className="w-16 h-16 text-neon-green mx-auto mb-4" />
-              <p className="text-white text-lg font-semibold">{dictionary.contact.success}</p>
+              <p className="text-white text-lg font-semibold text-center">{dictionary.contact.success}</p>
+              {aiReply && (
+                <div className="mt-5 flex gap-2.5 text-left text-sm text-white/80 bg-white/5 border border-white/10 rounded-xl p-4">
+                  <Send className="w-4 h-4 mt-0.5 shrink-0 text-neon-green" />
+                  <p className="leading-relaxed whitespace-pre-line">{aiReply}</p>
+                </div>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="bg-black/60 backdrop-blur-md border border-border p-8 space-y-5">
