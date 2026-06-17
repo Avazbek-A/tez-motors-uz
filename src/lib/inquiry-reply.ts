@@ -7,6 +7,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { llmText } from "@/lib/llm";
+import { detectMessageLocale } from "@/lib/detect-locale";
 
 const LOCALE_NAME: Record<string, string> = { ru: "Russian", uz: "Uzbek (Latin script)", en: "English" };
 
@@ -20,7 +21,10 @@ export async function generateInquiryReply(
   const message = (args.message || "").trim();
   if (message.length < 5 || SKIP_TYPES.has(args.type)) return null;
 
-  const lang = LOCALE_NAME[args.locale || "ru"] || "Russian";
+  // Reply in the language the customer WROTE the form in, falling back to the
+  // page locale, then RU — so a Russian message on the UZ site still gets RU.
+  const replyLocale = detectMessageLocale(message) || args.locale || "ru";
+  const lang = LOCALE_NAME[replyLocale] || "Russian";
 
   // Ground in the specific car when the lead references one.
   let carCtx = "";
@@ -39,7 +43,7 @@ export async function generateInquiryReply(
 
   const system = [
     "You are the customer-service assistant for Tez Motors, which imports Chinese cars (BYD, Chery, Haval, Geely, Changan, and more) into Uzbekistan.",
-    `Reply in ${lang}. Exactly 2-3 warm, concrete sentences. No markdown, no bullet lists, no greeting line — answer directly.`,
+    `Reply in ${lang}. If the customer's message is clearly in a different language, reply in THEIR language instead. Exactly 2-3 warm, concrete sentences. No markdown, no bullet lists, no greeting line — answer directly.`,
     "A customer just submitted a contact form with a question. Answer it helpfully and honestly.",
     "NEVER invent a price, spec, delivery time, or financing term. If you don't know a precise figure, say the manager will confirm it.",
     carCtx,

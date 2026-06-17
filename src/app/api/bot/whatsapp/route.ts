@@ -30,6 +30,7 @@ import { runAssistantTurn, markConversationHandoff } from "@/lib/assistant-runti
 import { normalizePhone } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/error-report";
 import { verifyHmacSha256 } from "@/lib/hmac";
+import { resolveReplyLocale } from "@/lib/detect-locale";
 import type { Car } from "@/types/car";
 
 const GRAPH_API = "https://graph.facebook.com/v21.0";
@@ -206,7 +207,9 @@ async function handleUpdate(update: WaUpdate): Promise<void> {
   // Cap at 500 chars (same as the web assistant) — bounds LLM token cost on
   // pasted walls of text and limits the surface for prompt-injection attempts.
   const text = (message.text?.body || "").trim().slice(0, 500);
-  const locale = DEFAULT_LOCALE;
+  // WhatsApp carries no per-user UI language, so reply in whatever language the
+  // customer wrote in (Cyrillic→ru, Uzbek-Latin→uz, …), falling back to RU.
+  const locale = resolveReplyLocale(text, DEFAULT_LOCALE);
   if (!text) return;
 
   // 1) Typed phone → lead with that number.

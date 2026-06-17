@@ -29,6 +29,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { timingSafeEqual } from "@/lib/timing-safe";
 import { logEvent } from "@/lib/error-report";
 import { reserveCarAndCreateOrder } from "@/lib/reservation";
+import { resolveReplyLocale } from "@/lib/detect-locale";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -432,15 +433,18 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
 
   // 4) Free text → grounded recommendation + qualification (shared closer
   //    runtime: multi-turn memory, profile, nudges, dealer oversight).
+  //    Reply in the language the customer actually WROTE in — not their Telegram
+  //    UI language (a RU speaker with an English Telegram was getting English).
+  const replyLocale = resolveReplyLocale(text, locale);
   const supabase = createServiceClient();
   const { reply, cars } = await runAssistantTurn(supabase, {
     channel: "telegram",
     externalKey: chatId,
     message: text,
-    locale,
+    locale: replyLocale,
     knownName: from.first_name || null,
   });
-  await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
+  await tgSend(chatId, escapeHtml(reply), carButtons(cars, replyLocale) ?? contactKeyboard(replyLocale));
   await tgSendCarPhotos(chatId, cars);
 }
 

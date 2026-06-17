@@ -6,6 +6,7 @@ import { reportServerError } from "@/lib/error-report";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { resolveReplyLocale } from "@/lib/detect-locale";
 import { recommendCars, historyFromRows } from "@/lib/assistant-core";
 import {
   extractSlots,
@@ -61,7 +62,10 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = assistantSchema.parse(body);
-    const locale = data.locale || "ru";
+    // Reply in the language the customer typed, not just the page UI language —
+    // a RU message on the EN site should still get a RU answer. Falls back to
+    // the page locale when the message is too short to tell.
+    const locale = resolveReplyLocale(data.message, data.locale || "ru");
 
     // Turnstile is a SOFT signal here, not a hard gate. The widget is INVISIBLE, so a
     // legitimate visitor whose challenge silently fails (flagged IP / VPN / privacy
