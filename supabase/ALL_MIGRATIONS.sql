@@ -1,6 +1,6 @@
 -- ============================================================
 -- Tez Motors — consolidated schema (ALL migrations, in order)
--- Generated from 49 files in supabase/migrations/
+-- Generated from 82 files in supabase/migrations/
 -- FRESH DATABASE ONLY: paste this once into the Supabase SQL editor.
 -- For an existing DB, apply only the new individual migration files.
 -- ============================================================
@@ -1702,4 +1702,866 @@ CREATE INDEX IF NOT EXISTS idx_warranties_phone ON public.warranties (customer_p
 
 ALTER TABLE public.warranties ENABLE ROW LEVEL SECURITY;
 -- No policies on purpose: service-role only.
+
+-- ─── 050_customer_telegram.sql ───────────────────────────────────────────
+-- Phase AA: Telegram Mini App identity.
+--
+-- Customers can now authenticate via their Telegram account (inside the Mini
+-- App) instead of phone + OTP. Telegram's initData gives a user id, name and
+-- username — but NOT a phone — so we make `phone` nullable and add a unique
+-- `telegram_id`. A customer may have either or both (a phone-OTP customer who
+-- later opens the Mini App can be linked by phone share; v1 keys on telegram_id).
+--
+-- Service-role only (RLS already enabled on customers, no policies) — unchanged.
+ALTER TABLE public.customers ALTER COLUMN phone DROP NOT NULL;
+ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS telegram_id BIGINT UNIQUE;
+
+CREATE INDEX IF NOT EXISTS idx_customers_telegram_id
+  ON public.customers (telegram_id) WHERE telegram_id IS NOT NULL;
+
+-- ─── 051_car_spec_data.sql ───────────────────────────────────────────
+-- Phase AD: AutoHome spec sheets.
+--
+-- Rich, multi-trim parameter configuration captured from an AutoHome model page
+-- (clean global.autohome.com JSON, or — for obfuscated CN pages — a Playwright
+-- screenshot read by a vision LLM). Powers the public spec page + downloadable
+-- PDF. Distinct from the simple `specs` jsonb (a flat display grid) which stays
+-- as-is. Shape:
+--   { source, source_url, captured_at, brand, model, groups:[...],
+--     trims:[{ name, price_raw, year, params:{ group:{ paramName:value } } }],
+--     gallery:[storageUrls], colors:[...] }
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS spec_data JSONB;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS spec_captured_at TIMESTAMPTZ;
+
+-- Marketing data (no PII); the existing public car SELECT policy already covers
+-- new columns. Writes are service-role only via the admin import route.
+
+-- ─── 052_copilot_sessions.sql ───────────────────────────────────────────
+-- Phase AE — Dealer Copilot conversational operations.
+-- Kept SEPARATE from the customer assistant tables (assistant_conversations /
+-- assistant_messages, migration 040) so dealer ops never pollute the customer
+-- lead list, and so confirm-gated actions get their own payload/expiry columns.
+-- Both tables are service-role-only (RLS enabled, NO policies) — the dealer
+-- reaches them through requireAdmin routes or the operator-gated Telegram path.
+
+-- Per-thread conversation memory for the copilot (web panel + Telegram operator).
+create table if not exists public.copilot_messages (
+  id          uuid primary key default gen_random_uuid(),
+  thread_id   text not null,                 -- web: admin session/thread; tg: "tg:<chatId>"
+  role        text not null check (role in ('user','assistant')),
+  content     text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists copilot_messages_thread_idx
+  on public.copilot_messages (thread_id, created_at);
+
+-- Confirm-gated pending write actions. A WRITE intent first writes a row here
+-- with the FULLY-RESOLVED target ids frozen in `payload`; the dealer's explicit
+-- "yes"/Confirm flips it to confirmed and the executor runs the frozen payload —
+-- it never re-parses the free-text reference.
+create table if not exists public.copilot_pending_actions (
+  id          uuid primary key default gen_random_uuid(),
+  thread_id   text not null,
+  intent      text not null,                 -- markdown_car | create_promo | advance_order | draft_po | send_channel_post
+  payload     jsonb not null,                -- frozen, resolved params
+  preview     text not null,                 -- human-readable summary shown before confirm
+  status      text not null default 'proposed' check (status in ('proposed','confirmed','cancelled','expired')),
+  created_at  timestamptz not null default now(),
+  expires_at  timestamptz not null,
+  resolved_at timestamptz
+);
+create index if not exists copilot_pending_thread_idx
+  on public.copilot_pending_actions (thread_id, status, created_at desc);
+
+alter table public.copilot_messages        enable row level security;
+alter table public.copilot_pending_actions enable row level security;
+-- No policies: service-role only (privileged dealer ops), mirroring orders/payments.
+
+-- ─── 053_customer_notify.sql ───────────────────────────────────────────
+-- Phase AI — chat-first customer outbound.
+--
+-- `notify_channel` lets a customer pin a preferred channel; null/'auto' uses the
+-- smart fan-out in src/lib/customer-messaging.ts (Telegram DM first, then the
+-- push+email fallback). `notification_log` is a lightweight delivery record for
+-- observability and future cross-channel de-dupe.
+--
+-- Both are service-role only (RLS enabled, NO policies) — customers never read
+-- these directly; the app writes them through requireCustomer / service-role
+-- jobs, mirroring orders (017) / payments (020).
+
+ALTER TABLE public.customers
+  ADD COLUMN IF NOT EXISTS notify_channel text
+  CHECK (notify_channel IS NULL OR notify_channel IN ('auto', 'telegram', 'push', 'email'));
+
+CREATE TABLE IF NOT EXISTS public.notification_log (
+  id          uuid primary key default gen_random_uuid(),
+  customer_id uuid references public.customers(id) on delete set null,
+  kind        text,
+  channel     text not null,
+  created_at  timestamptz not null default now()
+);
+
+CREATE INDEX IF NOT EXISTS notification_log_customer_idx
+  ON public.notification_log (customer_id, created_at desc);
+
+ALTER TABLE public.notification_log ENABLE ROW LEVEL SECURITY;
+-- No policies: service-role only.
+
+-- ─── 054_used_cars.sql ───────────────────────────────────────────
+-- Used-car selling section. Big dealers run a New + a Used (pre-owned) catalog.
+-- New and used cars share ~95% of their shape (brand/model/year/price/images/
+-- specs), so rather than a parallel table we add a `listing_type` discriminator
+-- to `cars` plus the fields a used listing needs. `/catalog` stays "all"; the new
+-- `/used` section filters listing_type='used'. mileage already exists on cars.
+
+ALTER TABLE public.cars
+  ADD COLUMN IF NOT EXISTS listing_type   TEXT NOT NULL DEFAULT 'new'
+    CHECK (listing_type IN ('new', 'used')),
+  ADD COLUMN IF NOT EXISTS vin            TEXT,
+  ADD COLUMN IF NOT EXISTS owners_count   INTEGER CHECK (owners_count IS NULL OR owners_count >= 0),
+  ADD COLUMN IF NOT EXISTS accident_free  BOOLEAN,
+  ADD COLUMN IF NOT EXISTS condition_grade TEXT
+    CHECK (condition_grade IS NULL OR condition_grade IN ('excellent', 'good', 'fair'));
+
+-- Browsing the used section filters on listing_type a lot.
+CREATE INDEX IF NOT EXISTS cars_listing_type_idx ON public.cars (listing_type);
+
+-- All new columns are public-readable marketing data (no PII). RLS on `cars` is
+-- unchanged: anon SELECT of published rows, service-role writes.
+
+-- ─── 055_scooters.sql ───────────────────────────────────────────
+-- Scooters & e-bikes — a third product vertical alongside cars and parts.
+-- Light EVs diverge from cars (motor/battery/range/speed; no fuel/transmission),
+-- so a dedicated table cloned from `parts` (011), not the `cars` table. Images
+-- reuse the existing public car-images bucket under a scooters/ path prefix.
+
+create table if not exists public.scooters (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  kind text not null check (kind in ('escooter', 'ebike')),
+  brand text not null,
+  model text not null,
+  description_ru text,
+  description_uz text,
+  description_en text,
+  price_usd numeric,
+  original_price_usd numeric,
+  price_uzs numeric,
+  -- Light-EV spec fields (the point of the separate table).
+  motor_power_w integer,
+  battery_wh integer,
+  range_km integer,
+  top_speed_kmh integer,
+  max_load_kg integer,
+  weight_kg numeric,
+  wheel_size_inch numeric,
+  foldable boolean,
+  color text,
+  images text[] not null default '{}',
+  stock_qty integer not null default 0,
+  is_published boolean not null default false,
+  order_position integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists scooters_kind_idx on public.scooters (kind);
+create index if not exists scooters_published_idx on public.scooters (is_published) where is_published;
+create index if not exists scooters_search_trgm_idx on public.scooters
+  using gin (
+    (coalesce(brand, '') || ' ' || coalesce(model, '')) gin_trgm_ops
+  );
+
+alter table public.scooters enable row level security;
+-- Public reads published rows; writes via service-role only (mirror parts/cars).
+drop policy if exists "scooters public read" on public.scooters;
+create policy "scooters public read" on public.scooters for select using (is_published);
+
+-- ─── 056_listings.sql ───────────────────────────────────────────
+-- Phase AJ — off-site listing syndication queue.
+--
+-- OLX.uz / avtoelon.uz have no open per-seller publish API, so v1 is
+-- "manual-assisted": the app drafts a per-channel listing (AI or template) the
+-- dealer copy-pastes, then records the published external URL for attribution.
+-- (OLX business accounts can also autoload via /api/feed/olx.xml.) Telegram/IG/FB
+-- are handled by the marketing poster; this table is the cross-channel record.
+--
+-- Service-role only (RLS enabled, no policies) — reached through requireAdmin.
+
+create table if not exists public.listings (
+  id           uuid primary key default gen_random_uuid(),
+  car_id       uuid references public.cars(id) on delete cascade,
+  channel      text not null check (channel in ('olx','avtoelon','telegram','instagram','facebook')),
+  status       text not null default 'draft' check (status in ('draft','published','removed')),
+  title        text,
+  body         text,
+  external_id  text,
+  external_url text,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
+create index if not exists listings_car_idx on public.listings (car_id);
+create index if not exists listings_channel_status_idx on public.listings (channel, status);
+
+alter table public.listings enable row level security;
+-- No policies: service-role only.
+
+-- ─── 057_installed_base.sql ───────────────────────────────────────────
+-- Phase AL — installed-base revenue: service bookings + referrals.
+--
+-- service_bookings: a real booking (the services page was contact-only).
+-- referrals: a per-customer referral code + the leads it brings (attributed via
+-- the `ref` param the attribution cookie already captures).
+--
+-- Both service-role only (RLS enabled, no policies) — public writes go through
+-- the hardened /api/service-booking route; the account portal reads via
+-- service-role endpoints. Mirrors orders (017) / inquiries lockdown.
+
+create table if not exists public.service_bookings (
+  id             uuid primary key default gen_random_uuid(),
+  customer_phone text not null,
+  customer_name  text,
+  car_id         uuid references public.cars(id) on delete set null,
+  order_id       uuid references public.orders(id) on delete set null,
+  service_type   text not null,
+  preferred_date date,
+  status         text not null default 'new' check (status in ('new','confirmed','done','cancelled')),
+  notes          text,
+  locale         text,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+create index if not exists service_bookings_status_idx on public.service_bookings (status, created_at desc);
+create index if not exists service_bookings_phone_idx on public.service_bookings (customer_phone);
+
+create table if not exists public.referrals (
+  id                  uuid primary key default gen_random_uuid(),
+  referrer_customer_id uuid references public.customers(id) on delete set null,
+  code                text unique not null,
+  referred_phone      text,
+  referred_inquiry_id uuid references public.inquiries(id) on delete set null,
+  status              text not null default 'pending' check (status in ('pending','converted','rewarded','void')),
+  reward_note         text,
+  created_at          timestamptz not null default now()
+);
+create index if not exists referrals_referrer_idx on public.referrals (referrer_customer_id);
+
+alter table public.service_bookings enable row level security;
+alter table public.referrals        enable row level security;
+-- No policies: service-role only.
+
+-- ─── 058_suppliers_fx.sql ───────────────────────────────────────────
+-- Phase AK — supplier master + FX exposure tracking.
+--
+-- `suppliers`: a real supplier master (the PO `supplier` field was free text, so
+-- duplicate names fragmented price/reliability history). `purchase_orders` gets
+-- a nullable supplier_id FK (legacy text kept) plus FX columns so we can track
+-- CNY exposure between order and settlement.
+--
+-- Service-role only (RLS enabled, no policies) — reached through requireAdmin.
+
+create table if not exists public.suppliers (
+  id              uuid primary key default gen_random_uuid(),
+  name            text not null,
+  contact         text,
+  whatsapp        text,
+  country         text default 'CN',
+  lead_time_days  integer,
+  moq             integer,
+  payment_terms   text,
+  reliability_score integer,           -- 0-100, computed/curated
+  notes           text,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+-- Normalized-name uniqueness so "BYD", "byd", " BYD " don't fragment.
+create unique index if not exists suppliers_name_norm_idx on public.suppliers (lower(btrim(name)));
+
+alter table public.purchase_orders
+  add column if not exists supplier_id uuid references public.suppliers(id) on delete set null,
+  add column if not exists quote_currency text check (quote_currency is null or quote_currency in ('USD','CNY')),
+  add column if not exists quote_amount numeric check (quote_amount is null or quote_amount >= 0),
+  add column if not exists fx_cny_per_usd_at_order numeric check (fx_cny_per_usd_at_order is null or fx_cny_per_usd_at_order > 0),
+  add column if not exists order_date date;
+
+alter table public.suppliers enable row level security;
+-- No policies: service-role only.
+
+-- ─── 059_calls_commissions.sql ───────────────────────────────────────────
+-- Phase AM — call intelligence + team commissions.
+--
+-- calls: most UZ car deals close on a phone call, but the call channel was
+-- invisible. Logs a call (optional recording/transcript) with an AI summary +
+-- lead score, linked to the customer by phone for the customer-360 timeline.
+-- commissions: per-rep payout accrued on closed orders, for team scaling.
+--
+-- Both service-role only (RLS enabled, no policies). Recordings/transcripts are
+-- sensitive PII — never exposed publicly.
+
+create table if not exists public.calls (
+  id             uuid primary key default gen_random_uuid(),
+  customer_phone text,
+  direction      text not null default 'inbound' check (direction in ('inbound','outbound')),
+  duration_sec   integer,
+  recording_url  text,
+  transcript     text,
+  summary        text,
+  lead_score     integer,            -- 0-100
+  admin_user_id  uuid references public.admin_users(id) on delete set null,
+  created_at     timestamptz not null default now()
+);
+create index if not exists calls_phone_idx on public.calls (customer_phone, created_at desc);
+
+create table if not exists public.commissions (
+  id             uuid primary key default gen_random_uuid(),
+  admin_user_id  uuid references public.admin_users(id) on delete set null,
+  order_id       uuid references public.orders(id) on delete set null,
+  amount_usd     numeric not null default 0,
+  status         text not null default 'accrued' check (status in ('accrued','paid','void')),
+  note           text,
+  created_at     timestamptz not null default now()
+);
+create unique index if not exists commissions_order_idx on public.commissions (order_id);
+create index if not exists commissions_admin_idx on public.commissions (admin_user_id, status);
+
+alter table public.calls       enable row level security;
+alter table public.commissions enable row level security;
+-- No policies: service-role only.
+
+-- ─── 060_source_prices.sql ───────────────────────────────────────────
+-- Phase AK polish — live Chinese source prices from RFQ quotes.
+--
+-- The Buying Brain costed models from PO history only (backward-looking). This
+-- captures forward supplier quotes (pasted from WhatsApp/email, parsed into
+-- structure) so "what to import, at what margin" reflects current source cost.
+-- Service-role only (RLS enabled, no policies) — reached through requireAdmin.
+
+create table if not exists public.source_prices (
+  id             uuid primary key default gen_random_uuid(),
+  brand          text not null,
+  model          text not null,
+  price_usd      numeric,            -- normalized
+  price_cny      numeric,            -- as quoted, if CNY
+  lead_time_days integer,
+  moq            integer,
+  supplier       text,
+  raw            text,               -- original pasted quote (audit)
+  observed_at    timestamptz not null default now()
+);
+create index if not exists source_prices_model_idx on public.source_prices (lower(brand), lower(model), observed_at desc);
+
+alter table public.source_prices enable row level security;
+-- No policies: service-role only.
+
+-- ─── 061_order_attribution_adspend.sql ───────────────────────────────────────────
+-- Phase AN — attribution ROI / channel economics.
+--
+-- Two additive columns close the channel → revenue loop:
+--  - orders.attribution: the acquisition attribution (utm/referrer/ref) copied
+--    from the originating lead at order creation, so deposits + margin trace to
+--    a channel without a fragile phone-only join.
+--  - expenses.channel: tags a marketing-category expense to a channel
+--    (olx/google/meta/telegram/instagram/facebook/other) so CPA/ROAS can be
+--    computed per channel.
+-- Additive only; no RLS change (orders/expenses already service-role only).
+
+ALTER TABLE public.orders   ADD COLUMN IF NOT EXISTS attribution jsonb;
+ALTER TABLE public.expenses ADD COLUMN IF NOT EXISTS channel text;
+
+-- ─── 062_financing_insurance.sql ───────────────────────────────────────────
+-- Phase AP — point-of-sale revenue add-ons: financing applications + insurance leads.
+--
+-- Both are LEAD-CAPTURE + handoff (no live underwriting/binding): the dealer or
+-- a bank/insurer partner closes offline. Service-role only (RLS enabled, no
+-- policies) — they hold customer PII; public writes go through the hardened
+-- /api/financing/apply and /api/insurance/lead routes.
+
+create table if not exists public.financing_applications (
+  id                uuid primary key default gen_random_uuid(),
+  customer_name     text not null,
+  customer_phone    text not null,
+  car_id            uuid references public.cars(id) on delete set null,
+  order_id          uuid references public.orders(id) on delete set null,
+  down_pct          numeric,
+  term_months       integer,
+  estimated_monthly numeric,
+  employment        text,
+  income_band       text,
+  documents         jsonb not null default '[]',
+  status            text not null default 'new' check (status in ('new','submitted','approved','declined')),
+  partner           text,
+  notes             text,
+  locale            text,
+  created_at        timestamptz not null default now(),
+  updated_at        timestamptz not null default now()
+);
+create index if not exists financing_status_idx on public.financing_applications (status, created_at desc);
+
+create table if not exists public.insurance_leads (
+  id                uuid primary key default gen_random_uuid(),
+  customer_name     text,
+  customer_phone    text not null,
+  car_id            uuid references public.cars(id) on delete set null,
+  order_id          uuid references public.orders(id) on delete set null,
+  type              text not null check (type in ('osago','kasko')),
+  estimated_premium_usd numeric,
+  status            text not null default 'new' check (status in ('new','contacted','bound','lost')),
+  notes             text,
+  created_at        timestamptz not null default now()
+);
+create index if not exists insurance_leads_status_idx on public.insurance_leads (status, created_at desc);
+
+alter table public.financing_applications enable row level security;
+alter table public.insurance_leads        enable row level security;
+-- No policies: service-role only.
+
+-- ─── 063_document_signatures.sql ───────────────────────────────────────────
+-- Phase AR — e-signature on order documents.
+--
+-- Closes the last offline step: the deposit is paid online but the sales
+-- contract / deposit agreement was signed on paper. A customer-facing sign flow
+-- (gated by reference_code + phone, like /track) records a click-to-sign:
+-- typed name + agreement + timestamp + IP, with an optional drawn signature.
+--
+-- Service-role only (RLS enabled, no policies) — it's evidence of consent on a
+-- money document; the public sign route writes it via the service client after
+-- verifying code + phone.
+
+create table if not exists public.document_signatures (
+  id              uuid primary key default gen_random_uuid(),
+  order_id        uuid references public.orders(id) on delete cascade,
+  document_type   text not null,
+  signer_name     text not null,
+  signer_phone    text not null,
+  signature_text  text,           -- typed full name (the click-to-sign method)
+  signature_image text,           -- optional drawn signature (data URL, size-capped at write)
+  agreed          boolean not null default true,
+  ip              text,
+  user_agent      text,
+  signed_at       timestamptz not null default now()
+);
+create index if not exists document_signatures_order_idx on public.document_signatures (order_id, signed_at desc);
+
+alter table public.document_signatures enable row level security;
+-- No policies: service-role only.
+
+-- ─── 064_web_vitals.sql ───────────────────────────────────────────
+-- Phase AT — real-user Core Web Vitals (RUM).
+--
+-- AQ added synthetic + health checks; this captures REAL field metrics (LCP,
+-- CLS, INP, FCP, TTFB) from actual visitors so regressions in the experience
+-- people actually get are visible — not just synthetic uptime. Service-role
+-- only (RLS enabled, no policies); the public /api/rum route writes via the
+-- service client. Anonymous + non-PII (no IP, no user id) — just metric values
+-- + a coarse path bucket.
+
+create table if not exists public.web_vitals (
+  id         uuid primary key default gen_random_uuid(),
+  metric     text not null,                 -- LCP | CLS | INP | FCP | TTFB
+  value      double precision not null,
+  rating     text,                          -- good | needs-improvement | poor
+  path       text,                          -- coarse route (query stripped)
+  created_at timestamptz not null default now()
+);
+create index if not exists web_vitals_metric_idx on public.web_vitals (metric, created_at desc);
+
+alter table public.web_vitals enable row level security;
+-- No policies: service-role only.
+
+-- ─── 065_admin_users_rls.sql ───────────────────────────────────────────
+-- 065_admin_users_rls.sql
+--
+-- SECURITY FIX: admin_users was created in 009 but never had Row Level Security
+-- enabled, while every other PII/money table (orders, payments, customers,
+-- admin_sessions, otp_codes, ...) does. With RLS OFF, Supabase's default `anon`
+-- grant makes the table readable through PostgREST — i.e. a request with the
+-- public anon key to `/rest/v1/admin_users?select=*` would return every admin's
+-- email, role, and PBKDF2 password hash.
+--
+-- Lock it down to the service-role key only — RLS enabled, NO policies — exactly
+-- like orders/payments/customers/admin_sessions. The service-role key bypasses
+-- RLS, and every code path that touches admin_users already uses the service
+-- client behind requireAdmin (src/lib/auth.ts, api/admin/login, api/admin/{users,
+-- team,tasks}, api/admin/stats/funnel), so this is invisible to the app and only
+-- removes anon-key access.
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+-- No policies on purpose: only the service-role key (which bypasses RLS) may
+-- read or write this table.
+
+-- ─── 066_tenants.sql ───────────────────────────────────────────
+-- Phase AV — multi-tenant foundation (increment 1 of N: model + seam + proof).
+--
+-- The app is a complete single-dealer operating system. This lays the FOUNDATION
+-- to host multiple dealers without changing current behavior:
+--  - a `tenants` registry,
+--  - a well-known DEFAULT tenant that the existing single dealer maps to,
+--  - `tenant_id` on the storefront-content tables as a proof-of-pattern,
+--    nullable-safe via a constant DEFAULT so existing rows backfill to the
+--    default tenant and NO query filters by it yet.
+--
+-- Query scoping, RLS policies, onboarding, and billing are later increments
+-- (see docs/MULTI_TENANT.md). With the MULTI_TENANT flag off (default), every
+-- request resolves to the default tenant — behavior is byte-identical.
+
+create table if not exists public.tenants (
+  id           uuid primary key default gen_random_uuid(),
+  slug         text unique not null,
+  name         text not null,
+  primary_host text,
+  status       text not null default 'active' check (status in ('active','suspended')),
+  settings     jsonb not null default '{}',
+  created_at   timestamptz not null default now()
+);
+
+-- The single existing dealer = the default tenant (fixed, well-known id so app
+-- code can reference it as a constant).
+insert into public.tenants (id, slug, name, primary_host)
+values ('00000000-0000-0000-0000-000000000001', 'default', 'Tez Motors', 'tezmotors.uz')
+on conflict (id) do nothing;
+
+-- Proof-of-pattern on the storefront-content tables. NOT NULL + constant DEFAULT
+-- means Postgres backfills existing rows to the default tenant on ADD COLUMN
+-- (metadata-only in PG11+, no table rewrite); the FK validates trivially since
+-- every backfilled row points at the default tenant that already exists above.
+alter table public.cars  add column if not exists tenant_id uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id);
+alter table public.parts add column if not exists tenant_id uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id);
+create index if not exists cars_tenant_idx  on public.cars  (tenant_id);
+create index if not exists parts_tenant_idx on public.parts (tenant_id);
+
+alter table public.tenants enable row level security;
+-- No policies: service-role only (tenant management is an admin/ops concern).
+
+-- ─── 067_tenant_scope.sql ───────────────────────────────────────────
+-- Phase AV — multi-tenant increment 2: scope the data plane (schema side).
+--
+-- Adds `tenant_id` (NOT NULL, defaulted to the default tenant, FK) to every
+-- tenant-scoped table. The constant DEFAULT backfills existing rows to the
+-- default tenant (metadata-only ADD COLUMN in PG11+, no table rewrite), so the
+-- live single-dealer deployment is unchanged. NO query filters by it until the
+-- app layer opts in via scopeToTenant (storefront reads are wired in this same
+-- phase; the rest follow with the flag still off).
+--
+-- GLOBAL tables deliberately excluded (shared infra/ops, not per-dealer):
+--   tenants, admin_users, admin_sessions, admin_audit, error_events, cron_runs.
+-- cars + parts already got tenant_id in migration 066.
+
+do $$
+declare
+  t text;
+  scoped text[] := array[
+    'scooters','model_catalog','warranties','listings',
+    'orders','order_events','payments','car_costs','invoices','expenses',
+    'inquiries','customers','customer_sessions','otp_codes','push_subscriptions',
+    'newsletter_subscribers','notification_log',
+    'reviews','faqs','posts','promotions','campaigns','content_drafts',
+    'saved_searches','favorites','price_watches','document_signatures',
+    'financing_applications','insurance_leads','service_bookings','referrals',
+    'calls','commissions','crm_tasks',
+    'purchase_orders','shipments','shipment_events','shipment_documents',
+    'suppliers','source_prices','market_listings',
+    'assistant_conversations','assistant_messages',
+    'copilot_messages','copilot_pending_actions',
+    'site_settings','web_vitals'
+  ];
+begin
+  foreach t in array scoped loop
+    execute format(
+      'alter table public.%I add column if not exists tenant_id uuid not null default ''00000000-0000-0000-0000-000000000001'' references public.tenants(id)',
+      t
+    );
+  end loop;
+end $$;
+
+-- Indexes on the tables whose reads actually scope by tenant now (storefront +
+-- lead/order capture). Back-office tables get theirs when their queries are
+-- scoped in a later increment.
+create index if not exists scooters_tenant_idx       on public.scooters (tenant_id);
+create index if not exists reviews_tenant_idx        on public.reviews (tenant_id);
+create index if not exists faqs_tenant_idx           on public.faqs (tenant_id);
+create index if not exists posts_tenant_idx          on public.posts (tenant_id);
+create index if not exists promotions_tenant_idx     on public.promotions (tenant_id);
+create index if not exists model_catalog_tenant_idx  on public.model_catalog (tenant_id);
+create index if not exists inquiries_tenant_idx      on public.inquiries (tenant_id);
+create index if not exists orders_tenant_idx         on public.orders (tenant_id);
+create index if not exists customers_tenant_idx      on public.customers (tenant_id);
+
+-- ─── 068_marketing_automation.sql ───────────────────────────────────────────
+-- Phase AW — marketing automation: configurable journeys (drip sequences).
+--
+-- Generalizes the hard-coded one-off marketing crons (lead-nurture, win-back,
+-- review-requests, …) into a trigger-based, multi-step, admin-editable engine
+-- that delivers through the existing omnichannel layer (sendToCustomer:
+-- Telegram DM → push → email → SMS). Each step is a timed message; enrollment
+-- tracks a contact's progress through a journey.
+--
+-- Service-role only (RLS enabled, no policies) — it touches customer PII; the
+-- runner + admin reach it through the service client. Tenant-aware from day one.
+
+create table if not exists public.automation_journeys (
+  id            uuid primary key default gen_random_uuid(),
+  name          text not null,
+  trigger_event text not null check (trigger_event in ('new_lead','reservation_abandoned','delivered','manual')),
+  status        text not null default 'active' check (status in ('active','paused')),
+  -- steps: [{ delayHours, channel, subject, body, url, buttonLabel }]
+  steps         jsonb not null default '[]',
+  tenant_id     uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists automation_journeys_trigger_idx on public.automation_journeys (trigger_event, status);
+
+create table if not exists public.journey_enrollments (
+  id             uuid primary key default gen_random_uuid(),
+  journey_id     uuid not null references public.automation_journeys(id) on delete cascade,
+  contact_phone  text not null,
+  contact_name   text,
+  contact_email  text,
+  contact_locale text not null default 'ru',
+  customer_id    uuid references public.customers(id) on delete set null,
+  car_id         uuid references public.cars(id) on delete set null,
+  current_step   integer not null default 0,   -- index of the NEXT step to send
+  status         text not null default 'active' check (status in ('active','completed','exited')),
+  next_run_at    timestamptz not null,
+  context        jsonb not null default '{}',
+  tenant_id      uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id),
+  enrolled_at    timestamptz not null default now()
+);
+-- Runner scan: due active enrollments.
+create index if not exists journey_enrollments_due_idx on public.journey_enrollments (status, next_run_at);
+-- One active enrollment per (journey, contact) — no double-drip.
+create unique index if not exists journey_enrollments_active_uniq
+  on public.journey_enrollments (journey_id, lower(contact_phone)) where status = 'active';
+
+alter table public.automation_journeys enable row level security;
+alter table public.journey_enrollments enable row level security;
+-- No policies: service-role only.
+
+-- ─── 069_marketing_suppression.sql ───────────────────────────────────────────
+-- Phase AW (Leap 1) — marketing suppression / unsubscribe list.
+--
+-- A contact (phone or email) on this list is NEVER sent automated marketing —
+-- the journey runner + sendToCustomer skip them. This is the compliance +
+-- deliverability backbone: without an honoured opt-out, scaling automated
+-- outbound burns the list and trips spam filters.
+--
+-- Service-role only (RLS enabled, no policies). Tenant-aware.
+
+create table if not exists public.marketing_suppressions (
+  id         uuid primary key default gen_random_uuid(),
+  contact    text not null,                 -- normalized phone (digits) or lowercased email
+  channel    text,                          -- null = all channels; else email|sms|telegram|push
+  reason     text not null default 'unsubscribe' check (reason in ('unsubscribe','bounce','complaint','manual')),
+  tenant_id  uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id),
+  created_at timestamptz not null default now()
+);
+-- One row per (contact, channel-bucket): "all" or a specific channel.
+create unique index if not exists marketing_suppressions_uniq
+  on public.marketing_suppressions (lower(contact), coalesce(channel, 'all'));
+
+alter table public.marketing_suppressions enable row level security;
+-- No policies: service-role only.
+
+-- ─── 070_journey_converted_status.sql ───────────────────────────────────────────
+-- Phase AW (Leap 1) — add a 'converted' enrollment status.
+--
+-- When an enrolled contact converts (reserves/buys), their active enrollments
+-- exit as 'converted' (distinct from 'exited' for unsubscribe/pause) so
+-- per-journey conversion rate is a simple count.
+
+alter table public.journey_enrollments drop constraint if exists journey_enrollments_status_check;
+alter table public.journey_enrollments
+  add constraint journey_enrollments_status_check
+  check (status in ('active','completed','exited','converted'));
+
+-- ─── 071_behavioral_events.sql ───────────────────────────────────────────
+-- Phase AW (Leap 2) — behavioral event spine + triggers.
+--
+-- `marketing_events` is a lightweight behavioral log (car views, etc.) keyed to
+-- a contact when we know one. The behavioral-triggers cron derives conditions
+-- from it (+ orders/price_watches) and enrolls contacts into journeys. Also
+-- widens the journey trigger set with the behavioral kinds.
+--
+-- Service-role only. Tenant-aware.
+
+create table if not exists public.marketing_events (
+  id             uuid primary key default gen_random_uuid(),
+  type           text not null,                 -- 'car_view' | 'favorite' | ...
+  contact_phone  text,
+  customer_id    uuid references public.customers(id) on delete set null,
+  car_id         uuid references public.cars(id) on delete set null,
+  metadata       jsonb not null default '{}',
+  tenant_id      uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id),
+  created_at     timestamptz not null default now()
+);
+create index if not exists marketing_events_contact_idx on public.marketing_events (contact_phone, type, created_at desc);
+create index if not exists marketing_events_type_idx on public.marketing_events (type, created_at desc);
+
+alter table public.marketing_events enable row level security;
+-- No policies: service-role only.
+
+-- Widen the journey trigger set with behavioral kinds.
+alter table public.automation_journeys drop constraint if exists automation_journeys_trigger_event_check;
+alter table public.automation_journeys
+  add constraint automation_journeys_trigger_event_check
+  check (trigger_event in ('new_lead','reservation_abandoned','delivered','manual','browsed_no_inquiry','price_drop'));
+
+-- ─── 072_referral_program.sql ───────────────────────────────────────────
+-- Phase AW — referral / viral loop program.
+--
+-- The existing `referrals` table had a UNIQUE NOT NULL `code`, which models one
+-- code = one referral. A real program needs ONE shareable code per customer →
+-- MANY referred leads. So: a `referral_codes` table holds the per-customer
+-- shareable code, and `referrals` becomes the per-referred-lead ledger (the
+-- referrer's code repeated, no longer unique/required).
+
+create table if not exists public.referral_codes (
+  id          uuid primary key default gen_random_uuid(),
+  customer_id uuid not null unique references public.customers(id) on delete cascade,
+  code        text not null unique,
+  tenant_id   uuid not null default '00000000-0000-0000-0000-000000000001' references public.tenants(id),
+  created_at  timestamptz not null default now()
+);
+
+-- Relax referrals.code so it can record many leads under one referrer's code.
+alter table public.referrals drop constraint if exists referrals_code_key;
+alter table public.referrals alter column code drop not null;
+create index if not exists referrals_code_idx on public.referrals (code);
+create index if not exists referrals_referred_phone_idx on public.referrals (referred_phone);
+
+alter table public.referral_codes enable row level security;
+-- No policies: service-role only.
+
+-- ─── 073_inquiry_lead_score.sql ───────────────────────────────────────────
+-- Phase AW — lead scoring. Score every inbound lead so the dealer can work the
+-- hottest first and the system can fire an instant alert on a hot one.
+alter table public.inquiries add column if not exists lead_score integer;
+create index if not exists inquiries_lead_score_idx on public.inquiries (lead_score desc nulls last);
+
+-- ─── 074_cars_in_stock.sql ───────────────────────────────────────────
+-- Reserve eligibility: only cars physically in Tashkent that the dealer can sell
+-- immediately should show the public "Reserve" CTA. The catalog is otherwise
+-- import-to-order (inventory_status is 'available' for ~all cars, so it can't
+-- distinguish them). `in_stock` is an admin-toggled flag, default false → Reserve
+-- stays hidden until the dealer marks a car as on-hand.
+ALTER TABLE public.cars
+  ADD COLUMN IF NOT EXISTS in_stock boolean NOT NULL DEFAULT false;
+
+-- Fast lookup of the (small) in-stock set.
+CREATE INDEX IF NOT EXISTS cars_in_stock_idx ON public.cars (in_stock) WHERE in_stock;
+
+-- ─── 075_market_source_avtoelon.sql ───────────────────────────────────────────
+-- Allow 'avtoelon' as a market_listings source (the dedicated UZ car marketplace,
+-- added as a price-intelligence collector alongside OLX/Telegram). Until this runs,
+-- the avtoelon collector's ingest is rejected by the CHECK constraint (fail-safe).
+ALTER TABLE public.market_listings DROP CONSTRAINT IF EXISTS market_listings_source_check;
+ALTER TABLE public.market_listings ADD CONSTRAINT market_listings_source_check
+  CHECK (source IN ('olx', 'avtoelon', 'telegram', 'manual', 'other'));
+
+-- ─── 076_market_listing_lifecycle.sql ───────────────────────────────────────────
+-- Listing lifecycle: track when each listing was LAST seen, so we can derive
+-- days-on-market (an asking price that lingers unsold = overpriced; one that sells
+-- fast = a true clearing price) and infer sold/removed listings (stale last_seen).
+-- observed_at stays = first seen; ingest now upserts last_seen_at on every re-scrape.
+ALTER TABLE public.market_listings
+  ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now();
+
+-- Backfill existing rows: best we can do retroactively is last_seen = first seen.
+UPDATE public.market_listings SET last_seen_at = observed_at
+  WHERE last_seen_at IS NULL OR last_seen_at < observed_at;
+
+CREATE INDEX IF NOT EXISTS idx_market_listings_last_seen ON public.market_listings (last_seen_at DESC);
+
+-- ─── 077_cars_value_inputs.sql ───────────────────────────────────────────
+-- New value inputs (pricing-engine Phase 5). Attributes that materially move a
+-- car's worth but weren't captured:
+--   in_service_date  — when it was first registered → warranty remaining.
+--   battery_soh_pct  — EV/PHEV battery state-of-health (the dominant value driver
+--                      for electrics; mileage/age don't capture it).
+--   import_channel    — 'official' | 'gray' | null; official commands a premium.
+ALTER TABLE public.cars
+  ADD COLUMN IF NOT EXISTS in_service_date date,
+  ADD COLUMN IF NOT EXISTS battery_soh_pct smallint,
+  ADD COLUMN IF NOT EXISTS import_channel text;
+
+-- ─── 078_revoke_private_car_columns.sql ───────────────────────────────────────────
+-- Column-level lockdown of the Phase-5 valuation inputs. RLS gates ROWS, not
+-- COLUMNS, and the anon key is public (it ships in the client bundle) — so before
+-- this, anyone could GET /rest/v1/cars?select=import_channel directly via PostgREST
+-- and read these regardless of the app-layer scrub (scrubCarsForPublic only covers
+-- the app's own rendered pages). These columns are internal pricing-engine inputs
+-- with no client use; the server reads them via the service_role key, which is NOT
+-- affected by column GRANTs. import_channel ('gray') is genuinely sensitive.
+--
+-- Pre-req (shipped in the same release): the public select('*') pages were switched
+-- to PUBLIC_CAR_COLUMNS, which doesn't list these columns — so no anon query
+-- requests them anymore and this REVOKE breaks nothing.
+REVOKE SELECT (import_channel, battery_soh_pct, in_service_date) ON public.cars FROM anon;
+REVOKE SELECT (import_channel, battery_soh_pct, in_service_date) ON public.cars FROM authenticated;
+
+-- ─── 079_cars_column_grants.sql ───────────────────────────────────────────
+-- 078 was ineffective: a TABLE-level SELECT grant (Supabase grants it to anon by
+-- default) overrides a column-level REVOKE, so anon could still read every column.
+-- The correct pattern is to drop the table grant and re-grant ONLY the public
+-- columns — then the private pricing-engine inputs (import_channel/battery_soh_pct/
+-- in_service_date) are simply not selectable by anon/authenticated. The server reads
+-- them via service_role, which is unaffected by these grants.
+--
+-- The granted set == PUBLIC_CAR_COLUMNS (src/lib/car-columns.ts). Every anon/
+-- authenticated cars query selects a subset of these (verified: catalog, feeds,
+-- detail, recommended, sitemap, track, inquiry, pdf). KEEP THE TWO IN SYNC: if a new
+-- public column is added to PUBLIC_CAR_COLUMNS, add it here too.
+REVOKE SELECT ON public.cars FROM anon, authenticated;
+
+GRANT SELECT (
+  id, slug, brand, model, year, price_usd, original_price_usd, price_uzs,
+  body_type, fuel_type, engine_volume, engine_power, transmission, drivetrain,
+  mileage, listing_type, vin, owners_count, accident_free, condition_grade, color,
+  description_ru, description_uz, description_en, images, thumbnail, video_url,
+  is_hot_offer, is_available, inventory_status, in_stock, order_position,
+  specs, spec_data, spec_captured_at, created_at, updated_at
+) ON public.cars TO anon, authenticated;
+
+-- ─── 080_site_settings_llm_models.sql ───────────────────────────────────────────
+-- Allow a site_settings('llm_models') row so the per-tier LLM model picks
+-- (chat / reason / vision, each with a fallback) can be stored at runtime and
+-- swapped live by the weekly auto-refresh job (/api/cron/llm-refresh) without a
+-- redeploy. Extends the existing id allowlist (last set in 039_import_config).
+ALTER TABLE public.site_settings DROP CONSTRAINT IF EXISTS site_settings_id_check;
+ALTER TABLE public.site_settings
+  ADD CONSTRAINT site_settings_id_check
+  CHECK (id IN ('singleton', 'fx_rate', 'import_config', 'llm_models'));
+
+-- ─── 081_cars_category_columns.sql ───────────────────────────────────────────
+-- Materialize two derived categorization attributes as real columns so the catalog
+-- can FILTER + paginate on them (seat count + electric range live in spec_data, not
+-- queryable directly). Backfilled from categorizeCar() via /api/admin/cars/recategorize.
+-- drivetrain already exists (was null) and is backfilled by the same job. year /
+-- transmission / mileage / engine_power are existing columns — no schema change, just
+-- wired into the query + sidebar.
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS seats integer;
+ALTER TABLE public.cars ADD COLUMN IF NOT EXISTS range_km integer;
+
+CREATE INDEX IF NOT EXISTS cars_seats_idx ON public.cars (seats) WHERE seats IS NOT NULL;
+CREATE INDEX IF NOT EXISTS cars_range_km_idx ON public.cars (range_km) WHERE range_km IS NOT NULL;
+
+-- Public read: additive column grant (see 079 — column GRANTs accumulate, so this
+-- adds seats/range_km to the existing public set without re-listing it). KEEP IN SYNC
+-- with PUBLIC_CAR_COLUMNS (src/lib/car-columns.ts).
+GRANT SELECT (seats, range_km) ON public.cars TO anon, authenticated;
+
+-- ─── 082_site_settings_autopilot.sql ───────────────────────────────────────────
+-- Allow a site_settings('autopilot') row so the Autopilot control plane
+-- (master switch + auto-markdown / auto-source-draft bounds) can be persisted
+-- by /api/admin/autopilot-config (PUT) and read by the cron jobs
+-- (/api/cron/auto-markdown, /api/cron/auto-source).
+--
+-- BUG: the id allowlist (last set in 080_site_settings_llm_models) never
+-- included 'autopilot', so saving the Autopilot Rules page failed with
+-- "new row for relation \"site_settings\" violates check constraint
+-- \"site_settings_id_check\"". This extends the allowlist to fix it.
+ALTER TABLE public.site_settings DROP CONSTRAINT IF EXISTS site_settings_id_check;
+ALTER TABLE public.site_settings
+  ADD CONSTRAINT site_settings_id_check
+  CHECK (id IN ('singleton', 'fx_rate', 'import_config', 'llm_models', 'autopilot'));
 

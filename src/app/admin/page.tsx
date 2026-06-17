@@ -188,7 +188,12 @@ export default function AdminDashboard() {
       color: "text-muted-foreground bg-white/[0.06]",
     },
   ];
-  const dueInquiries = inquiries.filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(23, 59, 59, 999) >= Date.now()).slice(0, 5);
+  // "Due today / overdue" = follow-up day is today or earlier (NOT upcoming).
+  const todayEnd = new Date().setHours(23, 59, 59, 999);
+  const dueInquiries = inquiries
+    .filter((inq) => inq.follow_up_date && new Date(inq.follow_up_date).setHours(0, 0, 0, 0) <= todayEnd)
+    .sort((a, b) => new Date(a.follow_up_date!).getTime() - new Date(b.follow_up_date!).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-8">
