@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   Fuel, Gauge, Settings2, CarFront, Palette, Calendar,
-  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle, Layers
+  Zap, Send, Loader2, CheckCircle, Info, AlertCircle, Wrench, MessageCircle, Layers, Calculator
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -351,6 +351,17 @@ export default function CarDetailPage() {
                   <p className="mt-1 text-[11px] text-foreground/40">{dictionary.common.customsNote}</p>
                 </div>
               ) : null}
+
+              {/* High-intent bridge → full customs calculator, prefilled with this car. */}
+              {car.price_usd > 0 && (
+                <Link
+                  href={`${localizedPath(locale, "/calculator")}?car=${car.id}`}
+                  className="flex items-center justify-center gap-2 w-full mb-4 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-foreground/90 hover:bg-foreground/5 transition-colors"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {locale === "ru" ? "Рассчитать растаможку" : locale === "uz" ? "Rastamojkani hisoblash" : "Estimate customs"}
+                </Link>
+              )}
 
               {/* Per-trim CIP-Tashkent prices (authoritative Gonzo list). */}
               {car.spec_data?.gonzo_trims?.length ? (

@@ -93,6 +93,20 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
       .catch(() => {});
   }, []);
 
+  // Deep-link from a car page (/calculator?car=<id>): prefill price/type/engine
+  // once the catalog has loaded, so the estimate is one click from the listing.
+  useEffect(() => {
+    if (catalogCars.length === 0) return;
+    const carId = new URLSearchParams(window.location.search).get("car");
+    if (!carId) return;
+    const car = catalogCars.find((c) => c.id === carId);
+    if (!car) return;
+    setSelectedCarId(carId);
+    setCarPrice(String(car.price_usd));
+    setKind(resolveVehicleKind(car.fuel_type));
+    if (car.engine_volume) setEngineL(String(car.engine_volume));
+  }, [catalogCars]);
+
   const handleCarSelect = (carId: string) => {
     setSelectedCarId(carId);
     if (!carId) return;
