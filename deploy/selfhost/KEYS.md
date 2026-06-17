@@ -185,6 +185,24 @@ LLM_VISION_MODEL=qwen2.5-vl
 - Any OpenAI-compatible (Groq/Together/OpenAI): set `LLM_PROVIDER=openai`,
   `LLM_API_URL=<their /v1 URL>`, `LLM_API_KEY=<key>`, `LLM_MODEL=<model>`.
 
+### Option C (recommended): multi-provider FREE failover
+Drop in any of these FREE keys — each is independent, joins the failover chain
+the moment it's set, and is skipped when blank. **All free-tier; keep each
+account free (no payment method).** Live status + per-provider health: **Admin →
+AI Models**. Each gives its OWN per-key rate limit (fixes OpenRouter's shared
+free-pool 429s).
+
+| Key | Get it at | Powers | Notes |
+|-----|-----------|--------|-------|
+| `GROQ_API_KEY` | **console.groq.com** | chat (primary) | Llama-3.3-70B ~320 tok/s, 30 RPM, no card, no-train. Biggest chat upgrade. |
+| `GEMINI_API_KEY` | **aistudio.google.com** | reason + vision | Gemini 2.5 Flash, multimodal, ~1500/day, no expiry. **Non-PII tiers only** (Google trains on free tier) — auto-excluded from customer chat. |
+| `NVIDIA_API_KEY` | **build.nvidia.com** (`nvapi-…`) | failover all tiers | DeepSeek-R1 / Llama4 / Qwen / Nemotron, 40 RPM, no-train, no card. |
+| `SILICONFLOW_API_KEY` | **siliconflow.com** | deep failover | Qwen3-8B / DeepSeek-R1-Distill free, 1000 RPM. Chinese provider → non-chat tiers. |
+
+Order per tier lives in `src/lib/llm-models.ts` (`TIER_PROVIDER_ORDER`). The
+customer `chat` tier only uses no-train providers (Groq/NVIDIA/OpenRouter); the
+internal `reason`/`vision` tiers may use Gemini for its stronger/multimodal models.
+
 `AI_AUTORESPOND=1` (optional) auto-sends an AI-drafted reply to leads that leave
 an email. Leave blank for a standard confirmation only.
 

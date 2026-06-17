@@ -33,7 +33,7 @@
  * fallback chain runs entirely on OpenRouter's GPUs (nothing on local hardware, so
  * the Vostro never heats up). Local Ollama remains only a dev/offline option.
  */
-import { getTierModels, tierChain, isFreeModel, type LlmTier } from "@/lib/llm-models";
+import { getTierModels, tierChain, isFreeModel, resolveTierChain, PROVIDERS, type LlmTier } from "@/lib/llm-models";
 import { alertDealer } from "@/lib/error-report";
 import { recordLlmCall, type LlmFailure } from "@/lib/llm-telemetry";
 
@@ -116,8 +116,10 @@ export function openaiChatUrl(base: string): string {
   return `${u}/v1/chat/completions`;
 }
 
-/** Is any provider configured? Anthropic needs a key; openai needs a URL (key optional). */
+/** Is any provider configured? A failover-provider key (OpenRouter/Groq/NVIDIA/
+ *  Gemini/SiliconFlow), or the legacy single endpoint (anthropic key / openai URL). */
 export function llmConfigured(env: Record<string, string | undefined> = process.env): boolean {
+  for (const p of Object.values(PROVIDERS)) if ((env[p.keyEnv] || "").trim()) return true;
   if (resolveProvider(env) === "openai") return !!(env.LLM_API_URL || env.LLM_API_KEY);
   return !!env.LLM_API_KEY;
 }
@@ -179,18 +181,70 @@ export function parseChatResponse(provider: LlmProvider, data: unknown): string 
 const TIER_TIMEOUT_MS: Record<LlmTier, number> = { chat: 30000, reason: 90000, vision: 60000 };
 
 /**
- * Internal: run a chat completion for the given tier, walking the tier's
- * [primary, fallback] models — on a non-OK status, timeout, empty content, or
- * thrown error it tries the next model, then returns null (caller → template).
- * Fail-open to null. Reads `content` only — a reasoning model's separate
- * `reasoning` field is intentionally ignored.
+ * Internal: run a chat completion for the given tier, failing over ACROSS
+ * providers (resolveTierChain → [{provider, model, url, key}]). On a non-OK
+ * status, timeout, empty content, or thrown error it tries the next entry, then
+ * returns null (caller → template). Every entry is OpenAI-shaped. When no
+ * failover-provider key is set (pure local-Ollama / anthropic dev), it delegates
+ * to legacyCallChat (the single-endpoint path). Fail-open to null; reads
+ * `content` only — a reasoning model's separate `reasoning` field is ignored.
  */
 async function callChat(args: { system: string; messages: ChatMessage[]; maxTokens: number; tier: LlmTier }): Promise<string | null> {
   if (!llmConfigured()) return null;
+  const chain = await resolveTierChain(args.tier);
+  if (chain.length === 0) return legacyCallChat(args); // Ollama / anthropic dev path
+  const timeout = TIER_TIMEOUT_MS[args.tier];
+  const started = Date.now();
+  const failures: LlmFailure[] = [];
+  let attempts = 0;
+
+  for (const m of chain) {
+    attempts += 1;
+    const req = buildChatRequest("openai", { system: args.system, messages: args.messages, maxTokens: args.maxTokens, apiKey: m.key, url: m.url, model: m.model });
+    if (m.provider === "openrouter") {
+      req.headers["HTTP-Referer"] = "https://tezmotors.uz";
+      req.headers["X-Title"] = "Tez Motors";
+    }
+    try {
+      const res = await fetch(req.url, { method: "POST", headers: req.headers, body: req.body, signal: AbortSignal.timeout(timeout) });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error("LLM non-OK", m.provider, m.model, res.status, body.slice(0, 200));
+        failures.push({ model: m.model, provider: m.provider, reason: "non_ok", status: res.status });
+        continue;
+      }
+      const text = parseChatResponse("openai", await res.json());
+      if (text) {
+        void recordLlmCall({ tier: args.tier, provider: m.provider, answeredModel: m.model, attempts, failures, latencyMs: Date.now() - started });
+        return text;
+      }
+      console.error("LLM empty content", m.provider, m.model);
+      failures.push({ model: m.model, provider: m.provider, reason: "empty" });
+    } catch (err) {
+      console.error("LLM call failed", m.provider, m.model, err instanceof Error ? err.message : err);
+      failures.push({ model: m.model, provider: m.provider, reason: failReason(err) });
+    }
+  }
+  // Whole cross-provider chain failed → record it (answeredModel=null → the
+  // dashboard shows template fallbacks) and alert the owner.
+  if (attempts > 0) {
+    void recordLlmCall({ tier: args.tier, provider: null, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
+  }
+  void alertDealer("FREE LLM models unavailable (all providers)", [`tier=${args.tier}`, `tried: ${chain.map((c) => `${c.provider}:${c.model}`).join(", ")}`, "AI replies are falling back to the deterministic template. Check provider free-tier status / rate limits."], { key: "llm-free-down" });
+  return null;
+}
+
+/**
+ * Legacy single-endpoint path (local Ollama / hosted anthropic) — used only when
+ * NO failover-provider key is configured. Walks the OpenRouter-style tier chain
+ * against one endpoint. Preserved verbatim for dev/offline use.
+ */
+async function legacyCallChat(args: { system: string; messages: ChatMessage[]; maxTokens: number; tier: LlmTier }): Promise<string | null> {
   const provider = resolveProvider();
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = process.env.LLM_API_URL || (provider === "openai" ? OLLAMA_URL : ANTHROPIC_URL);
   const onOpenRouter = /openrouter\.ai/i.test(url);
+  const legacyProvider = onOpenRouter ? "openrouter" : provider === "anthropic" ? "anthropic" : "ollama";
   const all = tierChain(args.tier, await getTierModels());
   // PAID GUARD: on OpenRouter, only EVER call free (:free) models — the account has
   // credit, so a paid id would be billed. A misconfigured non-free model is skipped
@@ -225,7 +279,7 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
       }
       const text = parseChatResponse(provider, await res.json());
       if (text) {
-        void recordLlmCall({ tier: args.tier, answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
+        void recordLlmCall({ tier: args.tier, provider: legacyProvider, answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
         return text;
       }
       console.error("LLM empty content", model);
@@ -238,7 +292,7 @@ async function callChat(args: { system: string; messages: ChatMessage[]; maxToke
   // Whole chain failed → record it (answeredModel=null) so the dashboard shows
   // template fallbacks, then alert the owner the free models are down.
   if (attempts > 0) {
-    void recordLlmCall({ tier: args.tier, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
+    void recordLlmCall({ tier: args.tier, provider: null, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
   }
   if (onOpenRouter && models.length > 0) {
     void alertDealer("OpenRouter FREE models unavailable", [`tier=${args.tier}`, `tried: ${models.join(", ")}`, "AI replies are falling back to the template. Check OpenRouter free-tier status / daily cap / rate limits."], { key: "llm-free-down" });
@@ -306,10 +360,56 @@ export function buildVisionMessages(system: string, user: string, images: string
  * failure (caller fails open). `LLM_VISION_MODEL` overrides the model.
  */
 export async function llmVision(args: { system: string; user: string; images: string[]; maxTokens?: number }): Promise<string | null> {
-  if (!llmConfigured() || resolveProvider() !== "openai" || args.images.length === 0) return null;
+  if (!llmConfigured() || args.images.length === 0) return null;
+  const chain = await resolveTierChain("vision");
+  if (chain.length === 0) return legacyLlmVision(args); // local openai-compat dev
+  const started = Date.now();
+  const failures: LlmFailure[] = [];
+  let attempts = 0;
+  for (const m of chain) {
+    attempts += 1;
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (m.key) headers["authorization"] = `Bearer ${m.key}`;
+    if (m.provider === "openrouter") {
+      headers["HTTP-Referer"] = "https://tezmotors.uz";
+      headers["X-Title"] = "Tez Motors";
+    }
+    const body = JSON.stringify({
+      model: m.model,
+      max_tokens: args.maxTokens ?? 1800,
+      temperature: 0.1,
+      stream: false,
+      messages: buildVisionMessages(args.system, args.user, args.images),
+    });
+    try {
+      const res = await fetch(openaiChatUrl(m.url), { method: "POST", headers, body, signal: AbortSignal.timeout(TIER_TIMEOUT_MS.vision) });
+      if (!res.ok) { console.error("LLM vision non-OK", m.provider, m.model, res.status); failures.push({ model: m.model, provider: m.provider, reason: "non_ok", status: res.status }); continue; }
+      const text = parseChatResponse("openai", await res.json());
+      if (text) {
+        void recordLlmCall({ tier: "vision", provider: m.provider, answeredModel: m.model, attempts, failures, latencyMs: Date.now() - started });
+        return text;
+      }
+      failures.push({ model: m.model, provider: m.provider, reason: "empty" });
+    } catch (err) {
+      console.error("LLM vision failed", m.provider, m.model, err instanceof Error ? err.message : err);
+      failures.push({ model: m.model, provider: m.provider, reason: failReason(err) });
+    }
+  }
+  if (attempts > 0) {
+    void recordLlmCall({ tier: "vision", provider: null, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
+  }
+  void alertDealer("FREE vision models unavailable (all providers)", ["tier=vision", `tried: ${chain.map((c) => `${c.provider}:${c.model}`).join(", ")}`, "Vision (spec-screenshot) extraction fell back to none. Check provider free-tier status."], { key: "llm-free-down" });
+  return null;
+}
+
+/** Legacy single-endpoint vision (local openai-compatible / Ollama) — used only
+ *  when no failover-provider key is set. */
+async function legacyLlmVision(args: { system: string; user: string; images: string[]; maxTokens?: number }): Promise<string | null> {
+  if (resolveProvider() !== "openai" || args.images.length === 0) return null;
   const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || "";
   const url = openaiChatUrl(process.env.LLM_API_URL || OLLAMA_URL);
   const onOpenRouter = /openrouter\.ai/i.test(url);
+  const legacyProvider = onOpenRouter ? "openrouter" : "ollama";
   const all = tierChain("vision", await getTierModels());
   // PAID GUARD (see callChat): on OpenRouter only call :free vision models.
   const models = onOpenRouter ? all.filter(isFreeModel) : all.filter(Boolean);
@@ -337,7 +437,7 @@ export async function llmVision(args: { system: string; user: string; images: st
       if (!res.ok) { console.error("LLM vision non-OK", model, res.status); failures.push({ model, reason: "non_ok", status: res.status }); continue; }
       const text = parseChatResponse("openai", await res.json());
       if (text) {
-        void recordLlmCall({ tier: "vision", answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
+        void recordLlmCall({ tier: "vision", provider: legacyProvider, answeredModel: model, attempts, failures, latencyMs: Date.now() - started });
         return text;
       }
       failures.push({ model, reason: "empty" });
@@ -347,7 +447,7 @@ export async function llmVision(args: { system: string; user: string; images: st
     }
   }
   if (attempts > 0) {
-    void recordLlmCall({ tier: "vision", answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
+    void recordLlmCall({ tier: "vision", provider: null, answeredModel: null, attempts, failures, latencyMs: Date.now() - started });
   }
   if (onOpenRouter && models.length > 0) {
     void alertDealer("OpenRouter FREE models unavailable", ["tier=vision", `tried: ${models.join(", ")}`, "Vision (spec-screenshot) extraction fell back to none. Check OpenRouter free-tier status."], { key: "llm-free-down" });

@@ -118,3 +118,96 @@ export function invalidateTierModelsCache(): void {
   cache = null;
   cachedAt = 0;
 }
+
+// ---- Multi-provider failover (added 2026-06-17) ----------------------------
+// Each tier now fails over ACROSS providers, not just across OpenRouter's free
+// models. OpenRouter's `:free` ids share ONE global pool (the 404/429 churn we
+// saw); every other provider gives us our OWN per-key rate limit, which is the
+// real reliability fix. A provider is only used when its key env is set, so this
+// stays INERT (identical to today's OpenRouter-only behaviour) until the owner
+// drops a key into the Vostro .env.local — then it lights up automatically.
+//
+// PRIVACY GATE: the customer-facing `chat` tier can carry a name/phone in the
+// message text, so it only uses providers that do NOT train on inputs
+// (pii:"ok"). The internal `reason`/`vision` tiers (listing parse, spec
+// screenshots — no customer PII) may use data-training free tiers (Gemini) for
+// their stronger / multimodal models.
+
+export interface ProviderInfo { baseUrl: string; keyEnv: string; pii: "ok" | "avoid" }
+
+/** OpenAI-compatible providers we can fail over to. All use the OpenAI request
+ *  shape (so llm.ts buildChatRequest("openai", …) works unchanged). */
+export const PROVIDERS: Record<string, ProviderInfo> = {
+  // No-train (safe for customer chat):
+  openrouter:  { baseUrl: "https://openrouter.ai/api/v1",                             keyEnv: "OPENROUTER_API_KEY",  pii: "ok" },
+  groq:        { baseUrl: "https://api.groq.com/openai/v1",                           keyEnv: "GROQ_API_KEY",        pii: "ok" },
+  nvidia:      { baseUrl: "https://integrate.api.nvidia.com/v1",                      keyEnv: "NVIDIA_API_KEY",      pii: "ok" },
+  // May train on free-tier inputs / unclear → internal non-PII tiers only:
+  gemini:      { baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", keyEnv: "GEMINI_API_KEY",      pii: "avoid" },
+  siliconflow: { baseUrl: "https://api.siliconflow.com/v1",                           keyEnv: "SILICONFLOW_API_KEY", pii: "avoid" },
+};
+
+// Model id per (provider, tier). OpenRouter is special — it pulls its ids from
+// the configured free chain (site_settings / defaults), not from here.
+const PROVIDER_TIER_MODEL: Record<string, Partial<Record<LlmTier, string>>> = {
+  groq:        { chat: "llama-3.3-70b-versatile", reason: "llama-3.3-70b-versatile" },
+  nvidia:      { chat: "meta/llama-3.3-70b-instruct", reason: "deepseek-ai/deepseek-r1", vision: "meta/llama-3.2-90b-vision-instruct" },
+  gemini:      { chat: "gemini-2.5-flash", reason: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
+  siliconflow: { chat: "Qwen/Qwen3-8B", reason: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B" },
+};
+
+// Provider preference order per tier (best first). "openrouter" expands to the
+// configured free chain at that position.
+const TIER_PROVIDER_ORDER: Record<LlmTier, string[]> = {
+  chat:   ["groq", "openrouter", "nvidia", "siliconflow"],
+  reason: ["gemini", "nvidia", "openrouter", "groq", "siliconflow"],
+  vision: ["gemini", "openrouter", "nvidia"],
+};
+
+export interface ResolvedModel { provider: string; model: string; url: string; key: string; pii: "ok" | "avoid" }
+
+/**
+ * Pure chain builder (unit-tested): expand a tier's provider order into model
+ * entries given the OpenRouter sub-chain + which provider keys are available.
+ * Drops providers without a key; drops pii:"avoid" providers on the `chat` tier
+ * (privacy gate); dedups by provider+model; preserves order.
+ */
+export function buildChainEntries(
+  tier: LlmTier,
+  openrouterIds: string[],
+  hasKey: (provider: string) => boolean,
+): { provider: string; model: string }[] {
+  const out: { provider: string; model: string }[] = [];
+  const seen = new Set<string>();
+  const push = (provider: string, model: string) => {
+    if (!model || !hasKey(provider)) return;
+    if (tier === "chat" && PROVIDERS[provider]?.pii === "avoid") return; // privacy gate
+    const k = `${provider}:${model}`;
+    if (seen.has(k)) return;
+    seen.add(k);
+    out.push({ provider, model });
+  };
+  for (const provider of TIER_PROVIDER_ORDER[tier]) {
+    if (provider === "openrouter") openrouterIds.forEach((id) => push("openrouter", id));
+    else { const m = PROVIDER_TIER_MODEL[provider]?.[tier]; if (m) push(provider, m); }
+  }
+  return out;
+}
+
+/**
+ * Resolve the live failover chain for a tier: provider order → model entries,
+ * each carrying its base URL + key. OpenRouter entries use the configured
+ * (DB/env/default) free chain, free-guarded to `:free` only. Providers whose key
+ * is unset are skipped → inert until configured.
+ */
+export async function resolveTierChain(tier: LlmTier): Promise<ResolvedModel[]> {
+  const orIds = tierChain(tier, await getTierModels()).filter(isFreeModel); // OpenRouter paid-guard
+  const keyOf = (p: string) => (process.env[PROVIDERS[p]?.keyEnv || ""] || "").trim();
+  return buildChainEntries(tier, orIds, (p) => !!keyOf(p)).map((e) => ({
+    provider: e.provider,
+    model: e.model,
+    url: PROVIDERS[e.provider].baseUrl,
+    key: keyOf(e.provider),
+    pii: PROVIDERS[e.provider].pii,
+  }));
+}

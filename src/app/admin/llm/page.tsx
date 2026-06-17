@@ -16,6 +16,7 @@ interface TierStat {
   avgLatencyMs: number | null;
 }
 interface ModelStat {
+  provider: string;
   model: string;
   answered: number;
   non_ok: number;
@@ -24,12 +25,14 @@ interface ModelStat {
   error: number;
   lastUsed: string | null;
 }
-interface Pick { tier: string; chain: string[] }
+interface ChainEntry { provider: string; model: string }
+interface Pick { tier: string; chain: ChainEntry[] }
 interface RecentRow {
   tier: string;
+  provider: string | null;
   answered_model: string | null;
   attempts: number;
-  failures: { model: string; reason: string; status?: number }[];
+  failures: { model: string; provider?: string; reason: string; status?: number }[];
   created_at: string;
 }
 interface Suggestion { tier: string; current?: string; suggest: string; reason?: string }
@@ -71,6 +74,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     thFail: "Откаты",
     thLatency: "Ср. задержка",
     perModel: "По моделям (7 дней)",
+    thProvider: "Провайдер",
     thModel: "Модель",
     thAnswered: "Ответов",
     thFailures: "Сбоев (4xx/пусто/таймаут/ошибка)",
@@ -109,6 +113,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     thFail: "Qaytishlar",
     thLatency: "O'rt. kechikish",
     perModel: "Modellar bo'yicha (7 kun)",
+    thProvider: "Provayder",
     thModel: "Model",
     thAnswered: "Javoblar",
     thFailures: "Xatolar (4xx/bo'sh/taymaut/xato)",
@@ -147,6 +152,7 @@ const COPY: Record<Locale, Record<string, string>> = {
     thFail: "Fallbacks",
     thLatency: "Avg latency",
     perModel: "By model (7 days)",
+    thProvider: "Provider",
     thModel: "Model",
     thAnswered: "Answered",
     thFailures: "Failures (4xx/empty/timeout/error)",
@@ -308,10 +314,13 @@ export default function AdminLlmPage() {
             <div key={p.tier} className="bg-card border border-border rounded p-3">
               <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">{TIER_LABEL(p.tier, c)}</div>
               <div className="flex items-center gap-1.5 flex-wrap">
+                {p.chain.length === 0 && <span className="text-xs text-muted-foreground">{c.none}</span>}
                 {p.chain.map((m, i) => (
-                  <span key={m} className="inline-flex items-center gap-1.5">
+                  <span key={`${m.provider}/${m.model}`} className="inline-flex items-center gap-1.5">
                     {i > 0 && <ArrowRight className="w-3 h-3 text-muted-foreground" />}
-                    <span className={`font-mono text-xs rounded px-2 py-0.5 ${i === 0 ? "bg-primary/15 text-foreground" : "bg-muted/40 text-muted-foreground"}`}>{short(m)}</span>
+                    <span className={`font-mono text-xs rounded px-2 py-0.5 ${i === 0 ? "bg-primary/15 text-foreground" : "bg-muted/40 text-muted-foreground"}`}>
+                      <span className="opacity-60">{m.provider}</span> {short(m.model)}
+                    </span>
                   </span>
                 ))}
               </div>
@@ -367,6 +376,7 @@ export default function AdminLlmPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                      <th className="px-4 py-2 font-medium">{c.thProvider}</th>
                       <th className="px-4 py-2 font-medium">{c.thModel}</th>
                       <th className="px-4 py-2 font-medium text-right">{c.thAnswered}</th>
                       <th className="px-4 py-2 font-medium text-right">{c.thFailures}</th>
@@ -377,7 +387,8 @@ export default function AdminLlmPage() {
                     {data.models.map((m) => {
                       const fails = m.non_ok + m.empty + m.timeout + m.error;
                       return (
-                        <tr key={m.model} className="border-b border-border last:border-0">
+                        <tr key={`${m.provider}/${m.model}`} className="border-b border-border last:border-0">
+                          <td className="px-4 py-2 text-xs text-muted-foreground">{m.provider}</td>
                           <td className="px-4 py-2 font-mono text-xs text-foreground" title={m.model}>{short(m.model)}</td>
                           <td className="px-4 py-2 text-right font-mono text-[var(--success,#16a34a)]">{m.answered}</td>
                           <td className={`px-4 py-2 text-right font-mono ${fails > 0 ? "text-[var(--warning,#d97706)]" : "text-muted-foreground"}`}>
@@ -406,10 +417,10 @@ export default function AdminLlmPage() {
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{r.tier}</span>
                     <span className="flex-1 min-w-0 font-mono break-all">
                       {r.failures.map((f, j) => (
-                        <span key={j} className="text-[var(--warning,#d97706)]">{short(f.model)} <span className="text-muted-foreground">({f.reason}{f.status ? ` ${f.status}` : ""})</span>{j < r.failures.length - 1 ? ", " : ""} </span>
+                        <span key={j} className="text-[var(--warning,#d97706)]">{f.provider ? `${f.provider}:` : ""}{short(f.model)} <span className="text-muted-foreground">({f.reason}{f.status ? ` ${f.status}` : ""})</span>{j < r.failures.length - 1 ? ", " : ""} </span>
                       ))}
                       {r.answered_model ? (
-                        <span className="text-[var(--success,#16a34a)]">→ {short(r.answered_model)} {c.answeredBy}</span>
+                        <span className="text-[var(--success,#16a34a)]">→ {r.provider ? `${r.provider}:` : ""}{short(r.answered_model)} {c.answeredBy}</span>
                       ) : (
                         <span className="text-[var(--danger,#ef4444)]">→ {c.template}</span>
                       )}

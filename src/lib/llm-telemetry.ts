@@ -14,12 +14,14 @@ export type LlmFailureReason = "non_ok" | "empty" | "timeout" | "error";
 
 export interface LlmFailure {
   model: string;
+  provider?: string; // which provider this attempt hit (multi-provider failover)
   reason: LlmFailureReason;
   status?: number; // HTTP status for non_ok
 }
 
 export interface LlmCallRecord {
   tier: LlmTier;
+  provider: string | null; // provider that answered; null = whole chain failed
   answeredModel: string | null; // null = whole chain failed → template fallback
   attempts: number; // how many models were tried
   failures: LlmFailure[]; // each model that didn't answer
@@ -32,6 +34,7 @@ export async function recordLlmCall(rec: LlmCallRecord): Promise<void> {
     const supabase = createServiceClient();
     await supabase.from("llm_call_log").insert({
       tier: rec.tier,
+      provider: rec.provider,
       answered_model: rec.answeredModel,
       attempts: rec.attempts,
       switched: rec.attempts > 1,
