@@ -25,13 +25,13 @@ interface Btn { text: string; callback_data?: string; url?: string }
 interface Markup { inline_keyboard?: Btn[][]; force_reply?: boolean; input_field_placeholder?: string }
 export interface BotStep { text: string; replyMarkup?: Markup; lead?: boolean }
 
-const CATEGORIES: { cat: string; label: Tri; mode: "car" | "moto" | "lead"; note?: Tri }[] = [
+const CATEGORIES: { cat: string; label: Tri; mode: "car" | "moto" | "engine" | "truck" | "lead"; note?: Tri }[] = [
   { cat: "car", label: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, mode: "car" },
   { cat: "moto", label: { ru: "🏍 Мото / скутер", uz: "🏍 Moto / skuter", en: "🏍 Moto / scooter" }, mode: "moto" },
-  { cat: "truck", label: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" }, mode: "lead" },
-  { cat: "engine", label: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, mode: "lead" },
-  { cat: "fura", label: { ru: "🚛 Фура", uz: "🚛 Fura", en: "🚛 Semi-truck" }, mode: "lead", note: { ru: "Ввоз ниже Евро-4 запрещён.", uz: "Yevro-4 dan past import taqiqlangan.", en: "Below Euro-4 import is banned." } },
+  { cat: "truck", label: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" }, mode: "truck" },
+  { cat: "engine", label: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, mode: "engine" },
   { cat: "bus", label: { ru: "🚍 Автобус", uz: "🚍 Avtobus", en: "🚍 Bus" }, mode: "lead" },
+  { cat: "fura", label: { ru: "🚛 Фура", uz: "🚛 Fura", en: "🚛 Semi-truck" }, mode: "lead", note: { ru: "Тариф зависит от эко-класса/тоннажа; ввоз ниже Евро-4 запрещён.", uz: "Tarif eko-klass/tonnajga bog'liq; Yevro-4 dan past import taqiqlangan.", en: "Tariff depends on eco-class/tonnage; below Euro-4 import is banned." } },
 ];
 
 const KIND_LABEL: Record<VehicleKind, Tri> = {
@@ -44,6 +44,18 @@ const KIND_LABEL: Record<VehicleKind, Tri> = {
 const MOTO_FUEL: Record<"petrol" | "electric", Tri> = {
   petrol: { ru: "⛽️ Бензин", uz: "⛽️ Benzin", en: "⛽️ Petrol" },
   electric: { ru: "⚡️ Электро", uz: "⚡️ Elektro", en: "⚡️ Electric" },
+};
+const STATE_LABEL: Record<"new" | "used", Tri> = {
+  new: { ru: "Новый", uz: "Yangi", en: "New" },
+  used: { ru: "Б/У", uz: "Ishlatilgan", en: "Used" },
+};
+const TRUCK_FUEL: Record<"ice" | "ev", Tri> = {
+  ice: { ru: "⛽️ ДВС", uz: "⛽️ ICE", en: "⛽️ ICE" },
+  ev: { ru: "🔋 Электро", uz: "🔋 Elektro", en: "🔋 Electric" },
+};
+const TRUCK_AGE: Record<"le3" | "gt3", Tri> = {
+  le3: { ru: "До 3 лет", uz: "3 yilgacha", en: "≤3 years" },
+  gt3: { ru: "Более 3 лет", uz: "3 yildan ortiq", en: ">3 years" },
 };
 const AGE_LABEL: Record<VehicleAge, Tri> = {
   new: { ru: "До 1 года", uz: "1 yilgacha", en: "≤1 year" },
@@ -60,6 +72,9 @@ const T = {
   pickKind: { ru: "Тип топлива авто:", uz: "Avto yoqilg'i turi:", en: "Car fuel type:" },
   pickMotoFuel: { ru: "Тип топлива мото:", uz: "Moto yoqilg'i turi:", en: "Moto fuel type:" },
   pickAge: { ru: "Возраст авто:", uz: "Avto yoshi:", en: "Vehicle age:" },
+  pickState: { ru: "Состояние двигателя:", uz: "Dvigatel holati:", en: "Engine condition:" },
+  pickTruckFuel: { ru: "Тип топлива грузовика:", uz: "Yuk mashinasi yoqilg'isi:", en: "Truck fuel type:" },
+  pickTruckAge: { ru: "Возраст грузовика:", uz: "Yuk mashinasi yoshi:", en: "Truck age:" },
   pickOrigin: { ru: "Происхождение / сертификат СТ-1:", uz: "Kelib chiqishi / ST-1 sertifikati:", en: "Origin / ST-1 certificate:" },
   pickEngine: { ru: "Объём двигателя:", uz: "Dvigatel hajmi:", en: "Engine volume:" },
   askPrice: { ru: "Введите стоимость в USD (цена + доставка). Ответьте на это сообщение числом:", uz: "Narxni USD da kiriting (narx + yetkazib berish). Shu xabarga raqam bilan javob bering:", en: "Enter the price in USD (price + delivery). Reply to this message with a number:" },
@@ -75,7 +90,7 @@ const T = {
   fee: { ru: "Таможенный сбор", uz: "Bojxona yig'imi", en: "Clearance fee" },
   webBtn: { ru: "🌐 Точный расчёт на сайте", uz: "🌐 Saytda aniq hisob", en: "🌐 Exact estimate on the site" },
   note: { ru: "Оценка по тарифам РУз. Сертификация ~$300–690 отдельно.", uz: "OʻzR tariflari boʻyicha. Sertifikatlash ~$300–690 alohida.", en: "Per UZ tariffs. Certification ~$300–690 separate." },
-  cat: { car: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, moto: { ru: "🏍 Мото", uz: "🏍 Moto", en: "🏍 Moto" } } as Record<string, Tri>,
+  cat: { car: { ru: "🚗 Авто", uz: "🚗 Avto", en: "🚗 Car" }, moto: { ru: "🏍 Мото", uz: "🏍 Moto", en: "🏍 Moto" }, engine: { ru: "⚙️ Мотор", uz: "⚙️ Motor", en: "⚙️ Engine" }, truck: { ru: "🚚 Мини-грузовик", uz: "🚚 Mini yuk", en: "🚚 Mini-truck" } } as Record<string, Tri>,
 };
 
 const ENGINE_CC = [1500, 2000, 2500, 3000, 4000];
@@ -105,6 +120,14 @@ export function customsStep(data: string, loc: string): BotStep | null {
     if (cat.mode === "moto") {
       const fuels: ("petrol" | "electric")[] = ["petrol", "electric"];
       return { text: T.pickMotoFuel[l], replyMarkup: { inline_keyboard: [fuels.map((f) => ({ text: MOTO_FUEL[f][l], callback_data: `cu|mk|${f}` }))] } };
+    }
+    if (cat.mode === "engine") {
+      const states: ("new" | "used")[] = ["new", "used"];
+      return { text: T.pickState[l], replyMarkup: { inline_keyboard: [states.map((s) => ({ text: STATE_LABEL[s][l], callback_data: `cu|es|${s}` }))] } };
+    }
+    if (cat.mode === "truck") {
+      const fuels: ("ice" | "ev")[] = ["ice", "ev"];
+      return { text: T.pickTruckFuel[l], replyMarkup: { inline_keyboard: [fuels.map((f) => ({ text: TRUCK_FUEL[f][l], callback_data: `cu|tf|${f}` }))] } };
     }
     // car
     const kinds: VehicleKind[] = ["electric", "petrol", "hybrid", "phev"];
@@ -143,6 +166,26 @@ export function customsStep(data: string, loc: string): BotStep | null {
     const [, , fuel, origin] = p;
     return pricePrompt(`moto|${fuel}|${origin}`, l);
   }
+
+  // ── Engine flow ──
+  if (step === "es") return pricePrompt(`engine|${p[2]}`, l); // p[2] = new|used
+
+  // ── Mini-truck flow ──
+  if (step === "tf") {
+    const fuel = p[2]; // ice | ev
+    const ages: ("le3" | "gt3")[] = ["le3", "gt3"];
+    return { text: T.pickTruckAge[l], replyMarkup: { inline_keyboard: [ages.map((a) => ({ text: TRUCK_AGE[a][l], callback_data: `cu|ta|${fuel}|${a}` }))] } };
+  }
+  if (step === "ta") {
+    const [, , fuel, age] = p;
+    if (fuel === "ev") return pricePrompt(`truck|ev|${age}|certified`, l); // EV: origin irrelevant
+    const origins: OriginClass[] = ["fta", "certified", "uncertified"];
+    return { text: T.pickOrigin[l], replyMarkup: { inline_keyboard: origins.map((o) => [{ text: ORIGIN_LABEL[o][l], callback_data: `cu|to|${fuel}|${age}|${o}` }]) } };
+  }
+  if (step === "to") {
+    const [, , fuel, age, origin] = p;
+    return pricePrompt(`truck|${fuel}|${age}|${origin}`, l);
+  }
   return null;
 }
 
@@ -165,6 +208,16 @@ export function customsPriceReply(promptText: string, userText: string, loc: str
     const [, fuel, origin] = parts;
     r = computeCustomsUz({ priceUsd: price, category: "moto", kind: fuel as VehicleKind, origin: origin as OriginClass, usdUzs });
     header = `${T.cat.moto[l]} · ${MOTO_FUEL[(fuel === "electric" ? "electric" : "petrol")][l]} · ${ORIGIN_LABEL[r.origin][l]}`;
+  } else if (parts[0] === "engine") {
+    const state = parts[1] === "used" ? "used3plus" : "new";
+    r = computeCustomsUz({ priceUsd: price, category: "engine", kind: "petrol", age: state as VehicleAge, usdUzs });
+    header = `${T.cat.engine[l]} · ${STATE_LABEL[parts[1] === "used" ? "used" : "new"][l]}`;
+  } else if (parts[0] === "truck") {
+    const [, fuel, age, origin] = parts; // fuel ice|ev, age le3|gt3
+    const kind: VehicleKind = fuel === "ev" ? "electric" : "petrol";
+    const va: VehicleAge = age === "gt3" ? "used3plus" : "used1to3";
+    r = computeCustomsUz({ priceUsd: price, category: "truck", kind, age: va, origin: origin as OriginClass, usdUzs });
+    header = `${T.cat.truck[l]} · ${TRUCK_FUEL[fuel === "ev" ? "ev" : "ice"][l]} · ${TRUCK_AGE[age === "gt3" ? "gt3" : "le3"][l]}${kind === "electric" ? "" : ` · ${ORIGIN_LABEL[r.origin][l]}`}`;
   } else {
     const [kind, age, origin, cc] = parts;
     r = computeCustomsUz({ priceUsd: price, kind: kind as VehicleKind, age: age as VehicleAge, origin: origin as OriginClass, engineCc: Number(cc), usdUzs });

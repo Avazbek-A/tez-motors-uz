@@ -44,6 +44,23 @@ describe("motorcycle (HS 8711) — validated against @autodeklarantbot", () => {
   });
 });
 
+describe("engine (HS 8407) — validated against the bot", () => {
+  const E = (over: object) => computeCustomsUz({ priceUsd: 20000, category: "engine", usdUzs: 12012.12, kind: "petrol", ...over } as Parameters<typeof computeCustomsUz>[0]).customsCostUsd;
+  it("new motor: 0% duty, no util → $2,486", () => { expect(E({ age: "new" })).toBe(2486); });
+  it("used motor: 30% duty → $9,206", () => { expect(E({ age: "used3plus" })).toBe(9206); });
+  it("engine has no utilization line", () => {
+    expect(computeCustomsUz({ priceUsd: 20000, category: "engine", kind: "petrol", age: "new" }).lines.find((l) => l.key === "util")).toBeUndefined();
+  });
+});
+
+describe("mini-truck ≤5t (HS 8704) — validated against the bot", () => {
+  const TR = (over: object) => computeCustomsUz({ priceUsd: 20000, category: "truck", usdUzs: 12012.12, kind: "petrol", ...over } as Parameters<typeof computeCustomsUz>[0]).customsCostUsd;
+  it("petrol certified ≤3y: 30% duty, 210-BRV util → $16,409", () => { expect(TR({ age: "used1to3", origin: "certified" })).toBe(16409); });
+  it("petrol certified >3y: 300-BRV util → $19,496", () => { expect(TR({ age: "used3plus", origin: "certified" })).toBe(19496); });
+  it("no certificate: 60% duty → $23,129", () => { expect(TR({ age: "used1to3", origin: "uncertified" })).toBe(23129); });
+  it("electric: 0% duty, 120-BRV util → $6,602", () => { expect(TR({ age: "used1to3", origin: "certified", kind: "electric" })).toBe(6602); });
+});
+
 describe("rate structure", () => {
   it("no certificate doubles the certified duty rate", () => {
     expect(dutyRate("petrol", "new", "uncertified")).toEqual({ pct: 30, perCc: 2 });

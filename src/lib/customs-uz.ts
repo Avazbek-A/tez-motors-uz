@@ -30,9 +30,14 @@ export const CLEARANCE_BRV = 2.5; // таможенный сбор за офор
 
 // Motorcycle (HS 8711) — simpler: no age, no per-cc, no utilization fee, and a
 // 1-BRV clearance. Duty is flat by origin/fuel. (Probed + validated from the bot.)
-export type VehicleCategory = "car" | "moto";
+export type VehicleCategory = "car" | "moto" | "engine" | "truck";
 export const MOTO_DUTY_PCT = 20; // petrol, certified non-FTA (×2 if no certificate; FTA/electric → 0)
 export const MOTO_CLEARANCE_BRV = 1;
+// Engine/motor (HS 8407): new = duty-free, used = 30%; no utilization. (Probed.)
+export const ENGINE_USED_DUTY_PCT = 30;
+// Mini-truck ≤5t (HS 8704): 30% certified (×2 no-cert; 0 electric/FTA); utilization
+// by age (≤3y 210 / >3y 300 BRV; EV 120); gross mass doesn't change the ≤5t band. (Probed.)
+export const TRUCK_DUTY_PCT = 30;
 
 /** Duty base for a PETROL/DIESEL car, non-FTA origin WITH certificate, by age:
  *  [percent of customs value, USD per cm³]. No-cert doubles it; FTA → 0; EV → 0;
@@ -120,6 +125,33 @@ export function computeCustomsUz(input: CustomsInput): CustomsResult {
     lines.push({ key: "clearance", detail: `${MOTO_CLEARANCE_BRV} БРВ`, sumValue: feeSumM, usdValue: round0(toUsd(feeSumM)) });
     const costM = lines.reduce((s, l) => s + l.usdValue, 0);
     return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(costM), totalUsd: round0(customsValue + costM), usdUzs, brvSum: brv };
+  }
+
+  // ── Engine/motor path (HS 8407): new = 0%, used = 30%; no utilization. ──
+  if (input.category === "engine") {
+    const duty = age === "new" ? 0 : customsValue * (ENGINE_USED_DUTY_PCT / 100);
+    if (duty > 0) lines.push({ key: "duty", detail: `${ENGINE_USED_DUTY_PCT}%`, usdValue: round0(duty) });
+    lines.push({ key: "vat", detail: "12%", usdValue: round0((customsValue + duty) * VAT_PCT) });
+    const feeSum = CLEARANCE_BRV * brv;
+    lines.push({ key: "clearance", detail: `${CLEARANCE_BRV} БРВ`, sumValue: feeSum, usdValue: round0(toUsd(feeSum)) });
+    const cost = lines.reduce((s, l) => s + l.usdValue, 0);
+    return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(cost), totalUsd: round0(customsValue + cost), usdUzs, brvSum: brv };
+  }
+
+  // ── Mini-truck ≤5t path (HS 8704): 30%/60%/0 duty + age-tiered utilization. ──
+  if (input.category === "truck") {
+    const ev = kind === "electric" || kind === "phev";
+    const dutyPctT = ev || origin === "fta" ? 0 : origin === "uncertified" ? TRUCK_DUTY_PCT * 2 : TRUCK_DUTY_PCT;
+    const duty = customsValue * (dutyPctT / 100);
+    if (dutyPctT > 0) lines.push({ key: "duty", detail: `${dutyPctT}%`, usdValue: round0(duty) });
+    lines.push({ key: "vat", detail: "12%", usdValue: round0((customsValue + duty) * VAT_PCT) });
+    const utilBrvT = ev ? 120 : age === "used3plus" ? 300 : 210;
+    const utilSumT = utilBrvT * brv;
+    lines.push({ key: "util", detail: `${utilBrvT} БРВ`, sumValue: utilSumT, usdValue: round0(toUsd(utilSumT)) });
+    const feeSum = CLEARANCE_BRV * brv;
+    lines.push({ key: "clearance", detail: `${CLEARANCE_BRV} БРВ`, sumValue: feeSum, usdValue: round0(toUsd(feeSum)) });
+    const cost = lines.reduce((s, l) => s + l.usdValue, 0);
+    return { kind, age, origin, customsValueUsd: round0(customsValue), lines, customsCostUsd: round0(cost), totalUsd: round0(customsValue + cost), usdUzs, brvSum: brv };
   }
 
   // Customs duty (Таможенная пошлина).
