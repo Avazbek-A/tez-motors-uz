@@ -39,10 +39,13 @@ export interface TierModels {
 
 /** Quality-max defaults (dealer choice 2026-06-15) — all OpenRouter free NVIDIA Nemotron. */
 export const DEFAULT_TIER_MODELS: TierModels = {
-  chat: "nvidia/nemotron-3-nano-30b-a3b:free",
-  chatFallback: "nvidia/nemotron-nano-9b-v2:free",
-  reason: "nvidia/nemotron-3-ultra-550b-a55b:free",
-  reasonFallback: "nvidia/nemotron-3-super-120b-a12b:free",
+  // Current, verified-live OpenRouter `:free` instruction models (the older Nemotron
+  // ids 404'd on OpenRouter's free pool). Instruction (not reasoning) models — they
+  // emit clean JSON instead of burning the token budget on <think> blocks.
+  chat: "openai/gpt-oss-20b:free",
+  chatFallback: "meta-llama/llama-3.3-70b-instruct:free",
+  reason: "meta-llama/llama-3.3-70b-instruct:free",
+  reasonFallback: "qwen/qwen3-next-80b-a3b-instruct:free",
   vision: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   visionFallback: "nvidia/nemotron-nano-12b-v2-vl:free",
 };
@@ -98,8 +101,8 @@ export function tierPair(tier: LlmTier, m: TierModels): [string, string] {
  * multimodal). Kept short so a total free-tier outage doesn't stack timeouts.
  */
 const EXTRA_FREE_FALLBACKS: Record<LlmTier, string[]> = {
-  chat: ["nvidia/nemotron-nano-9b-v2:free", "meta-llama/llama-3.3-70b-instruct:free", "google/gemma-4-31b-it:free"],
-  reason: ["nvidia/nemotron-3-super-120b-a12b:free", "qwen/qwen3-next-80b-a3b-instruct:free", "meta-llama/llama-3.3-70b-instruct:free"],
+  chat: ["openai/gpt-oss-20b:free", "meta-llama/llama-3.3-70b-instruct:free", "qwen/qwen3-next-80b-a3b-instruct:free"],
+  reason: ["openai/gpt-oss-120b:free", "qwen/qwen3-coder:free", "meta-llama/llama-3.3-70b-instruct:free"],
   vision: ["nvidia/nemotron-nano-12b-v2-vl:free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"],
 };
 
@@ -160,7 +163,11 @@ const PROVIDER_TIER_MODEL: Record<string, Partial<Record<LlmTier, string>>> = {
 // configured free chain at that position.
 const TIER_PROVIDER_ORDER: Record<LlmTier, string[]> = {
   chat:   ["groq", "openrouter", "nvidia", "siliconflow"],
-  reason: ["gemini", "nvidia", "openrouter", "groq", "siliconflow"],
+  // Lead with the free no-train routers (OpenRouter + Groq). This (a) honours the
+  // "use the free routers" preference, and (b) keeps PII-bearing reason work — call
+  // transcripts via analyzeCall — on no-train providers in practice; the data-training
+  // free tiers (gemini/siliconflow) are demoted to last-resort fallbacks.
+  reason: ["openrouter", "groq", "nvidia", "gemini", "siliconflow"],
   vision: ["gemini", "openrouter", "nvidia"],
 };
 

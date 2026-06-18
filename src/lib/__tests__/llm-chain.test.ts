@@ -17,9 +17,17 @@ describe("buildChainEntries (multi-provider failover)", () => {
     expect(chain.some((e) => e.provider === "siliconflow")).toBe(false);
   });
 
-  it("reason: gemini allowed (internal, non-PII) and ranked first", () => {
+  it("reason: leads with the free no-train routers; gemini still allowed but demoted last", () => {
     const chain = buildChainEntries("reason", OR, all);
-    expect(chain[0]).toEqual({ provider: "gemini", model: "gemini-2.5-flash" });
+    // OpenRouter free models lead (preferred + no-train for PII-bearing call transcripts).
+    expect(chain[0]).toEqual({ provider: "openrouter", model: "openai/gpt-oss-20b:free" });
+    // gemini is still ALLOWED on the internal reason tier (privacy gate only blocks chat),
+    // but ranked AFTER the no-train providers (groq) — last-resort.
+    expect(chain.some((e) => e.provider === "gemini")).toBe(true);
+    const groqIdx = chain.findIndex((e) => e.provider === "groq");
+    const geminiIdx = chain.findIndex((e) => e.provider === "gemini");
+    expect(groqIdx).toBeGreaterThanOrEqual(0);
+    expect(geminiIdx).toBeGreaterThan(groqIdx);
     expect(chain.some((e) => e.provider === "siliconflow")).toBe(true);
   });
 
