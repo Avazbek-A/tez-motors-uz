@@ -300,6 +300,37 @@ export default function MobileCallRecorder() {
   const [aiAgentTyping, setAiAgentTyping] = useState(false);
   const [clientResponseText, setClientResponseText] = useState("");
 
+  // Next-Gen CRM VoIP & AI Call Center upgrades (v4) states
+  const [campaignAgent, setCampaignAgent] = useState<"qualifier" | "scheduler" | "closer">("qualifier");
+  const [sentiment, setSentiment] = useState<"neutral" | "positive" | "friction">("neutral");
+  const [suggestedDiscount, setSuggestedDiscount] = useState<number | null>(null);
+  
+  // B2B supplier sourcing states
+  const [sourcingLogs, setSourcingLogs] = useState<string[] | null>(null);
+  const [sourcingResults, setSourcingResults] = useState<any | null>(null);
+  const [isSourcingLoading, setIsSourcingLoading] = useState(false);
+
+  // 3D showroom visual push states
+  const [showShowroomModal, setShowShowroomModal] = useState(false);
+  const [showroomColor, setShowroomColor] = useState("Space Black");
+  const [showroomRot, setShowroomRot] = useState(0);
+
+  // Vocal Friction Indicator states
+  const [vocalFriction, setVocalFriction] = useState(0);
+  const [vocalFrictionLevel, setVocalFrictionLevel] = useState<"green" | "yellow" | "red">("green");
+
+  // Voice clone trainer widget states
+  const [voiceCloneRecording, setVoiceCloneRecording] = useState(false);
+  const [voiceCloneBlob, setVoiceCloneBlob] = useState<Blob | null>(null);
+  const [voiceCloneSuccess, setVoiceCloneSuccess] = useState(false);
+  const [voiceCloneSaving, setVoiceCloneSaving] = useState(false);
+  const [voiceCloneAudioUrl, setVoiceCloneAudioUrl] = useState<string | null>(null);
+  const [voiceCloneName, setVoiceCloneName] = useState("");
+
+  // Collateral brochure compiler states
+  const [brochureUrl, setBrochureUrl] = useState<string | null>(null);
+  const [compilingBrochure, setCompilingBrochure] = useState(false);
+
   // Refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -593,10 +624,36 @@ export default function MobileCallRecorder() {
 
       if (analyser) {
         analyser.getByteFrequencyData(dataArray);
+        // Calculate vocal friction score based on frequency amplitude average
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / bufferLength;
+        const score = Math.min(100, Math.max(0, Math.round(avg * 1.3)));
+        setVocalFriction(score);
+        if (score > 70) {
+          setVocalFrictionLevel("red");
+        } else if (score > 40) {
+          setVocalFrictionLevel("yellow");
+        } else {
+          setVocalFrictionLevel("green");
+        }
       } else {
         // Simulated frequency data for AI Outbound simulator
         for (let i = 0; i < bufferLength; i++) {
           dataArray[i] = Math.floor(Math.random() * 150) + 30;
+        }
+        // Simulate fluctuations in vocal friction
+        const simAvg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+        const score = Math.min(100, Math.max(0, Math.round(simAvg * 0.4 + (Math.sin(Date.now() / 1500) * 15 + 20))));
+        setVocalFriction(score);
+        if (score > 70) {
+          setVocalFrictionLevel("red");
+        } else if (score > 40) {
+          setVocalFrictionLevel("yellow");
+        } else {
+          setVocalFrictionLevel("green");
         }
       }
 
@@ -726,45 +783,24 @@ export default function MobileCallRecorder() {
     setFollowUpCheck(false);
     setModelDetected(aiAgentModel);
 
+    // Reset negotiation parameters
+    setSentiment("neutral");
+    setSuggestedDiscount(null);
+    setBrochureUrl(null);
+
     // Binds simulated frequency bars
     setTimeout(() => {
       drawVisualizer();
     }, 100);
 
     // Start running simulated time duration
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     timerIntervalRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    // Get initial dynamic greeting from Лия
-    setAiAgentTyping(true);
-    try {
-      const res = await fetch("/api/admin/calls/agent/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          history: [],
-          model: aiAgentModel,
-          language: aiAgentLang,
-          user_message: ""
-        })
-      });
-      const data = await res.json();
-      if (data.reply) {
-        const text = data.reply;
-        setTranscript(`[AI Agent]: ${text}`);
-        setAiChatHistory([{ speaker: "AI", text }]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch AI Agent greeting:", err);
-      const fallback = aiAgentLang === "uz" 
-        ? "Assalomu alaykum! Tez Motors kompaniyasining virtual yordamchisiman. Ismim Liya. Avtomobil sotib olishga qiziqayotgan edingizmi?"
-        : "Здравствуйте! Я виртуальный ассистент компании Tez Motors. Меня зовут Лия. Вы интересовались покупкой автомобиля?";
-      setTranscript(`[AI Agent]: ${fallback}`);
-      setAiChatHistory([{ speaker: "AI", text: fallback }]);
-    } finally {
-      setAiAgentTyping(false);
-    }
+    // Stream initial agent greeting from the selected agent type
+    await streamAgentResponse([], "");
   };
 
   const handleSendClientResponse = async (customText?: string) => {
@@ -790,26 +826,82 @@ export default function MobileCallRecorder() {
       setFollowUpCheck(true);
     }
 
+    await streamAgentResponse(updatedHistory, textToSend);
+  };
+
+  const streamAgentResponse = async (history: { speaker: "AI" | "Client"; text: string }[], userMessage: string) => {
     setAiAgentTyping(true);
     try {
-      const res = await fetch("/api/admin/calls/agent/chat", {
+      const response = await fetch("/api/admin/calls/agent/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          history: updatedHistory,
+          history,
           model: aiAgentModel,
           language: aiAgentLang,
-          user_message: textToSend
+          user_message: userMessage,
+          agent_type: campaignAgent // 'qualifier' | 'scheduler' | 'closer'
         })
       });
-      const data = await res.json();
-      if (data.reply) {
-        const replyText = data.reply;
-        setTranscript((prev) => `${prev}\n[AI Agent]: ${replyText}`);
-        setAiChatHistory((prev) => [...prev, { speaker: "AI", text: replyText }]);
 
-        // Double check target words in agent response
-        const lowerReply = replyText.toLowerCase();
+      if (!response.body) {
+        throw new Error("No readable stream in response");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let buffer = "";
+      
+      // We append AI Agent block start
+      setTranscript((prev) => `${prev}\n[AI Agent (${campaignAgent})]: `);
+
+      let aiTextAccumulator = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine) continue;
+            if (cleanLine === "data: [DONE]") continue;
+
+            if (cleanLine.startsWith("data: ")) {
+              try {
+                const parsed = JSON.parse(cleanLine.substring(6));
+                
+                // Check if this chunk is metadata containing sentiment/discount info
+                if (parsed.sentiment) {
+                  setSentiment(parsed.sentiment);
+                  if (parsed.suggested_discount) {
+                    setSuggestedDiscount(parsed.suggested_discount);
+                  }
+                }
+                
+                // Or if it is a text chunk
+                if (parsed.text) {
+                  const textChunk = parsed.text;
+                  aiTextAccumulator += textChunk;
+                  setTranscript((prev) => prev + textChunk);
+                }
+              } catch (e) {
+                // Incomplete JSON chunk, skip
+              }
+            }
+          }
+        }
+      }
+
+      // Add completed response to chat history
+      if (aiTextAccumulator) {
+        setAiChatHistory((prev) => [...prev, { speaker: "AI", text: aiTextAccumulator }]);
+
+        const lowerReply = aiTextAccumulator.toLowerCase();
         if (lowerReply.includes("гаранти") || lowerReply.includes("kafolat") || lowerReply.includes("warranty")) {
           setWarrantyCheck(true);
         }
@@ -820,10 +912,143 @@ export default function MobileCallRecorder() {
           setFollowUpCheck(true);
         }
       }
+
     } catch (err) {
-      console.error("Failed to query conversational agent:", err);
+      console.error("Error streaming agent response:", err);
+      // Fallback
+      const fallback = aiAgentLang === "uz" 
+        ? "Texnik nosozlik yuz berdi. Iltimos, qayta urinib ko'ring."
+        : "Произошла техническая ошибка. Пожалуйста, попробуйте еще раз.";
+      setTranscript((prev) => `${prev}\n[AI Agent (${campaignAgent})]: ${fallback}`);
+      setAiChatHistory((prev) => [...prev, { speaker: "AI", text: fallback }]);
     } finally {
       setAiAgentTyping(false);
+    }
+  };
+
+  // B2B supplier negotiation simulator caller
+  const runB2BSourcingNegotiation = async () => {
+    setIsSourcingLoading(true);
+    setSourcingLogs(null);
+    setSourcingResults(null);
+    try {
+      const vehiclePriceStr = CAR_SPECS[aiAgentModel]?.price || "26500";
+      const vehiclePrice = Number(vehiclePriceStr.replace(/[^0-9]/g, "")) || 26500;
+      
+      const res = await fetch("/api/admin/calls/agent/source", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicle: CAR_SPECS[aiAgentModel]?.model || "BYD Song Plus",
+          color: "matte grey",
+          budget: vehiclePrice
+        })
+      });
+      const data = await res.json();
+      if (data.logs) {
+        setSourcingLogs(data.logs);
+        setSourcingResults(data);
+      }
+    } catch (err) {
+      console.error("Failed to run sourcing negotiator:", err);
+    } finally {
+      setIsSourcingLoading(false);
+    }
+  };
+
+  // Compile Dynamic Sales Brochure (CRM Collateral)
+  const compileBrochure = async () => {
+    setCompilingBrochure(true);
+    try {
+      const vehiclePriceStr = CAR_SPECS[aiAgentModel]?.price || "26500";
+      const vehiclePrice = Number(vehiclePriceStr.replace(/[^0-9]/g, "")) || 26500;
+      
+      const res = await fetch("/api/admin/calls/collateral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name || "Уважаемый клиент",
+          phone: phone || "+998901234567",
+          vehicle: CAR_SPECS[aiAgentModel]?.model || "BYD Song Plus",
+          price: vehiclePrice,
+          discount: suggestedDiscount || 0,
+          details: {
+            color: sourcingResults?.sourced_color || "Space Black",
+            warranty: "5 years or 150,000 km",
+            eta_days: sourcingResults?.eta_days || 28
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.collateral_url) {
+        setBrochureUrl(data.collateral_url);
+      }
+    } catch (err) {
+      console.error("Failed to compile sales brochure:", err);
+    } finally {
+      setCompilingBrochure(false);
+    }
+  };
+
+  // voice clone recording helpers using MediaRecorder
+  const startVoiceCloneRecord = async () => {
+    setVoiceCloneSuccess(false);
+    setVoiceCloneBlob(null);
+    setVoiceCloneAudioUrl(null);
+    setVoiceCloneRecording(true);
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      console.error("Microphone access denied for voice clone:", err);
+      setVoiceCloneRecording(false);
+      return;
+    }
+
+    const cloneChunks: Blob[] = [];
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) cloneChunks.push(event.data);
+    };
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(cloneChunks, { type: "audio/webm" });
+      setVoiceCloneBlob(blob);
+      setVoiceCloneAudioUrl(URL.createObjectURL(blob));
+    };
+
+    mediaRecorder.start();
+    
+    // Automatically stop after 10 seconds (standard voice print training threshold)
+    setTimeout(() => {
+      if (mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        stream.getTracks().forEach((track) => track.stop());
+        setVoiceCloneRecording(false);
+      }
+    }, 10000);
+  };
+
+  const saveVoiceClone = async () => {
+    if (!voiceCloneBlob) return;
+    setVoiceCloneSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", voiceCloneBlob, "manager_voice.webm");
+      formData.append("name", voiceCloneName || "Manager Cloned Profile");
+
+      const res = await fetch("/api/admin/calls/voice-clones", {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVoiceCloneSuccess(true);
+      }
+    } catch (err) {
+      console.error("Failed to save voice clone:", err);
+    } finally {
+      setVoiceCloneSaving(false);
     }
   };
 
