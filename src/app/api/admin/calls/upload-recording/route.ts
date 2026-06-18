@@ -50,48 +50,85 @@ export async function POST(req: NextRequest) {
   // without a login). No auth at all → 401.
   const isAdmin = await isAdminRequest(req).catch(() => false);
   if (!isAdmin && !secretAuthed(req)) {
+    console.log("[upload-recording] 401 — no admin session and bad/missing CALLS_UPLOAD_SECRET");
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch {
-    return NextResponse.json({ error: "expected multipart/form-data" }, { status: 400 });
+  const url = new URL(req.url);
+  const qp = url.searchParams;
+  const ct = (req.headers.get("content-type") || "").toLowerCase();
+
+  let phoneRaw = "";
+  let direction = "outbound";
+  let transcript = "";
+  let durationSec = 0;
+  let audioBuffer: Buffer | null = null;
+  let audioName = "";
+  let audioType = "";
+
+  if (ct.includes("multipart/form-data")) {
+    // Rich form (audio + fields). Used by the admin UI and the full Shortcut.
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      return NextResponse.json({ error: "could not read multipart form" }, { status: 400 });
+    }
+    phoneRaw = String(form.get("caller_phone") || form.get("phone") || "").trim().slice(0, 40);
+    direction = String(form.get("direction") || "outbound").toLowerCase() === "inbound" ? "inbound" : "outbound";
+    transcript = String(form.get("transcript") || "").trim();
+    durationSec = Math.max(0, Math.round(Number(form.get("duration_sec") || 0)) || 0);
+    const audio = form.get("audio");
+    if (audio && typeof audio === "object" && "arrayBuffer" in audio) {
+      const file = audio as File;
+      audioBuffer = Buffer.from(await file.arrayBuffer());
+      audioName = file.name || "";
+      audioType = (file.type || "").toLowerCase();
+    }
+  } else {
+    // RAW-BODY mode — the dead-simple Shortcut: POST the recording AS the request
+    // body, metadata in the query string (?caller_phone=&direction=&transcript=).
+    // Nothing to misconfigure beyond URL + the Authorization header + the file body.
+    phoneRaw = String(qp.get("caller_phone") || qp.get("phone") || "").trim().slice(0, 40);
+    direction = String(qp.get("direction") || "outbound").toLowerCase() === "inbound" ? "inbound" : "outbound";
+    transcript = String(qp.get("transcript") || "").trim();
+    durationSec = Math.max(0, Math.round(Number(qp.get("duration_sec") || 0)) || 0);
+    const raw = Buffer.from(await req.arrayBuffer());
+    if (raw.byteLength > 0) {
+      audioBuffer = raw;
+      audioType = ct;
+    }
   }
 
-  const phoneRaw = String(form.get("caller_phone") || form.get("phone") || "").trim().slice(0, 40);
-  const direction = String(form.get("direction") || "outbound").toLowerCase() === "inbound" ? "inbound" : "outbound";
-  let transcript = String(form.get("transcript") || "").trim();
-  const durationSec = Math.max(0, Math.round(Number(form.get("duration_sec") || 0)) || 0);
-  const audio = form.get("audio");
+  console.log(
+    `[upload-recording] auth=${isAdmin ? "session" : "secret"} mode=${ct.includes("multipart") ? "form" : "raw"} ` +
+    `audio=${audioBuffer ? audioBuffer.byteLength + "b" : "none"} transcript=${transcript ? transcript.length + "ch" : "none"} phone="${phoneRaw}"`,
+  );
 
   // Store audio (if present) to the PRIVATE disk store (served only via the
   // admin-gated /api/admin/calls/recording/<file> route).
   let recordingFile: string | null = null;
-  let audioBuffer: Buffer | null = null;
-  if (audio && typeof audio === "object" && "arrayBuffer" in audio) {
-    const file = audio as File;
-    const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.byteLength === 0) return NextResponse.json({ error: "empty audio file" }, { status: 400 });
-    if (bytes.byteLength > MAX_BYTES) return NextResponse.json({ error: "audio too large" }, { status: 413 });
-    audioBuffer = bytes;
+  if (audioBuffer && audioBuffer.byteLength > 0) {
+    if (audioBuffer.byteLength > MAX_BYTES) return NextResponse.json({ error: "audio too large" }, { status: 413 });
     const ext =
-      AUDIO_EXT[(file.type || "").toLowerCase()] ||
-      file.name?.match(/\.([a-z0-9]{2,4})$/i)?.[1]?.toLowerCase().replace(/^mp4$/, "m4a") ||
+      AUDIO_EXT[audioType] ||
+      audioName.match(/\.([a-z0-9]{2,4})$/i)?.[1]?.toLowerCase().replace(/^mp4$/, "m4a") ||
       "m4a";
     const safeExt = /^(m4a|aac|mp3|webm|wav|ogg|3gp)$/.test(ext) ? ext : "m4a";
     recordingFile = `${randomUUID()}.${safeExt}`;
     try {
       const abs = safeMediaPath(`call-recordings/${recordingFile}`);
       await mkdir(dirname(abs), { recursive: true });
-      await writeFile(abs, bytes);
+      await writeFile(abs, audioBuffer);
     } catch (e) {
       return NextResponse.json({ error: "failed to store audio", detail: String((e as Error).message).slice(0, 120) }, { status: 500 });
     }
+  } else {
+    audioBuffer = null;
   }
 
   if (!transcript && !recordingFile) {
+    console.log("[upload-recording] 400 — no audio bytes and no transcript");
     return NextResponse.json({ error: "provide a transcript or an audio file" }, { status: 400 });
   }
 
@@ -194,19 +231,15 @@ async function enrichRecording(args: {
       }
     }
 
-    if (analysis.metadata) {
-      const lowCompliance = (analysis.metadata.compliance_score ?? 100) < 50;
-      const negative = ["negative", "frustrated"].includes(analysis.metadata.sentiment);
-      if (lowCompliance || negative) {
-        const triggers: string[] = [];
-        if (lowCompliance) triggers.push(`Low compliance (${analysis.metadata.compliance_score}%)`);
-        if (negative) triggers.push(`Negative sentiment (${analysis.metadata.sentiment})`);
-        await alertDealer(
-          "Recorded call — review",
-          [`Phone: ${args.phoneRaw || "—"}`, `Trigger: ${triggers.join(", ")}`, `Summary: ${analysis.summary}`],
-          { key: `call_upload_audit:${args.callId}` },
-        ).catch(() => {});
-      }
+    // Alert ONLY on a genuinely negative/frustrated call — NOT on low compliance.
+    // Compliance starts at 0% (the rep checklist is rarely fully met on a short or
+    // inbound call), so alerting on it would ping the dealer for every single call.
+    if (analysis.metadata && ["negative", "frustrated"].includes(analysis.metadata.sentiment)) {
+      await alertDealer(
+        "Recorded call — negative sentiment",
+        [`Phone: ${args.phoneRaw || "—"}`, `Sentiment: ${analysis.metadata.sentiment}`, `Summary: ${analysis.summary}`],
+        { key: `call_upload_audit:${args.callId}` },
+      ).catch(() => {});
     }
   } catch (e) {
     console.error("recording enrichment failed:", e);
