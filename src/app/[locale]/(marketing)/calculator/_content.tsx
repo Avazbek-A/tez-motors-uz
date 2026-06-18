@@ -15,6 +15,7 @@ import {
   type VehicleKind, type VehicleAge, type OriginClass, type VehicleCategory,
   type BusCapacity, type EcoClass, type FuraPart, type FuraAge, type CustomsResult,
 } from "@/lib/customs-uz";
+import { legalBasisNote } from "@/lib/customs-rates";
 import { formatPrice, cn } from "@/lib/utils";
 
 type Tri = Record<Locale, string>;
@@ -419,7 +420,10 @@ export default function CalculatorContent({ usdUzs }: { usdUzs?: number }) {
                       <div className="flex items-center justify-between"><span className="text-sm font-semibold text-muted-foreground">{t.customsCost}</span><span className="text-lg font-bold text-foreground">{formatPrice(result.customsCostUsd)}</span></div>
                       <div className="flex items-center justify-between pt-2 border-t border-border"><span className="font-bold text-base text-foreground">{t.grandTotal}</span><span className="text-2xl font-bold text-primary">{formatPrice(result.totalUsd)}</span></div>
                     </div>
-                    <div className="p-4 text-xs text-muted-foreground text-center">{t.note}</div>
+                    <div className="p-4 text-xs text-muted-foreground text-center space-y-1">
+                      <p>{t.note}</p>
+                      <p className="text-[10px] text-foreground/40">{legalBasisNote(locale)}</p>
+                    </div>
                   </div>
 
                   <div className="bg-card rounded-2xl border border-primary/30 p-6">
