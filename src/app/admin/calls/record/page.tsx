@@ -10,6 +10,22 @@ import {
 } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
+import { AudioPlayer } from "@/components/admin/audio-player";
+
+/**
+ * Pick a recording MIME the browser actually supports. CRITICAL for iOS/Safari
+ * (and all iPhone browsers, incl. "Chrome", which are WebKit): they do NOT support
+ * audio/webm in MediaRecorder — recordings come out empty/unplayable if you force
+ * webm. We probe in preference order and fall back to audio/mp4 on Apple devices.
+ * Returns "" if nothing matches (let MediaRecorder pick its own default).
+ */
+function pickRecorderMime(): string {
+  if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
+  for (const t of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/aac", "audio/mpeg"]) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return "";
+}
 
 interface Customer {
   key: string;
@@ -269,7 +285,6 @@ export default function MobileCallRecorder() {
 
   // Audio recording player state
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   // Post-Call AI Autopilot States
   const [aiAnalysis, setAiAnalysis] = useState<any | null>(null);
@@ -340,7 +355,6 @@ export default function MobileCallRecorder() {
   const speechRecognitionRef = useRef<any | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const audioPlaybackRef = useRef<HTMLAudioElement | null>(null);
   const copilotThrottleRef = useRef<number>(0);
 
   // Load team list and check speech support
@@ -500,13 +514,15 @@ export default function MobileCallRecorder() {
 
     if (stream) {
       try {
-        const mediaRecorder = new MediaRecorder(stream);
+        const mime = pickRecorderMime();
+        const mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) audioChunksRef.current.push(event.data);
         };
         mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const type = mediaRecorder.mimeType || mime || "audio/mp4";
+          const audioBlob = new Blob(audioChunksRef.current, { type });
           const url = URL.createObjectURL(audioBlob);
           setAudioUrl(url);
         };
@@ -701,9 +717,14 @@ export default function MobileCallRecorder() {
 
     let stream: MediaStream;
     try {
+      // In an insecure context (plain http on a LAN IP) the browser doesn't even
+      // expose mediaDevices — guard so we surface a clear error instead of throwing.
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("getUserMedia unavailable — page is not a secure (HTTPS) context");
+      }
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
-      console.error("Microphone access denied:", err);
+      console.error("Microphone unavailable:", err);
       setMicError(true);
       return;
     }
@@ -711,13 +732,17 @@ export default function MobileCallRecorder() {
     setIsRecording(true);
 
     try {
-      const mediaRecorder = new MediaRecorder(stream);
+      const mime = pickRecorderMime();
+      const mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        // Label the blob with the type the recorder ACTUALLY produced (mp4 on iOS),
+        // not a hardcoded webm that Apple browsers refuse to play back.
+        const type = mediaRecorder.mimeType || mime || "audio/mp4";
+        const audioBlob = new Blob(audioChunksRef.current, { type });
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
       };
@@ -1009,12 +1034,13 @@ export default function MobileCallRecorder() {
     }
 
     const cloneChunks: Blob[] = [];
-    const mediaRecorder = new MediaRecorder(stream);
+    const mime = pickRecorderMime();
+    const mediaRecorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) cloneChunks.push(event.data);
     };
     mediaRecorder.onstop = () => {
-      const blob = new Blob(cloneChunks, { type: "audio/webm" });
+      const blob = new Blob(cloneChunks, { type: mediaRecorder.mimeType || mime || "audio/mp4" });
       setVoiceCloneBlob(blob);
       setVoiceCloneAudioUrl(URL.createObjectURL(blob));
     };
@@ -1090,29 +1116,9 @@ export default function MobileCallRecorder() {
   };
 
   // Playback recorded audio memo
-  const handleTogglePlayback = () => {
-    if (!audioUrl) return;
-    if (isPlaying) {
-      audioPlaybackRef.current?.pause();
-      setIsPlaying(false);
-    } else {
-      if (!audioPlaybackRef.current) {
-        const audio = new Audio(audioUrl);
-        audio.onended = () => setIsPlaying(false);
-        audioPlaybackRef.current = audio;
-      }
-      audioPlaybackRef.current.play();
-      setIsPlaying(true);
-    }
-  };
-
   const handleDeleteRecording = () => {
-    if (audioPlaybackRef.current) {
-      audioPlaybackRef.current.pause();
-      audioPlaybackRef.current = null;
-    }
+    // Clearing audioUrl unmounts <AudioPlayer>, which stops + releases its own audio.
     setAudioUrl(null);
-    setIsPlaying(false);
     audioChunksRef.current = [];
   };
 
@@ -1771,23 +1777,32 @@ export default function MobileCallRecorder() {
               {isRecording ? `${t.recording} (${formatTime(duration)})` : t.tapToRecord}
             </p>
 
+            {micError && (
+              <p className="w-full text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mt-1 leading-snug">
+                {typeof window !== "undefined" && !window.isSecureContext
+                  ? locale === "ru"
+                    ? "Микрофон требует защищённого соединения (HTTPS). Откройте админку по адресу https:// (рабочий сайт) — по локальному http-адресу браузер блокирует запись."
+                    : locale === "uz"
+                    ? "Mikrofon HTTPS ulanishini talab qiladi. Admin panelni https:// orqali oching — lokal http manzilda brauzer yozuvni bloklaydi."
+                    : "Microphone needs a secure (HTTPS) connection. Open the admin over https:// (the production site) — on a local http address the browser blocks recording."
+                  : locale === "ru"
+                    ? "Доступ к микрофону заблокирован. Разрешите доступ в настройках браузера и попробуйте снова."
+                    : locale === "uz"
+                    ? "Mikrofonga ruxsat berilmadi. Brauzer sozlamalarida ruxsat bering va qayta urinib ko'ring."
+                    : "Microphone access was blocked. Allow microphone permission in your browser settings and try again."}
+              </p>
+            )}
+
             {audioUrl && !isRecording && (
-              <div className="w-full bg-muted/20 border border-border rounded-xl p-2.5 flex items-center justify-between mt-1 text-xs">
-                <button
-                  type="button"
-                  onClick={handleTogglePlayback}
-                  className="flex items-center gap-2 font-medium text-lime hover:opacity-80 transition-opacity"
-                >
-                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                  {isPlaying ? t.pauseRecording : t.playRecording}
-                </button>
+              <div className="w-full mt-1 space-y-2">
+                <AudioPlayer src={audioUrl} downloadName="tez-call-recording" />
                 <button
                   type="button"
                   onClick={handleDeleteRecording}
-                  className="text-red-400 hover:text-red-500 transition-colors p-1"
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium text-red-400 hover:text-red-500 transition-colors py-1"
                   title={t.deleteRecording}
                 >
-                  <Trash className="w-3.5 h-3.5" />
+                  <Trash className="w-3.5 h-3.5" /> {t.deleteRecording}
                 </button>
               </div>
             )}

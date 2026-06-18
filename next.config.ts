@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "img-src 'self' data: blob: https:",
-      "media-src 'self' https://*.autohome.com.cn",
+      "media-src 'self' blob: https://*.autohome.com.cn",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
       "frame-src 'self' https://yandex.com https://yandex.ru https://*.yandex.net https://*.maps.yandex.net https://challenges.cloudflare.com https://pano.autohome.com.cn",
       "frame-ancestors 'self'",
@@ -71,7 +71,12 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // Allow same-origin pages to REQUEST mic/camera (the Calls suite's call
+          // recorder, voice-clone trainer, CV greeter + trade-in scanner). `(self)`
+          // is a capability only — the browser still prompts the user per use; it
+          // does NOT auto-grant. `()` here previously blocked recording site-wide.
+          // geolocation stays fully blocked (no feature needs it).
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
           {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains; preload",
