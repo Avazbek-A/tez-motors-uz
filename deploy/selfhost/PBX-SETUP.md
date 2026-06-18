@@ -1,4 +1,4 @@
-# Tez Motors — Self-Hosted PBX (Asterisk/FreePBX) + AI Integration
+# Tez Motors — Self-Hosted PBX (Asterisk) + AI Integration
 
 Goal: **own** the telephony (make/receive real UZ calls, record, route) and feed every
 call into the Tez Motors CRM + AI pipeline. Architected so the telephony layer (this
@@ -6,7 +6,7 @@ PBX, on a VPS) and the intelligence layer (CRM/AI on the Vostro) stay cleanly se
 by the webhook/upload seam — so the AI layer can be spun off into a product later.
 
 ```
-[UZ SIP trunk] ─ SIP/RTP ─ [Asterisk/FreePBX on a public-IP VPS] ─ HTTPS upload ─► [Tez Motors CRM+AI on Vostro]
+[UZ SIP trunk] ─ SIP/RTP ─ [Asterisk on a public-IP VPS] ─ HTTPS upload ─► [Tez Motors CRM+AI on Vostro]
                                   │  WebRTC (WSS+coturn)
                               [admin PWA softphone — iPhone/Mac]
 ```
@@ -50,12 +50,21 @@ Once the VPS exists + I have SSH, I configure everything below.
 
 ---
 
-## 1. Base install (Ubuntu 22.04 VPS)
+## 1. Base install (Ubuntu 22.04 VPS) — raw Asterisk, NOT FreePBX
 
-Use the official FreePBX 17 / Asterisk 20 install (sangoma script) or Debian package path.
+**Decision: raw Asterisk 20 LTS, config-as-code — no FreePBX.** FreePBX is a heavy
+Apache+PHP+MariaDB GUI on top of Asterisk (~700 MB–1.5 GB RAM, ~2–3 GB disk) that adds NO
+AI and gets bypassed for the AI work anyway. Raw Asterisk runs in ~50–150 MB, exposes the
+AI primitives directly (AudioSocket / ARI / external-media), and its config is plain text
+we keep **in this repo** (version-controlled + reproducible) — lighter (matters on a
+free-tier VPS), AI-native, and reproducible vs FreePBX's GUI/MySQL config. The one thing
+FreePBX is better at (a security GUI for a human) doesn't apply: the configs are authored +
+hardened in-repo and applied to the VPS.
+
 Outline:
 - `apt update && apt upgrade`; set hostname `pbx.tezmotors.uz`.
-- Install Asterisk 20 LTS + FreePBX 17 (chan_pjsip enabled).
+- Install **Asterisk 20 LTS** (`apt install asterisk` or the official build), `chan_pjsip` enabled. No FreePBX.
+- Config lives in the repo (e.g. `deploy/asterisk/*.conf`) → rsync'd to `/etc/asterisk/` on the VPS, like our other config-as-code.
 - `certbot` (Let's Encrypt) for `pbx.tezmotors.uz` → TLS for WSS + SRTP.
 
 ## 2. SECURITY HARDENING (do BEFORE connecting the trunk)
@@ -72,7 +81,8 @@ Outline:
   premium/international ranges by default. This caps fraud damage even if creds leak.
 - **Trunk-side credit cap** (set with the provider) — the final backstop.
 - TLS + SRTP for the softphone leg; disable plain UDP for WebRTC.
-- Change all default passwords; restrict the FreePBX admin GUI to your IPs / behind auth.
+- Change all default passwords. No FreePBX web admin to expose (config-as-code) — one less
+  attack surface; the only listening services are SIP (trunk-IP-restricted), WSS, and SSH.
 
 ## 3. Trunk + routes
 - Create a `chan_pjsip` trunk: register to the provider, identify by their IP.
@@ -87,7 +97,7 @@ Outline:
 
 ## 5. Post-call AI (reuses what's already built — the big win)
 Asterisk records every call and uploads it to the existing pipeline; no new AI code.
-- FreePBX: enable call recording (MixMonitor) for inbound + outbound.
+- Asterisk: enable `MixMonitor` recording in the dialplan for inbound + outbound.
 - Hangup hook (Asterisk `h` extension / `hangup_handler` / a small post-record script):
   `curl -s -X POST https://tezmotors.uz/api/admin/calls/upload-recording \
         -H "Authorization: Bearer $CALLS_UPLOAD_SECRET" \
