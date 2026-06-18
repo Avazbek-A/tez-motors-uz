@@ -40,7 +40,11 @@ export function Header() {
   // text/controls stay light on the dark hero — in BOTH themes. Once scrolled (the
   // header gets a solid bg) or on any other page, it follows the active theme.
   const isHome = pathname === `/${locale}` || pathname === "/";
-  const overHero = isHome && !isScrolled;
+  // Over the dark hero (homepage top, not scrolled) the header is dark-scoped so its
+  // controls stay light. But once the mobile menu opens, the panel BEHIND the controls
+  // is the light menu overlay (in day mode), not the hero — so drop the dark scope then,
+  // or the logo / X / language switcher render light-on-light and vanish.
+  const overHero = isHome && !isScrolled && !isMobileMenuOpen;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
