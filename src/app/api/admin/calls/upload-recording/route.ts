@@ -6,6 +6,12 @@ import { isAdminRequest, requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { safeMediaPath } from "@/lib/disk-store";
 import { logRecording } from "@/lib/call-recording";
+import { getClientIp } from "@/lib/rate-limit";
+import { createKvRateLimiter } from "@/lib/rate-limit-kv";
+
+// Defense-in-depth on the shared-secret path: even if CALLS_UPLOAD_SECRET leaks, an
+// abuser can't spam Whisper/LLM/disk. A real dealer uploads a handful of calls/hour.
+const checkUploadRate = createKvRateLimiter({ max: 60, windowMs: 60 * 60 * 1000, prefix: "call-upload" });
 
 /**
  * No-SIP call-recording intake (the free path). An iOS Shortcut — or the admin UI —
@@ -36,6 +42,10 @@ export async function POST(req: NextRequest) {
   if (!isAdmin && !secretAuthed(req)) {
     console.log("[upload-recording] 401 — no admin session and bad/missing CALLS_UPLOAD_SECRET");
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  // Throttle the secret path (a logged-in admin uploading from the UI is exempt).
+  if (!isAdmin && !(await checkUploadRate(getClientIp(req)))) {
+    return NextResponse.json({ error: "too many uploads, slow down" }, { status: 429 });
   }
 
   const qp = new URL(req.url).searchParams;
