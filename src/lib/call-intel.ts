@@ -8,6 +8,22 @@
  */
 import { llmText } from "./llm";
 
+/**
+ * Normalize an LLM `summary` field to clean text. Some free models return it as an
+ * ARRAY of bullet strings instead of a single string — without this the UI/bot would
+ * show raw JSON like `["...","..."]`. Arrays become newline-joined "• " bullets.
+ */
+export function normalizeCallSummary(s: unknown): string {
+  if (Array.isArray(s)) {
+    return s
+      .map((x) => String(x).trim())
+      .filter(Boolean)
+      .map((x) => (/^[•\-*]/.test(x) ? x : `• ${x}`))
+      .join("\n");
+  }
+  return typeof s === "string" ? s.trim() : "";
+}
+
 // High-intent buying signals (RU/UZ/EN), lightly weighted.
 const INTENT_TERMS = [
   "куплю", "покупаю", "беру", "оплат", "депозит", "рассрочк", "кредит", "когда могу забрать",
@@ -132,7 +148,9 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
     const last = cleanedJson.lastIndexOf("}");
     if (first >= 0 && last > first) cleanedJson = cleanedJson.slice(first, last + 1);
     const data = JSON.parse(cleanedJson);
-    
+
+    const summaryText = normalizeCallSummary(data.summary);
+
     // Calculate compliance score in JS for predictability
     const checklist = data.compliance_checklist || { greeted_properly: false, offered_test_drive: false, mentioned_warranty: false, scheduled_followup: false };
     let checkCount = 0;
@@ -154,7 +172,7 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
       : defaultProb;
 
     return {
-      summary: data.summary || clean.slice(0, 280),
+      summary: summaryText || clean.slice(0, 280),
       leadScore,
       ai: true,
       metadata: {

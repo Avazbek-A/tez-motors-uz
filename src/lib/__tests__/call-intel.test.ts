@@ -1,5 +1,23 @@
 import { describe, it, expect } from "vitest";
-import { callLeadScore } from "../call-intel";
+import { callLeadScore, normalizeCallSummary } from "../call-intel";
+
+describe("normalizeCallSummary", () => {
+  it("passes a plain string through (trimmed)", () => {
+    expect(normalizeCallSummary("  Клиент хочет BYD Han  ")).toBe("Клиент хочет BYD Han");
+  });
+  it("turns an array of bullets into newline-joined • text (no raw JSON)", () => {
+    const out = normalizeCallSummary(["Клиент интересуется BYD", "Запрашивает цену"]);
+    expect(out).toBe("• Клиент интересуется BYD\n• Запрашивает цену");
+    expect(out).not.toContain("[");
+  });
+  it("keeps existing bullet/dash markers and drops empties", () => {
+    expect(normalizeCallSummary(["- уже с тире", "", "  обычный  "])).toBe("- уже с тире\n• обычный");
+  });
+  it("returns '' for null/object so the caller falls back to the transcript", () => {
+    expect(normalizeCallSummary(null)).toBe("");
+    expect(normalizeCallSummary({ a: 1 })).toBe("");
+  });
+});
 
 describe("callLeadScore", () => {
   it("is 0 for an empty transcript", () => {
