@@ -94,7 +94,11 @@ export async function POST(req: NextRequest) {
     transcript = String(qp.get("transcript") || "").trim();
     durationSec = Math.max(0, Math.round(Number(qp.get("duration_sec") || 0)) || 0);
     const raw = Buffer.from(await req.arrayBuffer());
-    if (raw.byteLength > 0) {
+    if (ct.startsWith("text/") || ct.includes("json")) {
+      // TEXT-body mode: the body IS the transcript (tiny, reliable on flaky links —
+      // sidesteps the audio-upload drops). Used by the "send transcript" Shortcut.
+      if (!transcript) transcript = raw.toString("utf8").trim().slice(0, 20000);
+    } else if (raw.byteLength > 0) {
       audioBuffer = raw;
       audioType = ct;
     }
