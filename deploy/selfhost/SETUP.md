@@ -149,6 +149,15 @@ Two options:
 - **Cloudflare cron-worker:** deploy `cron-worker/` as before, pointing
   `APP_BASE_URL` at `https://tezmotors.uz`.
 
+**Direct Node housekeeping (not HTTP routes), scheduled in the Vostro crontab:**
+```
+0 4 * * *  cd ~/tez-motors/deploy/collector && node clean-orphan-recordings.mjs >> ~/subs/orphan-clean.log 2>&1
+```
+`clean-orphan-recordings.mjs` prunes call-recording audio files left on disk with no
+referencing `calls` row (aborted uploads / manual tests) once they're older than 7
+days — unreferenced PII shouldn't linger. `--dry-run` reports without deleting;
+`--days=N` overrides the age gate.
+
 ## 8. Updating after a new commit
 ```bash
 cd ~/tez-motors
