@@ -134,20 +134,44 @@ sudo systemctl restart systemd-logind
 The laptop battery doubles as a UPS for short power cuts — a real plus in Tashkent.
 
 ## 7. Cron jobs (scheduled automation)
-The app's scheduled jobs live at `/api/cron/*` and are guarded by `CRON_SECRET`.
-Two options:
-- **Local cron (simplest, fully offline):** add to `crontab -e`, calling the
-  routes with the secret. Example (FX rate at 06:00, ops digest at 08:00,
-  reservation recovery every 2h):
+The app's scheduled jobs live at `/api/cron/*` and are guarded by `CRON_SECRET`
+(constant-time bearer check; fail-CLOSED when the secret is set). The full
+intended schedule is `deploy/selfhost/crontab` (mirrors `cron-worker/src/index.js`).
+Two ways to drive it:
+- **Host crontab (what prod uses).** `deploy/selfhost/run-cron.sh <route>` is a
+  thin wrapper: it reads `CRON_SECRET` from `.env.local` (reading only that key —
+  do **not** `source` the file; an unquoted `VAPID_SUBJECT=mailto: <addr>` line
+  aborts a POSIX `source`), sets `APP_URL=http://127.0.0.1:3000`, and POSTs the
+  route via `fire-cron.sh`. Add lines like:
   ```
-  0 1 * * *   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/rates
-  0 3 * * *   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/ops-digest
-  20 */2 * * * curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/reservation-recovery
+  0 1 * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/rates           >> ~/subs/cron.log 2>&1
+  0 5 * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/otp-cleanup     >> ~/subs/cron.log 2>&1
+  30 4 * * *  /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/order-sla       >> ~/subs/cron.log 2>&1
+  0 6 * * 1   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/inventory-aging >> ~/subs/cron.log 2>&1
+  15 4 * * *  /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/generate-tasks  >> ~/subs/cron.log 2>&1
   ```
-  (Mirror the full schedule from `cron-worker/wrangler.toml`. Put `CRON_SECRET`
-  in the crontab or a sourced file.)
-- **Cloudflare cron-worker:** deploy `cron-worker/` as before, pointing
-  `APP_BASE_URL` at `https://tezmotors.uz`.
+- **Cloudflare cron-worker:** deploy `cron-worker/` instead, pointing
+  `APP_BASE_URL` at `https://tezmotors.uz` (only if you cut back to Workers).
+
+### Phased rollout — enable the safe batch first
+The block above is the **internal/safe batch** (only mutates DB rows; no external
+messaging): `rates`, `otp-cleanup`, `order-sla`, `inventory-aging`,
+`generate-tasks`. These are live in prod.
+
+**Held pending owner approval** (each sends Telegram/email/push to customers, posts
+public content, or changes prices — turn on deliberately, ideally after a dry run):
+`lead-digest`, `ops-digest`, `follow-ups`, `review-requests`, `win-back`,
+`service-reminders`, `saved-search-alerts`, `reservation-recovery`, `lead-nurture`,
+`monthly-report`, `shipment-sla`, `warranty-expiry`, `marketing-poster`,
+`promotions-apply`, and **`price-watch-sweep`** (it messages customers who set a
+price-drop watch via `notifyPriceWatchers` — outbound, despite living next to the
+internal jobs). The newer `cron-worker`-only routes (`operator-briefing`,
+`marketing-autopilot`, `market-digest`, `auto-markdown`, `auto-source`, `synthetic`,
+`journeys`, `behavioral-triggers`) also need their own review before enabling.
+Use the schedule times in `deploy/selfhost/crontab` when you add them.
+
+Verify after enabling: `tail ~/subs/cron.log` shows `... -> 200`, and for `rates`
+the `site_settings` row `id='fx_rate'` `updated_at` refreshes to today.
 
 **Direct Node housekeeping (not HTTP routes), scheduled in the Vostro crontab:**
 ```
