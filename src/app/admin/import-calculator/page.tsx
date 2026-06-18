@@ -15,6 +15,7 @@ import {
   type ImportRates,
   type ImportFees,
 } from "@/lib/import-cost";
+import { finalCarPrice } from "@/lib/final-price";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 
@@ -294,6 +295,17 @@ export default function ImportCalculatorPage() {
   );
 
   const suggested = useMemo(() => suggestedListPrice(breakdown.landedCostUsd, margin), [breakdown.landedCostUsd, margin]);
+  // Authoritative (law-cited customs-uz) landed price — the SAME engine the public
+  // calculator + bot use, for the common case (new, certified; 2.0L assumed for ICE).
+  const authoritative = useMemo(
+    () => finalCarPrice({
+      carUsd: vehicleUsd, fuelType: fuel, year: new Date().getFullYear(),
+      engineCc: fuel === "electric" || fuel === "phev" ? 0 : 2000,
+      origin: "certified", freightUsd: fees.freightUsd, certUsd: rates.certificationUsd,
+      marginPct: margin, usdUzs: fx.usd_uzs,
+    }),
+    [vehicleUsd, fuel, fees.freightUsd, rates.certificationUsd, margin, fx.usd_uzs],
+  );
   const actualMarginPct = useMemo(
     () => (listPrice > 0 ? marginPctFromPrice(breakdown.landedCostUsd, listPrice) : null),
     [breakdown.landedCostUsd, listPrice],
@@ -489,6 +501,28 @@ export default function ImportCalculatorPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Authoritative cross-check — law-cited customs-uz (Leap 3) */}
+            <div className="bg-card border border-[color:var(--primary)]/30 p-4 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground">По закону РУз (customs-uz)</h2>
+                <span className="text-[10px] text-muted-foreground">новый · с сертиф. · 2.0л</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <span className="text-muted-foreground">Растаможка</span>
+                <span className="text-right font-mono text-foreground">{usd(authoritative.customsUsd)}</span>
+                <span className="text-muted-foreground">Себестоимость</span>
+                <span className="text-right font-mono text-foreground">{usd(authoritative.landedUsd)}</span>
+                <span className="font-semibold text-foreground">Рек. цена</span>
+                <span className="text-right font-mono font-semibold text-primary">{usd(authoritative.finalUsd)}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Тарифы по закону (ПКМ №358/№55, БХМ). Точный расчёт по возрасту/объёму — на /calculator.
+                {Math.abs(authoritative.customsUsd - (breakdown.customsDutyUsd + breakdown.exciseUsd + breakdown.vatUsd + breakdown.recyclingFeeUsd)) > 400 && (
+                  <span className="text-[color:var(--warning)]"> · ⚠️ расходится с оценкой слева — сверьте ставки</span>
+                )}
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
