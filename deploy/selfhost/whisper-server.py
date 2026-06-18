@@ -2,15 +2,22 @@
 """
 Tez Motors self-hosted speech-to-text (Whisper) — runs on the Vostro, NOT the edge.
 
-The Calls suite's recording upload posts raw audio bytes here when a recording has
-no transcript (iOS usually supplies its own); we transcribe with faster-whisper on
-CPU — no cloud, no per-minute cost — and return JSON { text, language }.
+The Calls suite posts raw audio bytes here when a recording has no transcript; we
+transcribe with faster-whisper on CPU — no cloud, no per-minute cost — and return
+JSON { text, language }.
 
-Run via the tez-whisper systemd unit (see deploy/selfhost/KEYS.md). The app reaches
-it through WHISPER_URL=http://127.0.0.1:8089. Bound to localhost only.
+Tuned for the dealer's calls (Russian + Uzbek):
+  - Default model "medium" — far better Uzbek + language ID than "small".
+  - LANGUAGE FIX: Whisper confuses Uzbek with other Turkic languages (esp.
+    Azerbaijani "az"). When auto-detect returns a Turkic-non-Russian language, we
+    RE-transcribe forcing Uzbek so the text decodes correctly.
+  - DOMAIN PROMPT: seeds brand/place names Whisper otherwise mangles.
+  - ?language=ru|uz|en forces a language (skips detection).
 
-Env: WHISPER_MODEL (default "small"), WHISPER_PORT (default 8089),
-     WHISPER_COMPUTE (default "int8").
+Run via the tez-whisper cron supervisor (see deploy/selfhost/KEYS.md). The app
+reaches it at WHISPER_URL=http://127.0.0.1:8089. Bound to localhost only.
+
+Env: WHISPER_MODEL (default "medium"), WHISPER_PORT (8089), WHISPER_COMPUTE (int8).
 """
 import json
 import os
@@ -20,19 +27,53 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from faster_whisper import WhisperModel
 
-MODEL_NAME = os.environ.get("WHISPER_MODEL", "small")
+MODEL_NAME = os.environ.get("WHISPER_MODEL", "medium")
 PORT = int(os.environ.get("WHISPER_PORT", "8089"))
 COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
 MAX_BYTES = 200 * 1024 * 1024
 
+# Languages Whisper commonly mis-detects for Uzbek (Turkic family). When detection
+# lands on one of these, we force Uzbek decoding instead.
+TURKIC_MISDETECT = {"az", "tr", "tk", "tt", "kk", "ky", "ba", "cv", "ug", "kaa", "uz"}
+
+# Domain prompt — proper nouns Whisper mangles (language-neutral brand/place names).
+DOMAIN_PROMPT = "Tez Motors, BYD, Chery, Geely, Haval, Tank, Changan, Toyota, Tashkent, Samarkand."
+
 print(f"[whisper] loading model={MODEL_NAME} compute={COMPUTE} ...", flush=True)
 MODEL = WhisperModel(MODEL_NAME, device="cpu", compute_type=COMPUTE)
-LOCK = threading.Lock()  # transcribe() one at a time (low call volume; keeps RAM sane)
+LOCK = threading.Lock()  # one transcription at a time (low volume; keeps RAM sane)
 print(f"[whisper] ready on 127.0.0.1:{PORT}", flush=True)
 
 
+def _run(path: str, language):
+    segments, info = MODEL.transcribe(
+        path,
+        language=language,
+        beam_size=5,
+        vad_filter=True,
+        initial_prompt=DOMAIN_PROMPT,
+        condition_on_previous_text=True,
+    )
+    text = " ".join(s.text.strip() for s in segments).strip()
+    return text, getattr(info, "language", language)
+
+
+def transcribe(path: str, override):
+    if override:
+        return _run(path, override)
+    # Pass 1: auto-detect.
+    text, lang = _run(path, None)
+    # If detection landed on a Turkic language (but NOT Russian/English), it's almost
+    # certainly Uzbek mis-ID'd — re-decode forcing Uzbek for correct text.
+    if lang in TURKIC_MISDETECT and lang != "uz":
+        text2, _ = _run(path, "uz")
+        if text2:
+            return text2, "uz"
+    return text, lang
+
+
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, *_):  # quiet
+    def log_message(self, *_):
         pass
 
     def _json(self, code, obj):
@@ -52,18 +93,16 @@ class Handler(BaseHTTPRequestHandler):
             if n <= 0 or n > MAX_BYTES:
                 return self._json(400, {"error": "bad content length"})
             data = self.rfile.read(n)
-            # ?language=ru forces a language; otherwise auto-detect (handles RU/UZ/EN).
-            lang = None
+            override = None
             if "?" in self.path and "language=" in self.path:
-                lang = self.path.split("language=")[-1].split("&")[0] or None
+                override = (self.path.split("language=")[-1].split("&")[0] or "").strip() or None
             with tempfile.NamedTemporaryFile(suffix=".audio") as f:
                 f.write(data)
                 f.flush()
                 with LOCK:
-                    segments, info = MODEL.transcribe(f.name, language=lang, vad_filter=True)
-                    text = " ".join(s.text.strip() for s in segments).strip()
-            return self._json(200, {"text": text, "language": getattr(info, "language", None)})
-        except Exception as e:  # never crash the service on one bad file
+                    text, lang = transcribe(f.name, override)
+            return self._json(200, {"text": text, "language": lang})
+        except Exception as e:
             return self._json(500, {"error": str(e)[:200]})
 
 
