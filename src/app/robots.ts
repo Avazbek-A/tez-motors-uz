@@ -66,17 +66,17 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api/", "/_next/", ...privatePaths],
+        disallow: ["/admin", "/calls", "/api/", "/_next/", ...privatePaths],
       },
       ...aiCrawlers.map((agent) => ({
         userAgent: agent,
         allow: "/",
-        disallow: ["/admin", "/api/", ...privatePaths],
+        disallow: ["/admin", "/calls", "/api/", ...privatePaths],
       })),
       ...searchCrawlers.map((agent) => ({
         userAgent: agent,
         allow: "/",
-        disallow: ["/admin", "/api/", ...privatePaths],
+        disallow: ["/admin", "/calls", "/api/", ...privatePaths],
       })),
     ],
     sitemap,
