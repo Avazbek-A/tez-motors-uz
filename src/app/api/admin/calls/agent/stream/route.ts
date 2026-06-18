@@ -24,11 +24,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const history = body.history || [];
+    // Bound the conversational input — a voice chat shouldn't grow without limit, and
+    // this caps the prompt size (cost) regardless of what the client sends. Keep the
+    // most recent turns; truncate each. Admin-only, so this is belt-and-suspenders.
+    const rawHistory = Array.isArray(body.history) ? body.history : [];
+    const history = rawHistory.slice(-20).map((t: any) => ({
+      speaker: t?.speaker === "AI" ? "AI" : "Client",
+      text: String(t?.text ?? "").slice(0, 2000),
+    }));
     const modelKey = body.model || "byd_song";
-    const language = body.language || "ru";
-    const userMessage = body.user_message || "";
-    const agentType = body.agent_type || "qualifier"; // 'qualifier' | 'scheduler' | 'closer'
+    const language = body.language === "uz" ? "uz" : "ru";
+    const userMessage = String(body.user_message || "").slice(0, 2000);
+    const agentType = ["qualifier", "scheduler", "closer"].includes(body.agent_type) ? body.agent_type : "qualifier";
 
     const spec = CAR_SPECS[modelKey] || CAR_SPECS.byd_song;
     const formattedPrice = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(spec.price);

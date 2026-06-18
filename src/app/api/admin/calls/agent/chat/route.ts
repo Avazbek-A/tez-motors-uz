@@ -22,11 +22,17 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const history = body.history || [];
+    // Bound conversational input: keep the most recent turns, truncate each, and cap
+    // the user message — caps prompt size/cost regardless of client. Admin-only.
+    const rawHistory = Array.isArray(body.history) ? body.history : [];
+    const history = rawHistory.slice(-20).map((t: any) => ({
+      speaker: t?.speaker === "AI" ? "AI" : "Client",
+      text: String(t?.text ?? "").slice(0, 2000),
+    }));
     const modelKey = body.model || "byd_song";
-    const language = body.language || "ru";
-    const userMessage = body.user_message || "";
-    const agentType = body.agent_type || "qualifier"; // 'qualifier' | 'scheduler' | 'closer'
+    const language = body.language === "uz" ? "uz" : "ru";
+    const userMessage = String(body.user_message || "").slice(0, 2000);
+    const agentType = ["qualifier", "scheduler", "closer"].includes(body.agent_type) ? body.agent_type : "qualifier";
 
     const spec = CAR_SPECS[modelKey] || CAR_SPECS.byd_song;
     const formattedPrice = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(spec.price);
