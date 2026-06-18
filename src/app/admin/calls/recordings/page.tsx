@@ -13,7 +13,7 @@ interface Recording {
   lead_score: number | null;
   transcript: string | null;
   recording_url: string | null;
-  metadata: (Record<string, unknown> & { status?: string; language?: string }) | null;
+  metadata: (Record<string, unknown> & { status?: string; language?: string; customer_name?: string }) | null;
   created_at: string;
 }
 
@@ -101,7 +101,12 @@ export default function CallRecordingsPage() {
                   {r.direction === "inbound"
                     ? <ArrowDownLeft className="w-4 h-4 text-[var(--success,#16a34a)] shrink-0" />
                     : <ArrowUpRight className="w-4 h-4 text-primary shrink-0" />}
-                  <span className="font-medium text-foreground truncate">{r.customer_phone || "—"}</span>
+                  <span className="font-medium text-foreground truncate">
+                    {r.metadata?.customer_name || r.customer_phone || "—"}
+                  </span>
+                  {r.metadata?.customer_name && r.customer_phone && (
+                    <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline">{r.customer_phone}</span>
+                  )}
                   <span className="text-[11px] text-muted-foreground shrink-0">{fmtDate(r.created_at)}</span>
                   {r.metadata?.language && (
                     <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{langLabel(r.metadata.language)}</span>

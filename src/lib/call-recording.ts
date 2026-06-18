@@ -164,6 +164,23 @@ export async function enrichRecording(args: {
     const durationSec = args.durationSec || detectedDuration || 0;
     const analysis = await analyzeCall(transcript, durationSec);
 
+    // Resolve the CRM contact FIRST, so the recording row can carry the customer's
+    // name — the recordings list then shows a name instead of a bare phone number.
+    const phoneCore = contactKey(args.phoneRaw);
+    let inq: { id: string; name: string | null; notes: string | null; metadata: Record<string, unknown> | null } | null = null;
+    if (phoneCore) {
+      const { data } = await supabase
+        .from("inquiries")
+        .select("id, name, notes, metadata")
+        .ilike("phone", `%${phoneCore}%`)
+        .limit(1)
+        .maybeSingle();
+      inq = data;
+    }
+    // Don't surface the auto-generated "Call (…)"/"SIP Caller (…)" placeholders as a name.
+    const rawName = (inq?.name || "").trim();
+    const customerName = /^(call|sip caller)\s*\(/i.test(rawName) ? "" : rawName;
+
     await supabase
       .from("calls")
       .update({
@@ -171,19 +188,18 @@ export async function enrichRecording(args: {
         summary: analysis.summary || null,
         lead_score: analysis.leadScore,
         duration_sec: durationSec || null,
-        metadata: { ...(analysis.metadata || {}), source: "upload", status: "done", ...(language ? { language } : {}) },
+        metadata: {
+          ...(analysis.metadata || {}),
+          source: "upload",
+          status: "done",
+          ...(language ? { language } : {}),
+          ...(customerName ? { customer_name: customerName } : {}),
+        },
       })
       .eq("id", args.callId);
 
-    const phoneCore = contactKey(args.phoneRaw);
     if (phoneCore) {
       const closingProb = analysis.metadata?.extracted_entities?.closing_probability ?? 25;
-      const { data: inq } = await supabase
-        .from("inquiries")
-        .select("id, notes, metadata")
-        .ilike("phone", `%${phoneCore}%`)
-        .limit(1)
-        .maybeSingle();
       if (inq) {
         const dateStr = new Date().toLocaleDateString();
         const notes = analysis.summary
