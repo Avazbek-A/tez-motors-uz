@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2, RefreshCw, Search } from "lucide-react";
 import { AudioPlayer } from "@/components/admin/audio-player";
 
 interface Recording {
@@ -30,6 +30,17 @@ export default function CallRecordingsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) =>
+      [r.customer_phone, r.metadata?.customer_name, r.summary, r.transcript]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [rows, query]);
 
   const load = useCallback(async () => {
     try {
@@ -86,15 +97,30 @@ export default function CallRecordingsPage() {
         админки. Каждая транскрибируется и анализируется ИИ, привязывается к клиенту.
       </p>
 
+      {!loading && rows.length > 0 && (
+        <div className="relative mb-4">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Поиск по имени, телефону, тексту…"
+            className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Пока нет записей. Перешлите запись звонка боту @tezmotors_bot или загрузите из формы звонка.
         </p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Ничего не найдено по запросу «{query}».</p>
       ) : (
         <div className="space-y-3">
-          {rows.map((r) => (
+          {filtered.map((r) => (
             <div key={r.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">

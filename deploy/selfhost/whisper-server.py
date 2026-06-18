@@ -52,7 +52,17 @@ def _run(path: str, language):
         beam_size=5,
         vad_filter=True,
         initial_prompt=DOMAIN_PROMPT,
-        condition_on_previous_text=True,
+        # condition_on_previous_text=False: feeding each window the PREVIOUS window's
+        # text is the #1 cause of runaway repetition / hallucination on noisy phone
+        # audio (a whole call decoded as one repeated phrase). Turning it off trades a
+        # little cross-segment spelling consistency for far more robust transcripts.
+        # The initial_prompt still seeds brand/place proper nouns on the first window.
+        condition_on_previous_text=False,
+        # Drop low-confidence / gibberish segments instead of emitting hallucinated text
+        # during silence (defaults, made explicit so they survive faster-whisper changes).
+        no_speech_threshold=0.6,
+        compression_ratio_threshold=2.4,
+        log_prob_threshold=-1.0,
     )
     text = " ".join(s.text.strip() for s in segments).strip()
     return text, getattr(info, "language", language), getattr(info, "duration", 0) or 0
