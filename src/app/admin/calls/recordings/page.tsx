@@ -80,6 +80,15 @@ export default function CallRecordingsPage() {
 
               {r.summary && <p className="text-sm text-foreground leading-relaxed">{r.summary}</p>}
 
+              {!r.summary && (r.metadata as { status?: string } | null)?.status !== "done" && (
+                <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {(r.metadata as { status?: string } | null)?.status === "error"
+                    ? "Не удалось расшифровать — запись сохранена, можно прослушать."
+                    : "Расшифровка и анализ… обновите страницу через минуту."}
+                </p>
+              )}
+
               {r.transcript && (
                 <div>
                   <button

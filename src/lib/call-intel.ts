@@ -108,7 +108,7 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
     "Output ONLY the raw JSON string. No preamble, no markdown code blocks, no wrapping in ```json."
   ].join(" ");
 
-  const out = await llmText({ system, user: `Call transcript:\n${clean.slice(0, 6000)}`, maxTokens: 500 });
+  const out = await llmText({ system, user: `Call transcript:\n${clean.slice(0, 6000)}`, maxTokens: 800 });
 
   if (!out) {
     return {
@@ -126,7 +126,11 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
   }
 
   try {
-    const cleanedJson = out.replace(/```json|```/g, "").trim();
+    let cleanedJson = out.replace(/```json|```/g, "").trim();
+    // Salvage: if the model wrapped the JSON in any prose, parse just the {...} object.
+    const first = cleanedJson.indexOf("{");
+    const last = cleanedJson.lastIndexOf("}");
+    if (first >= 0 && last > first) cleanedJson = cleanedJson.slice(first, last + 1);
     const data = JSON.parse(cleanedJson);
     
     // Calculate compliance score in JS for predictability
@@ -178,7 +182,8 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
   } catch (err) {
     console.error("Failed to parse LLM call analysis JSON:", err, "Raw response:", out);
     return {
-      summary: out.slice(0, 280),
+      // Fall back to a readable transcript excerpt — never dump raw (malformed) JSON.
+      summary: clean.slice(0, 280),
       leadScore,
       ai: false,
       metadata: {

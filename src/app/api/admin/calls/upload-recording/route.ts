@@ -95,15 +95,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "provide a transcript or an audio file" }, { status: 400 });
   }
 
-  // No transcript from iOS but we have audio → self-hosted Whisper (fail-soft).
-  if (!transcript && audioBuffer) {
-    transcript = await transcribeAudio(audioBuffer).catch(() => "");
-  }
-
-  const analysis = await analyzeCall(transcript, durationSec);
-  const phoneCore = contactKey(phoneRaw);
-  const voiceSignature = generateVoiceSignature(audioBuffer, durationSec, phoneRaw);
+  // Insert the row with whatever we already have, then RETURN immediately. Whisper
+  // transcription + AI analysis run in the BACKGROUND: a long synchronous request
+  // (Whisper on CPU can take 30–90s) makes iOS / the Cloudflare tunnel drop the
+  // connection ("network connection lost"). Responding in <1s avoids that; the
+  // recordings page shows the call at once and fills in the transcript/summary after.
   const recordingUrl = recordingFile ? `/api/admin/calls/recording/${recordingFile}` : null;
+  const needsTranscription = !transcript && !!audioBuffer;
 
   const supabase = createServiceClient();
   const { data: callLog, error: callError } = await supabase
@@ -114,10 +112,10 @@ export async function POST(req: NextRequest) {
       duration_sec: durationSec || null,
       recording_url: recordingUrl,
       transcript: transcript || null,
-      summary: analysis.summary || null,
-      lead_score: analysis.leadScore,
-      metadata: { ...(analysis.metadata || {}), source: "upload" },
-      voice_signature: voiceSignature,
+      summary: null,
+      lead_score: 0,
+      metadata: { source: "upload", status: needsTranscription ? "transcribing" : "analyzing" },
+      voice_signature: generateVoiceSignature(audioBuffer, durationSec, phoneRaw),
     })
     .select("id")
     .single();
@@ -125,56 +123,95 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `failed to log call: ${callError.message}` }, { status: 500 });
   }
 
-  // Update / create the CRM inquiry for this caller (mirrors the SIP flow).
-  if (phoneCore) {
-    const closingProb = analysis.metadata?.extracted_entities?.closing_probability ?? 25;
-    const { data: inq } = await supabase
-      .from("inquiries")
-      .select("id, notes, metadata")
-      .ilike("phone", `%${phoneCore}%`)
-      .limit(1)
-      .maybeSingle();
-    if (inq) {
-      const dateStr = new Date().toLocaleDateString();
-      const notes = analysis.summary
-        ? `${inq.notes || ""}\n\n[Recorded call ${dateStr}]: ${analysis.summary}`.trim()
-        : inq.notes;
-      await supabase
-        .from("inquiries")
-        .update({ notes, metadata: { ...((inq.metadata as Record<string, unknown>) || {}), closing_probability: closingProb } })
-        .eq("id", inq.id);
-    } else if (phoneRaw) {
-      await supabase.from("inquiries").insert({
-        name: `Call (${phoneRaw})`,
-        phone: phoneRaw,
-        status: "new",
-        type: "callback",
-        notes: `[Auto-created from a recorded call]: ${analysis.summary || ""}`.trim(),
-        metadata: { closing_probability: closingProb },
-      });
-    }
-  }
-
-  // Alert the dealer on a low-compliance or negative call (mirrors the SIP flow).
-  if (analysis.metadata) {
-    const lowCompliance = (analysis.metadata.compliance_score ?? 100) < 50;
-    const negative = ["negative", "frustrated"].includes(analysis.metadata.sentiment);
-    if (lowCompliance || negative) {
-      const triggers: string[] = [];
-      if (lowCompliance) triggers.push(`Low compliance (${analysis.metadata.compliance_score}%)`);
-      if (negative) triggers.push(`Negative sentiment (${analysis.metadata.sentiment})`);
-      await alertDealer(
-        "Recorded call — review",
-        [`Phone: ${phoneRaw || "—"}`, `Trigger: ${triggers.join(", ")}`, `Summary: ${analysis.summary}`],
-        { key: `call_upload_audit:${callLog.id}` },
-      ).catch(() => {});
-    }
-  }
+  // Fire-and-forget enrichment — keeps running after the response on the long-lived
+  // Vostro Node server.
+  void enrichRecording({ callId: callLog.id, audioBuffer, transcript, durationSec, phoneRaw, direction });
 
   return NextResponse.json(
-    { success: true, call_log_id: callLog.id, stored: !!recordingFile, transcribed: !!transcript },
+    { success: true, call_log_id: callLog.id, stored: !!recordingFile, status: "processing" },
     { status: 201 },
   );
+}
+
+/**
+ * Background enrichment: transcribe (if needed) → AI-analyze → update the call row,
+ * the CRM inquiry, and fire a dealer alert on a bad call. Best-effort — errors are
+ * logged (the upload already returned 201) and the row is marked status:"error".
+ */
+async function enrichRecording(args: {
+  callId: string;
+  audioBuffer: Buffer | null;
+  transcript: string;
+  durationSec: number;
+  phoneRaw: string;
+  direction: string;
+}) {
+  const supabase = createServiceClient();
+  try {
+    let transcript = args.transcript;
+    if (!transcript && args.audioBuffer) {
+      transcript = await transcribeAudio(args.audioBuffer).catch(() => "");
+    }
+    const analysis = await analyzeCall(transcript, args.durationSec);
+
+    await supabase
+      .from("calls")
+      .update({
+        transcript: transcript || null,
+        summary: analysis.summary || null,
+        lead_score: analysis.leadScore,
+        metadata: { ...(analysis.metadata || {}), source: "upload", status: "done" },
+      })
+      .eq("id", args.callId);
+
+    const phoneCore = contactKey(args.phoneRaw);
+    if (phoneCore) {
+      const closingProb = analysis.metadata?.extracted_entities?.closing_probability ?? 25;
+      const { data: inq } = await supabase
+        .from("inquiries")
+        .select("id, notes, metadata")
+        .ilike("phone", `%${phoneCore}%`)
+        .limit(1)
+        .maybeSingle();
+      if (inq) {
+        const dateStr = new Date().toLocaleDateString();
+        const notes = analysis.summary
+          ? `${inq.notes || ""}\n\n[Recorded call ${dateStr}]: ${analysis.summary}`.trim()
+          : inq.notes;
+        await supabase
+          .from("inquiries")
+          .update({ notes, metadata: { ...((inq.metadata as Record<string, unknown>) || {}), closing_probability: closingProb } })
+          .eq("id", inq.id);
+      } else if (args.phoneRaw) {
+        await supabase.from("inquiries").insert({
+          name: `Call (${args.phoneRaw})`,
+          phone: args.phoneRaw,
+          status: "new",
+          type: "callback",
+          notes: `[Auto-created from a recorded call]: ${analysis.summary || ""}`.trim(),
+          metadata: { closing_probability: closingProb },
+        });
+      }
+    }
+
+    if (analysis.metadata) {
+      const lowCompliance = (analysis.metadata.compliance_score ?? 100) < 50;
+      const negative = ["negative", "frustrated"].includes(analysis.metadata.sentiment);
+      if (lowCompliance || negative) {
+        const triggers: string[] = [];
+        if (lowCompliance) triggers.push(`Low compliance (${analysis.metadata.compliance_score}%)`);
+        if (negative) triggers.push(`Negative sentiment (${analysis.metadata.sentiment})`);
+        await alertDealer(
+          "Recorded call — review",
+          [`Phone: ${args.phoneRaw || "—"}`, `Trigger: ${triggers.join(", ")}`, `Summary: ${analysis.summary}`],
+          { key: `call_upload_audit:${args.callId}` },
+        ).catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.error("recording enrichment failed:", e);
+    await supabase.from("calls").update({ metadata: { source: "upload", status: "error" } }).eq("id", args.callId);
+  }
 }
 
 export async function GET(req: NextRequest) {
