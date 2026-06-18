@@ -1298,6 +1298,26 @@ export default function MobileCallRecorder() {
             <p className="text-lg font-mono text-lime font-bold">{formatTime(callDuration)}</p>
           </div>
 
+          {/* Live AI sentiment + dynamic-discount readout (updates from the agent stream) */}
+          {isAiCallSimulating && (
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold capitalize ${
+                sentiment === "positive"
+                  ? "bg-green-500/10 border-green-500/30 text-green-400"
+                  : sentiment === "friction"
+                  ? "bg-red-500/10 border-red-500/30 text-red-400"
+                  : "bg-muted/30 border-border text-muted-foreground"
+              }`}>
+                <Smile className="w-3.5 h-3.5" /> {sentiment}
+              </span>
+              {suggestedDiscount ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-lime/30 bg-lime/10 text-lime text-xs font-bold">
+                  <Award className="w-3.5 h-3.5" /> Discount unlocked: ${suggestedDiscount.toLocaleString()}
+                </span>
+              ) : null}
+            </div>
+          )}
+
           {/* Audio canvas visualizer */}
           <canvas
             ref={visualizerCanvasRef}
@@ -2037,6 +2057,26 @@ export default function MobileCallRecorder() {
                 >
                   O'zbekcha
                 </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">Agent Persona</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([["qualifier", "Qualifier"], ["scheduler", "Scheduler"], ["closer", "Closer"]] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setCampaignAgent(val)}
+                    className={`py-1.5 text-[11px] font-semibold rounded-lg border transition-all ${
+                      campaignAgent === val
+                        ? "bg-lime/10 text-lime border-lime"
+                        : "bg-muted/10 border-border text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
