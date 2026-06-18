@@ -933,7 +933,8 @@ export default function MobileCallRecorder() {
     setSourcingResults(null);
     try {
       const vehiclePriceStr = CAR_SPECS[aiAgentModel]?.price || "26500";
-      const vehiclePrice = Number(vehiclePriceStr.replace(/[^0-9]/g, "")) || 26500;
+      // price is a range string like "$24,500 - $28,900" → take the first amount.
+      const vehiclePrice = Number((vehiclePriceStr.match(/[\d,]+/)?.[0] || "26500").replace(/,/g, "")) || 26500;
       
       const res = await fetch("/api/admin/calls/agent/source", {
         method: "POST",
@@ -961,7 +962,8 @@ export default function MobileCallRecorder() {
     setCompilingBrochure(true);
     try {
       const vehiclePriceStr = CAR_SPECS[aiAgentModel]?.price || "26500";
-      const vehiclePrice = Number(vehiclePriceStr.replace(/[^0-9]/g, "")) || 26500;
+      // price is a range string like "$24,500 - $28,900" → take the first amount.
+      const vehiclePrice = Number((vehiclePriceStr.match(/[\d,]+/)?.[0] || "26500").replace(/,/g, "")) || 26500;
       
       const res = await fetch("/api/admin/calls/collateral", {
         method: "POST",
@@ -2047,6 +2049,95 @@ export default function MobileCallRecorder() {
             <PhoneCall className="w-4 h-4" />
             Start AI Outbound Call
           </button>
+
+          {/* AI sales tools: dealer-network sourcing · brochure · manager voice clone */}
+          <div className="w-full space-y-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">AI Sales Tools</span>
+
+            {/* B2B dealer-network sourcing */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={runB2BSourcingNegotiation}
+                disabled={isSourcingLoading}
+                className="w-full py-2.5 rounded-xl border border-border bg-muted/20 text-foreground text-xs font-semibold flex items-center justify-center gap-2 hover:bg-muted/40 disabled:opacity-50 transition-colors"
+              >
+                {isSourcingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4 text-lime" />}
+                Source from dealer network
+              </button>
+              {sourcingLogs && (
+                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-1 max-h-44 overflow-y-auto">
+                  {sourcingLogs.map((line, i) => (
+                    <p key={i} className="text-[11px] font-mono text-muted-foreground leading-snug">{line}</p>
+                  ))}
+                  {sourcingResults?.final_wholesale_price && (
+                    <p className="text-[11px] text-foreground pt-1.5 border-t border-border/40 mt-1.5">
+                      Wholesale <span className="font-bold text-lime">${Number(sourcingResults.final_wholesale_price).toLocaleString()}</span>
+                      {sourcingResults.sourced_color ? ` · ${sourcingResults.sourced_color}` : ""}
+                      {sourcingResults.eta_days ? ` · ETA ${sourcingResults.eta_days}d` : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Dynamic sales brochure compiler */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={compileBrochure}
+                disabled={compilingBrochure}
+                className="w-full py-2.5 rounded-xl border border-border bg-muted/20 text-foreground text-xs font-semibold flex items-center justify-center gap-2 hover:bg-muted/40 disabled:opacity-50 transition-colors"
+              >
+                {compilingBrochure ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4 text-lime" />}
+                Compile sales brochure
+              </button>
+              {brochureUrl && (
+                <a
+                  href={brochureUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 rounded-xl border border-lime/30 bg-lime/10 text-lime text-xs font-semibold flex items-center justify-center gap-2 hover:bg-lime/20 transition-colors"
+                >
+                  <Send className="w-4 h-4" /> Open / share brochure
+                </a>
+              )}
+            </div>
+
+            {/* Manager voice-clone trainer */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={voiceCloneName}
+                onChange={(e) => setVoiceCloneName(e.target.value)}
+                placeholder="Voice profile name (e.g. Тимур)"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-muted/30 text-foreground focus:outline-none focus:border-lime"
+              />
+              <button
+                type="button"
+                onClick={startVoiceCloneRecord}
+                disabled={voiceCloneRecording}
+                className="w-full py-2.5 rounded-xl border border-border bg-muted/20 text-foreground text-xs font-semibold flex items-center justify-center gap-2 hover:bg-muted/40 disabled:opacity-50 transition-colors"
+              >
+                {voiceCloneRecording ? <><Loader2 className="w-4 h-4 animate-spin text-red-400" /> Recording 10s…</> : <><Mic className="w-4 h-4 text-lime" /> Record voice sample (10s)</>}
+              </button>
+              {voiceCloneAudioUrl && <audio controls src={voiceCloneAudioUrl} className="w-full h-9" />}
+              {voiceCloneBlob && !voiceCloneSuccess && (
+                <button
+                  type="button"
+                  onClick={saveVoiceClone}
+                  disabled={voiceCloneSaving}
+                  className="w-full py-2 rounded-xl bg-lime/10 border border-lime/30 text-lime text-xs font-semibold flex items-center justify-center gap-2 hover:bg-lime/20 disabled:opacity-50 transition-colors"
+                >
+                  {voiceCloneSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save voice clone
+                </button>
+              )}
+              {voiceCloneSuccess && (
+                <p className="text-[11px] text-lime flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Voice clone saved to your profile</p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
