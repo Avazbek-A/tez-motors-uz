@@ -19,17 +19,34 @@ by the webhook/upload seam — so the AI layer can be spun off into a product la
 
 ## 0. What YOU must procure (cannot be automated)
 
-1. **VPS** — public IPv4, ~2 vCPU / 2–4 GB RAM, Ubuntu 22.04. EU (Frankfurt) or Turkey for
-   acceptable UZ latency. Hetzner / Contabo / Vultr (~$5–12/mo). Root SSH.
-2. **UZ SIP trunk + DID (phone number)** — from a UZ provider (onlinepbx.uz as a trunk
-   provider, a UZ telecom's business SIP, or a reseller). You need: SIP server host, your
-   registration username/password, the DID number, and the provider's signalling/media IP
-   ranges (for the firewall allowlist). UZ numbers may require business documents.
-   **Set a hard spending/credit cap on the trunk** — the cheapest toll-fraud insurance.
-3. **DNS** — `pbx.tezmotors.uz` → the VPS public IP (A record). Needed for the TLS cert
-   that WebRTC (softphone) requires.
+### Cost reality
+The PBX software + hosting can be **$0**. Real **PSTN calls to/from UZ phone numbers cannot
+be free** — a carrier charges per-minute + number rental. That carrier cost is the ONLY
+irreducible spend, and it's pay-as-you-go (a few $), deferrable until you actually dial real
+numbers. App-to-app / WebRTC calls (e.g. a website "call us" → rep's browser) are free.
 
-Once these exist + I have SSH, I configure everything below.
+1. **VPS** — public IPv4, Ubuntu 22.04, root SSH.
+   - **FREE option: Oracle Cloud "Always Free"** — public-IP VM (up to 4 ARM cores / 24 GB),
+     free forever, Gulf region (decent UZ latency). Runs Asterisk + coturn fine. Caveats:
+     a card is required for identity verification (not charged); keep the instance active so
+     Oracle doesn't reclaim idle Always-Free ARM VMs.
+   - Paid alt (~$5–12/mo): Hetzner / Contabo / Vultr (EU/Turkey).
+2. **UZ SIP trunk + DID (phone number)** — ONLY needed for real PSTN calls (skip for a
+   free app-to-app/WebRTC-only setup). From a UZ provider (onlinepbx.uz as a *trunk*
+   provider, a UZ telecom's business SIP, or a reseller). You need: SIP server host,
+   registration user/pass, the DID, and the provider's signalling/media IP ranges (firewall
+   allowlist). UZ numbers may require business docs. **Prefer pay-as-you-go + set a hard
+   credit cap** — cheapest toll-fraud insurance.
+3. **DNS** — `pbx.tezmotors.uz` → the VPS public IP (A record). Needed for the WebRTC TLS cert.
+
+### Free vs paid, by what you want to do
+- **AI on your real calls, $0, ALREADY WORKING:** record normal phone/Telegram calls (iOS
+  native recorder) → `/api/admin/calls/upload-recording` → Whisper + analysis. No PBX needed.
+- **Free PBX to build/experiment + app-to-app/WebRTC + AI-receptionist demo:** Oracle Always
+  Free + Asterisk — no phone numbers, no carrier, $0.
+- **Dial/receive real UZ phones from the app:** add the pay-as-you-go SIP trunk (the only spend).
+
+Once the VPS exists + I have SSH, I configure everything below.
 
 ---
 
