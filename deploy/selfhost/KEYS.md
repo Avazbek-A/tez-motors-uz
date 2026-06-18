@@ -77,6 +77,25 @@ openssl rand -hex 32     # run once per secret, paste the output
 | `EXTRACTOR_SECRET` | Optional bearer between the app and the local AutoHome extractor service. |
 | `TELEGRAM_WEBHOOK_SECRET` | Validates that inbound Telegram webhook calls really come from Telegram. |
 | `WHATSAPP_VERIFY_TOKEN` | A value *you choose*; you paste the same into Meta's webhook setup. |
+| `SIP_WEBHOOK_SECRET` | Optional — the Calls suite's **inbound-call webhook**. Only needed if you connect a SIP/PBX. See below. |
+
+### SIP_WEBHOOK_SECRET — connecting a real phone line (optional)
+The Calls suite (`/admin/calls`) can log + AI-analyze real inbound calls, but only
+once you connect a telephony provider. Nothing here costs money on its own — the
+secret is self-generated; the *phone line* is whatever SIP trunk / cloud PBX you
+choose (a UZ provider, or self-hosted Asterisk/FreeSWITCH). To go live:
+1. `openssl rand -hex 32` → put it in the Vostro `.env.local` as `SIP_WEBHOOK_SECRET` (redeploy).
+2. In your PBX, add a webhook to `POST https://tezmotors.uz/api/admin/calls/sip-webhook`
+   with header `X-SIP-Token: <that secret>`.
+3. Send two event types:
+   - `{ "event": "call_started", "caller_phone": "+998…", "call_id": "…" }`
+     → the response tells the PBX where to route (assigned rep vs AI assistant).
+   - `{ "event": "recording_ready", "caller_phone": "+998…", "call_id": "…",
+        "recording_url": "…", "transcript": "…", "duration_sec": 0, "direction": "inbound" }`
+     → logs the call and runs the LLM transcript analysis.
+
+**Until you set it, the webhook stays OFF in production (returns 503)** — it never
+runs unauthenticated. Everything else in the Calls suite works without it.
 
 ### VAPID keys (Web Push)
 For browser push notifications. Generate a keypair once:
