@@ -117,8 +117,11 @@ export async function enrichRecording(args: {
   const supabase = createServiceClient();
   try {
     let transcript = args.transcript;
+    let language: string | null = null;
     if (!transcript && args.audioBuffer) {
-      transcript = await transcribeAudio(args.audioBuffer).catch(() => "");
+      const r = await transcribeAudio(args.audioBuffer).catch(() => ({ text: "", language: null }));
+      transcript = r.text;
+      language = r.language;
     }
     const analysis = await analyzeCall(transcript, args.durationSec);
 
@@ -128,7 +131,7 @@ export async function enrichRecording(args: {
         transcript: transcript || null,
         summary: analysis.summary || null,
         lead_score: analysis.leadScore,
-        metadata: { ...(analysis.metadata || {}), source: "upload", status: "done" },
+        metadata: { ...(analysis.metadata || {}), source: "upload", status: "done", ...(language ? { language } : {}) },
       })
       .eq("id", args.callId);
 

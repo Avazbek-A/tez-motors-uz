@@ -1,8 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
+import { unlink } from "node:fs/promises";
 import { isAdminRequest, requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { safeMediaPath } from "@/lib/disk-store";
 import { logRecording } from "@/lib/call-recording";
 
 /**
@@ -113,4 +115,27 @@ export async function GET(req: NextRequest) {
     .limit(100);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, recordings: data || [] });
+}
+
+/** Delete a recording (admin only): removes the audio file from disk + the call row. */
+export async function DELETE(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard) return guard;
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id || !/^[a-f0-9-]{1,64}$/i.test(id)) {
+    return NextResponse.json({ error: "missing or invalid id" }, { status: 400 });
+  }
+  const supabase = createServiceClient();
+  const { data: row } = await supabase.from("calls").select("recording_url").eq("id", id).maybeSingle();
+  const file = (row?.recording_url || "").split("/").pop() || "";
+  if (file && /^[a-zA-Z0-9._-]+$/.test(file) && !file.includes("..")) {
+    try {
+      await unlink(safeMediaPath(`call-recordings/${file}`));
+    } catch {
+      // already gone — fine
+    }
+  }
+  const { error } = await supabase.from("calls").delete().eq("id", id);
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
 }

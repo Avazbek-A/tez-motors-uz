@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { AudioPlayer } from "@/components/admin/audio-player";
 
 interface Recording {
@@ -13,7 +13,7 @@ interface Recording {
   lead_score: number | null;
   transcript: string | null;
   recording_url: string | null;
-  metadata: Record<string, unknown> | null;
+  metadata: (Record<string, unknown> & { status?: string; language?: string }) | null;
   created_at: string;
 }
 
@@ -23,19 +23,55 @@ const fmtDur = (s: number | null) => {
   return `${m}:${String(sec).padStart(2, "0")}`;
 };
 const fmtDate = (s: string) => { try { return new Date(s).toLocaleString("ru-RU"); } catch { return s; } };
+const langLabel = (c?: string) => (!c ? "" : c === "ru" ? "RU" : c === "uz" ? "UZ" : c === "en" ? "EN" : c.toUpperCase());
 
 export default function CallRecordingsPage() {
   const [rows, setRows] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    fetch("/api/admin/calls/upload-recording")
-      .then((r) => r.json())
-      .then((d) => { if (d.ok) setRows(d.recordings || []); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const load = useCallback(async (): Promise<Recording[]> => {
+    let recs: Recording[] = [];
+    try {
+      const d = await fetch("/api/admin/calls/upload-recording").then((r) => r.json());
+      if (d.ok) { recs = d.recordings || []; setRows(recs); }
+    } catch {
+      /* keep prior rows */
+    }
+    setLoading(false);
+    return recs;
   }, []);
+
+  // Initial load + light polling WHILE any recording is still processing (so the
+  // transcript/summary appear without a manual refresh). Stops once all are done.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      const recs = await load();
+      const stillProcessing = recs.some(
+        (r) => r.metadata?.status && r.metadata.status !== "done" && r.metadata.status !== "error",
+      );
+      if (!cancelled && stillProcessing) timer.current = setTimeout(tick, 5000);
+    };
+    tick();
+    return () => { cancelled = true; if (timer.current) clearTimeout(timer.current); };
+  }, [load]);
+
+  const remove = async (id: string) => {
+    if (!confirm("Удалить эту запись звонка? Действие необратимо.")) return;
+    setDeleting((d) => ({ ...d, [id]: true }));
+    try {
+      const r = await fetch(`/api/admin/calls/upload-recording?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (r.ok) setRows((rs) => rs.filter((x) => x.id !== id));
+    } catch {
+      /* noop */
+    } finally {
+      setDeleting((d) => ({ ...d, [id]: false }));
+    }
+  };
 
   return (
     <div className="max-w-3xl">
@@ -44,15 +80,15 @@ export default function CallRecordingsPage() {
         <h1 className="text-2xl font-semibold text-foreground">Записи звонков</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
-        Записи, загруженные с телефона (нативная запись iOS / диктофон) или из админки. Каждая
-        транскрибируется и анализируется ИИ, привязывается к клиенту.
+        Записи, загруженные с телефона (нативная запись iOS / диктофон), через Telegram-бота или из
+        админки. Каждая транскрибируется и анализируется ИИ, привязывается к клиенту.
       </p>
 
       {loading ? (
         <div className="py-12 text-center"><Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" /></div>
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Пока нет записей. Загрузите запись звонка с телефона (через ярлык iOS) или из формы звонка.
+          Пока нет записей. Перешлите запись звонка боту @tezmotors_bot или загрузите из формы звонка.
         </p>
       ) : (
         <div className="space-y-3">
@@ -65,27 +101,39 @@ export default function CallRecordingsPage() {
                     : <ArrowUpRight className="w-4 h-4 text-primary shrink-0" />}
                   <span className="font-medium text-foreground truncate">{r.customer_phone || "—"}</span>
                   <span className="text-[11px] text-muted-foreground shrink-0">{fmtDate(r.created_at)}</span>
+                  {r.metadata?.language && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{langLabel(r.metadata.language)}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground shrink-0">
                   <span className="font-mono">{fmtDur(r.duration_sec)}</span>
-                  {typeof r.lead_score === "number" && (
+                  {typeof r.lead_score === "number" && r.lead_score > 0 && (
                     <span className={`font-mono font-bold ${r.lead_score >= 60 ? "text-[var(--success,#16a34a)]" : r.lead_score >= 30 ? "text-[var(--warning,#d97706)]" : "text-muted-foreground"}`}>
                       {r.lead_score}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => remove(r.id)}
+                    disabled={deleting[r.id]}
+                    title="Удалить запись"
+                    className="text-muted-foreground hover:text-[var(--danger,#ef4444)] transition-colors disabled:opacity-50"
+                  >
+                    {deleting[r.id] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
               {r.recording_url && <AudioPlayer src={r.recording_url} downloadName={`call-${r.customer_phone || r.id}`} />}
 
-              {r.summary && <p className="text-sm text-foreground leading-relaxed">{r.summary}</p>}
+              {r.summary && <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{r.summary}</p>}
 
-              {!r.summary && (r.metadata as { status?: string } | null)?.status !== "done" && (
+              {!r.summary && r.metadata?.status !== "done" && (
                 <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  {(r.metadata as { status?: string } | null)?.status === "error"
+                  {r.metadata?.status === "error"
                     ? "Не удалось расшифровать — запись сохранена, можно прослушать."
-                    : "Расшифровка и анализ… обновите страницу через минуту."}
+                    : "Расшифровка и анализ…"}
                 </p>
               )}
 
