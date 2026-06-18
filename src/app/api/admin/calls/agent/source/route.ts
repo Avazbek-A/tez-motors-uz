@@ -14,14 +14,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { vehicle, color, budget } = body;
+    // Bound the free-text fields that get interpolated into the LLM prompt (cost +
+    // prompt-injection hygiene; admin-only). Budget is numeric-coerced already.
+    const vehicle = String(body.vehicle || "").slice(0, 80).trim();
+    const targetColor = (String(body.color || "").slice(0, 40).trim()) || "Grey";
 
     if (!vehicle) {
       return NextResponse.json({ error: "Missing vehicle parameters" }, { status: 400 });
     }
 
-    const targetColor = color || "Grey";
-    const clientBudget = Number(budget || 26000);
+    const clientBudget = Number(body.budget || 26000);
 
     const systemPrompt = [
       `You are the B2B Wholesale Sourcing Agent for Tez Motors.`,

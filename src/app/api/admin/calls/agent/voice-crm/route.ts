@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const voiceCommand = body.voice_command || "";
+    // A voice query is short; cap it (cost + prompt-injection hygiene; admin-only).
+    const voiceCommand = String(body.voice_command || "").slice(0, 1000).trim();
 
     if (!voiceCommand) {
       return NextResponse.json({ error: "Missing voice command parameter" }, { status: 400 });
