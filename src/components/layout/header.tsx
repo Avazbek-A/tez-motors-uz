@@ -158,7 +158,7 @@ export function Header() {
                   doesn't fit) */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="xl:hidden p-2 -mr-2"
+                className="xl:hidden p-2 -mr-2 text-foreground hover:opacity-70 transition-opacity"
                 aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                 aria-expanded={isMobileMenuOpen}
               >
