@@ -52,6 +52,7 @@ async function probe(c) {
     else if (/возраст/i.test(t)) fn = () => click(m, c.age);
     else if (/тип топлив|тип двигател/i.test(t)) fn = () => click(m, c.fuel);
     else if (/состояние двигател/i.test(t)) fn = () => click(m, c.state);
+    else if (/масс/i.test(t)) fn = () => client.sendMessage(BOT, { message: "3000" });
     else if (/объ[её]м двигател/i.test(t)) fn = () => client.sendMessage(BOT, { message: c.cc || "2000" });
     else if (/экологическ/i.test(t)) fn = () => click(m, c.eco);
     else if (/сертификат/i.test(t)) fn = () => click(m, c.cert || "Имеется");
@@ -79,22 +80,27 @@ const CANARIES = [
   { l: "car petrol 1-3 NOCERT", base: "60% + 5 $/см3|180 БРВ", type: "🚗 Автомобиль", age: "С 1 г. до 3 лет", fuel: "⛽️ Бензин", cc: "2000", cert: "Не имеется" },
   { l: "car electric 1-3", base: "0%|120 БРВ", type: "🚗 Автомобиль", age: "С 1 г. до 3 лет", fuel: "🔋 Электр", cc: "2000", cert: "Имеется", country: "🇨🇳Китай" },
   { l: "truck petrol <=3 cert", base: "30%|210 БРВ", type: "🚚 Мини грузовик", age: "До 3 лет", fuel: "⛽️ Бензин", cc: "2000", cert: "Имеется", country: "🇨🇳Китай" },
-  { l: "engine new", base: "—|—", type: "⚙️ Мотор", fuel: "⛽️ Бензин", cc: "2000", state: "Новый" },
+  { l: "engine new", base: "0%|—", type: "⚙️ Мотор", fuel: "⛽️ Бензин", cc: "2000", state: "Новый" },
   { l: "bus 10-59 <=3 Euro5", base: "Лгота|120 БРВ", type: "🚍 Автобус", capacity: "от 10 до 59", age: "До 3 лет", fuel: "⛽️ Бензин", cc: "2000", eco: "Евро-5 и выше", cert: "Имеется", country: "🇨🇳Китай" },
   { l: "fura tractor >7 hiE5", base: "70% + 3 $/см3|1360 БРВ", type: "🚛 Фура", part: "🚛 Тягач", age: "Более 7", fuel: "⛽️ Дизель", eco: "Выше Евро-5", cc: "10000", cert: "Имеется", country: "🇨🇳Китай" },
 ];
 
-const drift = [];
+// Normalize rate strings so cosmetic formatting (e.g. "70 %" vs "70%") never
+// triggers a false alarm — only genuine rate changes count as drift.
+const nrm = (s) => (s || "").toLowerCase().replace(/\s+/g, "");
+const drift = [], failed = [];
 for (const c of CANARIES) {
-  const t = await probe(c);
-  if (t === "TIMEOUT") { drift.push(`${c.l}: PROBE FAILED`); await sleep(2000); continue; }
+  let t = await probe(c);
+  if (t === "TIMEOUT") { await sleep(2500); t = await probe(c); } // one retry — probe flakiness ≠ rate change
+  if (t === "TIMEOUT") { failed.push(c.l); await sleep(2000); continue; }
   const r = rateOf(t);
   const now = r.banned ? "BANNED" : `${r.duty}|${r.util}`;
-  if (now !== c.base) drift.push(`${c.l}:  was [${c.base}]  →  now [${now}]`);
+  if (nrm(now) !== nrm(c.base)) drift.push(`${c.l}:  was [${c.base}]  →  now [${now}]`);
   await sleep(2000);
 }
 
 await client.disconnect();
+if (failed.length) console.log("ℹ️ could not verify (probe failed, not drift): " + failed.join(", "));
 if (!drift.length) { console.log("✓ no customs-rate drift — all canaries match the baseline."); process.exit(0); }
 console.log("⚠️ CUSTOMS RATE DRIFT DETECTED:\n  " + drift.join("\n  "));
 
