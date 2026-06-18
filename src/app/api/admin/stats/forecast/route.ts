@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const safe = <T>(p: PromiseLike<{ data: T | null }>, d: T) => p.then((r) => r.data ?? d, () => d);
 
-  const [invoices, payments, orders, costs, expenses, pos, fx] = await Promise.all([
+  const [invoices, payments, orders, costs, expenses, pos, fx, inquiriesRes, carsRes] = await Promise.all([
     safe(supabase.from("invoices").select("total_usd, status, due_at, issued_at").limit(MAX), [] as { total_usd: number; status: string; due_at: string | null; issued_at: string | null }[]),
     safe(supabase.from("payments").select("amount_tiyin, state, order_id").eq("state", 2).limit(MAX), [] as { amount_tiyin: number; state: number; order_id: string | null }[]),
     safe(supabase.from("orders").select("id, reference_code, status, amount_usd, car_id, cars(brand, model, year)").order("created_at", { ascending: false }).limit(200), [] as { id: string; reference_code: string; status: string; amount_usd: number | null; car_id: string | null; cars: { brand: string; model: string; year: number }[] }[]),
@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
     safe(supabase.from("expenses").select("amount_usd, spent_on").gte("spent_on", monthAgo.slice(0, 10)).limit(MAX), [] as { amount_usd: number; spent_on: string }[]),
     safe(supabase.from("purchase_orders").select("status, qty, unit_cost_usd, eta_date, created_at").limit(MAX), [] as { status: string; qty: number; unit_cost_usd: number | null; eta_date: string | null; created_at: string }[]),
     getFxRates(supabase),
+    safe(supabase.from("inquiries").select("id, metadata, car_id, status").in("status", ["new", "contacted", "in_progress"]).limit(MAX), [] as { id: string; metadata: unknown; car_id: string | null; status: string }[]),
+    safe(supabase.from("cars").select("id, price_usd").limit(MAX), [] as { id: string; price_usd: number | null }[]),
   ]);
 
   // Cash now ≈ deposits collected (the liquid cash the dealer holds). USD via FX.
@@ -64,6 +66,22 @@ export async function GET(request: NextRequest) {
     return dealPnl({ id: o.id, reference_code: o.reference_code, status: o.status, amount_usd: o.amount_usd, car: carName }, cost, depositsByOrder.get(o.id) || 0);
   });
 
+  // Calculate Pipeline Closing Probability Math
+  const carPriceMap = new Map<string, number>();
+  for (const c of carsRes) if (c.id) carPriceMap.set(c.id, num(c.price_usd));
+
+  let totalPipelineUsd = 0;
+  let adjustedPipelineUsd = 0;
+  for (const inq of inquiriesRes) {
+    if (!inq.car_id) continue;
+    const price = carPriceMap.get(inq.car_id) || 0;
+    totalPipelineUsd += price;
+    
+    const meta = (inq.metadata as Record<string, any>) || {};
+    const prob = meta.closing_probability != null ? num(meta.closing_probability) : 25; // default 25% closing chance
+    adjustedPipelineUsd += (price * prob) / 100;
+  }
+
   return NextResponse.json({
     ok: true,
     fx: { usd_uzs: fx.usd_uzs },
@@ -73,5 +91,7 @@ export async function GET(request: NextRequest) {
     depositsHeldUsd: depositsHeldAsLiability(orders, depositsByOrder),
     fxExposure: fxExposureScenarios(Math.round(committedUsd), fx.usd_uzs),
     deals,
+    pipelineValueUsd: Math.round(totalPipelineUsd),
+    pipelineForecastUsd: Math.round(adjustedPipelineUsd),
   });
 }

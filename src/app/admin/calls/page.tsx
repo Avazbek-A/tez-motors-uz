@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Phone, Loader2, Plus } from "lucide-react";
+import Link from "next/link";
+import { Phone, Loader2, Plus, Mic } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 
@@ -123,9 +124,18 @@ export default function AdminCallsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Phone className="h-5 w-5 text-lime" />
-        <h1 className="text-xl font-bold">{t.title}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Phone className="h-5 w-5 text-lime" />
+          <h1 className="text-xl font-bold">{t.title}</h1>
+        </div>
+        <Link
+          href="/admin/calls/record"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-lime to-lime-500 text-navy px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-lime/10 hover:opacity-90 transition-opacity"
+        >
+          <Mic className="w-4 h-4 shrink-0" />
+          {locale === "ru" ? "Запустить Регистратор Звонков (Мобильный)" : locale === "uz" ? "Qo‘ng‘iroq yozuvchisini ochish" : "Launch Mobile Call Recorder"}
+        </Link>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border bg-card p-4">

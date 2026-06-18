@@ -22,7 +22,6 @@ import {
 } from "@/lib/market-analytics";
 import { baseModelKey } from "@/lib/model-normalize";
 import {
-  computeLandedCost,
   suggestedListPrice,
   resolveFuelKind,
   DEFAULT_IMPORT_CONFIG,
@@ -30,6 +29,7 @@ import {
   type ImportConfig,
   type FuelKind,
 } from "@/lib/import-cost";
+import { finalCarPrice } from "@/lib/final-price";
 import { demandScore, opportunityScore, verdict, recommendedQty } from "@/lib/buying-brain";
 import { aggregatePreorderDemand, modelKey } from "@/lib/procurement-demand";
 import { freightPerUnit } from "@/lib/freight";
@@ -306,15 +306,27 @@ export async function GET(request: NextRequest) {
       let netMarginUsd: number | null = null;
       let netMarginPct: number | null = null;
       if (supplierCostUsd != null) {
-        const breakdown = computeLandedCost({
-          vehiclePriceUsd: supplierCostUsd,
+        // Landed cost via the AUTHORITATIVE, law-cited customs engine (customs-uz),
+        // the same matrix the public calculator + Telegram bot use — so the buy-side
+        // and the customer-facing quote can never disagree. The dealer imports NEW,
+        // certificate-of-origin cars from China → age defaults to "new", origin to
+        // "certified". The per-cm³ duty term only bites petrol/diesel, so a
+        // representative 2.0 L stands in at the model level (the exact cc refines
+        // per-unit in the quote/calculator). customs-uz already charges the official
+        // 2.5-BRV customs fee + the law-based utilization fee, so the dealer's own
+        // flat fees (broker clearance, local delivery, misc) fold into inland.
+        const fp = finalCarPrice({
+          carUsd: supplierCostUsd,
+          fuelType: meta.fuel,
+          origin: "certified",
+          engineCc: meta.fuel === "petrol" || meta.fuel === "diesel" ? 2000 : 0,
           freightUsd: config.fees.freightUsd,
-          clearanceUsd: config.fees.clearanceUsd,
-          inlandLogisticsUsd: config.fees.inlandLogisticsUsd,
-          otherUsd: config.fees.otherUsd,
-          rates: config.rates[meta.fuel],
+          certUsd: config.rates[meta.fuel].certificationUsd,
+          inlandUsd: config.fees.inlandLogisticsUsd + config.fees.clearanceUsd + config.fees.otherUsd,
+          marginPct: config.targetMarginPct,
+          usdUzs: fx.usd_uzs,
         });
-        landedCostUsd = breakdown.landedCostUsd;
+        landedCostUsd = fp.landedUsd;
         suggestedPriceUsd = suggestedListPrice(landedCostUsd, config.targetMarginPct);
         // Margin vs the effective (shrinkage-adjusted) market read, not the raw
         // 1-comp median.

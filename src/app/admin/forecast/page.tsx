@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, TrendingUp } from "lucide-react";
+import { Loader2, TrendingUp, Sparkles } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 
@@ -173,6 +173,36 @@ export default function AdminForecastPage() {
             <div className={`text-lg font-semibold ${c.tone || ""}`}>{c.v}</div>
           </div>
         ))}
+      </div>
+
+      {/* AI Pipeline Forecast */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-lg border border-[var(--border)] bg-card p-4 flex flex-col justify-between shadow-md">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-lime" />
+              AI Pipeline Book Value (Raw)
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Sum list price of all active inquiries in the pipeline</p>
+          </div>
+          <div className="text-2xl font-bold text-foreground mt-2">
+            {usd((data as any).pipelineValueUsd || 0)}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-lime/30 bg-gradient-to-br from-card via-card to-lime/5 p-4 flex flex-col justify-between shadow-lg relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-lime/10 rounded-full blur-xl pointer-events-none" />
+          <div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-lime uppercase tracking-wider">
+              <Sparkles className="w-4 h-4 text-lime animate-pulse" />
+              AI Closing Forecast (Probability-Adjusted)
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Projected revenue based on phone transcript buying signals</p>
+          </div>
+          <div className="text-2xl font-black text-lime mt-2">
+            {usd((data as any).pipelineForecastUsd || 0)}
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-sm">

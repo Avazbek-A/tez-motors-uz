@@ -39,27 +39,155 @@ export interface CallAnalysis {
   summary: string;
   leadScore: number;
   ai: boolean;
+  metadata?: {
+    extracted_entities: {
+      budget: number | null;
+      car_model: string | null;
+      payment_pref: string | null;
+      urgency: "hot" | "warm" | "cold";
+      closing_probability: number;
+      closing_probability_reason: string;
+    };
+    compliance_checklist: {
+      greeted_properly: boolean;
+      offered_test_drive: boolean;
+      mentioned_warranty: boolean;
+      scheduled_followup: boolean;
+    };
+    compliance_score: number;
+    sentiment: "positive" | "neutral" | "negative" | "frustrated";
+    follow_up_draft: string;
+  };
 }
 
 /**
- * Summarize + score a call. LLM summary when configured (fail-open to a
- * truncated transcript); score always from the deterministic heuristic so it's
- * consistent and never depends on the model.
+ * Summarize + score a call bilingually. LLM summary + structured metadata (entities,
+ * compliance audit, sentiment, follow-up messages) extracted.
  */
 export async function analyzeCall(transcript: string, durationSec = 0): Promise<CallAnalysis> {
   const leadScore = callLeadScore(transcript, durationSec);
   const clean = (transcript || "").trim();
-  if (!clean) return { summary: "", leadScore: 0, ai: false };
+  if (!clean) {
+    return {
+      summary: "",
+      leadScore: 0,
+      ai: false,
+      metadata: {
+        extracted_entities: { budget: null, car_model: null, payment_pref: null, urgency: "cold", closing_probability: 25, closing_probability_reason: "Нет данных для оценки." },
+        compliance_checklist: { greeted_properly: false, offered_test_drive: false, mentioned_warranty: false, scheduled_followup: false },
+        compliance_score: 0,
+        sentiment: "neutral",
+        follow_up_draft: "",
+      }
+    };
+  }
 
   const system = [
-    "You summarize a sales phone call for a Chinese-car importer in Tashkent.",
-    "Output 1-3 short bullet points: what the customer wants, their intent level, and the next action.",
-    "Be factual — use only what's in the transcript. No preamble.",
+    "You are an AI sales analyst for Tez Motors, a premium Chinese-car importer in Tashkent.",
+    "Analyze the call transcript (which may contain a mix of Russian and Uzbek code-switching) and output a JSON object with this exact structure:",
+    "{",
+    '  "summary": "1-3 bullet points in Russian summarizing customer requests and next action.",',
+    '  "extracted_entities": {',
+    '    "budget": 25000, // budget in USD (number or null)',
+    '    "car_model": "BYD Song Plus", // matched car model or null',
+    '    "payment_pref": "cash" | "leasing" | "installment" | null,',
+    '    "urgency": "hot" | "warm" | "cold", // cold: just browsing, warm: within 1-2 weeks, hot: ready to buy now/deposit',
+    '    "closing_probability": 75, // probability percentage 0 to 100 representing the likelihood of closing a deal based on discussion metrics',
+    '    "closing_probability_reason": "Explanation in Russian of why this probability was assigned based on buy signals/objections."',
+    "  },",
+    '  "compliance_checklist": {',
+    '    "greeted_properly": true/false, // did rep mention company name "Tez Motors"?',
+    '    "offered_test_drive": true/false, // did rep offer a test drive or showroom visit?',
+    '    "mentioned_warranty": true/false, // did rep mention warranty option?',
+    '    "scheduled_followup": true/false // did rep agree on date/time for next contact?',
+    "  },",
+    '  "sentiment": "positive" | "neutral" | "negative" | "frustrated",',
+    '  "follow_up_draft": "Personalized follow-up message in the customer\'s preferred language (Russian or Uzbek) thanking them and proposing the next action discussed."',
+    "}",
+    "Note: Mixed Uzbek-Russian language is expected. Translate the summary to clean Russian, but write the follow-up draft in the language preferred by the customer in the transcript.",
+    "Output ONLY the raw JSON string. No preamble, no markdown code blocks, no wrapping in ```json."
   ].join(" ");
-  const out = await llmText({ system, user: `Call transcript:\n${clean.slice(0, 6000)}`, maxTokens: 200 });
-  return {
-    summary: out?.trim() || clean.slice(0, 280),
-    leadScore,
-    ai: Boolean(out),
-  };
+
+  const out = await llmText({ system, user: `Call transcript:\n${clean.slice(0, 6000)}`, maxTokens: 500 });
+
+  if (!out) {
+    return {
+      summary: clean.slice(0, 280),
+      leadScore,
+      ai: false,
+      metadata: {
+        extracted_entities: { budget: null, car_model: null, payment_pref: null, urgency: "cold", closing_probability: leadScore, closing_probability_reason: "Вычислено по умолчанию." },
+        compliance_checklist: { greeted_properly: false, offered_test_drive: false, mentioned_warranty: false, scheduled_followup: false },
+        compliance_score: 0,
+        sentiment: "neutral",
+        follow_up_draft: `Спасибо за звонок! Мы свяжемся с вами в ближайшее время.`,
+      }
+    };
+  }
+
+  try {
+    const cleanedJson = out.replace(/```json|```/g, "").trim();
+    const data = JSON.parse(cleanedJson);
+    
+    // Calculate compliance score in JS for predictability
+    const checklist = data.compliance_checklist || { greeted_properly: false, offered_test_drive: false, mentioned_warranty: false, scheduled_followup: false };
+    let checkCount = 0;
+    if (checklist.greeted_properly) checkCount++;
+    if (checklist.offered_test_drive) checkCount++;
+    if (checklist.mentioned_warranty) checkCount++;
+    if (checklist.scheduled_followup) checkCount++;
+    const compliance_score = checkCount * 25;
+
+    // Use default probability fallback based on urgency
+    let defaultProb = 25;
+    const urgency = data.extracted_entities?.urgency || "cold";
+    if (urgency === "hot") defaultProb = 85;
+    else if (urgency === "warm") defaultProb = 50;
+    else defaultProb = 15;
+
+    const parsedClosingProb = typeof data.extracted_entities?.closing_probability === "number"
+      ? data.extracted_entities.closing_probability
+      : defaultProb;
+
+    return {
+      summary: data.summary || clean.slice(0, 280),
+      leadScore,
+      ai: true,
+      metadata: {
+        extracted_entities: {
+          budget: typeof data.extracted_entities?.budget === "number" ? data.extracted_entities.budget : null,
+          car_model: typeof data.extracted_entities?.car_model === "string" ? data.extracted_entities.car_model : null,
+          payment_pref: typeof data.extracted_entities?.payment_pref === "string" ? data.extracted_entities.payment_pref : null,
+          urgency: ["hot", "warm", "cold"].includes(data.extracted_entities?.urgency) ? data.extracted_entities.urgency : "cold",
+          closing_probability: parsedClosingProb,
+          closing_probability_reason: typeof data.extracted_entities?.closing_probability_reason === "string"
+            ? data.extracted_entities.closing_probability_reason
+            : "Автоматическая ИИ-оценка диалога.",
+        },
+        compliance_checklist: {
+          greeted_properly: Boolean(checklist.greeted_properly),
+          offered_test_drive: Boolean(checklist.offered_test_drive),
+          mentioned_warranty: Boolean(checklist.mentioned_warranty),
+          scheduled_followup: Boolean(checklist.scheduled_followup),
+        },
+        compliance_score,
+        sentiment: ["positive", "neutral", "negative", "frustrated"].includes(data.sentiment) ? data.sentiment : "neutral",
+        follow_up_draft: data.follow_up_draft || "",
+      }
+    };
+  } catch (err) {
+    console.error("Failed to parse LLM call analysis JSON:", err, "Raw response:", out);
+    return {
+      summary: out.slice(0, 280),
+      leadScore,
+      ai: false,
+      metadata: {
+        extracted_entities: { budget: null, car_model: null, payment_pref: null, urgency: "cold", closing_probability: leadScore, closing_probability_reason: "Ошибка парсинга ответа ИИ." },
+        compliance_checklist: { greeted_properly: false, offered_test_drive: false, mentioned_warranty: false, scheduled_followup: false },
+        compliance_score: 0,
+        sentiment: "neutral",
+        follow_up_draft: `Спасибо за звонок! Мы свяжемся с вами в ближайшее время.`,
+      }
+    };
+  }
 }
