@@ -55,21 +55,21 @@ def _run(path: str, language):
         condition_on_previous_text=True,
     )
     text = " ".join(s.text.strip() for s in segments).strip()
-    return text, getattr(info, "language", language)
+    return text, getattr(info, "language", language), getattr(info, "duration", 0) or 0
 
 
 def transcribe(path: str, override):
     if override:
         return _run(path, override)
     # Pass 1: auto-detect.
-    text, lang = _run(path, None)
+    text, lang, dur = _run(path, None)
     # If detection landed on a Turkic language (but NOT Russian/English), it's almost
     # certainly Uzbek mis-ID'd — re-decode forcing Uzbek for correct text.
     if lang in TURKIC_MISDETECT and lang != "uz":
-        text2, _ = _run(path, "uz")
+        text2, _, dur2 = _run(path, "uz")
         if text2:
-            return text2, "uz"
-    return text, lang
+            return text2, "uz", dur2
+    return text, lang, dur
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -100,8 +100,8 @@ class Handler(BaseHTTPRequestHandler):
                 f.write(data)
                 f.flush()
                 with LOCK:
-                    text, lang = transcribe(f.name, override)
-            return self._json(200, {"text": text, "language": lang})
+                    text, lang, dur = transcribe(f.name, override)
+            return self._json(200, {"text": text, "language": lang, "duration": round(dur)})
         except Exception as e:
             return self._json(500, {"error": str(e)[:200]})
 

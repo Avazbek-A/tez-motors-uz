@@ -12,9 +12,9 @@
 export async function transcribeAudio(
   audio: Buffer | Uint8Array,
   opts?: { language?: string; filename?: string },
-): Promise<{ text: string; language: string | null }> {
+): Promise<{ text: string; language: string | null; duration: number }> {
   const url = (process.env.WHISPER_URL || "").trim();
-  if (!url) return { text: "", language: null };
+  if (!url) return { text: "", language: null, duration: 0 };
   try {
     // POST the raw audio bytes; the self-hosted faster-whisper service
     // (deploy/selfhost/whisper-server.py on the Vostro) reads the body, transcribes,
@@ -26,10 +26,14 @@ export async function transcribeAudio(
       body: new Uint8Array(audio),
       signal: AbortSignal.timeout(180_000), // long calls take a while on CPU
     });
-    if (!res.ok) return { text: "", language: null };
-    const data = (await res.json().catch(() => null)) as { text?: string; transcript?: string; language?: string } | null;
-    return { text: (data?.text || data?.transcript || "").trim(), language: data?.language || null };
+    if (!res.ok) return { text: "", language: null, duration: 0 };
+    const data = (await res.json().catch(() => null)) as { text?: string; transcript?: string; language?: string; duration?: number } | null;
+    return {
+      text: (data?.text || data?.transcript || "").trim(),
+      language: data?.language || null,
+      duration: Math.max(0, Math.round(Number(data?.duration) || 0)),
+    };
   } catch {
-    return { text: "", language: null };
+    return { text: "", language: null, duration: 0 };
   }
 }

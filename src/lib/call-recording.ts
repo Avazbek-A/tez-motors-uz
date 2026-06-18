@@ -119,12 +119,15 @@ export async function enrichRecording(args: {
   try {
     let transcript = args.transcript;
     let language: string | null = null;
+    let detectedDuration = 0;
     if (!transcript && args.audioBuffer) {
-      const r = await transcribeAudio(args.audioBuffer).catch(() => ({ text: "", language: null }));
+      const r = await transcribeAudio(args.audioBuffer).catch(() => ({ text: "", language: null, duration: 0 }));
       transcript = r.text;
       language = r.language;
+      detectedDuration = r.duration;
     }
-    const analysis = await analyzeCall(transcript, args.durationSec);
+    const durationSec = args.durationSec || detectedDuration || 0;
+    const analysis = await analyzeCall(transcript, durationSec);
 
     await supabase
       .from("calls")
@@ -132,6 +135,7 @@ export async function enrichRecording(args: {
         transcript: transcript || null,
         summary: analysis.summary || null,
         lead_score: analysis.leadScore,
+        duration_sec: durationSec || null,
         metadata: { ...(analysis.metadata || {}), source: "upload", status: "done", ...(language ? { language } : {}) },
       })
       .eq("id", args.callId);
