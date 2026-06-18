@@ -24,6 +24,20 @@ export function normalizeCallSummary(s: unknown): string {
   return typeof s === "string" ? s.trim() : "";
 }
 
+/**
+ * Excerpt a transcript for LLM analysis. A long sales call's most important moment —
+ * the CLOSE (commitment, next step, objection) — happens at the END, so a plain
+ * head-truncation throws away the signal that matters most. For long transcripts we
+ * keep the opening (context: who/what) AND the ending (outcome), dropping the middle.
+ */
+export function excerptForAnalysis(text: string, max = 8000): string {
+  const t = (text || "").trim();
+  if (t.length <= max) return t;
+  const headLen = Math.floor(max * 0.6);
+  const tailLen = max - headLen;
+  return `${t.slice(0, headLen).trim()}\n\n[…]\n\n${t.slice(-tailLen).trim()}`;
+}
+
 // High-intent buying signals (RU/UZ/EN), lightly weighted.
 const INTENT_TERMS = [
   "куплю", "покупаю", "беру", "оплат", "депозит", "рассрочк", "кредит", "когда могу забрать",
@@ -124,7 +138,7 @@ export async function analyzeCall(transcript: string, durationSec = 0): Promise<
     "Output ONLY the raw JSON string. No preamble, no markdown code blocks, no wrapping in ```json."
   ].join(" ");
 
-  const out = await llmText({ system, user: `Call transcript:\n${clean.slice(0, 6000)}`, maxTokens: 800 });
+  const out = await llmText({ system, user: `Call transcript:\n${excerptForAnalysis(clean, 8000)}`, maxTokens: 800 });
 
   if (!out) {
     return {

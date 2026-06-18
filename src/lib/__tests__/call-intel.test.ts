@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { callLeadScore, normalizeCallSummary } from "../call-intel";
+import { callLeadScore, normalizeCallSummary, excerptForAnalysis } from "../call-intel";
+
+describe("excerptForAnalysis", () => {
+  it("returns short transcripts unchanged (trimmed)", () => {
+    expect(excerptForAnalysis("  short call  ", 8000)).toBe("short call");
+  });
+  it("keeps BOTH the opening and the closing of a long call", () => {
+    const head = "OPENING: customer asks about BYD Han. ";
+    const tail = " CLOSING: customer agrees to a test drive tomorrow.";
+    const long = head + "x".repeat(20000) + tail;
+    const out = excerptForAnalysis(long, 8000);
+    expect(out.length).toBeLessThan(long.length);
+    expect(out).toContain("OPENING");
+    expect(out).toContain("CLOSING");
+    expect(out).toContain("[…]");
+  });
+  it("respects the max budget (plus the small elision marker)", () => {
+    const out = excerptForAnalysis("y".repeat(50000), 8000);
+    expect(out.length).toBeLessThanOrEqual(8000 + 10);
+  });
+});
 
 describe("normalizeCallSummary", () => {
   it("passes a plain string through (trimmed)", () => {
