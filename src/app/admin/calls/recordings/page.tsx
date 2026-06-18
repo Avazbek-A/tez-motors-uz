@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2, RefreshCw, Search } from "lucide-react";
+import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2, RefreshCw, Search, AlertCircle } from "lucide-react";
 import { AudioPlayer } from "@/components/admin/audio-player";
 
 interface Recording {
@@ -169,13 +169,27 @@ export default function CallRecordingsPage() {
 
               {r.summary && <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{r.summary}</p>}
 
-              {!r.summary && r.metadata?.status !== "done" && (
-                <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  {r.metadata?.status === "error"
-                    ? "Не удалось расшифровать — запись сохранена, можно прослушать."
-                    : "Расшифровка и анализ…"}
-                </p>
+              {!r.summary && (
+                r.metadata?.status === "error" ? (
+                  <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Не удалось расшифровать — запись сохранена, можно прослушать или переанализировать.
+                  </p>
+                ) : r.metadata?.status === "done" ? (
+                  // Done, but the transcript came back empty (silent/corrupt audio or a
+                  // format Whisper couldn't decode) — explain instead of showing a blank card.
+                  !r.transcript && (
+                    <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      Речь не распознана (тихая запись или неподдерживаемый формат).
+                    </p>
+                  )
+                ) : (
+                  <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Расшифровка и анализ…
+                  </p>
+                )
               )}
 
               {r.transcript && (
