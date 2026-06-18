@@ -52,6 +52,7 @@ interface TgFile {
   mime_type?: string;
   file_name?: string;
   duration?: number;
+  file_size?: number;
 }
 interface TgMessage {
   chat?: { id: number };
@@ -164,6 +165,11 @@ async function tgDownloadFile(fileId: string): Promise<Buffer | null> {
  * Fire-and-forget from handleMessage so the webhook acks Telegram fast.
  */
 async function handleOperatorRecording(chatId: number, file: TgFile, caption?: string): Promise<void> {
+  // Telegram Bot API getFile downloads cap at 20 MB — bail early with a clear note.
+  if (file.file_size && file.file_size > 20 * 1024 * 1024) {
+    await tgSend(chatId, "❌ Запись больше 20 МБ — Telegram-бот не может её скачать. Отправьте более короткую запись (или пришлите текст расшифровки звонка).");
+    return;
+  }
   await tgSend(chatId, "⏳ Обрабатываю запись звонка…");
   const bytes = await tgDownloadFile(file.file_id);
   if (!bytes || bytes.byteLength === 0) {
@@ -173,7 +179,7 @@ async function handleOperatorRecording(chatId: number, file: TgFile, caption?: s
   const capRaw = (caption || "").trim();
   const phone = capRaw && looksLikePhone(capRaw) ? (normalizePhone(capRaw) || capRaw) : "";
   try {
-    const { analysis } = await logRecording({
+    const { analysis, language } = await logRecording({
       audioBuffer: bytes,
       audioType: file.mime_type || "audio/ogg",
       audioName: file.file_name || "telegram-call.ogg",
@@ -183,6 +189,9 @@ async function handleOperatorRecording(chatId: number, file: TgFile, caption?: s
       awaitEnrich: true,
     });
     const m = analysis?.metadata;
+    const langLabel = language
+      ? language === "ru" ? "🇷🇺 Русский" : language === "uz" ? "🇺🇿 O'zbek" : language === "en" ? "🇬🇧 English" : language.toUpperCase()
+      : "";
     const lines = [
       "📞 <b>Запись звонка добавлена в CRM</b>",
       "",
@@ -190,6 +199,7 @@ async function handleOperatorRecording(chatId: number, file: TgFile, caption?: s
       "",
       `👤 Клиент: ${phone ? escapeHtml(phone) : "не указан — добавьте номер в подпись к записи, чтобы привязать к клиенту"}`,
       m ? `📊 Вероятность сделки: ${m.extracted_entities?.closing_probability ?? "—"}%  ·  Тон: ${escapeHtml(m.sentiment || "—")}` : "",
+      langLabel ? `🗣 Язык: ${langLabel}` : "",
       `🔗 <a href="${siteUrl()}/admin/calls/recordings">Открыть записи в CRM</a>`,
     ].filter(Boolean);
     await tgSend(chatId, lines.join("\n"));

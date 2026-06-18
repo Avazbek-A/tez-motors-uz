@@ -51,6 +51,7 @@ export interface LogRecordingResult {
   recordingUrl: string | null;
   analysis: CallAnalysis | null;
   transcript: string;
+  language: string | null;
 }
 
 /** Store audio (if any) + insert the call row, then enrich (await or background). */
@@ -98,11 +99,11 @@ export async function logRecording(input: LogRecordingInput): Promise<LogRecordi
 
   const enrichArgs = { callId: row.id as string, audioBuffer, transcript: transcript0, durationSec, phoneRaw };
   if (input.awaitEnrich) {
-    const { analysis, transcript } = await enrichRecording(enrichArgs);
-    return { callId: row.id, recordingUrl, analysis, transcript };
+    const { analysis, transcript, language } = await enrichRecording(enrichArgs);
+    return { callId: row.id, recordingUrl, analysis, transcript, language };
   }
   void enrichRecording(enrichArgs);
-  return { callId: row.id, recordingUrl, analysis: null, transcript: transcript0 };
+  return { callId: row.id, recordingUrl, analysis: null, transcript: transcript0, language: null };
 }
 
 /** Background: transcribe (if needed) → AI-analyze → update the row + CRM inquiry +
@@ -113,7 +114,7 @@ export async function enrichRecording(args: {
   transcript: string;
   durationSec: number;
   phoneRaw: string;
-}): Promise<{ analysis: CallAnalysis | null; transcript: string }> {
+}): Promise<{ analysis: CallAnalysis | null; transcript: string; language: string | null }> {
   const supabase = createServiceClient();
   try {
     let transcript = args.transcript;
@@ -174,10 +175,10 @@ export async function enrichRecording(args: {
         { key: `call_upload_audit:${args.callId}` },
       ).catch(() => {});
     }
-    return { analysis, transcript };
+    return { analysis, transcript, language };
   } catch (e) {
     console.error("recording enrichment failed:", e);
     await supabase.from("calls").update({ metadata: { source: "upload", status: "error" } }).eq("id", args.callId);
-    return { analysis: null, transcript: args.transcript };
+    return { analysis: null, transcript: args.transcript, language: null };
   }
 }
