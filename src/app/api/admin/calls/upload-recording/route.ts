@@ -5,7 +5,7 @@ import { unlink } from "node:fs/promises";
 import { isAdminRequest, requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { safeMediaPath } from "@/lib/disk-store";
-import { logRecording } from "@/lib/call-recording";
+import { logRecording, reprocessRecording } from "@/lib/call-recording";
 import { getClientIp } from "@/lib/rate-limit";
 import { createKvRateLimiter } from "@/lib/rate-limit-kv";
 
@@ -125,6 +125,18 @@ export async function GET(req: NextRequest) {
     .limit(100);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, recordings: data || [] });
+}
+
+/** Re-run transcription + analysis on an existing recording (admin only). */
+export async function PATCH(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if (guard) return guard;
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id || !/^[a-f0-9-]{1,64}$/i.test(id)) {
+    return NextResponse.json({ error: "missing or invalid id" }, { status: 400 });
+  }
+  void reprocessRecording(id); // background — page polls until it lands
+  return NextResponse.json({ ok: true, status: "reprocessing" });
 }
 
 /** Delete a recording (admin only): removes the audio file from disk + the call row. */

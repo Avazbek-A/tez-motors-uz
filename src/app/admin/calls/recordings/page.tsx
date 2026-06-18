@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Phone, Loader2, ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronUp, Trash2, RefreshCw } from "lucide-react";
 import { AudioPlayer } from "@/components/admin/audio-player";
 
 interface Recording {
@@ -30,35 +30,37 @@ export default function CallRecordingsPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async (): Promise<Recording[]> => {
-    let recs: Recording[] = [];
+  const load = useCallback(async () => {
     try {
       const d = await fetch("/api/admin/calls/upload-recording").then((r) => r.json());
-      if (d.ok) { recs = d.recordings || []; setRows(recs); }
+      if (d.ok) setRows(d.recordings || []);
     } catch {
       /* keep prior rows */
     }
     setLoading(false);
-    return recs;
   }, []);
 
-  // Initial load + light polling WHILE any recording is still processing (so the
-  // transcript/summary appear without a manual refresh). Stops once all are done.
+  useEffect(() => { load(); }, [load]);
+
+  // Poll while anything is still transcribing/analyzing (re-evaluates on every rows
+  // change, so it also resumes after a manual re-analyze). Stops once all are done.
   useEffect(() => {
-    let cancelled = false;
-    const tick = async () => {
-      if (cancelled) return;
-      const recs = await load();
-      const stillProcessing = recs.some(
-        (r) => r.metadata?.status && r.metadata.status !== "done" && r.metadata.status !== "error",
-      );
-      if (!cancelled && stillProcessing) timer.current = setTimeout(tick, 5000);
-    };
-    tick();
-    return () => { cancelled = true; if (timer.current) clearTimeout(timer.current); };
-  }, [load]);
+    const processing = rows.some((r) => r.metadata?.status && r.metadata.status !== "done" && r.metadata.status !== "error");
+    if (!processing) return;
+    const t = setTimeout(load, 5000);
+    return () => clearTimeout(t);
+  }, [rows, load]);
+
+  const reprocess = async (id: string) => {
+    try {
+      await fetch(`/api/admin/calls/upload-recording?id=${encodeURIComponent(id)}`, { method: "PATCH" });
+      // Optimistically mark processing → the poll effect resumes until it lands.
+      setRows((rs) => rs.map((x) => (x.id === id ? { ...x, summary: null, metadata: { ...(x.metadata || {}), status: "transcribing" } } : x)));
+    } catch {
+      /* noop */
+    }
+  };
 
   const remove = async (id: string) => {
     if (!confirm("Удалить эту запись звонка? Действие необратимо.")) return;
@@ -112,6 +114,14 @@ export default function CallRecordingsPage() {
                       {r.lead_score}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => reprocess(r.id)}
+                    title="Переанализировать (новая модель/язык)"
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => remove(r.id)}

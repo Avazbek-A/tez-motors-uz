@@ -6,7 +6,7 @@
  * links the CRM inquiry in the background.
  */
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createServiceClient } from "@/lib/supabase/service";
 import { safeMediaPath } from "@/lib/disk-store";
@@ -104,6 +104,41 @@ export async function logRecording(input: LogRecordingInput): Promise<LogRecordi
   }
   void enrichRecording(enrichArgs);
   return { callId: row.id, recordingUrl, analysis: null, transcript: transcript0, language: null };
+}
+
+/**
+ * Re-run transcription + analysis on an EXISTING recording (e.g. after a model /
+ * language upgrade, or a bad first pass). Reads the stored audio from disk when
+ * present (fresh transcribe), else re-analyzes the existing transcript. Background.
+ */
+export async function reprocessRecording(callId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  const { data: row } = await supabase
+    .from("calls")
+    .select("transcript, recording_url, customer_phone, duration_sec")
+    .eq("id", callId)
+    .maybeSingle();
+  if (!row) return false;
+
+  let audioBuffer: Buffer | null = null;
+  const file = (row.recording_url || "").split("/").pop() || "";
+  if (file && /^[a-zA-Z0-9._-]+$/.test(file) && !file.includes("..")) {
+    try {
+      audioBuffer = await readFile(safeMediaPath(`call-recordings/${file}`));
+    } catch {
+      /* audio gone — fall back to re-analyzing the existing transcript */
+    }
+  }
+  // Show "processing" so the recordings page re-polls until the new result lands.
+  await supabase.from("calls").update({ metadata: { source: "upload", status: "transcribing" } }).eq("id", callId);
+  await enrichRecording({
+    callId,
+    audioBuffer,
+    transcript: audioBuffer ? "" : (row.transcript || ""), // audio → fresh transcribe; else re-analyze
+    durationSec: Number(row.duration_sec) || 0,
+    phoneRaw: row.customer_phone || "",
+  });
+  return true;
 }
 
 /** Background: transcribe (if needed) → AI-analyze → update the row + CRM inquiry +
