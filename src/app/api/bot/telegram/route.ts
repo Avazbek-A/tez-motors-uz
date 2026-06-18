@@ -32,6 +32,7 @@ import { reserveCarAndCreateOrder } from "@/lib/reservation";
 import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
+import { logRecording } from "@/lib/call-recording";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -46,12 +47,22 @@ interface TgContact {
   phone_number?: string;
   first_name?: string;
 }
+interface TgFile {
+  file_id: string;
+  mime_type?: string;
+  file_name?: string;
+  duration?: number;
+}
 interface TgMessage {
   chat?: { id: number };
   from?: TgUser;
   text?: string;
+  caption?: string;
   contact?: TgContact;
   reply_to_message?: { text?: string };
+  voice?: TgFile;
+  audio?: TgFile;
+  document?: TgFile;
 }
 interface TgCallbackQuery {
   id: string;
@@ -126,6 +137,64 @@ async function tgSend(chatId: number, text: string, replyMarkup?: ReplyMarkup): 
     });
   } catch {
     // fail-open
+  }
+}
+
+/** Download a Telegram file (voice/audio/document) by file_id → bytes. */
+async function tgDownloadFile(fileId: string): Promise<Buffer | null> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return null;
+  try {
+    const meta = await fetch(`${TG_API}/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`).then((r) => r.json());
+    const path = meta?.result?.file_path;
+    if (!path) return null;
+    const res = await fetch(`${TG_API}/file/bot${token}/${path}`);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Dealer forwards a call recording to the bot → log it to the CRM. Telegram's upload
+ * is robust on flaky connections (the phone uploads to Telegram; the bot fetches
+ * server-to-server), so this is the reliable channel vs a direct HTTP upload. Add the
+ * customer's phone as the message CAPTION to auto-link the call to their inquiry.
+ * Fire-and-forget from handleMessage so the webhook acks Telegram fast.
+ */
+async function handleOperatorRecording(chatId: number, file: TgFile, caption?: string): Promise<void> {
+  await tgSend(chatId, "⏳ Обрабатываю запись звонка…");
+  const bytes = await tgDownloadFile(file.file_id);
+  if (!bytes || bytes.byteLength === 0) {
+    await tgSend(chatId, "❌ Не удалось скачать запись из Telegram. Попробуйте отправить ещё раз.");
+    return;
+  }
+  const capRaw = (caption || "").trim();
+  const phone = capRaw && looksLikePhone(capRaw) ? (normalizePhone(capRaw) || capRaw) : "";
+  try {
+    const { analysis } = await logRecording({
+      audioBuffer: bytes,
+      audioType: file.mime_type || "audio/ogg",
+      audioName: file.file_name || "telegram-call.ogg",
+      phone,
+      direction: "outbound",
+      durationSec: file.duration || 0,
+      awaitEnrich: true,
+    });
+    const m = analysis?.metadata;
+    const lines = [
+      "📞 <b>Запись звонка добавлена в CRM</b>",
+      "",
+      analysis?.summary ? escapeHtml(analysis.summary) : "Запись сохранена, расшифровка в обработке.",
+      "",
+      `👤 Клиент: ${phone ? escapeHtml(phone) : "не указан — добавьте номер в подпись к записи, чтобы привязать к клиенту"}`,
+      m ? `📊 Вероятность сделки: ${m.extracted_entities?.closing_probability ?? "—"}%  ·  Тон: ${escapeHtml(m.sentiment || "—")}` : "",
+      `🔗 <a href="${siteUrl()}/admin/calls/recordings">Открыть записи в CRM</a>`,
+    ].filter(Boolean);
+    await tgSend(chatId, lines.join("\n"));
+  } catch (e) {
+    await tgSend(chatId, "❌ Не удалось обработать запись: " + escapeHtml((e as Error).message || "ошибка"));
   }
 }
 
@@ -409,6 +478,16 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
   // 0) OPERATOR (dealer) branch — gated to the allow-list. Runs the Dealer
   //    Copilot (ask + confirm-gated actions), NOT the customer recommender.
   if (isOperatorChat(chatId)) {
+    // Forwarded call recording (voice / audio / audio-document) → log to the CRM.
+    // The reliable channel: Telegram handles the upload; the bot fetches it server-side.
+    const rec =
+      message.voice ||
+      message.audio ||
+      (message.document && /^audio\//i.test(message.document.mime_type || "") ? message.document : null);
+    if (rec) {
+      void handleOperatorRecording(chatId, rec, message.caption).catch(() => {});
+      return;
+    }
     const opText = (message.text || "").trim().slice(0, 1000);
     if (!opText) return;
     if (opText === "/start" || opText.startsWith("/start")) {
