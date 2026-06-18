@@ -79,23 +79,26 @@ const LAUNCHERS: Record<Locale, Array<{
   desc: string;
   role: string;
   path: string;
-  icon: "Phone" | "Camera" | "Ship" | "Sparkles";
+  icon: "Phone" | "Camera" | "Ship" | "Sparkles" | "Mic";
   targetBlank?: boolean;
 }>> = {
   ru: [
     { title: "Телефония и Продажи", desc: "Звонки VoIP, голосовые слепки, микротремор, ИИ-копилот.", role: "Менеджер по продажам", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Записи звонков", desc: "Записи с телефона (нативная запись iOS / диктофон): транскрипт, ИИ-анализ, плеер.", role: "Менеджер по продажам", path: "/admin/calls/recordings", icon: "Mic" },
     { title: "Посетители Шоурума (CV)", desc: "Компьютерное зрение на входе, логи посещений, сопоставление лиц.", role: "Администратор шоурума", path: "/admin/calls/showroom-cv", icon: "Camera" },
     { title: "Импорт и Логистика", desc: "Голосовое управление контейнерами, блокчейн-свопы, прогноз кэш-флоу.", role: "Менеджер логистики", path: "/admin/calls/logistics", icon: "Ship" },
     { title: "Интерактивный PWA клиента", desc: "3D-осмотр WebXR, AI-оценка Trade-In по фото и звуку двигателя.", role: "Публичный доступ", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
   ],
   uz: [
     { title: "Telefoniya va Sotuvlar", desc: "VoIP qo'ng'iroqlari, ovozli nusxalar, mikro-tremor, AI-kopilot.", role: "Sotuv menejeri", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Qo'ng'iroq yozuvlari", desc: "Telefondan yozuvlar (iOS / diktofon): transkript, AI-tahlil, pleyer.", role: "Sotuv menejeri", path: "/admin/calls/recordings", icon: "Mic" },
     { title: "Showroom Tashriflari (CV)", desc: "Kirishda kompyuter ko'rishi, tashriflar jurnali, yuzlarni tanish.", role: "Showroom greeteri", path: "/admin/calls/showroom-cv", icon: "Camera" },
     { title: "Import va Logistika", desc: "Konteynerlarni ovozli boshqarish, blokcheyn-svoplar, kesh-flou prognozi.", role: "Logistika menejeri", path: "/admin/calls/logistics", icon: "Ship" },
     { title: "Mijozning interaktiv PWA-si", desc: "WebXR 3D-ko'rik, dvigatel ovozi va foto bo'yicha AI Trade-In baholash.", role: "Ochiq kirish", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
   ],
   en: [
     { title: "VoIP & Sales Softphone", desc: "VoIP dialer, micro-tremor analysis, voice clones, AI coaching.", role: "Sales Representative", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Call Recordings", desc: "Phone-captured recordings (iOS native / voice memo): transcript, AI analysis, player.", role: "Sales Representative", path: "/admin/calls/recordings", icon: "Mic" },
     { title: "Showroom CV Greeter", desc: "Entrance computer vision feed, log entries, and CRM face matching.", role: "Showroom Greeter", path: "/admin/calls/showroom-cv", icon: "Camera" },
     { title: "Logistics & Forecast Hub", desc: "Voice container dispatching, P2P blockchain swap consensus, cash flow graph.", role: "Importer Logistics", path: "/admin/calls/logistics", icon: "Ship" },
     { title: "Customer Interactive PWA", desc: "WebXR 3D car rotation sync view, acoustic & photo AI Trade-In diagnostic.", role: "Public Customer", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
@@ -180,6 +183,8 @@ export default function AdminCallsPage() {
                 ? Camera
                 : item.icon === "Ship"
                 ? Ship
+                : item.icon === "Mic"
+                ? Mic
                 : Sparkles;
 
             return (

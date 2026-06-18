@@ -78,6 +78,7 @@ openssl rand -hex 32     # run once per secret, paste the output
 | `TELEGRAM_WEBHOOK_SECRET` | Validates that inbound Telegram webhook calls really come from Telegram. |
 | `WHATSAPP_VERIFY_TOKEN` | A value *you choose*; you paste the same into Meta's webhook setup. |
 | `SIP_WEBHOOK_SECRET` | Optional — the Calls suite's **inbound-call webhook**. Only needed if you connect a SIP/PBX. See below. |
+| `CALLS_UPLOAD_SECRET` | Optional — lets an **iOS Shortcut** upload call recordings to the CRM without a login. See below. |
 
 ### SIP_WEBHOOK_SECRET — connecting a real phone line (optional)
 The Calls suite (`/admin/calls`) can log + AI-analyze real inbound calls, but only
@@ -96,6 +97,34 @@ choose (a UZ provider, or self-hosted Asterisk/FreeSWITCH). To go live:
 
 **Until you set it, the webhook stays OFF in production (returns 503)** — it never
 runs unauthenticated. Everything else in the Calls suite works without it.
+
+### CALLS_UPLOAD_SECRET — record real calls from your iPhone (free, no SIP)
+iOS can't let any app tap a live cellular call, but iOS 18.1+ has **built-in Call
+Recording** (Phone app → tap ⏺ during a call; it saves the audio **and a transcript**
+to the Notes app and plays a "recording" notice). This secret lets a one-tap **iOS
+Shortcut** push that recording into the CRM, where it's transcribed (iOS's transcript,
+or self-hosted Whisper) + AI-analyzed + linked to the customer. View them at
+**/admin/calls/recordings**.
+
+Setup:
+1. `openssl rand -hex 32` → set `CALLS_UPLOAD_SECRET` in the Vostro `.env.local` (redeploy).
+2. On the iPhone, build a Shortcut (Shortcuts app → ➕):
+   - **Receive**: "Audio" and "Text" from the **Share Sheet** (toggle "Show in Share Sheet").
+   - Action **Get Contents of URL**:
+     - URL: `https://tezmotors.uz/api/admin/calls/upload-recording`
+     - Method: **POST**
+     - Headers: `Authorization` = `Bearer <your CALLS_UPLOAD_SECRET>`
+     - Request Body: **Form**
+       - `audio` = (the Shortcut Input / the recording file)
+       - `caller_phone` = (Ask Each Time, or a Contact's number)
+       - `direction` = `outbound`
+   - Name it "Log call to Tez CRM" → it now appears in the Share Sheet.
+3. After a recorded call: open the recording in Notes/Voice Memos → **Share → "Log call
+   to Tez CRM"**. (If your iOS exposes the transcript text too, add it as a `transcript`
+   form field — then Whisper isn't even needed.)
+
+Admin-session users can also upload from the browser without the secret. If the secret
+is unset, only logged-in admins can upload (the Shortcut path is simply off).
 
 ### VAPID keys (Web Push)
 For browser push notifications. Generate a keypair once:
