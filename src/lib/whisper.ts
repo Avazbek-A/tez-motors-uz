@@ -16,25 +16,19 @@ export async function transcribeAudio(
   const url = (process.env.WHISPER_URL || "").trim();
   if (!url) return "";
   try {
-    const form = new FormData();
-    // whisper.cpp's server expects the field name "file"; faster-whisper wrappers
-    // commonly accept "file" too. Send a generic m4a/wav blob.
-    form.append("file", new Blob([new Uint8Array(audio)]), opts?.filename || "call.m4a");
-    if (opts?.language) form.append("language", opts.language);
-    // whisper.cpp server flags (ignored by wrappers that don't use them).
-    form.append("response_format", "json");
-    const res = await fetch(url, {
+    // POST the raw audio bytes; the self-hosted faster-whisper service
+    // (deploy/selfhost/whisper-server.py on the Vostro) reads the body, transcribes,
+    // and returns JSON { text, language }. Raw body keeps the service trivial.
+    const u = opts?.language ? `${url}${url.includes("?") ? "&" : "?"}language=${encodeURIComponent(opts.language)}` : url;
+    const res = await fetch(u, {
       method: "POST",
-      body: form,
-      signal: AbortSignal.timeout(180_000), // long calls can take a while on CPU
+      headers: { "Content-Type": "application/octet-stream" },
+      body: new Uint8Array(audio),
+      signal: AbortSignal.timeout(180_000), // long calls take a while on CPU
     });
     if (!res.ok) return "";
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) {
-      const data = (await res.json().catch(() => null)) as { text?: string; transcript?: string } | null;
-      return (data?.text || data?.transcript || "").trim();
-    }
-    return (await res.text()).trim();
+    const data = (await res.json().catch(() => null)) as { text?: string; transcript?: string } | null;
+    return (data?.text || data?.transcript || "").trim();
   } catch {
     return "";
   }
