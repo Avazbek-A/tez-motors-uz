@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Phone, Loader2, Plus, Mic } from "lucide-react";
+import { Phone, Loader2, Plus, Mic, Camera, Ship, Sparkles, ArrowUpRight } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
 
@@ -74,6 +74,34 @@ const COPY: Record<Locale, {
   },
 };
 
+const LAUNCHERS: Record<Locale, Array<{
+  title: string;
+  desc: string;
+  role: string;
+  path: string;
+  icon: "Phone" | "Camera" | "Ship" | "Sparkles";
+  targetBlank?: boolean;
+}>> = {
+  ru: [
+    { title: "Телефония и Продажи", desc: "Звонки VoIP, голосовые слепки, микротремор, ИИ-копилот.", role: "Менеджер по продажам", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Посетители Шоурума (CV)", desc: "Компьютерное зрение на входе, логи посещений, сопоставление лиц.", role: "Администратор шоурума", path: "/admin/calls/showroom-cv", icon: "Camera" },
+    { title: "Импорт и Логистика", desc: "Голосовое управление контейнерами, блокчейн-свопы, прогноз кэш-флоу.", role: "Менеджер логистики", path: "/admin/calls/logistics", icon: "Ship" },
+    { title: "Интерактивный PWA клиента", desc: "3D-осмотр WebXR, AI-оценка Trade-In по фото и звуку двигателя.", role: "Публичный доступ", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
+  ],
+  uz: [
+    { title: "Telefoniya va Sotuvlar", desc: "VoIP qo'ng'iroqlari, ovozli nusxalar, mikro-tremor, AI-kopilot.", role: "Sotuv menejeri", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Showroom Tashriflari (CV)", desc: "Kirishda kompyuter ko'rishi, tashriflar jurnali, yuzlarni tanish.", role: "Showroom greeteri", path: "/admin/calls/showroom-cv", icon: "Camera" },
+    { title: "Import va Logistika", desc: "Konteynerlarni ovozli boshqarish, blokcheyn-svoplar, kesh-flou prognozi.", role: "Logistika menejeri", path: "/admin/calls/logistics", icon: "Ship" },
+    { title: "Mijozning interaktiv PWA-si", desc: "WebXR 3D-ko'rik, dvigatel ovozi va foto bo'yicha AI Trade-In baholash.", role: "Ochiq kirish", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
+  ],
+  en: [
+    { title: "VoIP & Sales Softphone", desc: "VoIP dialer, micro-tremor analysis, voice clones, AI coaching.", role: "Sales Representative", path: "/admin/calls/record", icon: "Phone" },
+    { title: "Showroom CV Greeter", desc: "Entrance computer vision feed, log entries, and CRM face matching.", role: "Showroom Greeter", path: "/admin/calls/showroom-cv", icon: "Camera" },
+    { title: "Logistics & Forecast Hub", desc: "Voice container dispatching, P2P blockchain swap consensus, cash flow graph.", role: "Importer Logistics", path: "/admin/calls/logistics", icon: "Ship" },
+    { title: "Customer Interactive PWA", desc: "WebXR 3D car rotation sync view, acoustic & photo AI Trade-In diagnostic.", role: "Public Customer", path: "/calls/customer", icon: "Sparkles", targetBlank: true }
+  ]
+};
+
 export default function AdminCallsPage() {
   const { locale } = useLocale();
   const t = COPY[locale];
@@ -122,20 +150,68 @@ export default function AdminCallsPage() {
     }
   }
 
+  const launchers = LAUNCHERS[locale];
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Phone className="h-5 w-5 text-lime" />
-          <h1 className="text-xl font-bold">{t.title}</h1>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Phone className="h-5 w-5 text-lime" />
+        <h1 className="text-xl font-bold">{t.title}</h1>
+      </div>
+
+      {/* Modular Launchers Grid */}
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+            {locale === "ru" ? "Специализированные модули PWA" : locale === "uz" ? "Ixtisoslashtirilgan PWA modullari" : "Dedicated PWA Modules"}
+          </h2>
+          <p className="text-[11px] text-muted-foreground">
+            {locale === "ru" ? "Выберите интерфейс в зависимости от вашей роли" : locale === "uz" ? "Rolingizga qarab kerakli interfeysni tanlang" : "Select a modular application role interface"}
+          </p>
         </div>
-        <Link
-          href="/admin/calls/record"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-lime to-lime-500 text-navy px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-lime/10 hover:opacity-90 transition-opacity"
-        >
-          <Mic className="w-4 h-4 shrink-0" />
-          {locale === "ru" ? "Запустить Регистратор Звонков (Мобильный)" : locale === "uz" ? "Qo‘ng‘iroq yozuvchisini ochish" : "Launch Mobile Call Recorder"}
-        </Link>
+
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          {launchers.map((item) => {
+            const Icon =
+              item.icon === "Phone"
+                ? Phone
+                : item.icon === "Camera"
+                ? Camera
+                : item.icon === "Ship"
+                ? Ship
+                : Sparkles;
+
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                target={item.targetBlank ? "_blank" : undefined}
+                className="group relative rounded-2xl border border-border bg-card p-5 space-y-4 shadow-md hover:border-lime/40 hover:shadow-lime/5 transition-all flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="p-2.5 bg-muted rounded-xl border border-border/40 group-hover:bg-lime/10 group-hover:border-lime/20 group-hover:text-lime transition-all">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-[8px] bg-muted px-2 py-0.5 border border-border rounded font-bold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-all">
+                      {item.role}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold text-foreground group-hover:text-lime transition-all flex items-center gap-1">
+                      {item.title}
+                      {item.targetBlank && <ArrowUpRight className="w-3 h-3 text-muted-foreground" />}
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-2 rounded-lg border border-border bg-card p-4">

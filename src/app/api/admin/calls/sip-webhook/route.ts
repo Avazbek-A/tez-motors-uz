@@ -4,18 +4,29 @@ import { analyzeCall } from "@/lib/call-intel";
 import { generateVoiceSignature } from "@/lib/biometrics";
 import { contactKey } from "@/lib/crm";
 import { alertDealer } from "@/lib/error-report";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
- * Cloud PBX SIP Webhook API (Leap 1).
- * Gated by a shared secret key (e.g. SIP_WEBHOOK_SECRET) if configured,
- * otherwise runs in open mock mode for local testing.
+ * Cloud PBX SIP Webhook API (Leap 1). Called by the external PBX, not an admin,
+ * so it can't use the admin session — it's gated by a shared secret instead.
+ *
+ * SECURITY: fail CLOSED in production. The PBX must send X-SIP-Token matching
+ * SIP_WEBHOOK_SECRET. If the secret is unset, the open "mock mode" is allowed
+ * ONLY in development — never in prod, where an open endpoint would let anyone
+ * enumerate leads by phone, read assigned-manager emails, write rows, and spam
+ * the dealer alert. Comparison is timing-safe (matches MARKET_INGEST / payme).
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("X-SIP-Token");
+    const authHeader = request.headers.get("X-SIP-Token") || "";
     const secret = process.env.SIP_WEBHOOK_SECRET;
-    if (secret && authHeader !== secret) {
-      return NextResponse.json({ error: "Unauthorized SIP event" }, { status: 401 });
+    if (secret) {
+      if (!timingSafeEqual(authHeader, secret)) {
+        return NextResponse.json({ error: "Unauthorized SIP event" }, { status: 401 });
+      }
+    } else if (process.env.NODE_ENV === "production") {
+      // No secret configured + prod → refuse rather than run open.
+      return NextResponse.json({ error: "SIP webhook not configured" }, { status: 503 });
     }
 
     const body = await request.json().catch(() => ({}));

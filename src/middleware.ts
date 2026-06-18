@@ -6,6 +6,24 @@ const ADMIN_COOKIE = "admin_session";
 const LOCALE_COOKIE = "NEXT_LOCALE";
 
 /**
+ * Local-network dev convenience (mobile testing over LAN IP / http): skip the
+ * https upgrade and the admin login gate. STRICTLY dev-only — gated on
+ * NODE_ENV so production (NODE_ENV=production on the Vostro standalone build)
+ * always enforces both, regardless of a spoofed Host header. Mirrors the same
+ * gate in src/lib/auth.ts (isAdminRequest).
+ */
+function isDevLocalHost(host: string): boolean {
+  if (process.env.NODE_ENV !== "development") return false;
+  return (
+    host.includes("localhost") ||
+    host.includes("127.0.0.1") ||
+    host.startsWith("192.168.") ||
+    host.startsWith("172.") ||
+    host.startsWith("10.")
+  );
+}
+
+/**
  * UX-level gate: redirect to login if no admin cookie is present.
  * Actual auth enforcement lives in API routes (requireAdmin), which
  * verifies the cookie against the admin_sessions table.
@@ -20,7 +38,8 @@ export function middleware(request: NextRequest) {
   // The localhost deploy health-check (no www, x-forwarded-proto:https) is untouched.
   {
     const host = (request.headers.get("host") || request.nextUrl.host || "").toLowerCase();
-    const needsHttps = request.headers.get("x-forwarded-proto") === "http";
+    const isLocal = isDevLocalHost(host);
+    const needsHttps = !isLocal && request.headers.get("x-forwarded-proto") === "http";
     const needsApex = host.startsWith("www.");
     if (needsHttps || needsApex) {
       const targetHost = needsApex ? host.slice(4) : host;
@@ -44,8 +63,10 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    const host = (request.headers.get("host") || request.nextUrl.host || "").toLowerCase();
+    const isLocal = isDevLocalHost(host);
     const cookie = request.cookies.get(ADMIN_COOKIE)?.value;
-    if (!cookie) {
+    if (!cookie && !isLocal) {
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
@@ -74,7 +95,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (!pathname.startsWith("/admin")) {
+  // /admin and /calls are locale-agnostic top-level routes (not under [locale]):
+  // /admin is the gated dashboard; /calls hosts the public customer XR portal
+  // (src/app/calls/customer). Locale-prefixing them would 404, so skip the redirect.
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/calls")) {
     const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
     const bestLocale = (cookieLocale === "ru" || cookieLocale === "uz" || cookieLocale === "en")
       ? cookieLocale

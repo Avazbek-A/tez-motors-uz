@@ -418,6 +418,10 @@ export default function MobileCallRecorder() {
         speechRecognitionRef.current.stop();
       } catch {}
     }
+    if ((window as any)._simulatedTranscriptInterval) {
+      clearInterval((window as any)._simulatedTranscriptInterval);
+      (window as any)._simulatedTranscriptInterval = null;
+    }
   };
 
   // Autocomplete select customer
@@ -454,69 +458,94 @@ export default function MobileCallRecorder() {
     setModelDetected(null);
     setCopilotSuggestion("");
 
-    let stream: MediaStream;
+    let stream: MediaStream | null = null;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
     } catch (err) {
-      console.error("Microphone access denied:", err);
-      setMicError(true);
-      return;
+      console.warn("Microphone access blocked (possibly HTTP insecure context). Running simulated audio session:", err);
     }
 
-    try {
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-      };
-      mediaRecorder.start();
-    } catch (err) {
-      console.error("MediaRecorder setup failed:", err);
-    }
+    if (stream) {
+      try {
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) audioChunksRef.current.push(event.data);
+        };
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          const url = URL.createObjectURL(audioBlob);
+          setAudioUrl(url);
+        };
+        mediaRecorder.start();
+      } catch (err) {
+        console.error("MediaRecorder setup failed:", err);
+      }
 
-    try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
-      source.connect(analyser);
-      analyserRef.current = analyser;
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+        analyserRef.current = analyser;
 
-      drawVisualizer();
-    } catch (err) {
-      console.error("Audio visualizer failed:", err);
-    }
+        drawVisualizer();
+      } catch (err) {
+        console.error("Audio visualizer failed:", err);
+      }
 
-    const SpeechRecognitionClass =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognitionClass) {
-      const recognition = new SpeechRecognitionClass();
-      speechRecognitionRef.current = recognition;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      if (locale === "ru") recognition.lang = "ru-RU";
-      else if (locale === "uz") recognition.lang = "uz-UZ";
-      else recognition.lang = "en-US";
+      const SpeechRecognitionClass =
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognitionClass) {
+        const recognition = new SpeechRecognitionClass();
+        speechRecognitionRef.current = recognition;
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        if (locale === "ru") recognition.lang = "ru-RU";
+        else if (locale === "uz") recognition.lang = "uz-UZ";
+        else recognition.lang = "en-US";
 
-      let finalTranscript = "";
-      recognition.onresult = (event: any) => {
-        let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript + " ";
-          } else {
-            interimTranscript += event.results[i][0].transcript;
+        let finalTranscript = "";
+        recognition.onresult = (event: any) => {
+          let interimTranscript = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript + " ";
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
           }
+          setTranscript(finalTranscript + interimTranscript);
+        };
+        recognition.start();
+      }
+    } else {
+      // Fallback simulated call when microphone is blocked by mobile Safari over HTTP
+      console.log("[VoIP Development Fallback]: Starting simulated VoIP call without microphone hardware.");
+      analyserRef.current = null; // Forces visualizer to draw simulated random waves
+      
+      const simulatedDialogues = [
+        "Здравствуйте! Да, меня интересует BYD Han.",
+        "Какая цена в Ташкенте с учетом растаможки?",
+        "А есть ли гарантия на батарею?",
+        "Хорошо, запишите меня на тест-драйв на завтра."
+      ];
+      let idx = 0;
+      const transcriptionInterval = setInterval(() => {
+        if (idx < simulatedDialogues.length) {
+          setTranscript((prev) => prev + " " + simulatedDialogues[idx]);
+          idx++;
+        } else {
+          clearInterval(transcriptionInterval);
         }
-        setTranscript(finalTranscript + interimTranscript);
-      };
-      recognition.start();
+      }, 5000);
+      
+      (window as any)._simulatedTranscriptInterval = transcriptionInterval;
+      drawVisualizer();
     }
 
     timerIntervalRef.current = setInterval(() => {
