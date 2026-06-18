@@ -21,11 +21,17 @@ Env: WHISPER_MODEL (default "medium"), WHISPER_PORT (8089), WHISPER_COMPUTE (int
 """
 import json
 import os
+import shutil
+import subprocess
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from faster_whisper import WhisperModel
+
+
+class AudioDecodeError(Exception):
+    """The upload has no decodable audio stream (truncated/corrupt/not audio)."""
 
 MODEL_NAME = os.environ.get("WHISPER_MODEL", "medium")
 PORT = int(os.environ.get("WHISPER_PORT", "8089"))
@@ -68,7 +74,29 @@ def _run(path: str, language):
     return text, getattr(info, "language", language), getattr(info, "duration", 0) or 0
 
 
-def transcribe(path: str, override):
+FFMPEG = shutil.which("ffmpeg")
+
+
+def _ffmpeg_to_wav(src: str):
+    """Transcode anything ffmpeg can read into a clean 16 kHz mono WAV (what Whisper
+    wants anyway). ffmpeg is far more tolerant than faster-whisper's PyAV decoder of
+    the slightly-malformed .m4a containers iOS produces. Returns the wav path, or
+    raises AudioDecodeError if there's no usable audio stream. Caller deletes the file."""
+    if not FFMPEG:
+        raise AudioDecodeError("audio could not be decoded (ffmpeg not installed)")
+    out = src + ".16k.wav"
+    proc = subprocess.run(
+        [FFMPEG, "-nostdin", "-v", "error", "-i", src, "-ar", "16000", "-ac", "1", "-f", "wav", out, "-y"],
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not os.path.exists(out) or os.path.getsize(out) < 256:
+        if os.path.exists(out):
+            os.remove(out)
+        raise AudioDecodeError("audio could not be decoded (no audio stream / corrupt upload)")
+    return out
+
+
+def _transcribe_passes(path: str, override):
     if override:
         return _run(path, override)
     # Pass 1: auto-detect.
@@ -80,6 +108,25 @@ def transcribe(path: str, override):
         if text2:
             return text2, "uz", dur2
     return text, lang, dur
+
+
+def transcribe(path: str, override):
+    """Try faster-whisper's native (PyAV) decode first — zero overhead for clean WAV/MP3.
+    If PyAV can't demux the container (common for iOS .m4a), fall back to an ffmpeg
+    transcode and retry. Genuinely undecodable uploads surface as AudioDecodeError."""
+    try:
+        return _transcribe_passes(path, override)
+    except AudioDecodeError:
+        raise
+    except Exception:
+        wav = _ffmpeg_to_wav(path)  # raises AudioDecodeError if no audio stream
+        try:
+            return _transcribe_passes(wav, override)
+        finally:
+            try:
+                os.remove(wav)
+            except OSError:
+                pass
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -112,6 +159,10 @@ class Handler(BaseHTTPRequestHandler):
                 with LOCK:
                     text, lang, dur = transcribe(f.name, override)
             return self._json(200, {"text": text, "language": lang, "duration": round(dur)})
+        except AudioDecodeError as e:
+            # Not a server fault — the upload itself has no usable audio (truncated /
+            # corrupt / wrong file). 422 so callers can distinguish it from a 5xx.
+            return self._json(422, {"error": str(e)[:200], "text": "", "language": None, "duration": 0})
         except Exception as e:
             return self._json(500, {"error": str(e)[:200]})
 
