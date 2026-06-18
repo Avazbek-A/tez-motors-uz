@@ -20,11 +20,17 @@ export async function transcribeAudio(
     // (deploy/selfhost/whisper-server.py on the Vostro) reads the body, transcribes,
     // and returns JSON { text, language }. Raw body keeps the service trivial.
     const u = opts?.language ? `${url}${url.includes("?") ? "&" : "?"}language=${encodeURIComponent(opts.language)}` : url;
+    // CPU transcription runs at ~1–3× realtime on the Vostro, so a long sales call
+    // (10–20 min) needs far more than the old 180s — at that limit a long call aborted
+    // mid-way and silently produced an EMPTY transcript (the worst outcome, on exactly
+    // the calls that matter most). Transcription is backgrounded (HTTP) or awaited
+    // behind a "⏳ processing" message (Telegram bot), so a generous ceiling is safe.
+    const timeoutMs = Math.max(60_000, Number(process.env.WHISPER_TIMEOUT_MS) || 1_800_000); // default 30 min
     const res = await fetch(u, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: new Uint8Array(audio),
-      signal: AbortSignal.timeout(180_000), // long calls take a while on CPU
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return { text: "", language: null, duration: 0 };
     const data = (await res.json().catch(() => null)) as { text?: string; transcript?: string; language?: string; duration?: number } | null;
