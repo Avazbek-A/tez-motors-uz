@@ -152,6 +152,12 @@ Two ways to drive it:
 - **Cloudflare cron-worker:** deploy `cron-worker/` instead, pointing
   `APP_BASE_URL` at `https://tezmotors.uz` (only if you cut back to Workers).
 
+> **Timezone:** the schedule times are **UTC** (the Cloudflare worker's basis).
+> Vixie/`cron` interprets a crontab in the host's local zone, so on the Vostro
+> (Asia/Tashkent, UTC+5) put a `CRON_TZ=UTC` line **above the `/api/cron` block**
+> (and below any local-time host jobs like the collectors) — otherwise every job
+> fires 5h early.
+
 ### What the jobs do / safety
 All 28 routes are enabled in prod (2026-06-18). They fall into three risk tiers:
 - **Internal (DB-only, no external output):** `rates`, `otp-cleanup`, `order-sla`,

@@ -2,6 +2,12 @@
 # source of truth). Loaded by the Docker "cron" sidecar (BusyBox crond), which
 # also works as a plain host crontab if you self-host without Docker.
 # Each line fires one guarded /api/cron/* route with the bearer secret.
+# These times are UTC (the Cloudflare worker's basis). Vixie/cron on a host in a
+# non-UTC zone would otherwise interpret them in LOCAL time — keep CRON_TZ=UTC so
+# the schedule matches intent. (The Docker sidecar's container is already UTC, so
+# there it's just a harmless env var.) On a host crontab, put CRON_TZ=UTC ABOVE
+# only the /api/cron lines so local-time host jobs above it are unaffected.
+CRON_TZ=UTC
 0 1 * * *    sh /scripts/fire-cron.sh /api/cron/rates
 30 3 * * *   sh /scripts/fire-cron.sh /api/cron/lead-digest
 0 4 * * *    sh /scripts/fire-cron.sh /api/cron/follow-ups
