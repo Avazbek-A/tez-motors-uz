@@ -89,11 +89,11 @@
     "subtitle": "We show every part of the price — official customs, the real exchange rate, the actual invoice. You pay exactly what you see.",
     "calculateExact": "Calculate the exact cost for your car →",
     "points": [
+      { "title": "Almost new, below market", "desc": "Low-mileage cars at prices well below the official market — you pay for the car, not a chain of resellers." },
       { "title": "Real customs, by the law", "desc": "Exact calculation at official rates, with the original ГТД declaration. No padding." },
       { "title": "Central-bank exchange rate", "desc": "Settled in sum at the official CBU rate — no hidden currency margin." },
       { "title": "The actual China invoice", "desc": "We show the real supplier price. You see exactly what you're paying for." },
-      { "title": "Official fees at cost", "desc": "Certification, recycling fee, registration — exactly at their official price." },
-      { "title": "Guided at every step", "desc": "From choosing the car to getting the keys — a manager guides you the whole way." },
+      { "title": "Inspection + report before shipping", "desc": "We inspect every car and send a photo condition report before it leaves China." },
       { "title": "Fixed price, in writing", "desc": "The contract price doesn't change after your deposit. No 'the rate went up.'" }
     ]
   },

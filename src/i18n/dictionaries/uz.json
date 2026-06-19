@@ -89,11 +89,11 @@
     "subtitle": "Narxning har bir qismini ko'rsatamiz — rasmiy bojxona, haqiqiy valyuta kursi, faktura. Siz qancha ko'rsangiz, shuncha to'laysiz.",
     "calculateExact": "Avtomobilingiz uchun aniq narxni hisoblang →",
     "points": [
+      { "title": "Deyarli yangi — bozordan past", "desc": "Kichik probeg, narxi rasmiy bozordan ancha past. Siz avtoga to'laysiz, vositachilar zanjiriga emas." },
       { "title": "Qonun bo'yicha haqiqiy bojxona", "desc": "Rasmiy stavkalar bo'yicha aniq hisob va asl ГТД deklaratsiyasi. Ustamasiz." },
       { "title": "Markaziy bank kursi", "desc": "To'lov so'mda rasmiy MB kursi bo'yicha — yashirin valyuta marjasisiz." },
       { "title": "Xitoydan haqiqiy faktura", "desc": "Yetkazib beruvchining haqiqiy narxini ko'rsatamiz. Nima uchun to'layotganingizni ko'rasiz." },
-      { "title": "Rasmiy yig'imlar o'z narxida", "desc": "Sertifikatlash, utilizatsiya yig'imi, ro'yxatga olish — aynan rasmiy narxda." },
-      { "title": "Har bosqichda hamrohlik", "desc": "Avtomobil tanlashdan kalitni olishgacha — menejer har qadamda yo'l ko'rsatadi." },
+      { "title": "Jo'natishdan oldin ko'rik va hisobot", "desc": "Har bir avtoni tekshiramiz va Xitoydan jo'natishdan oldin holati haqida foto-hisobot beramiz." },
       { "title": "Shartnomada qat'iy narx", "desc": "Narx zakalatdan keyin o'zgarmaydi. «Kurs oshdi» degan gaplar yo'q." }
     ]
   },
