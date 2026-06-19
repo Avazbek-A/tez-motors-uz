@@ -1,33 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { Scale, Landmark, FileText, BadgeCheck, ShieldCheck, Lock } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
-import { formatPrice } from "@/lib/utils";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { GridBackground } from "@/components/effects";
+
+// Honest transparency block (replaced the old price-vs-middlemen table). Tez's real
+// edge over a competent middleman isn't a per-car price delta — it's that we SHOW the
+// parts middlemen hide (customs, FX, the invoice, fees, spec/warranty). Each point is a
+// thing we can prove; the customer infers the contrast. No fabricated savings number.
+const ICONS = [Scale, Landmark, FileText, BadgeCheck, ShieldCheck, Lock];
 
 export function PricingComparison() {
   const { locale, dictionary } = useLocale();
   const { ref, isVisible } = useScrollReveal();
-
-  // Illustrative comparison (USD). The persuasion is the CONTRAST: car cost + customs
-  // are identical (regulated), but Tez has lower delivery AND a minimal transparent
-  // service fee vs the middleman's fat markup — so the all-in total is clearly lower.
-  // `ours.service` is your visible margin lever: keep it minimal (or set to 0 to show a
-  // zero-markup direct channel). Never label this "commission" — it brands Tez as the
-  // very middleman it competes against.
-  const comparison = [
-    { label: dictionary.pricing.carPrice, ours: 25000, theirs: 25000 },
-    { label: dictionary.pricing.customs, ours: 5000, theirs: 5000 },
-    { label: dictionary.pricing.delivery, ours: 2000, theirs: 3500 },
-    { label: dictionary.pricing.service, ours: 500, theirs: 4000 },
-  ];
-
-  const ourTotal = comparison.reduce((s, r) => s + r.ours, 0);
-  const theirTotal = comparison.reduce((s, r) => s + r.theirs, 0);
-  const savings = theirTotal - ourTotal;
+  const points = dictionary.pricing.points;
 
   return (
     <section className="py-20 md:py-28 bg-background relative overflow-hidden">
@@ -38,66 +28,32 @@ export function PricingComparison() {
       <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-white/[0.025] rounded-full blur-3xl" />
 
       <div className="container-custom relative z-10">
-        <SectionHeading
-          title={dictionary.pricing.title}
-          subtitle={dictionary.pricing.subtitle}
-          light
-        />
+        <SectionHeading title={dictionary.pricing.title} subtitle={dictionary.pricing.subtitle} light />
 
         <div
           ref={ref}
-          className={`max-w-3xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
+          className={`max-w-5xl mx-auto ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
         >
-          <div className="bg-card border border-border overflow-hidden">
-            {/* Header row */}
-            <div className="grid grid-cols-3 bg-card border-b border-border">
-              <div className="p-4 text-sm font-medium" />
-              <div className="p-4 text-center bg-neon-green/[0.05] border-x border-neon-green/15">
-                <div className="text-sm font-bold text-neon-green">{dictionary.pricing.ourPrice}</div>
-                <div className="text-xs text-[var(--fg-3)] font-mono uppercase tracking-[0.16em]">Tez Motors</div>
-              </div>
-              <div className="p-4 text-center">
-                <div className="text-sm font-bold text-muted-foreground">{dictionary.pricing.competitorPrice}</div>
-              </div>
-            </div>
-
-            {/* Data rows */}
-            {comparison.map((row, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-3 border-b border-white/[0.06] last:border-0 hover:bg-white/[0.02] transition-colors"
-              >
-                <div className="p-4 text-sm font-medium text-muted-foreground">{row.label}</div>
-                <div className="p-4 text-center text-sm font-semibold font-mono text-neon-green bg-neon-green/[0.05] border-x border-neon-green/15">
-                  {formatPrice(row.ours)}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {points.map((pt, i) => {
+              const Icon = ICONS[i % ICONS.length];
+              return (
+                <div
+                  key={i}
+                  className="bg-card border border-border rounded-xl p-5 hover:border-neon-green/30 transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-neon-green/[0.08] border border-neon-green/15 flex items-center justify-center mb-3">
+                    <Icon className="w-5 h-5 text-neon-green" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground mb-1.5">{pt.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{pt.desc}</p>
                 </div>
-                <div className="p-4 text-center text-sm font-mono text-foreground/40">
-                  {formatPrice(row.theirs)}
-                </div>
-              </div>
-            ))}
-
-            {/* Total row */}
-            <div className="grid grid-cols-3 border-t border-border bg-muted">
-              <div className="p-4 text-sm font-bold text-foreground/80">{dictionary.pricing.total}</div>
-              <div className="p-4 text-center bg-neon-green/[0.08] border-x border-neon-green/15">
-                <span className="text-xl font-bold font-mono text-neon-green">{formatPrice(ourTotal)}</span>
-              </div>
-              <div className="p-4 text-center">
-                <span className="text-xl font-bold font-mono text-foreground/40 line-through">{formatPrice(theirTotal)}</span>
-              </div>
-            </div>
-
-            {/* Savings banner */}
-            <div className="bg-neon-green/[0.10] border-t border-neon-green/25 p-4 text-center">
-              <span className="text-lg font-bold font-mono text-neon-green">
-                {dictionary.pricing.savings}: {formatPrice(savings)}
-              </span>
-            </div>
+              );
+            })}
           </div>
 
-          {/* Wire the illustration to the REAL customs engine — get your exact number. */}
-          <div className="mt-6 text-center">
+          {/* Bridge to the real customs engine — get your exact number. */}
+          <div className="mt-8 text-center">
             <Link
               href={localizedPath(locale, "/calculator")}
               className="inline-flex items-center gap-1 text-sm font-semibold text-neon-green hover:opacity-80 transition-opacity underline-offset-4 hover:underline"

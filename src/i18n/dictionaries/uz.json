@@ -85,17 +85,17 @@
     ]
   },
   "pricing": {
-    "title": "Shaffof narx belgilash",
-    "subtitle": "Bizning narxlarimizni vositachilar orqali sotib olish bilan solishtiring",
-    "ourPrice": "Bizning narx",
-    "competitorPrice": "Vositachilar orqali",
-    "carPrice": "Avtomobil narxi",
-    "customs": "Bojxona to'lovlari",
-    "delivery": "Yetkazib berish",
-    "service": "Xizmat haqi",
-    "total": "Jami",
-    "savings": "Sizning tejamkorligingiz",
-    "calculateExact": "Avtomobilingiz uchun aniq narxni hisoblang →"
+    "title": "Halol narx. Yashirin ustamalarsiz.",
+    "subtitle": "Narxning har bir qismini ko'rsatamiz — rasmiy bojxona, haqiqiy valyuta kursi, faktura. Siz qancha ko'rsangiz, shuncha to'laysiz.",
+    "calculateExact": "Avtomobilingiz uchun aniq narxni hisoblang →",
+    "points": [
+      { "title": "Qonun bo'yicha haqiqiy bojxona", "desc": "Rasmiy stavkalar bo'yicha aniq hisob va asl ГТД deklaratsiyasi. Ustamasiz." },
+      { "title": "Markaziy bank kursi", "desc": "To'lov so'mda rasmiy MB kursi bo'yicha — yashirin valyuta marjasisiz." },
+      { "title": "Xitoydan haqiqiy faktura", "desc": "Yetkazib beruvchining haqiqiy narxini ko'rsatamiz. Nima uchun to'layotganingizni ko'rasiz." },
+      { "title": "Rasmiy yig'imlar o'z narxida", "desc": "Sertifikatlash, utilizatsiya yig'imi, ro'yxatga olish — aynan rasmiy narxda." },
+      { "title": "Eksport komplektatsiyasi va kafolat", "desc": "To'liq eksport versiyasi, rasmiy kafolat va servis — «kulrang» avtomobil emas." },
+      { "title": "Shartnomada qat'iy narx", "desc": "Narx zakalatdan keyin o'zgarmaydi. «Kurs oshdi» degan gaplar yo'q." }
+    ]
   },
   "reviews": {
     "title": "Mijozlar fikrlari",

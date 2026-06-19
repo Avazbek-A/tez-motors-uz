@@ -85,17 +85,17 @@
     ]
   },
   "pricing": {
-    "title": "Transparent Pricing",
-    "subtitle": "Compare our prices with buying through middlemen",
-    "ourPrice": "Our Price",
-    "competitorPrice": "Through Middlemen",
-    "carPrice": "Car Cost",
-    "customs": "Customs Duties",
-    "delivery": "Delivery",
-    "service": "Service Fee",
-    "total": "Total",
-    "savings": "Your Savings",
-    "calculateExact": "Calculate the exact cost for your car →"
+    "title": "Honest Pricing. No Hidden Markups.",
+    "subtitle": "We show every part of the price — official customs, the real exchange rate, the actual invoice. You pay exactly what you see.",
+    "calculateExact": "Calculate the exact cost for your car →",
+    "points": [
+      { "title": "Real customs, by the law", "desc": "Exact calculation at official rates, with the original ГТД declaration. No padding." },
+      { "title": "Central-bank exchange rate", "desc": "Settled in sum at the official CBU rate — no hidden currency margin." },
+      { "title": "The actual China invoice", "desc": "We show the real supplier price. You see exactly what you're paying for." },
+      { "title": "Official fees at cost", "desc": "Certification, recycling fee, registration — exactly at their official price." },
+      { "title": "Export spec + real warranty", "desc": "Full export version with official warranty and service — not a grey-market car." },
+      { "title": "Fixed price, in writing", "desc": "The contract price doesn't change after your deposit. No 'the rate went up.'" }
+    ]
   },
   "reviews": {
     "title": "Client Reviews",
