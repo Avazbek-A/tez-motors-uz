@@ -45,6 +45,22 @@ install only, then re-run the firewall step once the Uztelecom welcome email lan
 > On Oracle/Hetzner the **cloud firewall** must open the same ports as ufw
 > (22, 5060-5061, 10000-20000/udp, 8089, 80/443, 3478, 49152-65535/udp).
 
+## In-app softphone (phase 3) — env on the Vostro app
+The browser softphone (`/admin/calls/softphone`) is already built; it stays inert until
+these are set in the **Vostro app** `.env.local` (then restart the app). The browser
+connects straight to the VPS Asterisk over WSS, so DNS + the TLS cert must be live first.
+```
+PBX_WS_URL=wss://pbx.tezmotors.uz:8089/ws
+SOFTPHONE_SIP_URI=sip:6001@pbx.tezmotors.uz
+SOFTPHONE_AUTH_USER=6001
+SOFTPHONE_PASSWORD=<same value as [6001-auth] in pjsip_secrets.conf>
+# optional, for restrictive client NAT (pairs with coturn use-auth-secret):
+PBX_TURN_URL=turn:pbx.tezmotors.uz:3478
+PBX_TURN_SECRET=<same as static-auth-secret in turnserver.conf>
+```
+The SIP password is served only to a logged-in admin via `/api/admin/calls/softphone-config`
+— never baked into the public bundle.
+
 ## What I need from the owner (the only blockers)
 1. A public-IP VPS + SSH (Oracle Cloud **Always-Free** = $0; or any paid VPS).
 2. Uztelecom: SIP host, username/password (or IP-auth), the DID, and their signalling IP range(s).

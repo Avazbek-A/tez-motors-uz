@@ -286,6 +286,30 @@ Invisible spam protection on public forms.
 
 ---
 
+## Tier 9 — Telephony / in-app softphone (Asterisk PBX on a VPS)
+
+The PBX runs on a **public-IP VPS** (NOT the Vostro). Full config-as-code + runbook:
+`deploy/asterisk/README.md`. Two seams touch the Vostro app:
+
+1. **Auto-record → CRM** — works as soon as the PBX records a call; the VPS posts to
+   `/api/admin/calls/upload-recording` with `CALLS_UPLOAD_SECRET` (already a Tier-1 key
+   here; the VPS uses the *same* value in `/etc/asterisk/tez.env`).
+2. **In-app softphone** (`/admin/calls/softphone`) — set once the PBX + DNS + TLS are up,
+   then restart the app. Inert (shows "not set up yet") until set:
+```
+PBX_WS_URL=wss://pbx.tezmotors.uz:8089/ws
+SOFTPHONE_SIP_URI=sip:6001@pbx.tezmotors.uz
+SOFTPHONE_AUTH_USER=6001
+SOFTPHONE_PASSWORD=<same as [6001-auth] in the VPS pjsip_secrets.conf>
+PBX_TURN_URL=turn:pbx.tezmotors.uz:3478        # optional (restrictive client NAT)
+PBX_TURN_SECRET=<same as static-auth-secret in the VPS turnserver.conf>
+```
+Owner-procured (I can't create accounts/pay): the VPS (Oracle Always-Free = $0), the
+**Uztelecom** trunk creds (host/user/pass/DID + their signalling IPs), and DNS
+`pbx.tezmotors.uz` → VPS IP. The trunk creds live on the VPS, never here.
+
+---
+
 ## The fastest launch path
 
 To go live **today** you only need:
