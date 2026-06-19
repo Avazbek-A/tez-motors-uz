@@ -1,0 +1,6 @@
+# Operator-filled secrets — never commit. Live only on the VPS.
+pjsip_secrets.conf
+tez.env
+keys/
+*.pem
+*.key
