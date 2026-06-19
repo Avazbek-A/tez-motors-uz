@@ -22,3 +22,11 @@
 0 * * * *    sh /scripts/fire-cron.sh /api/cron/marketing-poster
 10 * * * *   sh /scripts/fire-cron.sh /api/cron/promotions-apply
 0 9 * * 3    sh /scripts/fire-cron.sh /api/cron/warranty-expiry
+20 3 * * *   sh /scripts/fire-cron.sh /api/cron/operator-briefing
+30 6 * * 1   sh /scripts/fire-cron.sh /api/cron/marketing-autopilot
+0 8 * * 5    sh /scripts/fire-cron.sh /api/cron/market-digest
+0 7 * * 1    sh /scripts/fire-cron.sh /api/cron/auto-markdown
+30 7 * * 1   sh /scripts/fire-cron.sh /api/cron/auto-source
+*/15 * * * * sh /scripts/fire-cron.sh /api/cron/synthetic
+20 * * * *   sh /scripts/fire-cron.sh /api/cron/journeys
+40 * * * *   sh /scripts/fire-cron.sh /api/cron/behavioral-triggers

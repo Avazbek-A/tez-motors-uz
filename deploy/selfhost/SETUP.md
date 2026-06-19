@@ -142,36 +142,36 @@ Two ways to drive it:
   thin wrapper: it reads `CRON_SECRET` from `.env.local` (reading only that key —
   do **not** `source` the file; an unquoted `VAPID_SUBJECT=mailto: <addr>` line
   aborts a POSIX `source`), sets `APP_URL=http://127.0.0.1:3000`, and POSTs the
-  route via `fire-cron.sh`. Add lines like:
+  route via `fire-cron.sh`. Install the full schedule from `deploy/selfhost/crontab`
+  (28 jobs), e.g.:
   ```
-  0 1 * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/rates           >> ~/subs/cron.log 2>&1
-  0 5 * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/otp-cleanup     >> ~/subs/cron.log 2>&1
-  30 4 * * *  /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/order-sla       >> ~/subs/cron.log 2>&1
-  0 6 * * 1   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/inventory-aging >> ~/subs/cron.log 2>&1
-  15 4 * * *  /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/generate-tasks  >> ~/subs/cron.log 2>&1
+  0 1 * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/rates            >> ~/subs/cron.log 2>&1
+  0 * * * *   /home/<user>/tez-motors/deploy/selfhost/run-cron.sh /api/cron/marketing-poster >> ~/subs/cron.log 2>&1
+  …            # one line per route, times per deploy/selfhost/crontab
   ```
 - **Cloudflare cron-worker:** deploy `cron-worker/` instead, pointing
   `APP_BASE_URL` at `https://tezmotors.uz` (only if you cut back to Workers).
 
-### Phased rollout — enable the safe batch first
-The block above is the **internal/safe batch** (only mutates DB rows; no external
-messaging): `rates`, `otp-cleanup`, `order-sla`, `inventory-aging`,
-`generate-tasks`. These are live in prod.
+### What the jobs do / safety
+All 28 routes are enabled in prod (2026-06-18). They fall into three risk tiers:
+- **Internal (DB-only, no external output):** `rates`, `otp-cleanup`, `order-sla`,
+  `inventory-aging`, `generate-tasks`, `shipment-sla`, `synthetic` (health checks).
+- **Gated / act only on admin-configured rows — no-op until set up:**
+  `auto-markdown` & `auto-source` return `skipped:"disabled"` unless the autopilot
+  master flag is on (`site_settings` `autopilot`); `marketing-poster` only publishes
+  `content_drafts` an admin authored **and** scheduled (capped 5/run); `promotions-apply`
+  only activates/ends admin-configured `promotions`; `marketing-autopilot` drafts
+  suggestions for review (does not auto-publish).
+- **Outbound — message customers/staff (Telegram/email/push):** `lead-digest`,
+  `ops-digest`, `operator-briefing`, `lead-nurture`, `follow-ups`, `review-requests`,
+  `service-reminders`, `saved-search-alerts`, `reservation-recovery`, `win-back`,
+  `warranty-expiry`, `market-digest`, `monthly-report`, `journeys` (quiet-hours
+  suppressed), `behavioral-triggers`, and `price-watch-sweep` (notifies customers who
+  set a price-drop watch). These are windowed/idempotent, but after a long outage the
+  **first run can send a backlog** — watch `~/subs/cron.log` after re-enabling.
 
-**Held pending owner approval** (each sends Telegram/email/push to customers, posts
-public content, or changes prices — turn on deliberately, ideally after a dry run):
-`lead-digest`, `ops-digest`, `follow-ups`, `review-requests`, `win-back`,
-`service-reminders`, `saved-search-alerts`, `reservation-recovery`, `lead-nurture`,
-`monthly-report`, `shipment-sla`, `warranty-expiry`, `marketing-poster`,
-`promotions-apply`, and **`price-watch-sweep`** (it messages customers who set a
-price-drop watch via `notifyPriceWatchers` — outbound, despite living next to the
-internal jobs). The newer `cron-worker`-only routes (`operator-briefing`,
-`marketing-autopilot`, `market-digest`, `auto-markdown`, `auto-source`, `synthetic`,
-`journeys`, `behavioral-triggers`) also need their own review before enabling.
-Use the schedule times in `deploy/selfhost/crontab` when you add them.
-
-Verify after enabling: `tail ~/subs/cron.log` shows `... -> 200`, and for `rates`
-the `site_settings` row `id='fx_rate'` `updated_at` refreshes to today.
+Verify: `tail ~/subs/cron.log` shows `... -> 200`, and for `rates` the
+`site_settings` row `id='fx_rate'` `updated_at` refreshes to today.
 
 **Direct Node housekeeping (not HTTP routes), scheduled in the Vostro crontab:**
 ```
