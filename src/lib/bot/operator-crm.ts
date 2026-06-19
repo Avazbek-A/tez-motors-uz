@@ -21,6 +21,7 @@ import { sendBotMessage } from "@/lib/telegram";
 export const CRM_CUST_MARKER = "[crm:cust]";
 export const CRM_SEARCH_MARKER = "[crm:search]";
 export const CRM_REPLY_MARKER = "[crm:reply:";
+export const CRM_NOTE_MARKER = "[crm:note:";
 const PAGE = 6;
 const ACTOR = { email: "operator:telegram" };
 const TG = "https://api.telegram.org";
@@ -118,7 +119,7 @@ async function leadsList(supabase: SupabaseClient, chatId: number, msgId: number
 async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: number, id: string) {
   const { data: i } = await supabase
     .from("inquiries")
-    .select("id, name, phone, type, message, source_page, status, lead_score, created_at")
+    .select("id, name, phone, type, message, source_page, status, lead_score, notes, created_at")
     .eq("id", id)
     .maybeSingle();
   if (!i) { await edit(chatId, msgId, "Заявка не найдена.", { inline_keyboard: [[{ text: "🔙 К заявкам", callback_data: "crm|leads|0" }]] }); return; }
@@ -131,6 +132,7 @@ async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: numbe
     i.source_page ? `🌐 ${escapeHtml(i.source_page as string)}` : "",
     `🕒 ${ago(i.created_at as string)} назад`,
     i.message ? `\n💬 ${escapeHtml((i.message as string).slice(0, 600))}` : "",
+    i.notes ? `\n🗒 <b>Заметки:</b>\n${escapeHtml(String(i.notes).slice(-700))}` : "",
   ].filter(Boolean);
   const wa = waUrl(i.phone as string);
   const ph = String((i.phone as string) || "").replace(/\D/g, "");
@@ -141,6 +143,7 @@ async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: numbe
   if (contactRow.length) kb.push(contactRow);
   kb.push([{ text: "📞 Связались", callback_data: `crm|lst|${id}|contacted` }, { text: "🔄 В работе", callback_data: `crm|lst|${id}|in_progress` }]);
   kb.push([{ text: "📝 Задача", callback_data: `crm|ltask|${id}` }, { text: "✅ Закрыть", callback_data: `crm|lst|${id}|closed` }]);
+  kb.push([{ text: "🗒 Заметка", callback_data: `crm|note|${id}` }]);
   if (ord) kb.push([{ text: `📦 Заказ ${ord.reference_code} · ${ORD[ord.status as string] || ord.status}`, callback_data: `crm|order|${ord.id}` }]);
   kb.push([{ text: "🔙 К заявкам", callback_data: "crm|leads|0" }]);
   await edit(chatId, msgId, lines.join("\n"), { inline_keyboard: kb });
@@ -357,6 +360,23 @@ export async function handleCrmReply(supabase: SupabaseClient, operatorChatId: n
     { inline_keyboard: [[{ text: "💬 Открыть WhatsApp с текстом", url: wa }]] });
 }
 
+// ---- Lead notes (append-only, timestamped) ---------------------------------
+export async function handleCrmNote(supabase: SupabaseClient, operatorChatId: number, promptText: string, msg: string) {
+  const m = promptText.match(/\[crm:note:([a-f0-9-]{8,64})\]/i);
+  const note = msg.trim().slice(0, 1000);
+  if (!m || !note) { await send(operatorChatId, "Не удалось определить заявку или пустая заметка."); return; }
+  const id = m[1];
+  const { data: i } = await supabase.from("inquiries").select("notes, name").eq("id", id).maybeSingle();
+  if (!i) { await send(operatorChatId, "Заявка не найдена."); return; }
+  const stamp = new Date().toLocaleString("ru-RU", { timeZone: "Asia/Tashkent", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const existing = (i.notes as string) || "";
+  // Keep the field bounded — retain the most recent ~4000 chars of history.
+  const merged = `${existing ? existing + "\n" : ""}[${stamp}] ${note}`.slice(-4000);
+  await supabase.from("inquiries").update({ notes: merged }).eq("id", id);
+  logAdminAction(null, { action: "update", entity: "inquiry", entity_id: id, actor: ACTOR, diff: { added_note: note.slice(0, 80), via: "telegram" } }).catch(() => {});
+  await send(operatorChatId, `🗒 Заметка добавлена к «${escapeHtml((i.name as string) || "заявке")}».`, { inline_keyboard: [[{ text: "📥 Открыть заявку", callback_data: `crm|lead|${id}` }]] });
+}
+
 // ---- Dispatch --------------------------------------------------------------
 export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Promise<void> {
   const chatId = cb.message?.chat?.id;
@@ -390,6 +410,10 @@ export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Pr
       case "reply":
         await answer(cb.id);
         await send(chatId, `✍️ ${CRM_REPLY_MARKER}${parts[2]}]\nНапишите сообщение клиенту ответом на это сообщение — отправлю в Telegram (если привязан), иначе дам ссылку WhatsApp:`, { force_reply: true, input_field_placeholder: "Сообщение клиенту…" });
+        return;
+      case "note":
+        await answer(cb.id);
+        await send(chatId, `🗒 ${CRM_NOTE_MARKER}${parts[2]}]\nНапишите заметку к заявке ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Текст заметки…" });
         return;
       default: await answer(cb.id); return;
     }
