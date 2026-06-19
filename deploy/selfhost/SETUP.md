@@ -152,11 +152,13 @@ Two ways to drive it:
 - **Cloudflare cron-worker:** deploy `cron-worker/` instead, pointing
   `APP_BASE_URL` at `https://tezmotors.uz` (only if you cut back to Workers).
 
-> **Timezone:** the schedule times are **UTC** (the Cloudflare worker's basis).
-> Vixie/`cron` interprets a crontab in the host's local zone, so on the Vostro
-> (Asia/Tashkent, UTC+5) put a `CRON_TZ=UTC` line **above the `/api/cron` block**
-> (and below any local-time host jobs like the collectors) — otherwise every job
-> fires 5h early.
+> **Timezone (important):** the times in `deploy/selfhost/crontab` are **UTC**
+> (the Cloudflare worker's basis). Debian/Vixie `cron` schedules in the **system
+> timezone and ignores `CRON_TZ`** (`man 5 crontab`: *"does not support per-user
+> timezones"*). On the Vostro (Asia/Tashkent, UTC+5) the live crontab therefore
+> uses **local times = the UTC times + 5h** (e.g. `rates` `0 1` UTC → `0 6` local).
+> Don't add a `CRON_TZ` line — it's silently ignored and the jobs would fire 5h
+> early. The collector crons above the block are authored in local time already.
 
 ### What the jobs do / safety
 All 28 routes are enabled in prod (2026-06-18). They fall into three risk tiers:
