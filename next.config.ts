@@ -14,6 +14,12 @@ const nextConfig: NextConfig = {
   // hardening; tells less to fingerprinting scanners about our stack.
   poweredByHeader: false,
   images: {
+    // Hero/car/blog images are immutable (named assets, replaced via new files
+    // rather than mutated in place). Cache optimized variants for a year so the
+    // browser + Next's on-disk image cache stop re-fetching and re-encoding them
+    // every few hours (the default minimumCacheTTL was 4h → constant re-optimize
+    // on a CDN that doesn't cache the query-string optimizer URL).
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       {
         protocol: "https",
@@ -84,6 +90,15 @@ const nextConfig: NextConfig = {
           // Report-only to start — flip to Content-Security-Policy after observing prod for violations.
           { key: "Content-Security-Policy-Report-Only", value: csp },
         ],
+      },
+      // Static image assets in /public/images are immutable (we replace by
+      // shipping a new file, never mutating an existing one). Cache hard at the
+      // browser AND the CDN — unlike the query-string /_next/image optimizer URL,
+      // Cloudflare caches these extension-based static paths, so this turns
+      // repeat hero/car-photo loads into edge HITs instead of origin fetches.
+      {
+        source: "/images/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       // Cookie-gated routes should NEVER be cached by intermediate proxies or
       // a misconfigured CDN. Routes can still set their own Cache-Control if
