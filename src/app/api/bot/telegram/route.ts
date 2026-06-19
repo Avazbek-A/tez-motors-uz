@@ -352,6 +352,7 @@ function mainMenu(locale: BotLocale): { text: string; markup: ReplyMarkup } {
       [{ text: m.catalog, web_app: { url: `${siteUrl()}/${locale}/app` } }],
       [{ text: m.find, callback_data: "m|find" }, { text: m.customs, callback_data: "cu|go" }],
       [{ text: m.track, callback_data: "m|track" }, { text: m.manager, callback_data: "m|mgr" }],
+      [{ text: locale === "uz" ? "🛠 Xizmatlar" : locale === "en" ? "🛠 Services" : "🛠 Услуги", callback_data: "m|svc" }],
       [{ text: m.contacts, callback_data: "m|contacts" }, { text: m.language, callback_data: "m|lang" }],
       [{ text: m.help, callback_data: "m|help" }],
     ] },
@@ -556,10 +557,13 @@ async function captureLead(
   chatId: number,
   locale: BotLocale,
   lead: { name: string; phone: string },
+  opts: { type?: string; message?: string } = {},
 ): Promise<void> {
   const supabase = createServiceClient();
   const phone = normalizePhone(lead.phone) || lead.phone;
   const name = lead.name?.trim() || "Telegram";
+  const type = opts.type || "car_inquiry";
+  const message = opts.message || "Telegram bot lead";
 
   // Link this Telegram identity to a customer record keyed on the shared phone,
   // so future proactive messages (order status, price drops) can reach them on
@@ -592,8 +596,8 @@ async function captureLead(
       .insert({
         name,
         phone,
-        type: "car_inquiry",
-        message: "Telegram bot lead",
+        type,
+        message,
         source_page: "telegram-bot",
         metadata: { channel: "telegram", chat_id: chatId },
         status: "new",
@@ -611,8 +615,8 @@ async function captureLead(
   notifyNewInquiry({
     name,
     phone,
-    type: "car_inquiry",
-    message: "Telegram bot lead",
+    type,
+    message,
     source_page: "telegram-bot",
     metadata: { channel: "telegram", chat_id: chatId },
     locale,
@@ -767,6 +771,93 @@ const FIND_QUERY: Record<BotLocale, Record<string, string>> = {
   en: { ev: "electric car", suv: "crossover SUV", family: "family car 7 seats", premium: "premium car", budget: "car under $20000", sedan: "sedan" },
 };
 
+// ---- Service flows: trade-in / test-drive / installments / service ---------
+const SERVICE_MARKER = "[svc:";
+const SERVICES: Record<string, { type: string; label: Record<BotLocale, string>; prompt: Record<BotLocale, string> }> = {
+  trade_in: {
+    type: "trade_in",
+    label: { ru: "🔄 Trade-in (обмен)", uz: "🔄 Trade-in", en: "🔄 Trade-in" },
+    prompt: {
+      ru: "🔄 Trade-in. Опишите ваш авто (марка, год, пробег) и укажите номер телефона — оценим обмен:",
+      uz: "🔄 Trade-in. Avtongizni yozing (marka, yil, probeg) va telefon raqamingizni qoldiring — almashuvni baholaymiz:",
+      en: "🔄 Trade-in. Describe your car (make, year, mileage) and leave your phone — we'll value the trade:",
+    },
+  },
+  test_drive: {
+    type: "test_drive",
+    label: { ru: "🚗 Тест-драйв", uz: "🚗 Test-drayv", en: "🚗 Test drive" },
+    prompt: {
+      ru: "🚗 Тест-драйв. Какой авто хотите попробовать? Укажите номер телефона — организуем:",
+      uz: "🚗 Test-drayv. Qaysi avtoni sinab ko'rmoqchisiz? Telefon raqamingizni qoldiring:",
+      en: "🚗 Test drive. Which car would you like to try? Leave your phone — we'll arrange it:",
+    },
+  },
+  installment: {
+    type: "callback",
+    label: { ru: "💳 Рассрочка", uz: "💳 Bo'lib to'lash", en: "💳 Installments" },
+    prompt: {
+      ru: "💳 Рассрочка. Укажите интересующий авто и номер телефона — менеджер рассчитает условия:",
+      uz: "💳 Bo'lib to'lash. Qaysi avto qiziqtirayotganini va telefon raqamingizni yozing:",
+      en: "💳 Installments. Tell us the car and leave your phone — a manager will work out the terms:",
+    },
+  },
+  service: {
+    type: "service",
+    label: { ru: "🛠 Сервис", uz: "🛠 Servis", en: "🛠 Service" },
+    prompt: {
+      ru: "🛠 Сервис. Опишите услугу или проблему и укажите номер телефона:",
+      uz: "🛠 Servis. Xizmat yoki muammoni yozing va telefon raqamingizni qoldiring:",
+      en: "🛠 Service. Describe the service/issue and leave your phone:",
+    },
+  },
+};
+
+function servicesMenu(locale: BotLocale): { text: string; markup: ReplyMarkup } {
+  const title = locale === "uz" ? "🛠 <b>Xizmatlar</b> — kerakli bo'limni tanlang:" : locale === "en" ? "🛠 <b>Services</b> — choose one:" : "🛠 <b>Услуги</b> — выберите нужное:";
+  const back = locale === "uz" ? "🔙 Menyu" : locale === "en" ? "🔙 Menu" : "🔙 Меню";
+  const rows = ["trade_in", "test_drive", "installment", "service"].map((k) => [{ text: SERVICES[k].label[locale], callback_data: `svc|${k}` }]);
+  rows.push([{ text: back, callback_data: "m|menu" }]);
+  return { text: title, markup: { inline_keyboard: rows } };
+}
+
+/** Pull the first plausible phone (9–15 digits) out of free text. */
+function extractPhone(s: string): string | null {
+  const m = s.replace(/[()\-]/g, " ").match(/\+?\d[\d\s]{7,16}\d/);
+  if (!m) return null;
+  const digits = m[0].replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15 ? digits : null;
+}
+
+async function handleServiceCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId) return;
+  const locale = botLocale(cb.from?.language_code);
+  const key = (cb.data || "").slice(4);
+  const svc = SERVICES[key];
+  if (!svc) return;
+  await tgSend(chatId, `${SERVICE_MARKER}${key}]\n${svc.prompt[locale]}`, { force_reply: true, input_field_placeholder: "…" });
+}
+
+async function captureServiceLead(chatId: number, locale: BotLocale, promptText: string, text: string, from: TgUser): Promise<void> {
+  const m = promptText.match(/\[svc:([a-z_]+)\]/);
+  if (!m) return;
+  const key = m[1];
+  const svc = SERVICES[key];
+  if (!svc) return;
+  let phone = extractPhone(text);
+  if (!phone) {
+    const { data: c } = await createServiceClient().from("customers").select("phone").eq("telegram_id", chatId).maybeSingle();
+    if (c?.phone) phone = String(c.phone);
+  }
+  if (!phone) {
+    const ask = locale === "uz" ? "Iltimos, xabarga telefon raqamingizni ham qo'shing:" : locale === "en" ? "Please include your phone number in the message:" : "Пожалуйста, добавьте номер телефона в сообщение:";
+    await tgSend(chatId, `${SERVICE_MARKER}${key}]\n${ask}`, { force_reply: true });
+    return;
+  }
+  await captureLead(chatId, locale, { name: from.first_name || "Telegram", phone }, { type: svc.type, message: `[${key}] ${text}`.slice(0, 500) });
+}
+
 // Refine the last recommendation in place — the phrase rides the same assistant
 // thread (channel:chatId), so recommendCars refines against the prior context.
 const REFINE: Record<BotLocale, Record<string, string>> = {
@@ -903,6 +994,11 @@ async function handleMenuCallback(cb: TgCallbackQuery): Promise<void> {
     case "lang":
       await tgSend(chatId, MENU[locale].pickLang, langKeyboard());
       return;
+    case "svc": {
+      const sm = servicesMenu(locale);
+      await tgSend(chatId, sm.text, sm.markup);
+      return;
+    }
     case "help":
       await tgSend(chatId, HELP[locale]);
       return;
@@ -942,6 +1038,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     else if (data.startsWith("car:")) await handleCarDetailCallback(cb);
     else if (data.startsWith("find|")) await handleFindCallback(cb);
     else if (data.startsWith("ref|")) await handleRefineCallback(cb);
+    else if (data.startsWith("svc|")) await handleServiceCallback(cb);
     else if (data.startsWith("pw:")) await handlePriceWatchCallback(cb);
     else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
     else await tgAnswerCallback(cb.id);
@@ -1028,6 +1125,12 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     const usdUzs = await getUsdUzsRate(createServiceClient()).catch(() => 12600);
     const step = customsPriceReply(message.reply_to_message.text, text, locale, usdUzs);
     if (step) { await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup); return; }
+  }
+
+  // 1.6) Service flow — a reply to a service prompt carries [svc:<key>].
+  if (message.reply_to_message?.text?.includes(SERVICE_MARKER)) {
+    await captureServiceLead(chatId, locale, message.reply_to_message.text, text, from);
+    return;
   }
 
   // 2) Slash commands → a discoverable, professional menu. The full list is
