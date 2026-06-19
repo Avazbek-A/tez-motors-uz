@@ -303,6 +303,9 @@ function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
     { text: pricier, callback_data: "ref|pricier" },
     { text: bigger, callback_data: "ref|bigger" },
   ]);
+  // Save this search → the saved-search cron DMs them on new matches.
+  const saveLbl = locale === "uz" ? "🔔 Qidiruvni saqlash (yangisi kelsa — xabar)" : locale === "en" ? "🔔 Save search (alert on new matches)" : "🔔 Сохранить поиск (уведомлять о новых)";
+  rows.push([{ text: saveLbl, callback_data: "ss|save" }]);
   return { inline_keyboard: rows };
 }
 
@@ -881,6 +884,42 @@ async function handleRefineCallback(cb: TgCallbackQuery): Promise<void> {
   await tgSendCarPhotos(chatId, cars);
 }
 
+// Save the customer's last query as a saved search → the saved-search-alerts
+// cron then DMs them (Telegram-first via sendToCustomer) when a new car matches.
+async function handleSaveSearchCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId) return;
+  const locale = botLocale(cb.from?.language_code);
+  const supabase = createServiceClient();
+  const { data: customer } = await supabase.from("customers").select("id").eq("telegram_id", chatId).maybeSingle();
+  if (!customer?.id) {
+    const ask = locale === "uz" ? "Yangi avtolar haqida xabar olish uchun avval raqamingizni ulashing 👇" : locale === "en" ? "To get alerts on new matches, share your number first 👇" : "Чтобы получать уведомления о новых авто, поделитесь номером 👇";
+    await tgSend(chatId, ask, contactKeyboard(locale));
+    return;
+  }
+  const { data: last } = await supabase
+    .from("assistant_messages")
+    .select("content")
+    .eq("thread_id", `telegram:${chatId}`)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const query = String(last?.content || "").trim().slice(0, 120);
+  if (!query) {
+    await tgSend(chatId, locale === "uz" ? "Avval nimani qidirayotganingizni yozing." : locale === "en" ? "First tell me what you're looking for." : "Сначала опишите, что вы ищете.");
+    return;
+  }
+  const { data: dupe } = await supabase.from("saved_searches").select("id").eq("customer_id", customer.id).eq("label", query).maybeSingle();
+  if (dupe) {
+    await tgSend(chatId, locale === "uz" ? "🔔 Bu qidiruv allaqachon saqlangan." : locale === "en" ? "🔔 This search is already saved." : "🔔 Этот поиск уже сохранён.");
+    return;
+  }
+  await supabase.from("saved_searches").insert({ customer_id: customer.id, label: query, filters: { search: query } });
+  await tgSend(chatId, locale === "uz" ? `🔔 Saqlandi: «${escapeHtml(query)}». Mos avto kelsa, Telegramda xabar beramiz.` : locale === "en" ? `🔔 Saved: “${escapeHtml(query)}”. We'll DM you on Telegram when a match arrives.` : `🔔 Сохранил: «${escapeHtml(query)}». Уведомлю в Telegram, как только появится подходящее авто.`);
+}
+
 async function handleFindCallback(cb: TgCallbackQuery): Promise<void> {
   const chatId = cb.message?.chat?.id;
   await tgAnswerCallback(cb.id);
@@ -1038,6 +1077,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     else if (data.startsWith("car:")) await handleCarDetailCallback(cb);
     else if (data.startsWith("find|")) await handleFindCallback(cb);
     else if (data.startsWith("ref|")) await handleRefineCallback(cb);
+    else if (data.startsWith("ss|")) await handleSaveSearchCallback(cb);
     else if (data.startsWith("svc|")) await handleServiceCallback(cb);
     else if (data.startsWith("pw:")) await handlePriceWatchCallback(cb);
     else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
