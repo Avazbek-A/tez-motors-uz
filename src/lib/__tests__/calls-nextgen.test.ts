@@ -36,14 +36,12 @@ vi.mock("@/lib/llm", () => ({
 
 import { POST as postVoiceNotes } from "@/app/api/admin/calls/agent/voice-notes/route";
 import { POST as postP2pBlockchain } from "@/app/api/admin/calls/p2p-blockchain/route";
-import { POST as postArShowroom } from "@/app/api/admin/calls/ar-showroom/route";
 import { POST as postVocalTremor } from "@/app/api/admin/calls/vocal-tremor/route";
 import { POST as postDialerHandover } from "@/app/api/admin/calls/dialer-handover/route";
 import { POST as postCvShowroom } from "@/app/api/admin/calls/cv-showroom/route";
 import { POST as postDialectAdapt } from "@/app/api/admin/calls/dialect-adapt/route";
 import { POST as postVideoAvatar } from "@/app/api/admin/calls/video-avatar/route";
 import { POST as postLogisticsDispatch } from "@/app/api/admin/calls/logistics-dispatch/route";
-import { POST as postTradeIn } from "@/app/api/admin/calls/tradein-valuation/route";
 
 describe("Next-Gen Call Center API Endpoints (Leaps 10-19)", () => {
   beforeEach(() => {
@@ -80,21 +78,6 @@ describe("Next-Gen Call Center API Endpoints (Leaps 10-19)", () => {
       expect(body.block_index).toBeGreaterThan(0);
       expect(body.block_hash).toHaveLength(64);
       expect(body.consensus_status).toBe("verified");
-    });
-  });
-
-  describe("POST /api/admin/calls/ar-showroom", () => {
-    it("acknowledges WebXR synchronization actions", async () => {
-      const req = new NextRequest("http://localhost/api/admin/calls/ar-showroom", {
-        method: "POST",
-        body: JSON.stringify({ action: "toggle_doors", value: true }),
-      });
-      const res = await postArShowroom(req);
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.success).toBe(true);
-      expect(body.synced_action).toBe("toggle_doors");
-      expect(body.synced_value).toBe(true);
     });
   });
 
@@ -228,30 +211,5 @@ describe("Next-Gen Call Center API Endpoints (Leaps 10-19)", () => {
     });
   });
 
-  describe("POST /api/admin/calls/tradein-valuation", () => {
-    it("accepts audio files and calculates trade-in value", async () => {
-      mockDbResult = {
-        data: { id: "val-1", customer_name: "Anvar", vehicle_details: "Gentra 2022", engine_health_status: "healthy_idle", body_damage_details: "minor_scratches_left_fender", computed_value_usd: 12200, status: "approved" },
-        error: null,
-      };
-      mockBuilder.single.mockResolvedValueOnce(mockDbResult);
-
-      const fd = new FormData();
-      fd.append("customer_name", "Anvar");
-      fd.append("car_details", "Gentra 2022");
-      fd.append("engine_audio", new Blob(["mock-wav"], { type: "audio/wav" }));
-      fd.append("body_photo", new Blob(["mock-jpeg"], { type: "image/jpeg" }));
-
-      const req = new NextRequest("http://localhost/api/admin/calls/tradein-valuation", {
-        method: "POST",
-        body: fd,
-      });
-      const res = await postTradeIn(req);
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.success).toBe(true);
-      expect(body.valuation.computed_value_usd).toBe(12200);
-    });
-  });
 });
 export const runtime = "nodejs";

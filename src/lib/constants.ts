@@ -49,6 +49,7 @@ export const FOOTER_LINKS = [
   { href: "/tashkent", label: { ru: "Доставка по Ташкенту", uz: "Toshkent bo'ylab", en: "Tashkent" } },
   { href: "/about", label: { ru: "О нас", uz: "Biz haqimizda", en: "About" } },
   { href: "/sell-your-car", label: { ru: "Продать авто", uz: "Mashina sotish", en: "Sell Your Car" } },
+  { href: "/showroom", label: { ru: "Виртуальный шоурум", uz: "Virtual shourum", en: "Virtual showroom" } },
   { href: "/blog", label: { ru: "Блог", uz: "Blog", en: "Blog" } },
   { href: "/reviews", label: { ru: "Отзывы", uz: "Sharhlar", en: "Reviews" } },
   { href: "/faq", label: { ru: "FAQ", uz: "FAQ", en: "FAQ" } },

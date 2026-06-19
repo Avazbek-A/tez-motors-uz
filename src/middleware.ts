@@ -95,10 +95,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // /admin and /calls are locale-agnostic top-level routes (not under [locale]):
-  // /admin is the gated dashboard; /calls hosts the public customer XR portal
-  // (src/app/calls/customer). Locale-prefixing them would 404, so skip the redirect.
-  if (!pathname.startsWith("/admin") && !pathname.startsWith("/calls")) {
+  // /admin is a locale-agnostic top-level route (not under [locale]) — the gated
+  // dashboard. Locale-prefixing it would 404, so skip the redirect there.
+  if (!pathname.startsWith("/admin")) {
     const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
     const bestLocale = (cookieLocale === "ru" || cookieLocale === "uz" || cookieLocale === "en")
       ? cookieLocale
