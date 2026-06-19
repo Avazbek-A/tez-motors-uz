@@ -93,13 +93,29 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
   const dictionary = await getDictionary(locale);
   const supabase = await createClient();
 
+  // List/cards need title, cover, category, date, read-time, author + a short
+  // body snippet (for the 160-char excerpt and the client search box). They do
+  // NOT need faqs or meta_* — and shipping all three full ~4,000-char bodies for
+  // 50 posts bloated this page to ~900KB. Select only what cards use, then
+  // truncate the bodies before they're serialized into the client payload.
   const { data: posts } = await supabase
     .from("posts")
-    .select("*, author:blog_authors(*)")
+    .select(
+      "id, slug, title_ru, title_uz, title_en, body_ru, body_uz, body_en, cover_image, published_at, category, tags, read_time_minutes, author:blog_authors(*)",
+    )
     .eq("is_published", true)
     .order("published_at", { ascending: false, nullsFirst: false });
 
-  const items = (posts || []) as BlogPost[];
+  // Enough for the excerpt (160 chars) and a useful client-side search match,
+  // a fraction of the full article body. The full text lives on the detail page.
+  const SNIPPET = 400;
+  const snip = (s: string | null) => (s ? s.slice(0, SNIPPET) : s);
+  const items = ((posts || []) as unknown as BlogPost[]).map((p) => ({
+    ...p,
+    body_ru: snip(p.body_ru) as string,
+    body_uz: snip(p.body_uz),
+    body_en: snip(p.body_en),
+  }));
 
   const headings = {
     ru: { title: "Блог и Аналитика", subtitle: "Глубокая аналитика авторынка Китая, разборы технологий и инструкции по импорту." },
