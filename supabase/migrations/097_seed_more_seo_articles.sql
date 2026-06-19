@@ -4,7 +4,7 @@
 -- and SEO schemas.
 --
 
-DO $$
+DO $mig$
 DECLARE
   v_author_id UUID;
 BEGIN
@@ -270,4 +270,4 @@ The 1.5L turbo petrol engine under the hood acts strictly as an **onboard genera
     ]'::jsonb
   );
 
-END $$;
+END $mig$;

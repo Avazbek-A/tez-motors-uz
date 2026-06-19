@@ -3,7 +3,7 @@
 -- Seed remaining 45 articles with full translations, specifications, and FAQ structures.
 --
 
-DO $$
+DO $mig$
 DECLARE
   v_author_id UUID;
 BEGIN
@@ -5198,4 +5198,4 @@ Importing vehicles from China to Uzbekistan is the most efficient way to acquire
     '[{"question_ru":"Какова стоимость владения Future Tech Solid-State?","question_uz":"Future Tech Solid-State modelini saqlash xarajatlari qancha?","question_en":"What is the cost of ownership for the Future Tech Solid-State?","answer_ru":"Стоимость обслуживания минимальна по сравнению с бензиновыми авто. Расходы состоят в основном из зарядки аккумулятора и замены салонного фильтра раз в год.","answer_uz":"Gazolinli avtomobillarga qaraganda xizmat ko''rsatish minimal darajada. Xarajatlar asosan akkumulyatorni zaryadlash va salonda filtrni almashtirishdan iborat.","answer_en":"Maintenance costs are minimal compared to combustion cars. Major expenses are limited to battery charging and cabin air filter replacements once a year."},{"question_ru":"Предоставляет ли Tez Motors гарантию на Future Tech?","question_uz":"Tez Motors Future Tech avtomobiliga kafolat beradimi?","question_en":"Does Tez Motors offer a warranty on Future Tech vehicles?","answer_ru":"Да, на все поставляемые автомобили Tez Motors предоставляет техническую гарантию на двигатель, батарею и редуктор через наши партнерские сервисные центры.","answer_uz":"Ha, Tez Motors o''zi olib kelgan barcha avtomobillarga hamkor servis markazlari orqali dvigatel, batareya va reduktor uchun texnik kafolat beradi.","answer_en":"Yes, Tez Motors provides a comprehensive technical warranty covering the motor, battery, and gearbox through our partner service networks."}]'::jsonb
   ) ON CONFLICT (slug) DO NOTHING;
   
-END $$;
+END $mig$;

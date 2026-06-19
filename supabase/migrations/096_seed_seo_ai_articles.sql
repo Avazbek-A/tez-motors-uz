@@ -4,7 +4,7 @@
 -- detailed comparison tables, and FAQPage JSON-LD compatible metadata.
 --
 
-DO $$
+DO $mig$
 DECLARE
   v_author_id UUID;
 BEGIN
@@ -487,4 +487,4 @@ We perform detailed pre-delivery detailing and hand over the vehicle with regist
     ]'::jsonb
   );
 
-END $$;
+END $mig$;
