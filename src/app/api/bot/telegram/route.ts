@@ -282,9 +282,10 @@ function contactKeyboard(locale: BotLocale): ReplyMarkup {
 function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
   const reserve = locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать";
   const rows = cars.slice(0, 3).map((c) => [
+    // Open a rich in-chat detail card (photo + specs) instead of bouncing to site.
     {
-      text: `${c.brand} ${c.model} ${c.year} — $${c.price_usd.toLocaleString("en-US")}`,
-      url: `${siteUrl()}/${locale}/catalog/${c.slug}?utm_source=telegram`,
+      text: `ℹ️ ${c.brand} ${c.model} ${c.year} — $${c.price_usd.toLocaleString("en-US")}`,
+      callback_data: `car:${c.id}`,
     },
     // Transact in chat (Phase AS): reserve this car without leaving Telegram.
     { text: `📝 ${reserve}`, callback_data: `rsv:${c.id}` },
@@ -626,6 +627,85 @@ async function handleCustomsCallback(cb: TgCallbackQuery): Promise<void> {
   else await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
 }
 
+// ---- In-chat car detail card -----------------------------------------------
+const FUEL: Record<BotLocale, Record<string, string>> = {
+  ru: { petrol: "⛽ Бензин", electric: "🔋 Электро", hybrid: "🔌 Гибрид", phev: "🔌 PHEV" },
+  uz: { petrol: "⛽ Benzin", electric: "🔋 Elektro", hybrid: "🔌 Gibrid", phev: "🔌 PHEV" },
+  en: { petrol: "⛽ Petrol", electric: "🔋 Electric", hybrid: "🔌 Hybrid", phev: "🔌 PHEV" },
+};
+const BODY: Record<BotLocale, Record<string, string>> = {
+  ru: { sedan: "Седан", suv: "Внедорожник", crossover: "Кроссовер", hatchback: "Хэтчбек", minivan: "Минивэн", coupe: "Купе" },
+  uz: { sedan: "Sedan", suv: "SUV", crossover: "Krossover", hatchback: "Xetchbek", minivan: "Minivan", coupe: "Kupe" },
+  en: { sedan: "Sedan", suv: "SUV", crossover: "Crossover", hatchback: "Hatchback", minivan: "Minivan", coupe: "Coupe" },
+};
+const UNIT: Record<BotLocale, { km: string; hp: string; seats: string }> = {
+  ru: { km: "км", hp: "л.с.", seats: "мест" },
+  uz: { km: "km", hp: "o.k.", seats: "o'rin" },
+  en: { km: "km", hp: "hp", seats: "seats" },
+};
+
+interface CarCardRow {
+  id: string; slug: string; brand: string; model: string; year: number;
+  price_usd: number; price_uzs: number | null; body_type: string; fuel_type: string;
+  engine_power: number | null; range_km: number | null; seats: number | null;
+  drivetrain: string | null; mileage: number | null; color: string | null;
+  images: string[] | null; inventory_status: string | null;
+}
+
+function carCaption(c: CarCardRow, locale: BotLocale): string {
+  const u = UNIT[locale];
+  const chips = [
+    c.engine_power ? `⚡ ${c.engine_power} ${u.hp}` : "",
+    c.range_km ? `🔋 ${c.range_km} ${u.km}` : "",
+    c.seats ? `👥 ${c.seats} ${u.seats}` : "",
+    c.mileage ? `🛣 ${Number(c.mileage).toLocaleString("en-US")} ${u.km}` : "",
+  ].filter(Boolean).join(" · ");
+  const sold = c.inventory_status === "sold" ? (locale === "uz" ? " · ❌ sotilgan" : locale === "en" ? " · ❌ sold" : " · ❌ продан")
+    : c.inventory_status === "reserved" ? (locale === "uz" ? " · 🔒 band" : locale === "en" ? " · 🔒 reserved" : " · 🔒 бронь") : "";
+  const lines = [
+    `🚗 <b>${escapeHtml(`${c.brand} ${c.model} ${c.year}`)}</b>${sold}`,
+    `💰 $${Number(c.price_usd).toLocaleString("en-US")}`,
+    [BODY[locale][c.body_type] || c.body_type, FUEL[locale][c.fuel_type] || c.fuel_type, c.drivetrain ? c.drivetrain.toUpperCase() : ""].filter(Boolean).join(" · "),
+    chips,
+    c.color ? `🎨 ${escapeHtml(c.color)}` : "",
+  ].filter(Boolean);
+  return lines.join("\n").slice(0, 1000);
+}
+
+async function handleCarDetailCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  const carId = (cb.data || "").slice(4);
+  await tgAnswerCallback(cb.id);
+  if (!chatId || !/^[a-f0-9-]{8,64}$/i.test(carId)) return;
+  const locale = botLocale(cb.from?.language_code);
+  const supabase = createServiceClient();
+  const { data: c } = await supabase
+    .from("cars")
+    .select("id, slug, brand, model, year, price_usd, price_uzs, body_type, fuel_type, engine_power, range_km, seats, drivetrain, mileage, color, images, inventory_status")
+    .eq("id", carId)
+    .maybeSingle();
+  if (!c) return;
+  const car = c as CarCardRow;
+  const reserveLbl = locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать";
+  const siteLbl = locale === "uz" ? "Saytda ochish" : locale === "en" ? "Open on site" : "Открыть на сайте";
+  const kb: ReplyMarkup = { inline_keyboard: [
+    [{ text: `📝 ${reserveLbl}`, callback_data: `rsv:${car.id}` }, { text: "🔔", callback_data: `pw:${car.id}` }],
+    [{ text: `🌐 ${siteLbl}`, url: `${siteUrl()}/${locale}/catalog/${car.slug}?utm_source=telegram` }],
+  ] };
+  const caption = carCaption(car, locale);
+  const img = Array.isArray(car.images) ? car.images[0] : null;
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (img && token) {
+    await fetch(`${TG_API}/bot${token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, photo: img, caption, parse_mode: "HTML", reply_markup: kb }),
+    }).catch(() => {});
+  } else {
+    await tgSend(chatId, caption, kb);
+  }
+}
+
 // ---- Smarter Find-a-car: quick picks → the recommender ---------------------
 const FIND_PICKS: Record<BotLocale, { title: string; rows: { text: string; callback_data: string }[][] }> = {
   ru: { title: "🔎 Выберите категорию — или просто опишите, что ищете, текстом 👇", rows: [
@@ -799,6 +879,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     if (data.startsWith("rsv:")) await handleReserveCallback(cb);
     else if (data.startsWith("cu|")) await handleCustomsCallback(cb);
+    else if (data.startsWith("car:")) await handleCarDetailCallback(cb);
     else if (data.startsWith("find|")) await handleFindCallback(cb);
     else if (data.startsWith("pw:")) await handlePriceWatchCallback(cb);
     else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
