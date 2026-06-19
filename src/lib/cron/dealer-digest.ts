@@ -6,7 +6,13 @@
 import { sendEmail } from "@/lib/email";
 import { escapeHtml as esc } from "@/lib/escape-html";
 
-export async function sendDealerDigest(subject: string, lines: string[]): Promise<void> {
+type DigestBtn = { text: string; callback_data?: string; url?: string };
+
+export async function sendDealerDigest(
+  subject: string,
+  lines: string[],
+  opts: { telegramButtons?: DigestBtn[][] } = {},
+): Promise<void> {
   const tasks: Promise<unknown>[] = [];
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -20,6 +26,7 @@ export async function sendDealerDigest(subject: string, lines: string[]): Promis
           chat_id: chatId,
           text: `📊 ${subject}\n\n${lines.join("\n")}`,
           disable_web_page_preview: true,
+          ...(opts.telegramButtons?.length ? { reply_markup: { inline_keyboard: opts.telegramButtons } } : {}),
         }),
       }).catch(() => {}),
     );

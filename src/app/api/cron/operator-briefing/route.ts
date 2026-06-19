@@ -18,7 +18,25 @@ async function handle(request: NextRequest) {
     const supabase = createServiceClient();
     const context = await gatherOperatorContext(supabase);
     const { text, ai } = await generateOperatorBriefing(context, "ru");
-    await sendDealerDigest("☀️ Tez Motors — briefing", text.split("\n"));
+
+    // Live counts → actionable buttons that deep-link into the in-chat CRM
+    // (works because the digest lands in the operator chat). edit-in-place.
+    const [leads, tasksOpen, ordersActive] = await Promise.all([
+      supabase.from("inquiries").select("id", { count: "exact", head: true }).in("status", ["new", "contacted", "in_progress"]),
+      supabase.from("crm_tasks").select("id", { count: "exact", head: true }).eq("status", "open"),
+      supabase.from("orders").select("id", { count: "exact", head: true }).neq("status", "delivered"),
+    ]);
+    const telegramButtons = [
+      [
+        { text: `📥 Заявки (${leads.count ?? 0})`, callback_data: "crm|leads|0" },
+        { text: `✅ Задачи (${tasksOpen.count ?? 0})`, callback_data: "crm|tasks|0" },
+      ],
+      [
+        { text: `📦 Заказы (${ordersActive.count ?? 0})`, callback_data: "crm|orders|0" },
+        { text: "🗂 CRM", callback_data: "crm|home" },
+      ],
+    ];
+    await sendDealerDigest("☀️ Tez Motors — briefing", text.split("\n"), { telegramButtons });
     logEvent("cron.operator_briefing", { ai });
     return NextResponse.json({ ok: true, ai });
   } catch (error) {
