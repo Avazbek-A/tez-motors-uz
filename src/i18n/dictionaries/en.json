@@ -92,7 +92,7 @@
     "carPrice": "Car Cost",
     "customs": "Customs Duties",
     "delivery": "Delivery",
-    "service": "Our Commission",
+    "service": "Service Fee",
     "total": "Total",
     "savings": "Your Savings"
   },
@@ -150,7 +150,7 @@
       "exciseTax": "Excise Tax",
       "vat": "VAT (12%)",
       "delivery": "Delivery",
-      "serviceFee": "Our Commission",
+      "serviceFee": "Service Fee",
       "total": "Total Turnkey",
       "note": "* This is an approximate calculation. Contact our manager for the exact cost."
     }

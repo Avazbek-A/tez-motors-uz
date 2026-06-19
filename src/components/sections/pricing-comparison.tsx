@@ -10,11 +10,17 @@ export function PricingComparison() {
   const { dictionary } = useLocale();
   const { ref, isVisible } = useScrollReveal();
 
+  // Illustrative comparison (USD). The persuasion is the CONTRAST: car cost + customs
+  // are identical (regulated), but Tez has lower delivery AND a minimal transparent
+  // service fee vs the middleman's fat markup — so the all-in total is clearly lower.
+  // `ours.service` is your visible margin lever: keep it minimal (or set to 0 to show a
+  // zero-markup direct channel). Never label this "commission" — it brands Tez as the
+  // very middleman it competes against.
   const comparison = [
     { label: dictionary.pricing.carPrice, ours: 25000, theirs: 25000 },
     { label: dictionary.pricing.customs, ours: 5000, theirs: 5000 },
     { label: dictionary.pricing.delivery, ours: 2000, theirs: 3500 },
-    { label: dictionary.pricing.service, ours: 1500, theirs: 4000 },
+    { label: dictionary.pricing.service, ours: 500, theirs: 4000 },
   ];
 
   const ourTotal = comparison.reduce((s, r) => s + r.ours, 0);

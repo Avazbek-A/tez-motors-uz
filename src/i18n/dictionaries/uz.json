@@ -92,7 +92,7 @@
     "carPrice": "Avtomobil narxi",
     "customs": "Bojxona to'lovlari",
     "delivery": "Yetkazib berish",
-    "service": "Bizning komissiya",
+    "service": "Xizmat haqi",
     "total": "Jami",
     "savings": "Sizning tejamkorligingiz"
   },
@@ -150,7 +150,7 @@
       "exciseTax": "Aksiz solig'i",
       "vat": "QQS (12%)",
       "delivery": "Yetkazib berish",
-      "serviceFee": "Bizning komissiya",
+      "serviceFee": "Xizmat haqi",
       "total": "Jami kalit topshirish",
       "note": "* Bu taxminiy hisob. Aniq narxni menejerimizdan bilib oling."
     }
