@@ -33,6 +33,7 @@ import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { getSiteSettings } from "@/lib/site-settings-server";
+import { handleCrmCallback, handleCrmCustomerLookup, CRM_CUST_MARKER } from "@/lib/bot/operator-crm";
 import { logRecording } from "@/lib/call-recording";
 import type { Car } from "@/types/car";
 
@@ -69,7 +70,7 @@ interface TgMessage {
 interface TgCallbackQuery {
   id: string;
   from?: TgUser;
-  message?: { chat?: { id: number } };
+  message?: { chat?: { id: number }; message_id?: number };
   data?: string;
 }
 interface TgUpdate {
@@ -431,7 +432,7 @@ function operatorMenu(): { text: string; markup: ReplyMarkup } {
       [{ text: "📊 Сводка", callback_data: "op|summary" }, { text: "💰 Деньги", callback_data: "op|money" }],
       [{ text: "📈 Спрос", callback_data: "op|demand" }, { text: "📦 Залежалось", callback_data: "op|aging" }],
       [{ text: "🔥 Новые заявки", callback_data: "op|leads" }],
-      [{ text: "🗂 Открыть CRM", url: `${siteUrl()}/admin` }],
+      [{ text: "🗂 CRM в чате", callback_data: "crm|home" }, { text: "🌐 Веб-CRM", url: `${siteUrl()}/admin` }],
     ] },
   };
 }
@@ -688,6 +689,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     const data = typeof cb.data === "string" ? cb.data : "";
     if (isOperatorChat(cbChat)) {
       if (data.startsWith("op|")) await handleOperatorCallback(cb);
+      else if (data.startsWith("crm|")) await handleCrmCallback(createServiceClient(), cb);
       else await tgAnswerCallback(cb.id);
       return;
     }
@@ -719,6 +721,11 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     const opText = (message.text || "").trim().slice(0, 1000);
     if (!opText) return;
+    // CRM customer lookup — a reply to the force_reply prompt carries the marker.
+    if (message.reply_to_message?.text?.includes(CRM_CUST_MARKER)) {
+      await handleCrmCustomerLookup(createServiceClient(), chatId, opText);
+      return;
+    }
     // /start, /menu, /help or any unknown slash command → the operator dashboard.
     const opCmd = opText.startsWith("/") ? opText.slice(1).split(/[@\s]/)[0].toLowerCase() : "";
     if (opCmd && !OP_QUERY[opCmd]) {
