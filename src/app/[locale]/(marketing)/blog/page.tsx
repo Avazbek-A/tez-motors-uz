@@ -1,44 +1,90 @@
-import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { getDictionary } from "@/i18n/get-dictionary";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { createClient } from "@/lib/supabase/server";
-import { renderMarkdown } from "@/lib/markdown";
-import { formatDate } from "@/lib/utils";
-import { localizedPath } from "@/lib/locale-path";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { BlogList } from "./blog-list";
 import type { BlogPost } from "@/types/car";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ category?: string }> }): Promise<Metadata> {
+  const { category } = await searchParams;
   const requestHeaders = await headers();
   const cookieStore = await cookies();
   const locale =
     (requestHeaders.get("x-tez-locale") as "ru" | "uz" | "en" | null) ??
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
 
-  const title = locale === "ru" ? "Блог" : "Blog";
-  const description =
-    locale === "ru"
-      ? "Новости, советы и практичные заметки для клиентов."
-      : "News, tips, and practical buying notes.";
+  const titleMap = {
+    all: {
+      ru: "Блог Tez Motors — Экспертная аналитика и ИИ",
+      uz: "Tez Motors blogi — Ekspert tahlili va AI",
+      en: "Tez Motors Blog — Expert Insights & AI",
+    },
+    ai: {
+      ru: "ИИ и технологии в автоимпорте — Блог Tez Motors",
+      uz: "AI va avto import texnologiyalari — Tez Motors blogi",
+      en: "AI & Automotive Import Technology — Tez Motors Blog",
+    },
+    guides: {
+      ru: "Инструкции и руководства по импорту авто — Блог Tez Motors",
+      uz: "Avto import qilish bo'yicha yo'riqnomalar — Tez Motors blogi",
+      en: "Car Sourcing & Import Guides — Tez Motors Blog",
+    },
+    analytics: {
+      ru: "Аналитика авторынка Китая и Узбекистана — Блог Tez Motors",
+      uz: "Xitoy va O'zbekiston avto bozori tahlili — Tez Motors blogi",
+      en: "China & Uzbekistan Auto Market Analytics — Tez Motors Blog",
+    },
+  };
+
+  const descMap = {
+    all: {
+      ru: "Ваш главный источник знаний об авторынке Китая, ИИ-импорте, таможенном оформлении и эксплуатации электромобилей в Узбекистане.",
+      uz: "Xitoy avtomobil bozori, AI importi, bojxona rasmiylashtiruvi va O'zbekistonda elektromobillar ekspluatatsiyasi bo'yicha asosiy bilim manbangiz.",
+      en: "Your primary knowledge source on the Chinese car market, AI import, customs clearance, and EV operations in Uzbekistan.",
+    },
+    ai: {
+      ru: "Как искусственный интеллект меняет подбор и доставку автомобилей из Китая. Разборы технологий и кейсы от экспертов Tez Motors.",
+      uz: "Sun'iy intellekt Xitoydan avtomobillarni tanlash va yetkazib berishni qanday o'zgartirayotgani. Tez Motors ekspertlaridan texnologiyalar tahlili.",
+      en: "How artificial intelligence changes sourcing and shipping of cars from China. Tech breakdowns and case studies by Tez Motors.",
+    },
+    guides: {
+      ru: "Подробные пошаговые руководства по растаможке, оформлению документов, проверке состояния и доставке автомобилей из Китая в Узбекистан.",
+      uz: "Xitoydan O'zbekistonga avtomobillarni bojxona rasmiylashtiruvi, hujjatlarni tayyorlash va yetkazib berish bo'yicha batafsil bosqichma-boshqich qo'llanmalar.",
+      en: "Detailed step-by-step guides on customs clearance, documentation, inspection, and shipping of cars from China to Uzbekistan.",
+    },
+    analytics: {
+      ru: "Цены, тренды, статистика и прогнозы рынка электромобилей и гибридов в Узбекистане. Экспертные обзоры от аналитиков Tez Motors.",
+      uz: "O'zbekistonda elektromobillar va gibridlar bozori narxlari, tendentsiyalari va prognozlari. Tez Motors tahlilchilaridan ekspert sharhlari.",
+      en: "Prices, trends, statistics, and forecasts of the EV and hybrid market in Uzbekistan. Expert reviews by Tez Motors analysts.",
+    },
+  };
+
+  const key = (category && titleMap[category as keyof typeof titleMap] ? category : "all") as keyof typeof titleMap;
+  const title = titleMap[key][locale] || titleMap[key].ru;
+  const description = descMap[key][locale] || descMap[key].ru;
+
+  const canonicalUrl = category
+    ? `https://tezmotors.uz/${locale}/blog?category=${category}`
+    : `https://tezmotors.uz/${locale}/blog`;
 
   return {
     title,
     description,
     alternates: {
-      canonical: `https://tezmotors.uz/${locale}/blog`,
+      canonical: canonicalUrl,
       languages: {
-        ru: "https://tezmotors.uz/ru/blog",
-        uz: "https://tezmotors.uz/uz/blog",
-        en: "https://tezmotors.uz/en/blog",
+        ru: category ? `https://tezmotors.uz/ru/blog?category=${category}` : "https://tezmotors.uz/ru/blog",
+        uz: category ? `https://tezmotors.uz/uz/blog?category=${category}` : "https://tezmotors.uz/uz/blog",
+        en: category ? `https://tezmotors.uz/en/blog?category=${category}` : "https://tezmotors.uz/en/blog",
       },
     },
   };
 }
 
-export default async function BlogPage() {
+export default async function BlogPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+  const { category } = await searchParams;
   const requestHeaders = await headers();
   const cookieStore = await cookies();
   const locale =
@@ -46,68 +92,31 @@ export default async function BlogPage() {
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
   const dictionary = await getDictionary(locale);
   const supabase = await createClient();
+
   const { data: posts } = await supabase
     .from("posts")
-    .select("*")
+    .select("*, author:blog_authors(*)")
     .eq("is_published", true)
     .order("published_at", { ascending: false, nullsFirst: false });
 
   const items = (posts || []) as BlogPost[];
 
-  const getTitle = (post: BlogPost) =>
-    (locale === "uz" ? post.title_uz : locale === "en" ? post.title_en : post.title_ru) || post.title_ru;
-  const getBody = (post: BlogPost) =>
-    (locale === "uz" ? post.body_uz : locale === "en" ? post.body_en : post.body_ru) || post.body_ru;
+  const headings = {
+    ru: { title: "Блог и Аналитика", subtitle: "Глубокая аналитика авторынка Китая, разборы технологий и инструкции по импорту." },
+    uz: { title: "Blog va Tahlil", subtitle: "Xitoy avtomobil bozori, texnologiyalar tahlili va import bo'yicha batafsil yo'riqnomalar." },
+    en: { title: "Blog & Insights", subtitle: "Deep analysis of the Chinese auto market, tech breakdowns, and import guides." }
+  };
+  const h = headings[locale] || headings.ru;
 
   return (
     <div className="pt-24 pb-16">
       <div className="container-custom">
         <SectionHeading
           as="h1"
-          title={locale === "ru" ? "Блог" : locale === "uz" ? "Blog" : "Blog"}
-          subtitle={locale === "ru" ? "Новости, советы и практичные заметки для клиентов." : "News, tips, and practical buying notes."}
+          title={h.title}
+          subtitle={h.subtitle}
         />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {items.map((post) => (
-            <article key={post.id} className="border border-border bg-card overflow-hidden shadow-sm transition-colors hover:border-border">
-              {post.cover_image && (
-                <div className="relative h-52 w-full">
-                  <Image
-                    src={post.cover_image}
-                    alt={getTitle(post)}
-                    fill
-                    sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="p-6 space-y-3">
-                <p className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--fg-3)]">
-                  {post.published_at ? formatDate(post.published_at, locale === "uz" ? "uz-UZ" : locale === "en" ? "en-US" : "ru-RU") : ""}
-                </p>
-                <h2 className="text-xl font-semibold text-foreground">
-                  <Link href={localizedPath(locale, `/blog/${post.slug}`)} className="hover:text-primary transition-colors">
-                    {getTitle(post)}
-                  </Link>
-                </h2>
-                <div
-                  className="prose prose-invert prose-sm max-w-none text-muted-foreground line-clamp-4"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(getBody(post).slice(0, 500)) }}
-                />
-                <Link href={localizedPath(locale, `/blog/${post.slug}`)} className="inline-flex text-sm font-medium text-primary hover:underline">
-                  {dictionary.common.learnMore}
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {items.length === 0 && (
-          <div className="border border-border bg-card p-8 text-center text-muted-foreground">
-            {locale === "ru" ? "Пока нет опубликованных постов." : "No published posts yet."}
-          </div>
-        )}
+        <BlogList posts={items} locale={locale} dictionary={dictionary} initialCategory={category} />
       </div>
     </div>
   );

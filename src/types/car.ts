@@ -122,6 +122,15 @@ export interface FAQ {
   is_published: boolean;
 }
 
+export interface BlogFAQ {
+  question_ru: string;
+  question_uz: string | null;
+  question_en: string | null;
+  answer_ru: string;
+  answer_uz: string | null;
+  answer_en: string | null;
+}
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -137,4 +146,23 @@ export interface BlogPost {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  category?: string | null;
+  tags?: string[] | null;
+  read_time_minutes?: number | null;
+  meta_title_ru?: string | null;
+  meta_title_uz?: string | null;
+  meta_title_en?: string | null;
+  meta_description_ru?: string | null;
+  meta_description_uz?: string | null;
+  meta_description_en?: string | null;
+  faqs?: BlogFAQ[] | null;
+  author?: {
+    name: string;
+    avatar_url: string | null;
+    bio_ru: string | null;
+    bio_uz: string | null;
+    bio_en: string | null;
+    twitter: string | null;
+    linkedin: string | null;
+  } | null;
 }

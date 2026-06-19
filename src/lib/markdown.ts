@@ -1,4 +1,5 @@
 import { escapeHtml } from "@/lib/escape-html";
+import { slugify } from "@/lib/utils";
 
 function formatInline(value: string): string {
   return escapeHtml(value)
@@ -12,6 +13,7 @@ export function renderMarkdown(markdown: string): string {
   const parts: string[] = [];
   let paragraph: string[] = [];
   let listItems: string[] = [];
+  let blockquoteLines: string[] = [];
   let inCode = false;
   let codeLines: string[] = [];
 
@@ -25,6 +27,12 @@ export function renderMarkdown(markdown: string): string {
     if (!listItems.length) return;
     parts.push(`<ul>${listItems.map((item) => `<li>${formatInline(item)}</li>`).join("")}</ul>`);
     listItems = [];
+  };
+
+  const flushBlockquote = () => {
+    if (!blockquoteLines.length) return;
+    parts.push(`<blockquote><p>${blockquoteLines.map((line) => formatInline(line)).join("<br />")}</p></blockquote>`);
+    blockquoteLines = [];
   };
 
   const flushCode = () => {
@@ -41,6 +49,7 @@ export function renderMarkdown(markdown: string): string {
       } else {
         flushParagraph();
         flushList();
+        flushBlockquote();
       }
       inCode = !inCode;
       continue;
@@ -54,6 +63,15 @@ export function renderMarkdown(markdown: string): string {
     if (!line.trim()) {
       flushParagraph();
       flushList();
+      flushBlockquote();
+      continue;
+    }
+
+    // Blockquotes
+    if (line.startsWith(">")) {
+      flushParagraph();
+      flushList();
+      blockquoteLines.push(line.replace(/^>\s*/, ""));
       continue;
     }
 
@@ -61,13 +79,17 @@ export function renderMarkdown(markdown: string): string {
     if (heading) {
       flushParagraph();
       flushList();
+      flushBlockquote();
       const level = heading[1].length;
-      parts.push(`<h${level}>${formatInline(heading[2])}</h${level}>`);
+      const text = heading[2];
+      const id = slugify(text);
+      parts.push(`<h${level} id="${id}">${formatInline(text)}</h${level}>`);
       continue;
     }
 
     if (/^[-*]\s+/.test(line)) {
       flushParagraph();
+      flushBlockquote();
       listItems.push(line.replace(/^[-*]\s+/, ""));
       continue;
     }
@@ -77,6 +99,7 @@ export function renderMarkdown(markdown: string): string {
 
   flushParagraph();
   flushList();
+  flushBlockquote();
   flushCode();
 
   return parts.join("\n");

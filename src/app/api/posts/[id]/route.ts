@@ -5,6 +5,7 @@ import { getAdminSessionContext, requireAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { logAdminAction } from "@/lib/audit";
 import { safeHttpUrlNullable } from "@/lib/schemas/safe-url";
+import { googleSubmitSitemap, yandexSubmitSitemap } from "@/lib/seo/webmaster";
 
 const schema = z.object({
   slug: z.string().max(200).optional().or(z.literal("")),
@@ -16,6 +17,23 @@ const schema = z.object({
   body_en: z.string().max(50_000).optional().nullable(),
   cover_image: safeHttpUrlNullable, // http(s) only — never javascript:/data:/file:
   is_published: z.boolean().default(false),
+  category: z.string().max(100).optional().nullable(),
+  tags: z.array(z.string()).optional().nullable(),
+  read_time_minutes: z.number().int().nonnegative().optional().nullable(),
+  meta_title_ru: z.string().max(200).optional().nullable(),
+  meta_title_uz: z.string().max(200).optional().nullable(),
+  meta_title_en: z.string().max(200).optional().nullable(),
+  meta_description_ru: z.string().max(500).optional().nullable(),
+  meta_description_uz: z.string().max(500).optional().nullable(),
+  meta_description_en: z.string().max(500).optional().nullable(),
+  faqs: z.array(z.object({
+    question_ru: z.string().max(300),
+    question_uz: z.string().max(300).optional().nullable(),
+    question_en: z.string().max(300).optional().nullable(),
+    answer_ru: z.string().max(2000),
+    answer_uz: z.string().max(2000).optional().nullable(),
+    answer_en: z.string().max(2000).optional().nullable(),
+  })).optional().nullable(),
 });
 
 export async function GET(
@@ -23,26 +41,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  // SECURITY: validate the path segment as a UUID or a safe slug. The previous
-  // implementation interpolated `id` into a PostgREST .or() filter string, which
-  // is a query-construction context — special chars (',' '.' '(' ')') change
-  // the predicate. A crafted URL like `/api/posts/x,is_published.eq.false` would
-  // leak unpublished drafts via OR'd conditions. Strict char-class kills the
-  // surface; we also use two separate .eq() lookups instead of .or() — both
-  // properly parameter-bind values.
   if (!id || id.length > 200 || !/^[A-Za-z0-9_-]+$/.test(id)) {
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
-  // Admin sessions can preview drafts (?preview=true); anon callers ONLY ever
-  // see published posts. Service-role bypasses RLS, so the filter is mandatory.
   const previewAllowed = !!(await getAdminSessionContext(request));
   const supabase = createServiceClient();
 
-  // Try by id (UUID) first, then by slug — each is a single .eq(), never a
-  // string-built filter expression.
   const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-  let q = supabase.from("posts").select("*");
+  let q = supabase.from("posts").select("*, author:blog_authors(*)");
   if (!previewAllowed) q = q.eq("is_published", true);
 
   let { data, error } = looksLikeUuid
@@ -50,8 +57,7 @@ export async function GET(
     : await q.eq("slug", id).maybeSingle();
 
   if ((!data && !error) && looksLikeUuid) {
-    // Fall back to slug lookup if the input happened to be a UUID-shaped slug.
-    let q2 = supabase.from("posts").select("*");
+    let q2 = supabase.from("posts").select("*, author:blog_authors(*)");
     if (!previewAllowed) q2 = q2.eq("is_published", true);
     const result = await q2.eq("slug", id).maybeSingle();
     data = result.data;
@@ -96,13 +102,28 @@ export async function PUT(
       published_at: parsed.data.is_published ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
       author_id: ctx?.user?.id ?? null,
+      category: parsed.data.category || null,
+      tags: parsed.data.tags || [],
+      read_time_minutes: parsed.data.read_time_minutes || null,
+      meta_title_ru: parsed.data.meta_title_ru || null,
+      meta_title_uz: parsed.data.meta_title_uz || null,
+      meta_title_en: parsed.data.meta_title_en || null,
+      meta_description_ru: parsed.data.meta_description_ru || null,
+      meta_description_uz: parsed.data.meta_description_uz || null,
+      meta_description_en: parsed.data.meta_description_en || null,
+      faqs: parsed.data.faqs || [],
     })
     .eq("id", id)
-    .select("*")
+    .select("*, author:blog_authors(*)")
     .single();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Trigger sitemap ping on publish/update
+  if (parsed.data.is_published) {
+    Promise.all([googleSubmitSitemap(), yandexSubmitSitemap()]).catch(() => {});
   }
 
   logAdminAction(request, {

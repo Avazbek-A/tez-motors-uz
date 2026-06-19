@@ -211,6 +211,9 @@ export function BlogPostingSchema({
   datePublished,
   dateModified,
   url,
+  authorName,
+  authorAvatar,
+  authorSocials,
 }: {
   headline: string;
   description?: string;
@@ -218,6 +221,9 @@ export function BlogPostingSchema({
   datePublished: string;
   dateModified?: string;
   url: string;
+  authorName?: string;
+  authorAvatar?: string;
+  authorSocials?: string[];
 }) {
   const schema = {
     "@context": "https://schema.org",
@@ -228,11 +234,18 @@ export function BlogPostingSchema({
     datePublished,
     dateModified: dateModified ?? datePublished,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    author: {
-      "@type": "Organization",
-      name: SITE_CONFIG.name,
-      url: SITE_CONFIG.url,
-    },
+    author: authorName
+      ? {
+          "@type": "Person",
+          name: authorName,
+          image: authorAvatar || undefined,
+          sameAs: authorSocials && authorSocials.length > 0 ? authorSocials : undefined,
+        }
+      : {
+          "@type": "Organization",
+          name: SITE_CONFIG.name,
+          url: SITE_CONFIG.url,
+        },
     publisher: {
       "@type": "Organization",
       name: SITE_CONFIG.name,
