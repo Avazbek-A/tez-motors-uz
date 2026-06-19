@@ -322,9 +322,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <BlogDetailClient headings={headings} shareUrl={shareUrl} shareTitle={title} locale={locale} />
 
             <article className="w-full">
-              {/* Rich Markdown Render */}
+              {/* Rich Markdown Render — styled by .article-body in globals.css */}
               <div
-                className="prose max-w-none prose-headings:text-foreground prose-p:text-foreground/80 prose-p:leading-relaxed prose-li:text-foreground/85 prose-a:text-primary hover:prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:bg-foreground/5 prose-blockquote:p-4 prose-blockquote:rounded-r-xl prose-table:border-collapse prose-th:bg-foreground/5 prose-th:border prose-th:border-border prose-th:p-2 prose-td:border prose-td:border-border prose-td:p-2"
+                className="article-body"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(body) }}
               />
 
