@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getCustomerContext } from "@/lib/customer-auth";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import { scrubCarsForPublic } from "@/lib/cars-query";
 import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/recommend";
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (wantPersonalized) {
       const [{ data: seedCars }, { data: candidates }] = await Promise.all([
         supabase.from("cars").select("id, brand, body_type, fuel_type, price_usd").in("id", seedIds),
-        supabase.from("cars").select(PUBLIC_CAR_COLUMNS).neq("inventory_status", "sold").limit(300),
+        supabase.from("cars").select(PUBLIC_CAR_LIST_COLUMNS).neq("inventory_status", "sold").limit(300),
       ]);
       const profile = buildProfile((seedCars as unknown as ScorableCar[]) || []);
       const candidateRows = (candidates as unknown as Record<string, unknown>[]) || [];
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       // Cold start: hot offers.
       const { data: hot } = await supabase
         .from("cars")
-        .select(PUBLIC_CAR_COLUMNS)
+        .select(PUBLIC_CAR_LIST_COLUMNS)
         .neq("inventory_status", "sold")
         .eq("is_hot_offer", true)
         .order("order_position", { ascending: true })

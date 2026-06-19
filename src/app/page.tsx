@@ -15,7 +15,7 @@ import { ContactForm } from "@/components/sections/contact-form";
 import { CtaBanner } from "@/components/sections/cta-banner";
 import { createClient } from "@/lib/supabase/server";
 import { scrubCarsForPublic } from "@/lib/cars-query";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import type { Car } from "@/types/car";
 
 export default async function HomePage() {
@@ -24,7 +24,7 @@ export default async function HomePage() {
   const [carsResult, partsResult, reviewsResult, faqsResult] = await Promise.all([
     supabase
       .from("cars")
-      .select(PUBLIC_CAR_COLUMNS)
+      .select(PUBLIC_CAR_LIST_COLUMNS)
       .eq("is_available", true)
       .eq("is_hot_offer", true)
       .order("order_position")

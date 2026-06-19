@@ -4,7 +4,7 @@
  * params, computes any trigram search ids, and applies cache headers.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import { scopeToTenant } from "@/lib/tenant-context";
 import { stripPublicSpecData, type SpecData } from "@/lib/autohome-spec";
 
@@ -100,9 +100,11 @@ export async function fetchCarsPage(
   const pageNum = Math.max(opts.page || 1, 1);
   const offset = (pageNum - 1) * size;
 
-  // Explicit column list (PUBLIC_CAR_COLUMNS) — never "*", so any internal
-  // column added to `cars` doesn't leak through the catalog list.
-  let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS, { count: "exact" });
+  // Explicit column list (PUBLIC_CAR_LIST_COLUMNS) — never "*", so any internal
+  // column added to `cars` doesn't leak through the catalog list. Uses the LIST
+  // subset (no spec_data/specs/descriptions/video_url) so a 24-card page doesn't
+  // serialize ~2MB of detail-only data; the detail page selects the full set.
+  let query = supabase.from("cars").select(PUBLIC_CAR_LIST_COLUMNS, { count: "exact" });
 
   if (opts.tenantId) query = scopeToTenant(query, opts.tenantId);
   if (!opts.includeAll) query = query.neq("inventory_status", "sold");
