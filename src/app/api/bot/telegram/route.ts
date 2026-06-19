@@ -36,6 +36,7 @@ import { getSiteSettings } from "@/lib/site-settings-server";
 import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, handleCrmReply, handleCrmNote, CRM_CUST_MARKER, CRM_SEARCH_MARKER, CRM_REPLY_MARKER, CRM_NOTE_MARKER } from "@/lib/bot/operator-crm";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { logRecording } from "@/lib/call-recording";
+import { transcribeAudio } from "@/lib/whisper";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -706,6 +707,32 @@ async function handleCarDetailCallback(cb: TgCallbackQuery): Promise<void> {
   }
 }
 
+// ---- Client voice-note search: transcribe (Whisper) → recommend ------------
+async function handleClientVoice(chatId: number, file: TgFile, locale: BotLocale, from: TgUser): Promise<void> {
+  const t = {
+    unavailable: locale === "uz" ? "🎙 Ovozli qidiruv hozircha mavjud emas — nimani qidirayotganingizni yozing." : locale === "en" ? "🎙 Voice search isn't available right now — please type what you're looking for." : "🎙 Голосовой поиск пока недоступен — напишите текстом, что ищете.",
+    big: locale === "uz" ? "Ovozli xabar juda uzun. Qisqaroq yuboring yoki yozing." : locale === "en" ? "That voice note is too long. Send a shorter one or type." : "Голосовое слишком длинное. Отправьте короче или напишите текстом.",
+    working: locale === "uz" ? "🎙 Ovozli xabarni tahlil qilyapman…" : locale === "en" ? "🎙 Transcribing your voice note…" : "🎙 Распознаю голосовое сообщение…",
+    failed: locale === "uz" ? "Ovozni aniqlay olmadim. Iltimos, yozib yuboring." : locale === "en" ? "Couldn't recognize the audio. Please type instead." : "Не удалось распознать. Напишите, пожалуйста, текстом.",
+  };
+  if (!process.env.WHISPER_URL) { await tgSend(chatId, t.unavailable); return; }
+  if (file.file_size && file.file_size > 20 * 1024 * 1024) { await tgSend(chatId, t.big); return; }
+  await tgSend(chatId, t.working);
+  const bytes = await tgDownloadFile(file.file_id);
+  if (!bytes || bytes.byteLength === 0) { await tgSend(chatId, t.failed); return; }
+  const { text } = await transcribeAudio(bytes, { filename: file.file_name || "voice.ogg" });
+  const q = (text || "").trim().slice(0, 500);
+  if (!q) { await tgSend(chatId, t.failed); return; }
+  const replyLocale = resolveReplyLocale(q, locale);
+  await tgSend(chatId, `🎙 «${escapeHtml(q.slice(0, 200))}»`);
+  const supabase = createServiceClient();
+  const { reply, cars } = await runAssistantTurn(supabase, {
+    channel: "telegram", externalKey: chatId, message: q, locale: replyLocale, knownName: from.first_name || null,
+  });
+  await tgSend(chatId, escapeHtml(reply), carButtons(cars, replyLocale) ?? contactKeyboard(replyLocale));
+  await tgSendCarPhotos(chatId, cars);
+}
+
 // ---- Smarter Find-a-car: quick picks → the recommender ---------------------
 const FIND_PICKS: Record<BotLocale, { title: string; rows: { text: string; callback_data: string }[][] }> = {
   ru: { title: "🔎 Выберите категорию — или просто опишите, что ищете, текстом 👇", rows: [
@@ -946,6 +973,13 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
       name: message.contact.first_name || from.first_name || "Telegram",
       phone: message.contact.phone_number,
     });
+    return;
+  }
+
+  // 1.1) Client voice note → transcribe (Whisper) → recommend. (Operator voice
+  //      is the call-recording path handled in the operator branch above.)
+  if (message.voice || message.audio) {
+    await handleClientVoice(chatId, (message.voice || message.audio)!, locale, from);
     return;
   }
 
