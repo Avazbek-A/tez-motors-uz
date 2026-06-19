@@ -94,7 +94,8 @@
     "delivery": "Yetkazib berish",
     "service": "Xizmat haqi",
     "total": "Jami",
-    "savings": "Sizning tejamkorligingiz"
+    "savings": "Sizning tejamkorligingiz",
+    "calculateExact": "Avtomobilingiz uchun aniq narxni hisoblang →"
   },
   "reviews": {
     "title": "Mijozlar fikrlari",

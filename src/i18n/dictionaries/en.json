@@ -94,7 +94,8 @@
     "delivery": "Delivery",
     "service": "Service Fee",
     "total": "Total",
-    "savings": "Your Savings"
+    "savings": "Your Savings",
+    "calculateExact": "Calculate the exact cost for your car →"
   },
   "reviews": {
     "title": "Client Reviews",

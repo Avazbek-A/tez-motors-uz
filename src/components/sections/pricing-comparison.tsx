@@ -1,13 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
+import { localizedPath } from "@/lib/locale-path";
 import { formatPrice } from "@/lib/utils";
 import { useScrollReveal } from "@/hooks/use-scroll-reveal";
 import { GridBackground } from "@/components/effects";
 
 export function PricingComparison() {
-  const { dictionary } = useLocale();
+  const { locale, dictionary } = useLocale();
   const { ref, isVisible } = useScrollReveal();
 
   // Illustrative comparison (USD). The persuasion is the CONTRAST: car cost + customs
@@ -92,6 +94,16 @@ export function PricingComparison() {
                 {dictionary.pricing.savings}: {formatPrice(savings)}
               </span>
             </div>
+          </div>
+
+          {/* Wire the illustration to the REAL customs engine — get your exact number. */}
+          <div className="mt-6 text-center">
+            <Link
+              href={localizedPath(locale, "/calculator")}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-neon-green hover:opacity-80 transition-opacity underline-offset-4 hover:underline"
+            >
+              {dictionary.pricing.calculateExact}
+            </Link>
           </div>
         </div>
       </div>
