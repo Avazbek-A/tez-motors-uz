@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Scale, Landmark, FileText, BadgeCheck, ShieldCheck, Lock } from "lucide-react";
+import { Scale, Landmark, FileText, BadgeCheck, Headset, Lock } from "lucide-react";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
@@ -12,7 +12,7 @@ import { GridBackground } from "@/components/effects";
 // edge over a competent middleman isn't a per-car price delta — it's that we SHOW the
 // parts middlemen hide (customs, FX, the invoice, fees, spec/warranty). Each point is a
 // thing we can prove; the customer infers the contrast. No fabricated savings number.
-const ICONS = [Scale, Landmark, FileText, BadgeCheck, ShieldCheck, Lock];
+const ICONS = [Scale, Landmark, FileText, BadgeCheck, Headset, Lock];
 
 export function PricingComparison() {
   const { locale, dictionary } = useLocale();
