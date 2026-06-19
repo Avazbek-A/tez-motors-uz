@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
       source_page: data.source_page,
       metadata: data.metadata,
       locale: data.locale,
+      inquiryId: inquiry?.id as string | undefined,
     }).catch(() => {});
     confirmToCustomer({
       email: data.email || null,

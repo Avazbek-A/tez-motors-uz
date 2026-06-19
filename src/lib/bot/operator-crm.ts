@@ -6,8 +6,8 @@
  * Navigation edits the same message (one tidy "screen"); data actions reuse the
  * real business logic — advanceOrder() fires the same customer notify + audit as
  * the web admin, status changes are audit-logged. callback_data stays < 64 bytes
- * ("crm|<view>|<id>"). Customer lookup is a force_reply carrying CRM_CUST_MARKER,
- * recognised back in the webhook.
+ * ("crm|<view>|<id>"). Customer lookup + search are force_reply flows carrying a
+ * marker, recognised back in the webhook.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { escapeHtml } from "@/lib/escape-html";
@@ -18,9 +18,11 @@ import { advanceOrder, nextOrderStatus, type OrderRow } from "@/lib/copilot/acti
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 
 export const CRM_CUST_MARKER = "[crm:cust]";
+export const CRM_SEARCH_MARKER = "[crm:search]";
 const PAGE = 6;
 const ACTOR = { email: "operator:telegram" };
 const TG = "https://api.telegram.org";
+const HOT = 70; // lead_score ≥ this → 🔥 hot
 
 type Btn = { text: string; url?: string; callback_data?: string };
 type InlineKb = { inline_keyboard: Btn[][] };
@@ -68,6 +70,7 @@ function waUrl(phone?: string | null): string | null {
   if (!d) return null;
   return `https://wa.me/${d.length === 9 ? "998" + d : d}`;
 }
+const hotTag = (score: unknown): string => (typeof score === "number" && score >= HOT ? `🔥${score} ` : "");
 const LEAD_STATUS = { new: "🆕 Новая", contacted: "📞 Связались", in_progress: "🔄 В работе", closed: "✅ Закрыта" } as const;
 const LEAD_EMOJI = { new: "🆕", contacted: "📞", in_progress: "🔄", closed: "✅" } as const;
 const ORD = ORDER_STATUS_LABELS.ru;
@@ -88,6 +91,7 @@ export function crmHome(): { text: string; markup: InlineKb } {
     markup: { inline_keyboard: [
       [{ text: "📥 Заявки", callback_data: "crm|leads|0" }, { text: "📦 Заказы", callback_data: "crm|orders|0" }],
       [{ text: "✅ Задачи", callback_data: "crm|tasks|0" }, { text: "👤 Найти клиента", callback_data: "crm|cust" }],
+      [{ text: "🔎 Поиск (имя / телефон / TM-…)", callback_data: "crm|srch" }],
     ] },
   };
 }
@@ -96,27 +100,30 @@ export function crmHome(): { text: string; markup: InlineKb } {
 async function leadsList(supabase: SupabaseClient, chatId: number, msgId: number, page: number) {
   const { data, count } = await supabase
     .from("inquiries")
-    .select("id, name, type, status, created_at", { count: "exact" })
+    .select("id, name, type, status, lead_score, created_at", { count: "exact" })
     .in("status", ["new", "contacted", "in_progress"])
+    .order("lead_score", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .range(page * PAGE, page * PAGE + PAGE - 1);
   const rows: Btn[][] = (data || []).map((i) => [{
-    text: `${LEAD_EMOJI[(i.status as keyof typeof LEAD_EMOJI)] || "•"} ${i.name || "—"} · ${i.type || "lead"} · ${ago(i.created_at as string)}`,
+    text: `${hotTag(i.lead_score)}${LEAD_EMOJI[(i.status as keyof typeof LEAD_EMOJI)] || "•"} ${i.name || "—"} · ${i.type || "lead"} · ${ago(i.created_at as string)}`,
     callback_data: `crm|lead|${i.id}`,
   }]);
   rows.push(pager("leads", page, count || 0, homeBtn));
-  await edit(chatId, msgId, `📥 <b>Заявки</b> — открытых: ${count ?? 0}`, { inline_keyboard: rows });
+  await edit(chatId, msgId, `📥 <b>Заявки</b> — открытых: ${count ?? 0}  (🔥 горячие сверху)`, { inline_keyboard: rows });
 }
 
 async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: number, id: string) {
   const { data: i } = await supabase
     .from("inquiries")
-    .select("id, name, phone, type, message, source_page, status, created_at")
+    .select("id, name, phone, type, message, source_page, status, lead_score, created_at")
     .eq("id", id)
     .maybeSingle();
   if (!i) { await edit(chatId, msgId, "Заявка не найдена.", { inline_keyboard: [[{ text: "🔙 К заявкам", callback_data: "crm|leads|0" }]] }); return; }
+  // Cross-link: does this lead already have an order?
+  const { data: ord } = await supabase.from("orders").select("id, reference_code, status").eq("inquiry_id", id).order("created_at", { ascending: false }).maybeSingle();
   const lines = [
-    `📥 <b>${escapeHtml((i.name as string) || "—")}</b>`,
+    `📥 <b>${escapeHtml((i.name as string) || "—")}</b>${hotTag(i.lead_score) ? ` · ${hotTag(i.lead_score)}` : ""}`,
     `📱 ${escapeHtml((i.phone as string) || "—")}`,
     `🏷 ${escapeHtml((i.type as string) || "lead")} · ${LEAD_STATUS[(i.status as keyof typeof LEAD_STATUS)] || i.status}`,
     i.source_page ? `🌐 ${escapeHtml(i.source_page as string)}` : "",
@@ -128,6 +135,7 @@ async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: numbe
   if (wa) kb.push([{ text: "💬 WhatsApp", url: wa }]);
   kb.push([{ text: "📞 Связались", callback_data: `crm|lst|${id}|contacted` }, { text: "🔄 В работе", callback_data: `crm|lst|${id}|in_progress` }]);
   kb.push([{ text: "📝 Задача", callback_data: `crm|ltask|${id}` }, { text: "✅ Закрыть", callback_data: `crm|lst|${id}|closed` }]);
+  if (ord) kb.push([{ text: `📦 Заказ ${ord.reference_code} · ${ORD[ord.status as string] || ord.status}`, callback_data: `crm|order|${ord.id}` }]);
   kb.push([{ text: "🔙 К заявкам", callback_data: "crm|leads|0" }]);
   await edit(chatId, msgId, lines.join("\n"), { inline_keyboard: kb });
 }
@@ -173,13 +181,14 @@ async function ordersList(supabase: SupabaseClient, chatId: number, msgId: numbe
   await edit(chatId, msgId, `📦 <b>Заказы</b> — активных: ${count ?? 0}`, { inline_keyboard: rows });
 }
 
-async function loadOrder(supabase: SupabaseClient, id: string): Promise<(OrderRow & { customer_name: string | null; amount_usd: number | null }) | null> {
+type FullOrder = OrderRow & { customer_name: string | null; amount_usd: number | null; inquiry_id: string | null };
+async function loadOrder(supabase: SupabaseClient, id: string): Promise<FullOrder | null> {
   const { data } = await supabase
     .from("orders")
-    .select("id, reference_code, status, customer_name, customer_email, customer_phone, amount_usd, locale, cars(brand, model, year)")
+    .select("id, reference_code, status, customer_name, customer_email, customer_phone, amount_usd, inquiry_id, locale, cars(brand, model, year)")
     .eq("id", id)
     .maybeSingle();
-  return (data as (OrderRow & { customer_name: string | null; amount_usd: number | null }) | null) || null;
+  return (data as FullOrder | null) || null;
 }
 
 async function orderDetail(supabase: SupabaseClient, chatId: number, msgId: number, id: string) {
@@ -198,6 +207,7 @@ async function orderDetail(supabase: SupabaseClient, chatId: number, msgId: numb
   const kb: Btn[][] = [];
   if (next) kb.push([{ text: `➡️ ${ORD[next] || next}`, callback_data: `crm|oadv|${id}` }]);
   if (wa) kb.push([{ text: "💬 WhatsApp", url: wa }]);
+  if (o.inquiry_id) kb.push([{ text: "📥 Открыть заявку", callback_data: `crm|lead|${o.inquiry_id}` }]);
   kb.push([{ text: "🔙 К заказам", callback_data: "crm|orders|0" }]);
   await edit(chatId, msgId, lines.join("\n"), { inline_keyboard: kb });
 }
@@ -240,7 +250,8 @@ async function taskDetail(supabase: SupabaseClient, chatId: number, msgId: numbe
   ].filter(Boolean);
   const kb: Btn[][] = [];
   if (wa) kb.push([{ text: "💬 WhatsApp", url: wa }]);
-  kb.push([{ text: "✅ Выполнено", callback_data: `crm|tdone|${id}` }, { text: "🔙 К задачам", callback_data: "crm|tasks|0" }]);
+  kb.push([{ text: "✅ Выполнено", callback_data: `crm|tdone|${id}` }, { text: "😴 +1 день", callback_data: `crm|tsnz|${id}` }]);
+  kb.push([{ text: "🔙 К задачам", callback_data: "crm|tasks|0" }]);
   await edit(chatId, msgId, lines.join("\n"), { inline_keyboard: kb });
 }
 
@@ -249,6 +260,38 @@ async function taskDone(supabase: SupabaseClient, cb: CrmCb, id: string) {
   logAdminAction(null, { action: "status_change", entity: "crm_task", entity_id: id, actor: ACTOR, diff: { to: "done", via: "telegram" } }).catch(() => {});
   await answer(cb.id, "✅ Готово");
   await tasksList(supabase, cb.message!.chat!.id, cb.message!.message_id!, 0);
+}
+
+async function taskSnooze(supabase: SupabaseClient, cb: CrmCb, id: string) {
+  const due = new Date(Date.now() + 86_400_000).toISOString();
+  await supabase.from("crm_tasks").update({ due_at: due, status: "open" }).eq("id", id);
+  await answer(cb.id, "😴 Отложено на завтра");
+  await tasksList(supabase, cb.message!.chat!.id, cb.message!.message_id!, 0);
+}
+
+// ---- Search (leads / orders / customers by name·phone·TM-ref) --------------
+export async function handleCrmSearch(supabase: SupabaseClient, chatId: number, query: string) {
+  const q = query.trim().slice(0, 60);
+  if (q.length < 2) { await send(chatId, "Введите минимум 2 символа для поиска."); return; }
+  // PostgREST .or() logic-tree: ilike wildcard is *, and , ( ) % break the string.
+  const safe = q.replace(/[,()*%]/g, " ").trim();
+  const digits = q.replace(/\D/g, "");
+  const [inq, ord] = await Promise.all([
+    supabase.from("inquiries")
+      .select("id, name, phone, type, status")
+      .or(`name.ilike.*${safe}*${digits.length >= 4 ? `,phone.ilike.*${digits}*` : ""}`)
+      .order("created_at", { ascending: false }).limit(6),
+    supabase.from("orders")
+      .select("id, reference_code, customer_name, status")
+      .or(`reference_code.ilike.*${safe}*,customer_name.ilike.*${safe}*${digits.length >= 4 ? `,customer_phone.ilike.*${digits}*` : ""}`)
+      .order("created_at", { ascending: false }).limit(6),
+  ]);
+  const kb: Btn[][] = [];
+  for (const i of inq.data || []) kb.push([{ text: `📥 ${i.name || "—"} · ${i.type || "lead"}`, callback_data: `crm|lead|${i.id}` }]);
+  for (const o of ord.data || []) kb.push([{ text: `📦 ${o.reference_code} · ${o.customer_name || "—"}`, callback_data: `crm|order|${o.id}` }]);
+  if (!kb.length) { await send(chatId, `🔎 По запросу «${escapeHtml(q)}» ничего не найдено.`); return; }
+  kb.push([homeBtn]);
+  await send(chatId, `🔎 Результаты по «${escapeHtml(q)}»:`, { inline_keyboard: kb });
 }
 
 // ---- Customer lookup -------------------------------------------------------
@@ -298,9 +341,14 @@ export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Pr
       case "tasks": await answer(cb.id); return void (await tasksList(supabase, chatId, msgId, parseInt(parts[2] || "0", 10) || 0));
       case "task": await answer(cb.id); return void (await taskDetail(supabase, chatId, msgId, parts[2]));
       case "tdone": return void (await taskDone(supabase, cb, parts[2]));
+      case "tsnz": return void (await taskSnooze(supabase, cb, parts[2]));
       case "cust":
         await answer(cb.id);
         await send(chatId, `👤 ${CRM_CUST_MARKER}\nОтправьте номер телефона клиента ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "+998 ..." });
+        return;
+      case "srch":
+        await answer(cb.id);
+        await send(chatId, `🔎 ${CRM_SEARCH_MARKER}\nОтправьте имя, телефон или номер заказа (TM-…) ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Иван / 901234567 / TM-..." });
         return;
       default: await answer(cb.id); return;
     }

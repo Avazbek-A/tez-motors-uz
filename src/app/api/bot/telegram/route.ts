@@ -33,7 +33,8 @@ import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { getSiteSettings } from "@/lib/site-settings-server";
-import { handleCrmCallback, handleCrmCustomerLookup, CRM_CUST_MARKER } from "@/lib/bot/operator-crm";
+import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, CRM_CUST_MARKER, CRM_SEARCH_MARKER } from "@/lib/bot/operator-crm";
+import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { logRecording } from "@/lib/call-recording";
 import type { Car } from "@/types/car";
 
@@ -287,6 +288,8 @@ function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
     },
     // Transact in chat (Phase AS): reserve this car without leaving Telegram.
     { text: `📝 ${reserve}`, callback_data: `rsv:${c.id}` },
+    // Subscribe to a price-drop alert for this car (price-watch-sweep notifies).
+    { text: "🔔", callback_data: `pw:${c.id}` },
   ]);
   return rows.length > 0 ? { inline_keyboard: rows } : undefined;
 }
@@ -601,6 +604,7 @@ async function captureLead(
     source_page: "telegram-bot",
     metadata: { channel: "telegram", chat_id: chatId },
     locale,
+    inquiryId: inquiryId ?? undefined,
   }).catch(() => {});
 
   await tgSend(chatId, COPY[locale].thanks);
@@ -622,6 +626,108 @@ async function handleCustomsCallback(cb: TgCallbackQuery): Promise<void> {
   else await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
 }
 
+// ---- Smarter Find-a-car: quick picks → the recommender ---------------------
+const FIND_PICKS: Record<BotLocale, { title: string; rows: { text: string; callback_data: string }[][] }> = {
+  ru: { title: "🔎 Выберите категорию — или просто опишите, что ищете, текстом 👇", rows: [
+    [{ text: "🔋 Электро", callback_data: "find|ev" }, { text: "🚙 Кроссовер", callback_data: "find|suv" }],
+    [{ text: "👨‍👩‍👧 Семейный", callback_data: "find|family" }, { text: "💎 Премиум", callback_data: "find|premium" }],
+    [{ text: "💰 До $20 000", callback_data: "find|budget" }, { text: "🏎 Седан", callback_data: "find|sedan" }],
+  ] },
+  uz: { title: "🔎 Toifani tanlang — yoki shunchaki nimani qidirayotganingizni yozing 👇", rows: [
+    [{ text: "🔋 Elektro", callback_data: "find|ev" }, { text: "🚙 Krossover", callback_data: "find|suv" }],
+    [{ text: "👨‍👩‍👧 Oilaviy", callback_data: "find|family" }, { text: "💎 Premium", callback_data: "find|premium" }],
+    [{ text: "💰 $20 000 gacha", callback_data: "find|budget" }, { text: "🏎 Sedan", callback_data: "find|sedan" }],
+  ] },
+  en: { title: "🔎 Pick a category — or just type what you're looking for 👇", rows: [
+    [{ text: "🔋 Electric", callback_data: "find|ev" }, { text: "🚙 SUV", callback_data: "find|suv" }],
+    [{ text: "👨‍👩‍👧 Family", callback_data: "find|family" }, { text: "💎 Premium", callback_data: "find|premium" }],
+    [{ text: "💰 Under $20,000", callback_data: "find|budget" }, { text: "🏎 Sedan", callback_data: "find|sedan" }],
+  ] },
+};
+const FIND_QUERY: Record<BotLocale, Record<string, string>> = {
+  ru: { ev: "электромобиль", suv: "кроссовер SUV", family: "семейный автомобиль 7 мест", premium: "премиум автомобиль", budget: "автомобиль до 20000 долларов", sedan: "седан" },
+  uz: { ev: "elektromobil", suv: "krossover SUV", family: "oilaviy avtomobil 7 o'rin", premium: "premium avtomobil", budget: "20000 dollargacha avtomobil", sedan: "sedan" },
+  en: { ev: "electric car", suv: "crossover SUV", family: "family car 7 seats", premium: "premium car", budget: "car under $20000", sedan: "sedan" },
+};
+
+async function handleFindCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId) return;
+  const locale = botLocale(cb.from?.language_code);
+  const query = FIND_QUERY[locale][(cb.data || "").slice(5)];
+  if (!query) return;
+  const supabase = createServiceClient();
+  const { reply, cars } = await runAssistantTurn(supabase, {
+    channel: "telegram", externalKey: chatId, message: query, locale, knownName: cb.from?.first_name || null,
+  });
+  await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
+  await tgSendCarPhotos(chatId, cars);
+}
+
+// ---- Price-drop alert: subscribe a linked customer to a car ----------------
+async function handlePriceWatchCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  const carId = (cb.data || "").slice(3);
+  if (!chatId || !/^[a-f0-9-]{8,64}$/i.test(carId)) { await tgAnswerCallback(cb.id); return; }
+  const locale = botLocale(cb.from?.language_code);
+  const supabase = createServiceClient();
+  const { data: customer } = await supabase.from("customers").select("id, phone").eq("telegram_id", chatId).maybeSingle();
+  if (!customer?.phone) {
+    await tgAnswerCallback(cb.id);
+    const ask = locale === "uz" ? "Narx tushishi haqida xabar olish uchun avval raqamingizni ulashing 👇"
+      : locale === "en" ? "To get a price-drop alert, share your number first 👇"
+      : "Чтобы получать уведомление о снижении цены, поделитесь номером 👇";
+    await tgSend(chatId, ask, contactKeyboard(locale));
+    return;
+  }
+  const { data: existing } = await supabase.from("price_watches").select("id").eq("car_id", carId).eq("customer_id", customer.id).is("notified_at", null).maybeSingle();
+  if (existing) {
+    await tgAnswerCallback(cb.id, locale === "uz" ? "🔔 Allaqachon obuna bo'lgansiz" : locale === "en" ? "🔔 Already subscribed" : "🔔 Подписка уже активна");
+    return;
+  }
+  const { data: car } = await supabase.from("cars").select("price_usd").eq("id", carId).maybeSingle();
+  if (!car) { await tgAnswerCallback(cb.id); return; }
+  await supabase.from("price_watches").insert({
+    car_id: carId,
+    customer_id: customer.id,
+    email: `tg+${String(customer.phone).replace(/\D/g, "")}@tezmotors.local`,
+    target_price_usd: car.price_usd,
+  });
+  await tgAnswerCallback(cb.id, locale === "uz" ? "🔔 Narx tushsa — xabar beramiz!" : locale === "en" ? "🔔 We'll alert you on a price drop!" : "🔔 Уведомим, как только цена снизится!");
+}
+
+// ---- Client self-service: My orders ----------------------------------------
+async function handleMyOrders(chatId: number, locale: BotLocale): Promise<void> {
+  const supabase = createServiceClient();
+  const { data: customer } = await supabase.from("customers").select("phone").eq("telegram_id", chatId).maybeSingle();
+  if (!customer?.phone) {
+    await tgSend(chatId, MENU[locale].trackText, { inline_keyboard: [[{ text: MENU[locale].trackBtn, url: `${siteUrl()}/${locale}/track` }]] });
+    return;
+  }
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("reference_code, status, created_at")
+    .eq("customer_phone", customer.phone)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (!orders?.length) {
+    const none = locale === "uz" ? "Sizda hali buyurtmalar yo'q. Katalogdan avto tanlang 👇"
+      : locale === "en" ? "You have no orders yet. Pick a car from the catalog 👇"
+      : "У вас пока нет заказов. Выберите авто в каталоге 👇";
+    await tgSend(chatId, none, appButton(locale));
+    return;
+  }
+  const labels = ORDER_STATUS_LABELS[locale];
+  const phoneParam = encodeURIComponent(customer.phone);
+  const head = locale === "uz" ? "📦 <b>Buyurtmalaringiz</b>" : locale === "en" ? "📦 <b>Your orders</b>" : "📦 <b>Ваши заказы</b>";
+  const rows = orders.map((o) => [{
+    text: `📦 ${o.reference_code} · ${labels[o.status as string] || o.status}`,
+    url: `${siteUrl()}/${locale}/track?code=${encodeURIComponent(o.reference_code as string)}&phone=${phoneParam}`,
+  }]);
+  await tgSend(chatId, head, { inline_keyboard: rows });
+}
+
 // Client main-menu buttons (m|…) and the language switch (lang|…).
 async function handleMenuCallback(cb: TgCallbackQuery): Promise<void> {
   const chatId = cb.message?.chat?.id;
@@ -641,15 +747,13 @@ async function handleMenuCallback(cb: TgCallbackQuery): Promise<void> {
 
   switch (data.slice(2)) {
     case "find":
-      await tgSend(chatId, MENU[locale].findPrompt, { force_reply: true, input_field_placeholder: MENU[locale].find });
+      await tgSend(chatId, FIND_PICKS[locale].title, { inline_keyboard: FIND_PICKS[locale].rows });
       return;
     case "mgr":
       await tgSend(chatId, COPY[locale].nudge, contactKeyboard(locale));
       return;
     case "track":
-      await tgSend(chatId, MENU[locale].trackText, {
-        inline_keyboard: [[{ text: MENU[locale].trackBtn, url: `${siteUrl()}/${locale}/track` }]],
-      });
+      await handleMyOrders(chatId, locale);
       return;
     case "contacts": {
       const c = await contactsCard(locale);
@@ -695,6 +799,8 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     if (data.startsWith("rsv:")) await handleReserveCallback(cb);
     else if (data.startsWith("cu|")) await handleCustomsCallback(cb);
+    else if (data.startsWith("find|")) await handleFindCallback(cb);
+    else if (data.startsWith("pw:")) await handlePriceWatchCallback(cb);
     else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
     else await tgAnswerCallback(cb.id);
     return;
@@ -721,9 +827,13 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     const opText = (message.text || "").trim().slice(0, 1000);
     if (!opText) return;
-    // CRM customer lookup — a reply to the force_reply prompt carries the marker.
+    // CRM force_reply flows — the prompt text carries a marker we match here.
     if (message.reply_to_message?.text?.includes(CRM_CUST_MARKER)) {
       await handleCrmCustomerLookup(createServiceClient(), chatId, opText);
+      return;
+    }
+    if (message.reply_to_message?.text?.includes(CRM_SEARCH_MARKER)) {
+      await handleCrmSearch(createServiceClient(), chatId, opText);
       return;
     }
     // /start, /menu, /help or any unknown slash command → the operator dashboard.

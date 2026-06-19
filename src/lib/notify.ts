@@ -29,6 +29,8 @@ export interface InquiryNotifyData {
   source_page?: string;
   metadata?: Record<string, unknown>;
   locale?: string | null;
+  /** When known, lets the dealer alert deep-link 1-tap into the in-chat CRM. */
+  inquiryId?: string;
 }
 
 function normalizeLocale(l?: string | null): EmailLocale {
@@ -83,6 +85,7 @@ export async function notifyNewInquiry(data: InquiryNotifyData): Promise<void> {
       type: data.type,
       source_page: data.source_page,
       metadata: data.metadata,
+      inquiryId: data.inquiryId,
     }),
     sendDealerEmail(data),
   ]);

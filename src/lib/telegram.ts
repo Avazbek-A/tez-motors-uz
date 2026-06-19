@@ -9,6 +9,7 @@ export async function sendTelegramNotification(data: {
   type: string;
   source_page?: string;
   metadata?: Record<string, unknown>;
+  inquiryId?: string;
 }): Promise<{ configured: boolean; ok: boolean }> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -56,9 +57,20 @@ export async function sendTelegramNotification(data: {
     (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "") +
     "/admin/inquiries";
   const waDigits = toWaDigits(data.phone);
-  const buttons: { text: string; url: string }[] = [];
-  if (waDigits) buttons.push({ text: "💬 WhatsApp", url: `https://wa.me/${waDigits}` });
-  buttons.push({ text: "📋 Открыть в админке", url: adminUrl });
+  type TgBtn = { text: string; url?: string; callback_data?: string };
+  const contactRow: TgBtn[] = [];
+  if (waDigits) contactRow.push({ text: "💬 WhatsApp", url: `https://wa.me/${waDigits}` });
+  contactRow.push({ text: "📋 В админке", url: adminUrl });
+  const keyboard: TgBtn[][] = [];
+  // When we know the inquiry id, offer 1-tap into the in-chat operator CRM
+  // (works because the alert chat == the operator chat). Falls back gracefully.
+  if (data.inquiryId) {
+    keyboard.push([
+      { text: "📋 Открыть в CRM", callback_data: `crm|lead|${data.inquiryId}` },
+      { text: "✅ Связался", callback_data: `crm|lst|${data.inquiryId}|contacted` },
+    ]);
+  }
+  keyboard.push(contactRow);
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -69,7 +81,7 @@ export async function sendTelegramNotification(data: {
         text,
         parse_mode: "Markdown",
         disable_web_page_preview: true,
-        reply_markup: { inline_keyboard: [buttons] },
+        reply_markup: { inline_keyboard: keyboard },
       }),
     });
     if (!res.ok) {
