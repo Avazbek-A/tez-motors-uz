@@ -293,7 +293,17 @@ function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
     // Subscribe to a price-drop alert for this car (price-watch-sweep notifies).
     { text: "🔔", callback_data: `pw:${c.id}` },
   ]);
-  return rows.length > 0 ? { inline_keyboard: rows } : undefined;
+  if (rows.length === 0) return undefined;
+  // Refine the SAME result set (the assistant thread keeps context per chat).
+  const cheaper = locale === "uz" ? "💰 Arzonroq" : locale === "en" ? "💰 Cheaper" : "💰 Дешевле";
+  const pricier = locale === "uz" ? "💎 Premium" : locale === "en" ? "💎 Pricier" : "💎 Дороже";
+  const bigger = locale === "uz" ? "📏 Kengroq" : locale === "en" ? "📏 Bigger" : "📏 Просторнее";
+  rows.push([
+    { text: cheaper, callback_data: "ref|cheaper" },
+    { text: pricier, callback_data: "ref|pricier" },
+    { text: bigger, callback_data: "ref|bigger" },
+  ]);
+  return { inline_keyboard: rows };
 }
 
 // ---- Main menu (client) ----------------------------------------------------
@@ -757,6 +767,29 @@ const FIND_QUERY: Record<BotLocale, Record<string, string>> = {
   en: { ev: "electric car", suv: "crossover SUV", family: "family car 7 seats", premium: "premium car", budget: "car under $20000", sedan: "sedan" },
 };
 
+// Refine the last recommendation in place — the phrase rides the same assistant
+// thread (channel:chatId), so recommendCars refines against the prior context.
+const REFINE: Record<BotLocale, Record<string, string>> = {
+  ru: { cheaper: "покажи дешевле", pricier: "покажи дороже, премиальнее", bigger: "просторнее, больше места и багажник" },
+  uz: { cheaper: "arzonrog'ini ko'rsat", pricier: "qimmatroq, premiumroq", bigger: "kengroq, ko'proq joy va bagaj" },
+  en: { cheaper: "show cheaper ones", pricier: "show more premium ones", bigger: "more spacious, bigger boot" },
+};
+
+async function handleRefineCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId) return;
+  const locale = botLocale(cb.from?.language_code);
+  const phrase = REFINE[locale][(cb.data || "").slice(4)];
+  if (!phrase) return;
+  const supabase = createServiceClient();
+  const { reply, cars } = await runAssistantTurn(supabase, {
+    channel: "telegram", externalKey: chatId, message: phrase, locale, knownName: cb.from?.first_name || null,
+  });
+  await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
+  await tgSendCarPhotos(chatId, cars);
+}
+
 async function handleFindCallback(cb: TgCallbackQuery): Promise<void> {
   const chatId = cb.message?.chat?.id;
   await tgAnswerCallback(cb.id);
@@ -908,6 +941,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     else if (data.startsWith("cu|")) await handleCustomsCallback(cb);
     else if (data.startsWith("car:")) await handleCarDetailCallback(cb);
     else if (data.startsWith("find|")) await handleFindCallback(cb);
+    else if (data.startsWith("ref|")) await handleRefineCallback(cb);
     else if (data.startsWith("pw:")) await handlePriceWatchCallback(cb);
     else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
     else await tgAnswerCallback(cb.id);
