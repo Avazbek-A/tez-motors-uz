@@ -1,3 +1,8 @@
+# agent / blog working artifacts (throwaway; never deploy)
+/scratch/
+/.agents/
+/ORIGINAL_REQUEST.md
+
 # dependencies
 /node_modules
 /.pnp

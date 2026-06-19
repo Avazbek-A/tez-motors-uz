@@ -108,7 +108,7 @@ BYD has become the dominant brand in the Uzbekistan EV market. While the choice 
 | **0-100 km/h Acceleration**| 8.5s | 6.9s (RWD) / 4.3s (AWD) |
 | **Battery Capacity** | 87 kWh | 87 kWh |
 | **Range (CLTC)** | 605 km | 662 km |$$,
-    'https://images.unsplash.com/photo-1616422285623-13ff0162193c?q=80&w=1200&auto=format&fit=crop',
+    '/images/byd_song_comparison.png',
     now() - interval '30 minutes',
     v_author_id,
     true,
@@ -237,7 +237,7 @@ The 1.5L turbo petrol engine under the hood acts strictly as an **onboard genera
 - **Li L7:** Premium large 5-seater (5.05m length, features rear VIP reclining seats).
 - **Li L8:** Three-row 6-seater premium SUV.
 - **Li L9:** The flagship 6-seater SUV (5.2m length, features onboard fridge and peak luxuries spec).$$,
-    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200&auto=format&fit=crop',
+    '/images/lixiang_suvs.png',
     now(),
     v_author_id,
     true,

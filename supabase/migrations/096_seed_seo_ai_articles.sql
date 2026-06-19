@@ -137,7 +137,7 @@ Let's calculate the approximate clearance cost for a new EV worth **$25,000** (F
 5. **Certification & Testing:** Around 2,500,000 UZS (~$200).
 
 **Total clearance expenses:** Around **$1,130** turn-key.$$,
-    'https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=1200&auto=format&fit=crop',
+    '/images/customs_clearance_ev.png',
     now() - interval '2 hours',
     v_author_id,
     true,
@@ -299,7 +299,7 @@ A highly reliable SUV based on Volvo architecture, remaining extremely popular a
 | **Li Auto L7** | Hybrid | 1100 km (total) | AWD | $45,000 - $52,000 |
 | **Xiaomi SU7** | EV | 830 km | AWD / RWD | $38,000 - $46,000 |
 | **Geely Monjaro** | ICE | — | AWD | $33,000 - $37,000 |$$,
-    'https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=1200&auto=format&fit=crop',
+    '/images/top_chinese_evs.png',
     now() - interval '1 hour',
     v_author_id,
     true,
@@ -454,7 +454,7 @@ We perform detailed pre-delivery detailing and hand over the vehicle with regist
 - **Full Transit Insurance:** Zero financial risk during international shipping.
 - **Pre-Shipment Inspection:** Verify vehicle status before it crosses the border.
 - **Turn-Key Convenience:** All logistics, customs, and certificates are handled for you.$$,
-    'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=1200&auto=format&fit=crop',
+    '/images/ev_logistics_truck.png',
     now(),
     v_author_id,
     true,
