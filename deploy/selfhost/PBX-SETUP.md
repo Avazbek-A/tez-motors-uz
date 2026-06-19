@@ -61,11 +61,18 @@ free-tier VPS), AI-native, and reproducible vs FreePBX's GUI/MySQL config. The o
 FreePBX is better at (a security GUI for a human) doesn't apply: the configs are authored +
 hardened in-repo and applied to the VPS.
 
-Outline:
-- `apt update && apt upgrade`; set hostname `pbx.tezmotors.uz`.
-- Install **Asterisk 20 LTS** (`apt install asterisk` or the official build), `chan_pjsip` enabled. No FreePBX.
-- Config lives in the repo (e.g. `deploy/asterisk/*.conf`) → rsync'd to `/etc/asterisk/` on the VPS, like our other config-as-code.
-- `certbot` (Let's Encrypt) for `pbx.tezmotors.uz` → TLS for WSS + SRTP.
+**The config-as-code now EXISTS** in `deploy/asterisk/` (pjsip.conf, extensions.conf,
+rtp/http/coturn, bootstrap.sh, apply.sh, secret templates) — tuned for the **Uztelecom**
+trunk. See `deploy/asterisk/README.md` for the exact go-live runbook. Outline:
+- `bootstrap.sh` runs `apt` install + hostname `pbx.tezmotors.uz` + the firewall/fail2ban/certbot/coturn hardening in one shot.
+- Install **Asterisk 20 LTS**, `chan_pjsip` enabled. No FreePBX.
+- `apply.sh` rsyncs `deploy/asterisk/*.conf` → `/etc/asterisk/` and reloads (never clobbers the operator-filled secrets).
+- `certbot` (Let's Encrypt) for `pbx.tezmotors.uz` → TLS for WSS + SRTP (bootstrap installs the renewal deploy-hook).
+
+> **The Vostro is NOT a viable host (re-verified 2026-06-19):** its only IPv4 is a private
+> `192.168.x` behind the home router, egress is via Cloudflare WARP (outbound-only VPN → no
+> inbound), and there's no router access for port-forwarding. Uztelecom IP-auth needs a fixed
+> reachable public IP. → a public-IP VPS is mandatory (Oracle Always-Free = $0).
 
 ## 2. SECURITY HARDENING (do BEFORE connecting the trunk)
 
