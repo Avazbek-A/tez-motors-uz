@@ -1,6 +1,6 @@
 -- ============================================================
 -- Tez Motors — consolidated schema (ALL migrations, in order)
--- Generated from 82 files in supabase/migrations/
+-- Generated from 93 files in supabase/migrations/
 -- FRESH DATABASE ONLY: paste this once into the Supabase SQL editor.
 -- For an existing DB, apply only the new individual migration files.
 -- ============================================================
@@ -2564,4 +2564,254 @@ ALTER TABLE public.site_settings DROP CONSTRAINT IF EXISTS site_settings_id_chec
 ALTER TABLE public.site_settings
   ADD CONSTRAINT site_settings_id_check
   CHECK (id IN ('singleton', 'fx_rate', 'import_config', 'llm_models', 'autopilot'));
+
+-- ─── 083_llm_call_log.sql ───────────────────────────────────────────
+-- Observability: free-model health + model-switch telemetry.
+--
+-- The buyer assistant / form auto-reply / parsers run on OpenRouter FREE models,
+-- which rotate (transient 404 / 429), so a call often has to fall back from the
+-- primary pick to a later model in the tier chain. Nobody could see how often
+-- that happened or which model was actually carrying the load. llm.ts now writes
+-- ONE summary row per completed call here, so the admin "AI models" dashboard can
+-- show: switch rate (how many calls needed a fallback), per-model success/fail
+-- counts, and which model answered. Service-role only; fire-and-forget, fail-open
+-- (telemetry must never break a reply).
+--
+--   tier           chat | reason | vision
+--   answered_model the model that ultimately replied; NULL = whole chain failed
+--                  (caller fell back to the deterministic template)
+--   attempts       how many models in the chain were tried (1 = primary worked)
+--   switched       attempts > 1 — i.e. the primary (or an earlier model) failed
+--   failures       [{ model, reason, status }] for each model that didn't answer
+--                  (reason: non_ok | empty | timeout | error)
+--   latency_ms     wall-clock of the whole call (all attempts)
+CREATE TABLE IF NOT EXISTS public.llm_call_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tier TEXT NOT NULL,
+  answered_model TEXT,
+  attempts SMALLINT NOT NULL DEFAULT 1,
+  switched BOOLEAN NOT NULL DEFAULT false,
+  failures JSONB NOT NULL DEFAULT '[]'::jsonb,
+  latency_ms INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.llm_call_log ENABLE ROW LEVEL SECURITY;
+-- No policies on purpose: service-role only.
+
+CREATE INDEX IF NOT EXISTS idx_llm_call_log_created_at ON public.llm_call_log (created_at DESC);
+
+-- Allow a site_settings('llm_catalog') row so the weekly llm-refresh scan can
+-- persist the ranked free-model catalog + upgrade suggestions for the dashboard.
+-- (Extends the id allowlist last set in 082_site_settings_autopilot.)
+ALTER TABLE public.site_settings DROP CONSTRAINT IF EXISTS site_settings_id_check;
+ALTER TABLE public.site_settings
+  ADD CONSTRAINT site_settings_id_check
+  CHECK (id IN ('singleton', 'fx_rate', 'import_config', 'llm_models', 'autopilot', 'llm_catalog'));
+
+-- ─── 084_llm_call_log_provider.sql ───────────────────────────────────────────
+-- Multi-provider failover (2026-06-17): the LLM tier chains now fail over ACROSS
+-- providers (OpenRouter / Groq / NVIDIA NIM / Gemini / SiliconFlow), each with
+-- its own per-key rate limit. Record WHICH provider answered (or null when the
+-- whole cross-provider chain fell through to the template) so the admin "AI
+-- Models" dashboard can show per-provider health, not just per-model.
+ALTER TABLE public.llm_call_log ADD COLUMN IF NOT EXISTS provider TEXT;
+
+-- ─── 085_customs_actuals.sql ───────────────────────────────────────────
+-- Leap 4: calibrate the customs model against the dealer's REAL cleared imports.
+--
+-- Every car the dealer actually clears, log the real assessed customs alongside
+-- what our model (customs-uz) predicted for the same inputs. The admin view then
+-- shows predicted-vs-actual divergence + a suggested correction factor — turning
+-- the calculator into a learning system grounded in the dealer's own receipts,
+-- not a competitor's bot. Service-role only (written via /api/admin/customs-actuals).
+CREATE TABLE IF NOT EXISTS public.customs_actuals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  car_id UUID,                          -- optional link to cars
+  label TEXT,                           -- "BYD Han 2024", free text
+  category TEXT NOT NULL DEFAULT 'car', -- car|moto|engine|truck|bus|fura
+  kind TEXT,                            -- fuel/vehicle kind
+  age TEXT,                             -- new|used1to3|used3plus
+  origin TEXT,                          -- fta|certified|uncertified
+  engine_cc INTEGER,
+  price_usd NUMERIC NOT NULL,           -- customs value used (car + freight)
+  predicted_customs_usd NUMERIC NOT NULL, -- our model at log time
+  actual_customs_usd NUMERIC NOT NULL,    -- what was really cleared
+  cleared_at DATE,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.customs_actuals ENABLE ROW LEVEL SECURITY;
+-- No policies on purpose: service-role only.
+
+CREATE INDEX IF NOT EXISTS idx_customs_actuals_created_at ON public.customs_actuals (created_at DESC);
+
+-- ─── 086_call_recordings_storage.sql ───────────────────────────────────────────
+-- Migration: Private storage bucket for sensitive call recordings.
+-- No policies are created on purpose; access is service-role only.
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('call-recordings', 'call-recordings', false)
+ON CONFLICT (id) DO UPDATE
+SET public = EXCLUDED.public,
+    name = EXCLUDED.name;
+
+-- ─── 087_add_calls_metadata.sql ───────────────────────────────────────────
+-- Migration: Add metadata JSONB column to calls table to store AI intelligence (entities, compliance, sentiment).
+ALTER TABLE public.calls ADD COLUMN IF NOT EXISTS metadata jsonb;
+
+-- ─── 088_add_voice_signature.sql ───────────────────────────────────────────
+-- Migration: Add voice_signature double precision[] column to calls table to store biometric voice print profiles.
+ALTER TABLE public.calls ADD COLUMN IF NOT EXISTS voice_signature double precision[];
+
+-- Index for querying calls by voice signature
+CREATE INDEX IF NOT EXISTS calls_voice_signature_idx ON public.calls USING gin (voice_signature);
+
+-- ─── 089_create_voice_authorizations.sql ───────────────────────────────────────────
+-- Migration: Create voice_authorizations table for logging cryptographic voice signature transaction approvals.
+CREATE TABLE IF NOT EXISTS public.voice_authorizations (
+  id             uuid primary key default gen_random_uuid(),
+  call_id        uuid references public.calls(id) on delete set null,
+  inquiry_id     uuid references public.inquiries(id) on delete set null,
+  phone          text not null,
+  verification_phrase text not null,
+  verification_token text not null,
+  similarity_score numeric not null,
+  created_at     timestamptz not null default now()
+);
+
+-- Enable Row Level Security (RLS) - service-role only
+ALTER TABLE public.voice_authorizations ENABLE ROW LEVEL SECURITY;
+
+-- ─── 090_add_voice_clones_and_collateral.sql ───────────────────────────────────────────
+-- Migration: Add voice clone ID to admin users and collateral fields to inquiries.
+ALTER TABLE public.admin_users
+  ADD COLUMN IF NOT EXISTS voice_clone_id TEXT;
+
+ALTER TABLE public.inquiries
+  ADD COLUMN IF NOT EXISTS collateral_url TEXT,
+  ADD COLUMN IF NOT EXISTS voice_auth_status TEXT DEFAULT 'pending' CHECK (voice_auth_status IN ('pending', 'approved', 'rejected', 'failed'));
+
+-- ─── 091_add_biometric_ledger_and_p2p_network.sql ───────────────────────────────────────────
+-- Migration: Add biometric ledger and P2P dealer inventory cooperative network.
+CREATE TABLE IF NOT EXISTS public.biometric_ledger (
+  id             uuid primary key default gen_random_uuid(),
+  inquiry_id     uuid references public.inquiries(id) on delete set null,
+  caller_phone   text not null,
+  cryptographic_signature text not null,
+  amount_usd     numeric not null,
+  verified_at    timestamptz not null default now(),
+  status         text not null default 'signed' check (status in ('pending', 'signed', 'completed'))
+);
+
+CREATE TABLE IF NOT EXISTS public.p2p_dealer_inventory (
+  id             uuid primary key default gen_random_uuid(),
+  dealer_name    text not null,
+  vehicle_model  text not null,
+  color          text not null,
+  wholesale_price numeric not null,
+  commission_usd numeric not null,
+  eta_days       integer not null default 30,
+  available      boolean not null default true,
+  created_at     timestamptz not null default now()
+);
+
+-- Enable RLS (service-role only)
+ALTER TABLE public.biometric_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.p2p_dealer_inventory ENABLE ROW LEVEL SECURITY;
+
+-- ─── 092_add_next_gen_leaps_10_19.sql ───────────────────────────────────────────
+-- Migration: Add Next-Gen CRM VoIP & AI Call Center tables (Leaps 10-19)
+
+-- 1. Computer Vision Showroom Analytics
+CREATE TABLE IF NOT EXISTS public.showroom_cv_logs (
+  id             uuid primary key default gen_random_uuid(),
+  visitor_id     uuid not null default gen_random_uuid(),
+  car_id         uuid references public.cars(id) on delete set null,
+  entry_time     timestamptz not null default now(),
+  exit_time      timestamptz,
+  attention_duration_seconds integer not null default 0,
+  face_match_score numeric not null default 0.0,
+  matched_inquiry_id uuid references public.inquiries(id) on delete set null,
+  created_at     timestamptz not null default now()
+);
+
+-- 2. Regional Dialect Configurations
+CREATE TABLE IF NOT EXISTS public.regional_dialect_configs (
+  id             uuid primary key default gen_random_uuid(),
+  region_name    text not null unique,
+  local_greeting text not null,
+  polite_suffix  text not null,
+  dialect_keywords text[] not null default '{}',
+  created_at     timestamptz not null default now()
+);
+
+-- Seed regional dialects for Uzbekistan
+INSERT INTO public.regional_dialect_configs (region_name, local_greeting, polite_suffix, dialect_keywords)
+VALUES 
+  ('Tashkent', 'Salom, aka! Qaleysiz?', 'hop bo''ladi, aka', ARRAY['qaleysiz', 'aka', 'hop']),
+  ('Fergana', 'Assalomu alaykum, yaxshimisiz?', 'bo''pti, ukam', ARRAY['yaxshimisiz', 'akam', 'aka']),
+  ('Samarkand', 'Salom, baxtlimisiz?', 'bo''ladi, jo''ra', ARRAY['jo''ra', 'aka', 'salom'])
+ON CONFLICT (region_name) DO NOTHING;
+
+-- 3. Generative Video Collateral
+CREATE TABLE IF NOT EXISTS public.generative_video_collateral (
+  id             uuid primary key default gen_random_uuid(),
+  inquiry_id     uuid references public.inquiries(id) on delete set null,
+  video_url      text not null,
+  avatar_name    text not null default 'Timur',
+  status         text not null default 'pending' check (status in ('pending', 'processing', 'completed', 'failed')),
+  generated_at   timestamptz not null default now()
+);
+
+-- 4. Voice logistics cargo orders
+CREATE TABLE IF NOT EXISTS public.logistics_voice_orders (
+  id             uuid primary key default gen_random_uuid(),
+  cargo_qty      integer not null default 1,
+  vehicle_model  text not null,
+  source_city    text not null,
+  destination_city text not null,
+  carrier_company text not null,
+  quote_usd      numeric not null,
+  status         text not null default 'draft' check (status in ('draft', 'dispatched', 'delivered')),
+  created_at     timestamptz not null default now()
+);
+
+-- 5. Multimedia trade-in inspections
+CREATE TABLE IF NOT EXISTS public.trade_in_evaluations (
+  id             uuid primary key default gen_random_uuid(),
+  customer_name  text not null,
+  vehicle_details text not null,
+  engine_health_status text not null default 'unknown',
+  body_damage_details text not null default 'none',
+  computed_value_usd numeric not null default 0,
+  status         text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at     timestamptz not null default now()
+);
+
+-- Enable RLS (service-role only)
+ALTER TABLE public.showroom_cv_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.regional_dialect_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.generative_video_collateral ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.logistics_voice_orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trade_in_evaluations ENABLE ROW LEVEL SECURITY;
+
+-- ─── 093_fix_crm_tasks_auto_source_unique.sql ───────────────────────────────────────────
+-- Migration: Fix the crm_tasks auto_source upsert (generate-tasks cron 42P10).
+--
+-- /api/cron/generate-tasks upserts with ON CONFLICT (auto_source), but 042 created
+-- the unique index as PARTIAL (WHERE auto_source IS NOT NULL). Postgres cannot use
+-- a partial index as an ON CONFLICT arbiter unless the index predicate is restated
+-- in the conflict target, and supabase-js cannot emit that predicate — so every run
+-- threw "42P10: there is no unique or exclusion constraint matching the ON CONFLICT
+-- specification" and created 0 tasks (silently, behind fail-soft).
+--
+-- Replace it with a FULL unique index on auto_source. NULLs remain distinct
+-- (Postgres default NULLS DISTINCT), so manually-created tasks (auto_source NULL)
+-- are unaffected; only the auto-generated dedupe keys are constrained — same intent
+-- as 042, but now usable as the ON CONFLICT arbiter.
+DROP INDEX IF EXISTS public.uniq_crm_tasks_auto_source;
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_crm_tasks_auto_source
+  ON public.crm_tasks (auto_source);
 
