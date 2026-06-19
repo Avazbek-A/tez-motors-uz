@@ -104,6 +104,15 @@ function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
 }
 
+/** Fire-and-forget bot funnel event (analytics). Never blocks the webhook. */
+function trackBot(chatId: number, event: string, detail?: Record<string, unknown>): void {
+  try {
+    void createServiceClient().from("bot_events").insert({ chat_id: chatId, event, detail: detail ?? null }).then(() => {}, () => {});
+  } catch {
+    /* fail-open */
+  }
+}
+
 /** Dealer-only allow-list (TELEGRAM_OPERATOR_CHAT_IDS, comma-separated chat ids).
  *  An operator chat runs the Dealer Copilot, NOT the customer recommender. */
 function isOperatorChat(chatId: number): boolean {
@@ -527,6 +536,8 @@ async function handleReserveCallback(cb: TgCallbackQuery): Promise<void> {
     return;
   }
 
+  trackBot(chatId, "reserve", { carId });
+
   notifyNewInquiry({
     name,
     phone: customer.phone,
@@ -625,6 +636,8 @@ async function captureLead(
     locale,
     inquiryId: inquiryId ?? undefined,
   }).catch(() => {});
+
+  trackBot(chatId, "lead", { type });
 
   // Turn a qualified car lead into ongoing new-arrival alerts: auto-enroll the
   // customer in the saved-search loop (the cron DMs them Telegram-first on a new
@@ -733,6 +746,7 @@ async function handleCarDetailCallback(cb: TgCallbackQuery): Promise<void> {
     .maybeSingle();
   if (!c) return;
   const car = c as CarCardRow;
+  trackBot(chatId, "car_view", { carId });
   const reserveLbl = locale === "uz" ? "Band qilish" : locale === "en" ? "Reserve" : "Забронировать";
   const siteLbl = locale === "uz" ? "Saytda ochish" : locale === "en" ? "Open on site" : "Открыть на сайте";
   const kb: ReplyMarkup = { inline_keyboard: [
@@ -775,6 +789,7 @@ async function handleClientVoice(chatId: number, file: TgFile, locale: BotLocale
   const { reply, cars } = await runAssistantTurn(supabase, {
     channel: "telegram", externalKey: chatId, message: q, locale: replyLocale, knownName: from.first_name || null,
   });
+  trackBot(chatId, "recommend", { count: cars.length, src: "voice" });
   await tgSend(chatId, escapeHtml(reply), carButtons(cars, replyLocale) ?? contactKeyboard(replyLocale));
   await tgSendCarPhotos(chatId, cars);
 }
@@ -960,6 +975,7 @@ async function handleFindCallback(cb: TgCallbackQuery): Promise<void> {
   const { reply, cars } = await runAssistantTurn(supabase, {
     channel: "telegram", externalKey: chatId, message: query, locale, knownName: cb.from?.first_name || null,
   });
+  trackBot(chatId, "recommend", { count: cars.length, src: "find" });
   await tgSend(chatId, escapeHtml(reply), carButtons(cars, locale) ?? contactKeyboard(locale));
   await tgSendCarPhotos(chatId, cars);
 }
@@ -1212,6 +1228,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
       case "start": {
         const greet = locale === "uz" ? "Assalomu alaykum" : locale === "en" ? "Welcome" : "Здравствуйте";
         const hi = from.first_name ? `👋 ${greet}, ${escapeHtml(from.first_name)}!\n\n` : "";
+        trackBot(chatId, "start");
         await tgSend(chatId, hi + menu.text, menu.markup);
         return;
       }
@@ -1277,6 +1294,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     locale: replyLocale,
     knownName: from.first_name || null,
   });
+  trackBot(chatId, "recommend", { count: cars.length, src: "text" });
   await tgSend(chatId, escapeHtml(reply), carButtons(cars, replyLocale) ?? contactKeyboard(replyLocale));
   await tgSendCarPhotos(chatId, cars);
 }
