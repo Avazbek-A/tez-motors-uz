@@ -37,6 +37,7 @@ import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, handleCrmR
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { logRecording } from "@/lib/call-recording";
 import { transcribeAudio } from "@/lib/whisper";
+import { createRateLimiter } from "@/lib/rate-limit";
 import type { Car } from "@/types/car";
 
 const TG_API = "https://api.telegram.org";
@@ -111,6 +112,17 @@ function trackBot(chatId: number, event: string, detail?: Record<string, unknown
   } catch {
     /* fail-open */
   }
+}
+
+// Cap LLM-backed messages per chat (cost + abuse). In-memory is fine: prod is a
+// single long-lived Node server. Generous for real customers; throttles bursts.
+const botLimiter = createRateLimiter({ max: 20, windowMs: 10 * 60 * 1000, maxEntries: 5000 });
+/** True if this chat may make another LLM-backed request right now. */
+function llmAllowed(chatId: number): boolean {
+  return botLimiter(String(chatId));
+}
+function throttledMsg(locale: BotLocale): string {
+  return locale === "uz" ? "⏳ So'rovlar juda ko'p — biroz kuting va qaytadan urinib ko'ring." : locale === "en" ? "⏳ Too many requests — please wait a moment and try again." : "⏳ Слишком много запросов — подождите немного и попробуйте снова.";
 }
 
 /** Dealer-only allow-list (TELEGRAM_OPERATOR_CHAT_IDS, comma-separated chat ids).
@@ -776,6 +788,7 @@ async function handleClientVoice(chatId: number, file: TgFile, locale: BotLocale
     failed: locale === "uz" ? "Ovozni aniqlay olmadim. Iltimos, yozib yuboring." : locale === "en" ? "Couldn't recognize the audio. Please type instead." : "Не удалось распознать. Напишите, пожалуйста, текстом.",
   };
   if (!process.env.WHISPER_URL) { await tgSend(chatId, t.unavailable); return; }
+  if (!llmAllowed(chatId)) { await tgSend(chatId, throttledMsg(locale)); return; }
   if (file.file_size && file.file_size > 20 * 1024 * 1024) { await tgSend(chatId, t.big); return; }
   await tgSend(chatId, t.working);
   const bytes = await tgDownloadFile(file.file_id);
@@ -920,6 +933,7 @@ async function handleRefineCallback(cb: TgCallbackQuery): Promise<void> {
   const locale = botLocale(cb.from?.language_code);
   const phrase = REFINE[locale][(cb.data || "").slice(4)];
   if (!phrase) return;
+  if (!llmAllowed(chatId)) { await tgSend(chatId, throttledMsg(locale)); return; }
   const supabase = createServiceClient();
   const { reply, cars } = await runAssistantTurn(supabase, {
     channel: "telegram", externalKey: chatId, message: phrase, locale, knownName: cb.from?.first_name || null,
@@ -971,6 +985,7 @@ async function handleFindCallback(cb: TgCallbackQuery): Promise<void> {
   const locale = botLocale(cb.from?.language_code);
   const query = FIND_QUERY[locale][(cb.data || "").slice(5)];
   if (!query) return;
+  if (!llmAllowed(chatId)) { await tgSend(chatId, throttledMsg(locale)); return; }
   const supabase = createServiceClient();
   const { reply, cars } = await runAssistantTurn(supabase, {
     channel: "telegram", externalKey: chatId, message: query, locale, knownName: cb.from?.first_name || null,
@@ -1285,6 +1300,7 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
   //    runtime: multi-turn memory, profile, nudges, dealer oversight).
   //    Reply in the language the customer actually WROTE in — not their Telegram
   //    UI language (a RU speaker with an English Telegram was getting English).
+  if (!llmAllowed(chatId)) { await tgSend(chatId, throttledMsg(locale)); return; }
   const replyLocale = resolveReplyLocale(text, locale);
   const supabase = createServiceClient();
   const { reply, cars } = await runAssistantTurn(supabase, {
