@@ -626,6 +626,35 @@ async function captureLead(
     inquiryId: inquiryId ?? undefined,
   }).catch(() => {});
 
+  // Turn a qualified car lead into ongoing new-arrival alerts: auto-enroll the
+  // customer in the saved-search loop (the cron DMs them Telegram-first on a new
+  // match). Conservative — car interest only, a real query, and only if they
+  // have no saved search yet (one auto-search per customer; never spammy).
+  if (type === "car_inquiry") {
+    try {
+      const { data: cust } = await supabase.from("customers").select("id").eq("phone", phone).maybeSingle();
+      if (cust?.id) {
+        const { data: existing } = await supabase.from("saved_searches").select("id").eq("customer_id", cust.id).limit(1).maybeSingle();
+        if (!existing) {
+          const { data: last } = await supabase
+            .from("assistant_messages")
+            .select("content")
+            .eq("thread_id", `telegram:${chatId}`)
+            .eq("role", "user")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const q = String(last?.content || "").trim().slice(0, 120);
+          if (q.length >= 4) {
+            await supabase.from("saved_searches").insert({ customer_id: cust.id, label: q, filters: { search: q } });
+          }
+        }
+      }
+    } catch {
+      /* fail-open */
+    }
+  }
+
   await tgSend(chatId, COPY[locale].thanks);
 }
 
