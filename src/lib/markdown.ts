@@ -5,10 +5,11 @@ function formatInline(value: string): string {
   return escapeHtml(value)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/`(.+?)`/g, "<code>$1</code>")
-    // external links → new tab
-    .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    // external links → new tab. Text capture excludes `]` so it can't span a
+    // following link on the same line (e.g. an earlier internal `[x](/y)`).
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
     // internal / relative links (/ru/calculator, #anchor) → same tab
-    .replace(/\[(.+?)\]\((\/[^\s)]+|#[^\s)]+)\)/g, '<a href="$2">$1</a>');
+    .replace(/\[([^\]]+)\]\((\/[^\s)]+|#[^\s)]+)\)/g, '<a href="$2">$1</a>');
 }
 
 // GFM-table separator row, e.g. `| :-- | :-: | --: |`
