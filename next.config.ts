@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
     // every few hours (the default minimumCacheTTL was 4h → constant re-optimize
     // on a CDN that doesn't cache the query-string optimizer URL).
     minimumCacheTTL: 31536000,
+    // No surface on this site renders an image wider than a full-bleed ~1920px
+    // hero, but Next defaults to offering 2048 + 3840 variants too. Since the
+    // image optimizer isn't CDN-cached (Cloudflare bypasses the query-string
+    // /_next/image URL), every offered width is a wasted cold sharp-encode on the
+    // single self-hosted box. Cap at 1920: smaller srcset markup + no 2K/4K encodes.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     remotePatterns: [
       {
         protocol: "https",
