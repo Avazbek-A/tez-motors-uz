@@ -32,6 +32,7 @@ import { reserveCarAndCreateOrder } from "@/lib/reservation";
 import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
+import { getSiteSettings } from "@/lib/site-settings-server";
 import { logRecording } from "@/lib/call-recording";
 import type { Car } from "@/types/car";
 
@@ -289,6 +290,163 @@ function carButtons(cars: Car[], locale: BotLocale): ReplyMarkup | undefined {
   return rows.length > 0 ? { inline_keyboard: rows } : undefined;
 }
 
+// ---- Main menu (client) ----------------------------------------------------
+// One clean, discoverable home screen. Buttons map to callbacks handled below;
+// the catalog opens the Mini App in-chat.
+
+const MENU: Record<BotLocale, {
+  title: string; catalog: string; find: string; customs: string; track: string;
+  contacts: string; manager: string; language: string; help: string;
+  findPrompt: string; trackText: string; trackBtn: string; pickLang: string;
+}> = {
+  ru: {
+    title: "🚗 <b>Tez Motors</b> — импорт авто из Китая «под ключ».\n\nВыберите нужный раздел 👇",
+    catalog: "🚗 Каталог авто", find: "🔎 Подобрать авто", customs: "🧮 Растаможка",
+    track: "📦 Мой заказ", contacts: "📍 Контакты", manager: "📞 Менеджер",
+    language: "🌐 Язык", help: "ℹ️ Помощь",
+    findPrompt: "Опишите, что ищете — например: «семейный кроссовер до $30 000», «электромобиль» или «Tank 300». Подберу из наличия с ценой и фото.",
+    trackText: "Проверьте статус заказа по кнопке ниже — понадобится номер TM-… и телефон.",
+    trackBtn: "Открыть мой заказ", pickLang: "🌐 Выберите язык / Tilni tanlang / Choose language:",
+  },
+  uz: {
+    title: "🚗 <b>Tez Motors</b> — Xitoydan «kalit topshirish» tamoyilida avto import.\n\nKerakli bo'limni tanlang 👇",
+    catalog: "🚗 Avto katalogi", find: "🔎 Avto tanlash", customs: "🧮 Rastamojka",
+    track: "📦 Buyurtmam", contacts: "📍 Kontaktlar", manager: "📞 Menejer",
+    language: "🌐 Til", help: "ℹ️ Yordam",
+    findPrompt: "Nimani qidirayotganingizni yozing — masalan: «$30 000 gacha oilaviy krossover», «elektromobil» yoki «Tank 300». Ombordan narxi va rasmi bilan tanlab beraman.",
+    trackText: "Buyurtma holatini pastdagi tugma orqali ko'ring — TM-… raqami va telefon kerak bo'ladi.",
+    trackBtn: "Buyurtmamni ochish", pickLang: "🌐 Выберите язык / Tilni tanlang / Choose language:",
+  },
+  en: {
+    title: "🚗 <b>Tez Motors</b> — turnkey car import from China.\n\nChoose what you need 👇",
+    catalog: "🚗 Car catalog", find: "🔎 Find a car", customs: "🧮 Customs",
+    track: "📦 My order", contacts: "📍 Contacts", manager: "📞 Manager",
+    language: "🌐 Language", help: "ℹ️ Help",
+    findPrompt: "Describe what you're looking for — e.g. \"family SUV under $30,000\", \"electric car\" or \"Tank 300\". I'll match from stock with price and photos.",
+    trackText: "Check your order status with the button below — you'll need your TM-… reference and phone.",
+    trackBtn: "Open my order", pickLang: "🌐 Выберите язык / Tilni tanlang / Choose language:",
+  },
+};
+
+function mainMenu(locale: BotLocale): { text: string; markup: ReplyMarkup } {
+  const m = MENU[locale];
+  return {
+    text: m.title,
+    markup: { inline_keyboard: [
+      [{ text: m.catalog, web_app: { url: `${siteUrl()}/${locale}/app` } }],
+      [{ text: m.find, callback_data: "m|find" }, { text: m.customs, callback_data: "cu|go" }],
+      [{ text: m.track, callback_data: "m|track" }, { text: m.manager, callback_data: "m|mgr" }],
+      [{ text: m.contacts, callback_data: "m|contacts" }, { text: m.language, callback_data: "m|lang" }],
+      [{ text: m.help, callback_data: "m|help" }],
+    ] },
+  };
+}
+
+function langKeyboard(): ReplyMarkup {
+  return { inline_keyboard: [[
+    { text: "🇷🇺 Русский", callback_data: "lang|ru" },
+    { text: "🇺🇿 O'zbek", callback_data: "lang|uz" },
+    { text: "🇬🇧 English", callback_data: "lang|en" },
+  ]] };
+}
+
+const HELP: Record<BotLocale, string> = {
+  ru: [
+    "ℹ️ <b>Что умеет бот</b>", "",
+    "🔎 Просто напишите, какое авто ищете — подберу из наличия с ценами и фото.",
+    "🚗 /catalog — весь каталог в приложении",
+    "🧮 /customs — калькулятор растаможки",
+    "📦 /track — статус вашего заказа",
+    "📍 /contacts — адрес, телефон, часы работы",
+    "🌐 /language — сменить язык",
+    "📋 /menu — главное меню", "",
+    "📞 Чтобы менеджер перезвонил — откройте «Менеджер» в меню и поделитесь номером.",
+  ].join("\n"),
+  uz: [
+    "ℹ️ <b>Bot imkoniyatlari</b>", "",
+    "🔎 Qanday avto kerakligini yozing — ombordan narxi va rasmi bilan tanlayman.",
+    "🚗 /catalog — to'liq katalog ilovada",
+    "🧮 /customs — rastamojka kalkulyatori",
+    "📦 /track — buyurtmangiz holati",
+    "📍 /contacts — manzil, telefon, ish vaqti",
+    "🌐 /language — tilni o'zgartirish",
+    "📋 /menu — bosh menyu", "",
+    "📞 Menejer qo'ng'iroq qilishi uchun menyudagi «Menejer»ni bosing va raqamingizni ulashing.",
+  ].join("\n"),
+  en: [
+    "ℹ️ <b>What this bot can do</b>", "",
+    "🔎 Just type what car you want — I'll match from stock with prices and photos.",
+    "🚗 /catalog — full catalog in the app",
+    "🧮 /customs — customs duty calculator",
+    "📦 /track — your order status",
+    "📍 /contacts — address, phone, hours",
+    "🌐 /language — change language",
+    "📋 /menu — main menu", "",
+    "📞 For a callback — tap “Manager” in the menu and share your number.",
+  ].join("\n"),
+};
+
+/** Live contacts card from site_settings (falls back to SITE_CONFIG). */
+async function contactsCard(locale: BotLocale): Promise<{ text: string; markup?: ReplyMarkup }> {
+  const s = await getSiteSettings();
+  const L = {
+    ru: { title: "📍 <b>Контакты Tez Motors</b>", hours: "🕒 Часы работы", map: "🗺 На карте", channel: "📣 Наш канал" },
+    uz: { title: "📍 <b>Tez Motors kontaktlari</b>", hours: "🕒 Ish vaqti", map: "🗺 Xaritada", channel: "📣 Bizning kanal" },
+    en: { title: "📍 <b>Tez Motors contacts</b>", hours: "🕒 Hours", map: "🗺 On the map", channel: "📣 Our channel" },
+  }[locale];
+  const lines = [
+    L.title, "",
+    s.address ? `🏢 ${escapeHtml(s.address)}` : "",
+    s.workingHours ? `${L.hours}: ${escapeHtml(s.workingHours)}` : "",
+    s.phone ? `📞 ${escapeHtml(s.phone)}` : "",
+    s.email ? `✉️ ${escapeHtml(s.email)}` : "",
+  ].filter(Boolean);
+  const row: { text: string; url: string }[] = [];
+  if (s.whatsapp) row.push({ text: "💬 WhatsApp", url: s.whatsapp });
+  if (s.telegram) row.push({ text: "✈️ Telegram", url: s.telegram });
+  const row2: { text: string; url: string }[] = [];
+  if (s.instagram) row2.push({ text: "📷 Instagram", url: s.instagram });
+  if (s.address) row2.push({ text: L.map, url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}` });
+  const inline = [row, row2].filter((r) => r.length > 0);
+  return { text: lines.join("\n"), markup: inline.length ? { inline_keyboard: inline } : undefined };
+}
+
+// ---- Operator (dealer) menu -------------------------------------------------
+// Operators work in Russian. Quick-report buttons run the Dealer Copilot.
+
+const OP_QUERY: Record<string, string> = {
+  summary: "сводка", money: "сколько денег", demand: "спрос",
+  aging: "что залежалось", leads: "новые заявки",
+};
+
+function operatorMenu(): { text: string; markup: ReplyMarkup } {
+  return {
+    text: [
+      "🔧 <b>Tez Motors — панель оператора</b>", "",
+      "Быстрые отчёты — нажмите кнопку или спросите словами («спрос», «сколько денег»).",
+      "Действия требуют подтверждения «да» — напр.: «снизь цену на Tank 300 на 5%», «переведи заказ TM-XXXXXXXX в таможню».",
+      "🎙 Перешлите аудио-запись звонка — добавлю в CRM (номер клиента — в подписи).",
+    ].join("\n"),
+    markup: { inline_keyboard: [
+      [{ text: "📊 Сводка", callback_data: "op|summary" }, { text: "💰 Деньги", callback_data: "op|money" }],
+      [{ text: "📈 Спрос", callback_data: "op|demand" }, { text: "📦 Залежалось", callback_data: "op|aging" }],
+      [{ text: "🔥 Новые заявки", callback_data: "op|leads" }],
+      [{ text: "🗂 Открыть CRM", url: `${siteUrl()}/admin` }],
+    ] },
+  };
+}
+
+/** Best-effort persist a chosen UI language to the linked customer (for proactive
+ *  outbound). No row yet → silently skipped; the in-chat menu re-renders regardless. */
+async function persistLocale(chatId: number, locale: BotLocale): Promise<void> {
+  try {
+    const supabase = createServiceClient();
+    await supabase.from("customers").update({ locale }).eq("telegram_id", chatId);
+  } catch {
+    /* fail-open */
+  }
+}
+
 /** Ack a callback query so Telegram stops the button's loading spinner. */
 async function tgAnswerCallback(callbackId: string, text?: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -463,19 +621,80 @@ async function handleCustomsCallback(cb: TgCallbackQuery): Promise<void> {
   else await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup);
 }
 
+// Client main-menu buttons (m|…) and the language switch (lang|…).
+async function handleMenuCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  await tgAnswerCallback(cb.id);
+  if (!chatId) return;
+  const data = cb.data || "";
+  let locale = botLocale(cb.from?.language_code);
+
+  if (data.startsWith("lang|")) {
+    const picked = data.slice(5);
+    locale = picked === "uz" ? "uz" : picked === "en" ? "en" : "ru";
+    await persistLocale(chatId, locale);
+    const menu = mainMenu(locale);
+    await tgSend(chatId, menu.text, menu.markup);
+    return;
+  }
+
+  switch (data.slice(2)) {
+    case "find":
+      await tgSend(chatId, MENU[locale].findPrompt, { force_reply: true, input_field_placeholder: MENU[locale].find });
+      return;
+    case "mgr":
+      await tgSend(chatId, COPY[locale].nudge, contactKeyboard(locale));
+      return;
+    case "track":
+      await tgSend(chatId, MENU[locale].trackText, {
+        inline_keyboard: [[{ text: MENU[locale].trackBtn, url: `${siteUrl()}/${locale}/track` }]],
+      });
+      return;
+    case "contacts": {
+      const c = await contactsCard(locale);
+      await tgSend(chatId, c.text, c.markup);
+      return;
+    }
+    case "lang":
+      await tgSend(chatId, MENU[locale].pickLang, langKeyboard());
+      return;
+    case "help":
+      await tgSend(chatId, HELP[locale]);
+      return;
+    default: {
+      const menu = mainMenu(locale);
+      await tgSend(chatId, menu.text, menu.markup);
+    }
+  }
+}
+
+// Operator quick-report buttons (op|…) → run the Dealer Copilot.
+async function handleOperatorCallback(cb: TgCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id;
+  const key = (cb.data || "").slice(3);
+  await tgAnswerCallback(cb.id);
+  if (!chatId || !OP_QUERY[key]) return;
+  const supabase = createServiceClient();
+  const turn = await runCopilotTurn({ supabase, threadId: `tg:${chatId}`, message: OP_QUERY[key] });
+  await tgSend(chatId, escapeHtml(turn.reply));
+}
+
 async function handleUpdate(update: TgUpdate): Promise<void> {
   // Inline-button callbacks (Phase AS — reserve in chat). Operator confirm
   // callbacks are handled elsewhere; here we only act on customer "rsv:" data.
   if (update.callback_query) {
     const cb = update.callback_query;
     const cbChat = cb.message?.chat?.id ?? 0;
-    if (typeof cb.data === "string" && cb.data.startsWith("rsv:") && !isOperatorChat(cbChat)) {
-      await handleReserveCallback(cb);
-    } else if (typeof cb.data === "string" && cb.data.startsWith("cu|") && !isOperatorChat(cbChat)) {
-      await handleCustomsCallback(cb);
-    } else {
-      await tgAnswerCallback(cb.id);
+    const data = typeof cb.data === "string" ? cb.data : "";
+    if (isOperatorChat(cbChat)) {
+      if (data.startsWith("op|")) await handleOperatorCallback(cb);
+      else await tgAnswerCallback(cb.id);
+      return;
     }
+    if (data.startsWith("rsv:")) await handleReserveCallback(cb);
+    else if (data.startsWith("cu|")) await handleCustomsCallback(cb);
+    else if (data.startsWith("m|") || data.startsWith("lang|")) await handleMenuCallback(cb);
+    else await tgAnswerCallback(cb.id);
     return;
   }
 
@@ -500,12 +719,17 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     const opText = (message.text || "").trim().slice(0, 1000);
     if (!opText) return;
-    if (opText === "/start" || opText.startsWith("/start")) {
-      await tgSend(chatId, "🔧 <b>Режим оператора.</b> Спросите: «сводка», «сколько денег», «спрос», «что залежалось», «новые заявки».\n\nКоманды (с подтверждением «да»): «снизь цену на Tank 300 на 5%», «переведи заказ TM-XXXXXXXX в таможню», «закажи 3 BYD Han у поставщика».");
+    // /start, /menu, /help or any unknown slash command → the operator dashboard.
+    const opCmd = opText.startsWith("/") ? opText.slice(1).split(/[@\s]/)[0].toLowerCase() : "";
+    if (opCmd && !OP_QUERY[opCmd]) {
+      const om = operatorMenu();
+      await tgSend(chatId, om.text, om.markup);
       return;
     }
+    // A quick-report command maps to a Copilot query; free text passes through verbatim.
+    const opQuery = opCmd ? OP_QUERY[opCmd] : opText;
     const supabaseOp = createServiceClient();
-    const turn = await runCopilotTurn({ supabase: supabaseOp, threadId: `tg:${chatId}`, message: opText });
+    const turn = await runCopilotTurn({ supabase: supabaseOp, threadId: `tg:${chatId}`, message: opQuery });
     await tgSend(chatId, escapeHtml(turn.reply));
     return;
   }
@@ -532,17 +756,49 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     if (step) { await tgSend(chatId, step.text, step.replyMarkup as ReplyMarkup); return; }
   }
 
-  // 2) /start → welcome + share-contact keyboard, then a Mini App launch button.
-  if (text === "/start" || text.startsWith("/start")) {
-    await tgSend(chatId, COPY[locale].welcome, contactKeyboard(locale));
-    const appPrompt =
-      locale === "uz"
-        ? "Yoki butun katalogni shu yerda ko'ring 👇"
-        : locale === "en"
-        ? "Or browse the whole catalog right here 👇"
-        : "Или посмотрите весь каталог прямо здесь 👇";
-    await tgSend(chatId, appPrompt, appButton(locale));
-    return;
+  // 2) Slash commands → a discoverable, professional menu. The full list is
+  //    registered with Telegram via setMyCommands (scripts/set-bot-commands.mjs)
+  //    so it shows in the "/" menu; here we render each one.
+  if (text.startsWith("/")) {
+    const cmd = text.slice(1).split(/[@\s]/)[0].toLowerCase();
+    const menu = mainMenu(locale);
+    switch (cmd) {
+      case "start": {
+        const greet = locale === "uz" ? "Assalomu alaykum" : locale === "en" ? "Welcome" : "Здравствуйте";
+        const hi = from.first_name ? `👋 ${greet}, ${escapeHtml(from.first_name)}!\n\n` : "";
+        await tgSend(chatId, hi + menu.text, menu.markup);
+        return;
+      }
+      case "menu":
+        await tgSend(chatId, menu.text, menu.markup);
+        return;
+      case "help":
+        await tgSend(chatId, HELP[locale]);
+        return;
+      case "catalog":
+        await tgSend(chatId, MENU[locale].catalog, appButton(locale));
+        return;
+      case "track":
+        await tgSend(chatId, MENU[locale].trackText, {
+          inline_keyboard: [[{ text: MENU[locale].trackBtn, url: `${siteUrl()}/${locale}/track` }]],
+        });
+        return;
+      case "contacts": {
+        const c = await contactsCard(locale);
+        await tgSend(chatId, c.text, c.markup);
+        return;
+      }
+      case "language":
+      case "lang":
+        await tgSend(chatId, MENU[locale].pickLang, langKeyboard());
+        return;
+      case "customs":
+      case "rastamozhka":
+        break; // handled by the customs wizard below (3.5)
+      default:
+        await tgSend(chatId, menu.text, menu.markup);
+        return;
+    }
   }
 
   // 3) Typed phone number → lead.
