@@ -16,9 +16,11 @@ import { contactKey } from "@/lib/crm";
 import { normalizePhone } from "@/lib/customer-auth";
 import { advanceOrder, nextOrderStatus, type OrderRow } from "@/lib/copilot/actions";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
+import { sendBotMessage } from "@/lib/telegram";
 
 export const CRM_CUST_MARKER = "[crm:cust]";
 export const CRM_SEARCH_MARKER = "[crm:search]";
+export const CRM_REPLY_MARKER = "[crm:reply:";
 const PAGE = 6;
 const ACTOR = { email: "operator:telegram" };
 const TG = "https://api.telegram.org";
@@ -131,8 +133,12 @@ async function leadDetail(supabase: SupabaseClient, chatId: number, msgId: numbe
     i.message ? `\n💬 ${escapeHtml((i.message as string).slice(0, 600))}` : "",
   ].filter(Boolean);
   const wa = waUrl(i.phone as string);
+  const ph = String((i.phone as string) || "").replace(/\D/g, "");
   const kb: Btn[][] = [];
-  if (wa) kb.push([{ text: "💬 WhatsApp", url: wa }]);
+  const contactRow: Btn[] = [];
+  if (wa) contactRow.push({ text: "💬 WhatsApp", url: wa });
+  if (ph) contactRow.push({ text: "✍️ Ответить", callback_data: `crm|reply|${ph}` });
+  if (contactRow.length) kb.push(contactRow);
   kb.push([{ text: "📞 Связались", callback_data: `crm|lst|${id}|contacted` }, { text: "🔄 В работе", callback_data: `crm|lst|${id}|in_progress` }]);
   kb.push([{ text: "📝 Задача", callback_data: `crm|ltask|${id}` }, { text: "✅ Закрыть", callback_data: `crm|lst|${id}|closed` }]);
   if (ord) kb.push([{ text: `📦 Заказ ${ord.reference_code} · ${ORD[ord.status as string] || ord.status}`, callback_data: `crm|order|${ord.id}` }]);
@@ -204,9 +210,13 @@ async function orderDetail(supabase: SupabaseClient, chatId: number, msgId: numb
   ].filter(Boolean);
   const next = nextOrderStatus(o.status);
   const wa = waUrl(o.customer_phone);
+  const ph = String(o.customer_phone || "").replace(/\D/g, "");
   const kb: Btn[][] = [];
   if (next) kb.push([{ text: `➡️ ${ORD[next] || next}`, callback_data: `crm|oadv|${id}` }]);
-  if (wa) kb.push([{ text: "💬 WhatsApp", url: wa }]);
+  const contactRow: Btn[] = [];
+  if (wa) contactRow.push({ text: "💬 WhatsApp", url: wa });
+  if (ph) contactRow.push({ text: "✍️ Ответить", callback_data: `crm|reply|${ph}` });
+  if (contactRow.length) kb.push(contactRow);
   if (o.inquiry_id) kb.push([{ text: "📥 Открыть заявку", callback_data: `crm|lead|${o.inquiry_id}` }]);
   kb.push([{ text: "🔙 К заказам", callback_data: "crm|orders|0" }]);
   await edit(chatId, msgId, lines.join("\n"), { inline_keyboard: kb });
@@ -317,7 +327,34 @@ export async function handleCrmCustomerLookup(supabase: SupabaseClient, chatId: 
     `📥 Заявок: ${inq ?? 0} · 📦 Заказов: ${(orders || []).length}`,
     ...(orders || []).map((o) => `   • ${o.reference_code} — ${ORD[o.status as string] || o.status}`),
   ];
-  await send(chatId, lines.join("\n"), wa ? { inline_keyboard: [[{ text: "💬 WhatsApp", url: wa }]] } : undefined);
+  const cr: Btn[] = [];
+  if (wa) cr.push({ text: "💬 WhatsApp", url: wa });
+  cr.push({ text: "✍️ Ответить", callback_data: `crm|reply|${phone.replace(/\D/g, "")}` });
+  await send(chatId, lines.join("\n"), { inline_keyboard: [cr] });
+}
+
+// ---- Reply to the customer from chat ---------------------------------------
+// The operator's reply to the force_reply prompt (which embeds the phone in
+// CRM_REPLY_MARKER) is delivered to the customer: a Telegram DM if their account
+// is linked (free, instant), otherwise a prefilled WhatsApp link the operator taps.
+export async function handleCrmReply(supabase: SupabaseClient, operatorChatId: number, promptText: string, msg: string) {
+  const m = promptText.match(/\[crm:reply:(\d+)\]/);
+  const text = msg.trim().slice(0, 2000);
+  if (!m || !text) { await send(operatorChatId, "Не удалось определить адресата или пустое сообщение."); return; }
+  const phone = normalizePhone(m[1]) || m[1];
+  const { data: c } = await supabase.from("customers").select("telegram_id, name").eq("phone", phone).maybeSingle();
+  if (c?.telegram_id) {
+    const res = await sendBotMessage(c.telegram_id as number, escapeHtml(text));
+    if (res.ok) {
+      await send(operatorChatId, `✅ Отправлено клиенту в Telegram${c.name ? ` (${escapeHtml(c.name as string)})` : ""}.`);
+      return;
+    }
+  }
+  const digits = (m[1] || "").replace(/\D/g, "");
+  const wa = `https://wa.me/${digits.length === 9 ? "998" + digits : digits}?text=${encodeURIComponent(text)}`;
+  await send(operatorChatId,
+    c?.telegram_id ? "⚠️ Не доставлено в Telegram (клиент мог заблокировать бота). Отправьте через WhatsApp:" : "Клиент не привязан к Telegram. Отправьте через WhatsApp:",
+    { inline_keyboard: [[{ text: "💬 Открыть WhatsApp с текстом", url: wa }]] });
 }
 
 // ---- Dispatch --------------------------------------------------------------
@@ -349,6 +386,10 @@ export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Pr
       case "srch":
         await answer(cb.id);
         await send(chatId, `🔎 ${CRM_SEARCH_MARKER}\nОтправьте имя, телефон или номер заказа (TM-…) ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Иван / 901234567 / TM-..." });
+        return;
+      case "reply":
+        await answer(cb.id);
+        await send(chatId, `✍️ ${CRM_REPLY_MARKER}${parts[2]}]\nНапишите сообщение клиенту ответом на это сообщение — отправлю в Telegram (если привязан), иначе дам ссылку WhatsApp:`, { force_reply: true, input_field_placeholder: "Сообщение клиенту…" });
         return;
       default: await answer(cb.id); return;
     }

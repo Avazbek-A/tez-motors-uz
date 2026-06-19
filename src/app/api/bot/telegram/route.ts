@@ -33,7 +33,7 @@ import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { getSiteSettings } from "@/lib/site-settings-server";
-import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, CRM_CUST_MARKER, CRM_SEARCH_MARKER } from "@/lib/bot/operator-crm";
+import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, handleCrmReply, CRM_CUST_MARKER, CRM_SEARCH_MARKER, CRM_REPLY_MARKER } from "@/lib/bot/operator-crm";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { logRecording } from "@/lib/call-recording";
 import type { Car } from "@/types/car";
@@ -834,6 +834,10 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     if (message.reply_to_message?.text?.includes(CRM_SEARCH_MARKER)) {
       await handleCrmSearch(createServiceClient(), chatId, opText);
+      return;
+    }
+    if (message.reply_to_message?.text?.includes(CRM_REPLY_MARKER)) {
+      await handleCrmReply(createServiceClient(), chatId, message.reply_to_message.text, opText);
       return;
     }
     // /start, /menu, /help or any unknown slash command → the operator dashboard.
