@@ -245,7 +245,10 @@ schema (G6) · collection ItemList schema (G7) · localized manifest (G8) · blo
 
 **Phase 1 — Calculator weapon + authority hub (weeks 2–3)**
 `растаможка` hub page (calculator + server-rendered rate tables + primary-source citations) ·
-pillar guide article · reconcile the duty/`утильсбор` rate config against lex.uz (open question).
+pillar guide article. **Rate source resolved:** render the tables from the exported
+constants in `src/lib/customs-uz.ts` (DUTY_BASE, utilizationBrv, BRV_SUM, VAT_PCT) — that
+model is reverse-engineered from @autodeklarantbot and validated to the dollar, so content
+and calculator stay in lockstep and never drift.
 
 **Phase 2 — Programmatic scale (weeks 3–6)**
 Per-model pages (demand-ranked from `market_listings`) · "под ключ" landed cost per model ·
@@ -327,4 +330,7 @@ These failed fact-checking (≥2 of 3 verifiers refuted). Keeping them out prote
    not freshly verified for UZ; validate Turbo/ПФ impact empirically via Webmaster after launch.
 2. **Keyword volume unverified** — confirm cluster demand via Wordstat / Keyword Planner.
 3. **Live SERP composition** — audit google.uz + yandex.uz for the exact Tier-1 queries to lock targets.
-4. **Duty age-tier breakpoints** — reconcile the rate config against lex.uz before the calculator ships numbers.
+4. ~~**Duty age-tier breakpoints** — reconcile against lex.uz.~~ **RESOLVED:** `src/lib/customs-uz.ts`
+   is reverse-engineered from the @autodeklarantbot customs-declarant bot and validated to the
+   dollar (finer + more complete than web sources: FTA/certified/uncertified origin, 15/30/40%
+   age ladder, EV/PHEV, util tiers). It is the rate source of truth — the hub renders from it.
