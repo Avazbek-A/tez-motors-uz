@@ -4,19 +4,19 @@ import { makePageMetadata } from "@/lib/seo/page-metadata";
 export async function generateMetadata(): Promise<Metadata> {
   return makePageMetadata("/calculator", {
     ru: {
-      title: "Калькулятор стоимости импорта авто из Китая",
+      title: "Калькулятор растаможки авто в Узбекистане 2026",
       description:
-        "Рассчитайте таможню, НДС, акциз, доставку. Бесплатный расчёт полной стоимости импорта авто из Китая в Узбекистан.",
+        "Бесплатно рассчитайте растаможку авто в Узбекистане: пошлина, НДС 12%, утильсбор и сбор за оформление по объёму двигателя и возрасту. Ставки 2026, расчёт для электромобилей.",
     },
     uz: {
-      title: "Xitoydan avto import qiymati kalkulyatori",
+      title: "O'zbekistonda avto rastamojka kalkulyatori 2026",
       description:
-        "Bojxona, QQS, aksiz, yetkazib berish — Xitoydan O'zbekistonga avtomobil importining to'liq qiymatini bepul hisoblang.",
+        "O'zbekistonda avtomobil rastamojkasini bepul hisoblang: boj, 12% QQS, utilizatsiya yig'imi va rasmiylashtirish — dvigatel hajmi va yoshga qarab. 2026 tariflari, elektromobil uchun ham.",
     },
     en: {
-      title: "China car import cost calculator — Uzbekistan",
+      title: "Car customs (rastamozhka) calculator — Uzbekistan 2026",
       description:
-        "Calculate customs, VAT, excise, and shipping. Free full-cost estimator for importing a car from China to Uzbekistan.",
+        "Free customs-clearance calculator for Uzbekistan: duty, 12% VAT, recycling fee and clearance by engine size and age. 2026 rates, electric vehicles included.",
     },
   });
 }
