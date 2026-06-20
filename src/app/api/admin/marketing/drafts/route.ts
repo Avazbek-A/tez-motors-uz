@@ -45,6 +45,42 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ success: true, id: data?.id }, { status: 201 });
 }
 
+const patchSchema = z.object({
+  id: z.string().uuid(),
+  kind: z.enum(["telegram", "instagram", "facebook", "ad", "blog", "promo"]).optional(),
+  locale: z.enum(["ru", "uz", "en"]).optional(),
+  subject: z.string().max(300).optional().nullable(),
+  car_id: z.string().uuid().optional().nullable(),
+  body: z.string().min(1).max(8000).optional(),
+  scheduled_at: z.string().max(40).optional().nullable(),
+  status: z.enum(["draft", "published"]).optional(),
+});
+
+export async function PATCH(request: NextRequest) {
+  const guard = await requireAdmin(request);
+  if (guard) return guard;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const parsed = patchSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Validation failed", issues: parsed.error.issues }, { status: 400 });
+
+  const { id, ...rest } = parsed.data;
+  const patch = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
+  if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("content_drafts").update(patch).eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  logAdminAction(request, { action: "update", entity: "content_draft", entity_id: id, diff: patch }).catch(() => {});
+  return NextResponse.json({ success: true });
+}
+
 export async function DELETE(request: NextRequest) {
   const guard = await requireAdmin(request);
   if (guard) return guard;

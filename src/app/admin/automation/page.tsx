@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Workflow, Loader2, Plus, Trash2, Play, Pause } from "lucide-react";
 import { useLocale } from "@/i18n/locale-context";
 import type { Locale } from "@/i18n/config";
+import { journeyPreset, type JourneyPresetKey } from "@/lib/automation/presets";
 
 interface Step {
   delayHours: number;
@@ -25,6 +26,10 @@ interface Journey {
   enrolled_active: number;
   enrolled_completed: number;
   enrolled_converted: number;
+  enrolled_exited: number;
+  sent_count: number;
+  due_count: number;
+  next_run_at: string | null;
   conversion_rate: number;
 }
 
@@ -33,18 +38,21 @@ const TRIGGER_LABELS: Record<Locale, Record<string, string>> = {
     new_lead: "Новый лид",
     reservation_abandoned: "Бронь брошена",
     delivered: "Заказ доставлен",
+    browsed_no_inquiry: "Смотрел без заявки",
     manual: "Вручную",
   },
   uz: {
     new_lead: "Yangi lid",
     reservation_abandoned: "Bron tashlab ketilgan",
     delivered: "Buyurtma yetkazilgan",
+    browsed_no_inquiry: "Ko‘rdi, ariza yo‘q",
     manual: "Qo‘lda",
   },
   en: {
     new_lead: "New lead",
     reservation_abandoned: "Reservation abandoned",
     delivered: "Order delivered",
+    browsed_no_inquiry: "Browsed, no inquiry",
     manual: "Manual",
   },
 };
@@ -58,6 +66,11 @@ const COPY: Record<Locale, {
   failedCreate: string;
   confirmDelete: string;
   journeyName: string;
+  presets: string;
+  presetLead: string;
+  presetAbandoned: string;
+  presetDelivered: string;
+  presetBrowsed: string;
   step: string;
   wait: string;
   bodyPlaceholder: string;
@@ -74,6 +87,11 @@ const COPY: Record<Locale, {
   active: string;
   done: string;
   converted: string;
+  exited: string;
+  sent: string;
+  due: string;
+  next: string;
+  none: string;
   pause: string;
   activate: string;
 }> = {
@@ -86,6 +104,11 @@ const COPY: Record<Locale, {
     failedCreate: "Не удалось создать",
     confirmDelete: "Удалить этот сценарий и его зачисления?",
     journeyName: "Название сценария",
+    presets: "Шаблоны",
+    presetLead: "Дожим нового лида",
+    presetAbandoned: "Брошенная бронь",
+    presetDelivered: "После доставки",
+    presetBrowsed: "Просмотр без заявки",
     step: "Шаг",
     wait: "ждать",
     bodyPlaceholder: "Текст сообщения (с {name}/{car}…) — также запасной вариант, если ИИ включён",
@@ -102,6 +125,11 @@ const COPY: Record<Locale, {
     active: "активных",
     done: "завершено",
     converted: "конверсий",
+    exited: "вышли",
+    sent: "доставлено",
+    due: "к отправке",
+    next: "след.",
+    none: "нет",
     pause: "Пауза",
     activate: "Активировать",
   },
@@ -114,6 +142,11 @@ const COPY: Record<Locale, {
     failedCreate: "Yaratib bo‘lmadi",
     confirmDelete: "Ushbu ssenariy va uning ro‘yxatlarini o‘chirilsinmi?",
     journeyName: "Ssenariy nomi",
+    presets: "Shablonlar",
+    presetLead: "Yangi lid kuzatuvi",
+    presetAbandoned: "Tashlangan bron",
+    presetDelivered: "Yetkazilgandan keyin",
+    presetBrowsed: "Ko‘rdi, ariza yo‘q",
     step: "Bosqich",
     wait: "kutish",
     bodyPlaceholder: "Xabar matni ({name}/{car}… bilan) — AI yoqilgan bo‘lsa, zaxira variant ham",
@@ -130,6 +163,11 @@ const COPY: Record<Locale, {
     active: "faol",
     done: "tugatilgan",
     converted: "konversiya",
+    exited: "chiqqan",
+    sent: "yetkazildi",
+    due: "yuboriladi",
+    next: "keyingi",
+    none: "yo‘q",
     pause: "Pauza",
     activate: "Faollashtirish",
   },
@@ -142,6 +180,11 @@ const COPY: Record<Locale, {
     failedCreate: "Failed to create",
     confirmDelete: "Delete this journey and its enrollments?",
     journeyName: "Journey name",
+    presets: "Presets",
+    presetLead: "New lead nurture",
+    presetAbandoned: "Abandoned reservation",
+    presetDelivered: "Post-delivery",
+    presetBrowsed: "Browsed no inquiry",
     step: "Step",
     wait: "wait",
     bodyPlaceholder: "Message body (with {name}/{car}…) — also the fallback if AI is on",
@@ -158,6 +201,11 @@ const COPY: Record<Locale, {
     active: "active",
     done: "done",
     converted: "converted",
+    exited: "exited",
+    sent: "sent",
+    due: "due",
+    next: "next",
+    none: "none",
     pause: "Pause",
     activate: "Activate",
   },
@@ -244,6 +292,15 @@ export default function AdminAutomationPage() {
     setJourneys((js) => js.filter((x) => x.id !== id));
   }
 
+  function applyPreset(key: JourneyPresetKey, label: string) {
+    const preset = journeyPreset(key);
+    if (!preset) return;
+    setName(label);
+    setTrigger(preset.trigger);
+    // JourneyStep.channel is `string | null`; the editor's Step uses `string | undefined`.
+    setSteps(preset.steps.map((s) => ({ ...s, channel: s.channel ?? undefined })));
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -262,6 +319,13 @@ export default function AdminAutomationPage() {
 
       {creating && (
         <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t.presets}</span>
+            <button onClick={() => applyPreset("new_lead_nurture", t.presetLead)} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">{t.presetLead}</button>
+            <button onClick={() => applyPreset("abandoned_reservation", t.presetAbandoned)} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">{t.presetAbandoned}</button>
+            <button onClick={() => applyPreset("post_delivery", t.presetDelivered)} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">{t.presetDelivered}</button>
+            <button onClick={() => applyPreset("browsed_no_inquiry", t.presetBrowsed)} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">{t.presetBrowsed}</button>
+          </div>
           <div className="flex flex-wrap gap-2">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.journeyName} className="rounded border border-border bg-muted px-3 py-2 text-sm" />
             <select value={trigger} onChange={(e) => setTrigger(e.target.value)} className="rounded border border-border bg-muted px-3 py-2 text-sm">
@@ -328,10 +392,13 @@ export default function AdminAutomationPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {j.enrolled_active} {t.active} · {j.enrolled_completed} {t.done}
+                    {j.enrolled_active} {t.active} · {j.enrolled_completed} {t.done} · {j.sent_count} {t.sent}
                     {j.enrolled_converted > 0 && (
                       <span className="text-lime"> · {j.enrolled_converted} {t.converted} ({j.conversion_rate}%)</span>
                     )}
+                    {j.enrolled_exited > 0 && <span> · {j.enrolled_exited} {t.exited}</span>}
+                    {j.due_count > 0 && <span className="text-amber-400"> · {j.due_count} {t.due}</span>}
+                    <span> · {t.next}: {j.next_run_at ? new Date(j.next_run_at).toLocaleString() : t.none}</span>
                   </span>
                   <span className={`rounded px-2 py-0.5 text-xs ${j.status === "active" ? "bg-lime/20 text-lime" : "bg-muted text-muted-foreground"}`}>{statusLabels[j.status] || j.status}</span>
                   <button onClick={() => toggle(j)} className="rounded border border-border p-1.5 hover:bg-muted" title={j.status === "active" ? t.pause : t.activate}>

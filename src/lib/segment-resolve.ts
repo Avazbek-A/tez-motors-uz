@@ -5,6 +5,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dedupeContacts, type RawContact, type SegContact } from "./segments";
+import { contactKey } from "./crm";
 
 const LIMIT = 3000;
 
@@ -60,5 +61,62 @@ export async function resolveSegmentContacts(supabase: SupabaseClient, key: stri
       return [];
   }
 
-  return dedupeContacts(rows);
+  const contacts = dedupeContacts(rows);
+  await enrichCustomerChannels(supabase, contacts);
+  return contacts;
+}
+
+async function enrichCustomerChannels(supabase: SupabaseClient, contacts: SegContact[]): Promise<void> {
+  const phones = Array.from(new Set(contacts.map((c) => contactKey(c.phone)).filter(Boolean) as string[]));
+  const emails = Array.from(new Set(contacts.map((c) => c.email?.trim().toLowerCase()).filter(Boolean) as string[]));
+  if (phones.length === 0 && emails.length === 0) return;
+
+  const byPhone = new Map<string, SegContact[]>();
+  const byEmail = new Map<string, SegContact[]>();
+  for (const c of contacts) {
+    const p = contactKey(c.phone);
+    if (p) byPhone.set(p, [...(byPhone.get(p) || []), c]);
+    const e = c.email?.trim().toLowerCase();
+    if (e) byEmail.set(e, [...(byEmail.get(e) || []), c]);
+  }
+
+  const batches = [
+    ...chunk(phones, 200).map((batch) =>
+      supabase
+        .from("customers")
+        .select("id, phone, email, telegram_id, notify_channel, locale")
+        .in("phone", batch)
+        .then((r) => r.data ?? [], () => []),
+    ),
+    ...chunk(emails, 200).map((batch) =>
+      supabase
+        .from("customers")
+        .select("id, phone, email, telegram_id, notify_channel, locale")
+        .in("email", batch)
+        .then((r) => r.data ?? [], () => []),
+    ),
+  ];
+
+  const rows = (await Promise.all(batches)).flat();
+  for (const r of rows) {
+    const matches = new Set<SegContact>();
+    const p = contactKey(r.phone as string);
+    if (p) for (const c of byPhone.get(p) || []) matches.add(c);
+    const e = typeof r.email === "string" ? r.email.trim().toLowerCase() : "";
+    if (e) for (const c of byEmail.get(e) || []) matches.add(c);
+    for (const c of matches) {
+      c.customerId = c.customerId ?? (r.id as string);
+      c.telegramId = c.telegramId ?? ((r.telegram_id as string | number | null) || null);
+      c.notifyChannel = c.notifyChannel ?? ((r.notify_channel as string | null) || null);
+      c.locale = c.locale ?? ((r.locale as string | null) || null);
+      c.email = c.email ?? ((r.email as string | null) || null);
+      c.phone = c.phone ?? ((r.phone as string | null) || null);
+    }
+  }
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }

@@ -53,7 +53,9 @@ export async function isSuppressed(
       .eq("contact", c)
       .limit(20);
     if (!data || data.length === 0) return false;
-    // "all" suppression blocks everything; else block when the specific channel matches.
+    // "all" suppression blocks everything. The "auto" fan-out can choose any
+    // channel, so any channel-specific opt-out blocks auto sends conservatively.
+    if (channel === "auto") return true;
     return data.some((r) => r.channel == null || (channel != null && r.channel === channel));
   } catch {
     return false; // don't let a transient DB error silently drop all sends

@@ -17,27 +17,49 @@ export async function GET(request: NextRequest) {
 
   const [jRes, eRes] = await Promise.all([
     supabase.from("automation_journeys").select("id, name, trigger_event, status, steps, created_at").order("created_at", { ascending: false }).limit(200),
-    supabase.from("journey_enrollments").select("journey_id, status").limit(20000),
+    supabase.from("journey_enrollments").select("journey_id, status, next_run_at").limit(20000),
   ]);
 
-  const counts = new Map<string, { active: number; completed: number; converted: number; total: number }>();
+  const journeyIds = (jRes.data || []).map((j) => j.id as string);
+  const sendCounts = new Map<string, number>();
+  if (journeyIds.length > 0) {
+    const kinds = journeyIds.map((id) => `journey:${id}`);
+    const { data: logs } = await supabase.from("notification_log").select("kind").in("kind", kinds).limit(50000);
+    for (const l of logs || []) {
+      const id = String(l.kind || "").replace(/^journey:/, "");
+      if (id) sendCounts.set(id, (sendCounts.get(id) || 0) + 1);
+    }
+  }
+
+  const counts = new Map<string, { active: number; completed: number; converted: number; exited: number; total: number; nextRunAt: string | null; due: number }>();
+  const now = Date.now();
   for (const e of eRes.data || []) {
     const id = e.journey_id as string;
-    const c = counts.get(id) || { active: 0, completed: 0, converted: 0, total: 0 };
+    const c = counts.get(id) || { active: 0, completed: 0, converted: 0, exited: 0, total: 0, nextRunAt: null, due: 0 };
     c.total += 1;
     if (e.status === "active") c.active += 1;
     else if (e.status === "completed") c.completed += 1;
     else if (e.status === "converted") c.converted += 1;
+    else if (e.status === "exited") c.exited += 1;
+    const nextRunAt = (e.next_run_at as string | null) || null;
+    if (e.status === "active" && nextRunAt) {
+      if (!c.nextRunAt || new Date(nextRunAt).getTime() < new Date(c.nextRunAt).getTime()) c.nextRunAt = nextRunAt;
+      if (new Date(nextRunAt).getTime() <= now) c.due += 1;
+    }
     counts.set(id, c);
   }
   const journeys = (jRes.data || []).map((j) => {
-    const c = counts.get(j.id as string) || { active: 0, completed: 0, converted: 0, total: 0 };
+    const c = counts.get(j.id as string) || { active: 0, completed: 0, converted: 0, exited: 0, total: 0, nextRunAt: null, due: 0 };
     return {
       ...j,
       step_count: Array.isArray(j.steps) ? (j.steps as unknown[]).length : 0,
       enrolled_active: c.active,
       enrolled_completed: c.completed,
       enrolled_converted: c.converted,
+      enrolled_exited: c.exited,
+      sent_count: sendCounts.get(j.id as string) || 0,
+      next_run_at: c.nextRunAt,
+      due_count: c.due,
       // Conversion rate over contacts that have left the active state.
       conversion_rate: c.total > 0 ? Math.round((c.converted / c.total) * 1000) / 10 : 0,
     };

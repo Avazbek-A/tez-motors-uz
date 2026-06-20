@@ -11,7 +11,7 @@ interface SegmentDef {
   key: string;
   label: string;
   description: string;
-  channels: ("email" | "sms")[];
+  channels: ("auto" | "email" | "sms")[];
 }
 
 interface Detail {
@@ -98,7 +98,7 @@ export default function AdminSegmentsPage() {
   const [selected, setSelected] = useState<SegmentDef | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [channel, setChannel] = useState<"email" | "sms">("sms");
+  const [channel, setChannel] = useState<"auto" | "email" | "sms">("auto");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -150,7 +150,7 @@ export default function AdminSegmentsPage() {
     }
   };
 
-  const reach = channel === "email" ? detail?.withEmail || 0 : detail?.withPhone || 0;
+  const reach = channel === "email" ? detail?.withEmail || 0 : channel === "sms" ? detail?.withPhone || 0 : detail?.count || 0;
 
   return (
     <div className="max-w-5xl">
@@ -226,9 +226,10 @@ export default function AdminSegmentsPage() {
                     <details className="text-xs text-muted-foreground">
                       <summary className="cursor-pointer">{t.previewRecipients(detail.sample.length)}</summary>
                       <div className="mt-2 max-h-40 overflow-y-auto space-y-0.5">
-                        {detail.sample.map((c, i) => (
-                          <div key={i} className="font-mono">{c.name || "—"} · {channel === "email" ? c.email || t.noEmail : c.phone || t.noPhone}</div>
-                        ))}
+                        {detail.sample.map((c, i) => {
+                          const target = channel === "email" ? c.email || t.noEmail : channel === "sms" ? c.phone || t.noPhone : c.phone || c.email || t.noPhone;
+                          return <div key={i} className="font-mono">{c.name || "—"} · {target}</div>;
+                        })}
                       </div>
                     </details>
                   )}

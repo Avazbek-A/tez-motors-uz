@@ -48,6 +48,8 @@ const COPY: Record<Locale, {
   nothingSaved: string;
   published: string;
   use: string;
+  reschedule: string;
+  unschedule: string;
   whereLeads: string;
   source: string;
   leads: string;
@@ -102,6 +104,8 @@ const COPY: Record<Locale, {
     nothingSaved: "Пока ничего не сохранено.",
     published: "опубликовано",
     use: "Использовать",
+    reschedule: "Запланировать",
+    unschedule: "Снять",
     whereLeads: "Откуда приходят лиды",
     source: "Источник",
     leads: "Лиды",
@@ -156,6 +160,8 @@ const COPY: Record<Locale, {
     nothingSaved: "Hali hech narsa saqlanmagan.",
     published: "joylandi",
     use: "Foydalanish",
+    reschedule: "Rejalash",
+    unschedule: "Bekor qilish",
     whereLeads: "Lidlar qayerdan keladi",
     source: "Manba",
     leads: "Lidlar",
@@ -210,6 +216,8 @@ const COPY: Record<Locale, {
     nothingSaved: "Nothing saved yet.",
     published: "published",
     use: "Use",
+    reschedule: "Schedule",
+    unschedule: "Unschedule",
     whereLeads: "Where leads come from",
     source: "Source",
     leads: "Leads",
@@ -252,6 +260,7 @@ export default function AdminMarketingPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [scheduleAt, setScheduleAt] = useState("");
+  const [draftSchedule, setDraftSchedule] = useState<Record<string, string>>({});
   const [attr, setAttr] = useState<{ bySource: AttrRow[]; byCampaign: AttrRow[]; byReferral: AttrRow[] } | null>(null);
   const [roi, setRoi] = useState<RoiRow[] | null>(null);
 
@@ -313,6 +322,16 @@ export default function AdminMarketingPage() {
 
   const delDraft = async (id: string) => { await fetch(`/api/admin/marketing/drafts?id=${id}`, { method: "DELETE" }); loadDrafts(); };
   const applyDraft = (d: Draft) => { setText(d.body); setKind(d.kind); setLocale(d.locale); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const patchDraftSchedule = async (id: string, value: string | null) => {
+    if (value === "") return;
+    await fetch("/api/admin/marketing/drafts", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "draft", scheduled_at: value ? new Date(value).toISOString() : null }),
+    });
+    setDraftSchedule((s) => ({ ...s, [id]: "" }));
+    loadDrafts();
+  };
 
   return (
     <div className="max-w-5xl">
@@ -398,6 +417,18 @@ export default function AdminMarketingPage() {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button onClick={() => applyDraft(d)} className="text-xs text-primary hover:underline">{t.use}</button>
+                  {SOCIAL.has(d.kind) && d.status === "draft" && (
+                    <>
+                      <input
+                        type="datetime-local"
+                        value={draftSchedule[d.id] || ""}
+                        onChange={(e) => setDraftSchedule((s) => ({ ...s, [d.id]: e.target.value }))}
+                        className="h-7 w-36 rounded-[2px] border border-border bg-[var(--bg-3)] px-1.5 text-[11px] text-foreground"
+                      />
+                      <button onClick={() => patchDraftSchedule(d.id, draftSchedule[d.id] || "")} className="text-xs text-primary hover:underline">{t.reschedule}</button>
+                      {d.scheduled_at && <button onClick={() => patchDraftSchedule(d.id, null)} className="text-xs text-muted-foreground hover:text-primary">{t.unschedule}</button>}
+                    </>
+                  )}
                   <button onClick={() => delDraft(d.id)} className="text-muted-foreground hover:text-[var(--danger)] p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>

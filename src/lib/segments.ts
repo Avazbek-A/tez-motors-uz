@@ -6,12 +6,14 @@
  */
 import { contactKey, pickFirst } from "./crm";
 
+export type SegmentChannel = "auto" | "email" | "sms";
+
 export interface SegmentDef {
   key: string;
   label: string;
   description: string;
   /** Channels that make sense for this audience. */
-  channels: ("email" | "sms")[];
+  channels: SegmentChannel[];
 }
 
 export const SEGMENTS: SegmentDef[] = [
@@ -19,31 +21,31 @@ export const SEGMENTS: SegmentDef[] = [
     key: "open_inquiry",
     label: "Open inquiries",
     description: "People who reached out and aren't closed yet — nudge them back.",
-    channels: ["sms", "email"],
+    channels: ["auto", "sms", "email"],
   },
   {
     key: "hot_handoff",
     label: "Hot AI leads",
     description: "Conversations the assistant flagged for handoff (last 14 days).",
-    channels: ["sms"],
+    channels: ["auto", "sms"],
   },
   {
     key: "abandoned_deposit",
     label: "Unpaid reservations",
     description: "Reserved a car but never paid the deposit.",
-    channels: ["sms", "email"],
+    channels: ["auto", "sms", "email"],
   },
   {
     key: "delivered",
     label: "Past buyers",
     description: "Orders delivered — ask for a review or a referral.",
-    channels: ["sms", "email"],
+    channels: ["auto", "sms", "email"],
   },
   {
     key: "account_holders",
     label: "All registered customers",
     description: "Everyone with an account — broad announcements.",
-    channels: ["sms", "email"],
+    channels: ["auto", "sms", "email"],
   },
 ];
 
@@ -62,6 +64,10 @@ export interface SegContact {
   phone: string | null;
   name: string | null;
   email: string | null;
+  customerId?: string | null;
+  telegramId?: number | string | null;
+  notifyChannel?: string | null;
+  locale?: string | null;
 }
 
 /** Dedupe raw rows into unique contacts keyed by phone core, merging best name/email. */
