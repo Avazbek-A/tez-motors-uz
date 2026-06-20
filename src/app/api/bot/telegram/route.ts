@@ -33,7 +33,7 @@ import { resolveReplyLocale } from "@/lib/detect-locale";
 import { customsStart, customsStep, customsPriceReply, isCustomsTrigger, CUST_MARKER } from "@/lib/customs-bot-flow";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { getSiteSettings } from "@/lib/site-settings-server";
-import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, handleCrmReply, handleCrmNote, CRM_CUST_MARKER, CRM_SEARCH_MARKER, CRM_REPLY_MARKER, CRM_NOTE_MARKER } from "@/lib/bot/operator-crm";
+import { handleCrmCallback, handleCrmCustomerLookup, handleCrmSearch, handleCrmReply, handleCrmNote, handleCrmCarSearch, handleCrmWalkinReserve, CRM_CUST_MARKER, CRM_SEARCH_MARKER, CRM_REPLY_MARKER, CRM_NOTE_MARKER, CRM_CAR_MARKER, CRM_WALKIN_MARKER } from "@/lib/bot/operator-crm";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { logRecording } from "@/lib/call-recording";
 import { transcribeAudio } from "@/lib/whisper";
@@ -1181,6 +1181,14 @@ async function handleUpdate(update: TgUpdate): Promise<void> {
     }
     if (message.reply_to_message?.text?.includes(CRM_NOTE_MARKER)) {
       await handleCrmNote(createServiceClient(), chatId, message.reply_to_message.text, opText);
+      return;
+    }
+    if (message.reply_to_message?.text?.includes(CRM_CAR_MARKER)) {
+      await handleCrmCarSearch(createServiceClient(), chatId, opText);
+      return;
+    }
+    if (message.reply_to_message?.text?.includes(CRM_WALKIN_MARKER)) {
+      await handleCrmWalkinReserve(createServiceClient(), chatId, message.reply_to_message.text, opText);
       return;
     }
     // /start, /menu, /help or any unknown slash command → the operator dashboard.

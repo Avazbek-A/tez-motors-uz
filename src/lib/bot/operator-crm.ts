@@ -14,17 +14,21 @@ import { escapeHtml } from "@/lib/escape-html";
 import { logAdminAction } from "@/lib/audit";
 import { contactKey } from "@/lib/crm";
 import { normalizePhone } from "@/lib/customer-auth";
-import { advanceOrder, nextOrderStatus, type OrderRow } from "@/lib/copilot/actions";
+import { advanceOrder, nextOrderStatus, resolveCar, computeMarkdownPrice, applyCarMarkdown, type OrderRow, type CarRow } from "@/lib/copilot/actions";
 import { ORDER_STATUS_LABELS } from "@/lib/order-status";
 import { sendBotMessage } from "@/lib/telegram";
+import { reserveCarAndCreateOrder } from "@/lib/reservation";
 
 export const CRM_CUST_MARKER = "[crm:cust]";
 export const CRM_SEARCH_MARKER = "[crm:search]";
 export const CRM_REPLY_MARKER = "[crm:reply:";
 export const CRM_NOTE_MARKER = "[crm:note:";
+export const CRM_CAR_MARKER = "[crm:car]";
+export const CRM_WALKIN_MARKER = "[crm:walkin:";
 const PAGE = 6;
 const ACTOR = { email: "operator:telegram" };
 const TG = "https://api.telegram.org";
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL || "https://tezmotors.uz").replace(/\/$/, "");
 const HOT = 70; // lead_score ≥ this → 🔥 hot
 
 type Btn = { text: string; url?: string; callback_data?: string };
@@ -94,6 +98,7 @@ export function crmHome(): { text: string; markup: InlineKb } {
     markup: { inline_keyboard: [
       [{ text: "📥 Заявки", callback_data: "crm|leads|0" }, { text: "📦 Заказы", callback_data: "crm|orders|0" }],
       [{ text: "✅ Задачи", callback_data: "crm|tasks|0" }, { text: "👤 Найти клиента", callback_data: "crm|cust" }],
+      [{ text: "🚗 Авто (наличие / цена)", callback_data: "crm|cars" }],
       [{ text: "🔎 Поиск (имя / телефон / TM-…)", callback_data: "crm|srch" }],
     ] },
   };
@@ -377,6 +382,80 @@ export async function handleCrmNote(supabase: SupabaseClient, operatorChatId: nu
   await send(operatorChatId, `🗒 Заметка добавлена к «${escapeHtml((i.name as string) || "заявке")}».`, { inline_keyboard: [[{ text: "📥 Открыть заявку", callback_data: `crm|lead|${id}` }]] });
 }
 
+// ---- Inventory (operator): look up a car, quick-markdown, reserve walk-in ---
+function carCard(c: CarRow): { text: string; markup: InlineKb } {
+  const status = c.inventory_status === "reserved" ? "🔒 бронь" : c.inventory_status === "sold" ? "❌ продан" : "✅ в наличии";
+  const orig = c.original_price_usd && c.original_price_usd > c.price_usd ? ` (было $${c.original_price_usd.toLocaleString("en-US")})` : "";
+  const text = [
+    `🚗 <b>${escapeHtml(`${c.brand} ${c.model} ${c.year ?? ""}`.trim())}</b>`,
+    `💰 $${c.price_usd.toLocaleString("en-US")}${orig}`,
+    `📦 ${status}`,
+  ].join("\n");
+  const kb: Btn[][] = [];
+  if (c.inventory_status !== "sold") {
+    kb.push([{ text: "💰 −5%", callback_data: `crm|cmd|${c.id}|5` }, { text: "💰 −10%", callback_data: `crm|cmd|${c.id}|10` }]);
+    kb.push([{ text: "🔖 Бронь для клиента", callback_data: `crm|crsv|${c.id}` }]);
+  }
+  kb.push([{ text: "🌐 На сайте", url: `${SITE}/ru/catalog/${c.slug}` }, homeBtn]);
+  return { text, markup: { inline_keyboard: kb } };
+}
+
+async function loadCarRow(supabase: SupabaseClient, id: string): Promise<CarRow | null> {
+  const { data } = await supabase
+    .from("cars")
+    .select("id, slug, brand, model, year, price_usd, original_price_usd, inventory_status")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as CarRow | null) || null;
+}
+
+async function carDetail(supabase: SupabaseClient, chatId: number, msgId: number, id: string) {
+  const c = await loadCarRow(supabase, id);
+  if (!c) { await edit(chatId, msgId, "Авто не найдено.", { inline_keyboard: [[homeBtn]] }); return; }
+  const card = carCard(c);
+  await edit(chatId, msgId, card.text, card.markup);
+}
+
+async function carMarkdown(supabase: SupabaseClient, cb: CrmCb, id: string, pct: number) {
+  const c = await loadCarRow(supabase, id);
+  if (!c) { await answer(cb.id, "Авто не найдено"); return; }
+  const target = computeMarkdownPrice(c.price_usd, { pct });
+  if (target == null) { await answer(cb.id, "Скидку нельзя применить"); return; }
+  const res = await applyCarMarkdown(supabase, c, target);
+  await answer(cb.id, res.ok ? `💰 −${pct}% → $${target.toLocaleString("en-US")}` : res.message.slice(0, 190));
+  await carDetail(supabase, cb.message!.chat!.id, cb.message!.message_id!, id);
+}
+
+/** Operator searches inventory by name → match card or candidate list. */
+export async function handleCrmCarSearch(supabase: SupabaseClient, chatId: number, query: string) {
+  const q = query.trim().slice(0, 60);
+  if (q.length < 2) { await send(chatId, "Введите марку/модель (минимум 2 символа)."); return; }
+  const res = await resolveCar(supabase, q);
+  if (res.match) { const card = carCard(res.match); await send(chatId, card.text, card.markup); return; }
+  if (res.candidates?.length) {
+    const rows: Btn[][] = res.candidates.map((c) => [{ text: `${c.brand} ${c.model} ${c.year ?? ""} — $${c.price_usd.toLocaleString("en-US")}`, callback_data: `crm|car|${c.id}` }]);
+    rows.push([homeBtn]);
+    await send(chatId, "🚗 Найдено несколько — выберите:", { inline_keyboard: rows });
+    return;
+  }
+  await send(chatId, `🚗 «${escapeHtml(q)}» не найдено в наличии.`);
+}
+
+/** Operator reserves a car for a walk-in: name + phone parsed from the reply. */
+export async function handleCrmWalkinReserve(supabase: SupabaseClient, operatorChatId: number, promptText: string, text: string) {
+  const m = promptText.match(/\[crm:walkin:([a-f0-9-]{8,64})\]/i);
+  if (!m) return;
+  const carId = m[1];
+  const phoneMatch = text.match(/\+?\d[\d\s()\-]{7,16}\d/);
+  const phone = phoneMatch ? (normalizePhone(phoneMatch[0].replace(/\D/g, "")) || phoneMatch[0].replace(/\D/g, "")) : "";
+  if (!phone) { await send(operatorChatId, "Укажите телефон клиента в сообщении."); return; }
+  const name = (phoneMatch ? text.replace(phoneMatch[0], "") : text).trim().slice(0, 80) || "Клиент";
+  const res = await reserveCarAndCreateOrder(supabase, { carId, name, phone, locale: "ru", attribution: { source: "telegram" }, sourcePage: "telegram-operator" });
+  if (!res.ok) { await send(operatorChatId, "❌ Не удалось забронировать (возможно, авто уже занято)."); return; }
+  logAdminAction(null, { action: "create", entity: "order", entity_id: null, actor: ACTOR, diff: { reference_code: res.referenceCode, walk_in: true, via: "telegram" } }).catch(() => {});
+  await send(operatorChatId, `🔖 Забронировано для <b>${escapeHtml(name)}</b> (${escapeHtml(phone)}).\nЗаказ: <b>${escapeHtml(res.referenceCode || "—")}</b>`);
+}
+
 // ---- Dispatch --------------------------------------------------------------
 export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Promise<void> {
   const chatId = cb.message?.chat?.id;
@@ -406,6 +485,16 @@ export async function handleCrmCallback(supabase: SupabaseClient, cb: CrmCb): Pr
       case "srch":
         await answer(cb.id);
         await send(chatId, `🔎 ${CRM_SEARCH_MARKER}\nОтправьте имя, телефон или номер заказа (TM-…) ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Иван / 901234567 / TM-..." });
+        return;
+      case "cars":
+        await answer(cb.id);
+        await send(chatId, `🚗 ${CRM_CAR_MARKER}\nВведите марку/модель авто ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Tank 300 / BYD Han …" });
+        return;
+      case "car": await answer(cb.id); return void (await carDetail(supabase, chatId, msgId, parts[2]));
+      case "cmd": return void (await carMarkdown(supabase, cb, parts[2], Number(parts[3]) || 0));
+      case "crsv":
+        await answer(cb.id);
+        await send(chatId, `🔖 ${CRM_WALKIN_MARKER}${parts[2]}]\nИмя и телефон клиента ответом на это сообщение:`, { force_reply: true, input_field_placeholder: "Иван, +998 90 …" });
         return;
       case "reply":
         await answer(cb.id);
