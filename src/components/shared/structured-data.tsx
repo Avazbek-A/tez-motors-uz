@@ -164,7 +164,11 @@ export function CarSchema({
             price: car.price_usd,
             priceCurrency: "USD",
             // Google rich-results recommends priceValidUntil + itemCondition; their
-            // absence triggers Search Console "missing field" warnings.
+            // absence triggers Search Console "missing field" warnings. CarSchema
+            // only renders inside the server component catalog/[slug]/page.tsx, so
+            // Date.now() runs once on the server (no hydration) — purity rule is a
+            // false positive here.
+            // eslint-disable-next-line react-hooks/purity
             priceValidUntil: new Date(Date.now() + 90 * 86_400_000).toISOString().split("T")[0],
             itemCondition: car.listing_type === "used" ? "https://schema.org/UsedCondition" : "https://schema.org/NewCondition",
             availability: car.is_available
@@ -254,6 +258,51 @@ export function BlogPostingSchema({
         url: `${SITE_CONFIG.url}/images/logo.svg`,
       },
     },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
+    />
+  );
+}
+
+export function CalculatorSchema({ locale = "ru" }: { locale?: "ru" | "uz" | "en" }) {
+  // WebApplication (not FAQPage) so this is guideline-safe without on-page FAQ
+  // content — it tells Google/Yandex the page IS the customs-cost tool people
+  // search for ("калькулятор растаможки"). Richer FAQ/HowTo schema is added in
+  // the P1 hub pass alongside visible content. `provider` links to the org node.
+  const copy = {
+    ru: {
+      name: "Калькулятор растаможки авто — Узбекистан",
+      description:
+        "Рассчитайте полную стоимость растаможки автомобиля в Узбекистане: таможенная пошлина, акциз, НДС 12% и утилизационный сбор по объёму двигателя и возрасту авто.",
+    },
+    uz: {
+      name: "Avto bojxona to'lovi kalkulyatori — O'zbekiston",
+      description:
+        "O'zbekistonda avtomobilni bojxona rasmiylashtirish narxini hisoblang: bojxona boji, aktsiz, 12% QQS va dvigatel hajmi hamda yoshiga qarab utilizatsiya yig'imi.",
+    },
+    en: {
+      name: "Car customs (rastamozhka) calculator — Uzbekistan",
+      description:
+        "Estimate the full cost of clearing a car through customs in Uzbekistan: customs duty, excise, 12% VAT, and the recycling fee by engine size and vehicle age.",
+    },
+  }[locale];
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: copy.name,
+    url: `${SITE_CONFIG.url}/calculator`,
+    applicationCategory: "FinanceApplication",
+    operatingSystem: "Web",
+    description: copy.description,
+    inLanguage: ["ru", "uz", "en"],
+    isAccessibleForFree: true,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "UZS" },
+    provider: { "@id": `${SITE_CONFIG.url}/#organization` },
   };
 
   return (
