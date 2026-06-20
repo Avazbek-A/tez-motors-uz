@@ -1,6 +1,5 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -32,14 +31,11 @@ import type { Car } from "@/types/car";
 import { Turnstile } from "@/components/shared/turnstile";
 import { ReservationModal } from "@/components/car/reservation-modal";
 
-export default function CarDetailPage() {
-  const params = useParams();
+export default function CarDetailPage({ car }: { car: Car }) {
   const { locale, dictionary } = useLocale();
   const { addViewed } = useRecentlyViewed();
   const settings = useSiteSettings();
 
-  const [car, setCar] = useState<Car | null>(null);
-  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,46 +45,13 @@ export default function CarDetailPage() {
   const [financing, setFinancing] = useState(false);
   const [aiReply, setAiReply] = useState<string | null>(null);
 
+  // The car is fetched & validated server-side in page.tsx (which issues a real
+  // 404 for unknown slugs) and passed in as a prop — so the full listing is in the
+  // initial HTML: indexable by Yandex (weak JS rendering), no client round-trip,
+  // no loading flash. Here we only record the "recently viewed" id client-side.
   useEffect(() => {
-    fetch(`/api/cars/${params.slug}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.car) {
-          setCar(data.car);
-          addViewed(data.car.id);
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [params.slug]);
-
-  if (loading) {
-    return (
-      <div className="pt-32 pb-16 text-center container-custom">
-        <Loader2 className="w-8 h-8 animate-spin text-neon-blue mx-auto mb-3" />
-        <p className="text-muted-foreground">{locale === "ru" ? "Загрузка..." : "Loading..."}</p>
-      </div>
-    );
-  }
-
-  if (!car) {
-    return (
-      <div className="pt-32 pb-16 text-center container-custom max-w-md mx-auto">
-        <div className="text-6xl font-black text-foreground/[0.04] mb-6">404</div>
-        <h1 className="text-xl font-bold mb-3 text-foreground">
-          {locale === "ru" ? "Автомобиль не найден" : locale === "uz" ? "Avtomobil topilmadi" : "Car not found"}
-        </h1>
-        <p className="text-muted-foreground text-sm mb-8">
-          {locale === "ru" ? "Возможно, этот автомобиль уже продан или ссылка устарела." : "This car may have been sold or the link is outdated."}
-        </p>
-        <Button asChild>
-          <Link href={localizedPath(locale, "/catalog")}>
-            {locale === "ru" ? "← Вернуться в каталог" : "← Back to Catalog"}
-          </Link>
-        </Button>
-      </div>
-    );
-  }
+    addViewed(car.id);
+  }, [car.id, addViewed]);
 
   const description = locale === "uz" ? car.description_uz : locale === "en" ? car.description_en : car.description_ru;
   // Guard price_usd > 0: a "price on request" car (price_usd === 0) with an

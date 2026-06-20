@@ -100,7 +100,7 @@ export default async function Page(
 
   return (
     <>
-      <CarDetailClient />
+      <CarDetailClient car={car} />
       {car && <CarSchema car={car} aggregate={aggregate} />}
       {car && (
         <BreadcrumbSchema
