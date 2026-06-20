@@ -7,6 +7,7 @@ import { getLocaleFromCookie } from "@/i18n/config";
 import { SITE_CONFIG } from "@/lib/constants";
 import { CalculatorSchema } from "@/components/shared/structured-data";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
+import { RastamozhkaGuide } from "./rastamozhka-guide";
 
 // Metadata is provided by calculator/layout.tsx via makePageMetadata.
 
@@ -42,6 +43,7 @@ export default async function CalculatorPage() {
         ]}
       />
       <CalculatorContent usdUzs={usdUzs} />
+      <RastamozhkaGuide locale={locale} />
     </>
   );
 }
