@@ -334,3 +334,37 @@ These failed fact-checking (≥2 of 3 verifiers refuted). Keeping them out prote
    is reverse-engineered from the @autodeklarantbot customs-declarant bot and validated to the
    dollar (finer + more complete than web sources: FTA/certified/uncertified origin, 15/30/40%
    age ladder, EV/PHEV, util tiers). It is the rate source of truth — the hub renders from it.
+
+---
+
+## Implementation status (2026-06-21)
+
+**Shipped & committed** (branch `design/cinematic-showroom`, `next build` verified, **not pushed**):
+
+- **P0** — car-detail SSR (full listing now in initial HTML); calculator `WebApplication` schema.
+- **P1** — server-rendered растаможка hub (rate tables derived from the engine, EV 0%-duty
+  story, eligibility, visible FAQ → FAQPage schema, lex.uz citations); title retargeted to
+  "Калькулятор растаможки авто в Узбекистане 2026".
+- **P2** — per-model pages (`/catalog/brand/[brand]/[model]`, под-ключ from the engine, ItemList
+  + reused CarCard); source-country hubs (`/import/{china,korea,usa,germany}`); comparison pages
+  (`/compare/a-vs-b`). All interlinked, schema'd, and in the sitemap (× locales).
+- **G7** — ItemList schema on brand + filter collection pages.
+- **P3** — two trilingual pillar guides (migration `101_seed_import_guides.sql`; publish on deploy).
+- **P4 (code)** — RSS feed at `/feed.xml`. Yandex foundations already in place: **SSR everywhere**
+  (P0), IndexNow, Webmaster APIs, verification meta, commercial factors (visible prices/contacts).
+  **Turbo Pages: intentionally skipped** — Yandex de-emphasized Turbo; sitemap + IndexNow + SSR
+  cover discovery without that maintenance burden.
+
+**Recon corrections:** the initial audit over-claimed gaps — G5 (parts metadata) and G6 (scooter
+Product schema) were already done; G9 (blog `?category=` canonical) is intentional, not a bug;
+G8 (manifest locale) skipped (Next `manifest.ts` is single-locale, and the site is RU-first).
+
+**Owner-only — still pending (cannot be done from code):**
+1. **Push the branch & deploy.** Everything is committed locally but not pushed. Deploy applies
+   migration `101` → the two guides go live; the new routes + RSS start serving.
+2. Create **Google Business Profile** + **Yandex.Business** listings (local pack for
+   "автосалон / импорт авто Ташкент").
+3. Pull **Yandex Wordstat** + **Google Keyword Planner** (`.uz`) to confirm cluster volumes, then
+   decide RU-vs-UZ lead per cluster (default shipped: RU-first, UZ second, EN third).
+4. Cloudflare **Cache Rule for `/_next/image*`** — still the #1 perf lever (owner action).
+5. After indexing, watch the Engine Ops "fix CTR" list and rewrite low-CTR titles.
