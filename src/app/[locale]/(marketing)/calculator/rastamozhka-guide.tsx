@@ -235,6 +235,14 @@ const COPY = {
   },
 } as const;
 
+// Cross-links to the source-country hubs — also covers the "растаможка авто из X" terms.
+const IMPORT_LINKS: { slug: string; ru: string; uz: string; en: string }[] = [
+  { slug: "china", ru: "Растаможка авто из Китая", uz: "Xitoydan avto rastamojka", en: "Customs for cars from China" },
+  { slug: "korea", ru: "Растаможка авто из Кореи", uz: "Koreyadan avto rastamojka", en: "Customs for cars from Korea" },
+  { slug: "usa", ru: "Растаможка авто из США", uz: "AQShdan avto rastamojka", en: "Customs for cars from the USA" },
+  { slug: "germany", ru: "Растаможка авто из Германии", uz: "Germaniyadan avto rastamojka", en: "Customs for cars from Germany" },
+];
+
 export function RastamozhkaGuide({ locale }: { locale: L }) {
   const c = COPY[locale];
 
@@ -376,6 +384,24 @@ export function RastamozhkaGuide({ locale }: { locale: L }) {
             {c.ctaBtn}
             <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+
+        {/* Source-country hubs — internal links + "растаможка из X" terms */}
+        <div className="space-y-3">
+          <h3 className="text-lg font-bold text-foreground">
+            {locale === "ru" ? "Растаможка по странам" : locale === "uz" ? "Davlatlar bo'yicha rastamojka" : "Customs by source country"}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {IMPORT_LINKS.map((l) => (
+              <Link
+                key={l.slug}
+                href={`/${locale}/import/${l.slug}`}
+                className="rounded-full border border-border bg-card px-4 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                {l[locale]}
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Legal basis / citations */}

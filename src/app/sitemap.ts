@@ -7,6 +7,7 @@ import { brandSlug, getInventoryBrands } from "@/lib/brands";
 import { getInventoryModels, modelSlug } from "@/lib/models";
 
 const CAR_FILTER_SLUGS = ["electric", "hybrid", "phev", "suv", "sedan", "crossover"];
+const IMPORT_COUNTRY_SLUGS = ["china", "korea", "usa", "germany"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://tezmotors.uz";
@@ -160,6 +161,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })),
     );
 
+    const importPages = IMPORT_COUNTRY_SLUGS.flatMap((country) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/import/${country}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+        alternates: alternatesFor(`/import/${country}`),
+      })),
+    );
+
     const cityPages = DELIVERY_CITIES.flatMap((city) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/city/${city.slug}`,
@@ -175,6 +186,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...brandPages,
       ...modelPages,
       ...filterPages,
+      ...importPages,
       ...cityPages,
       ...carPages,
       ...blogPages,
