@@ -5,7 +5,7 @@ export const alt = "Tez Motors — Import cars from China to Uzbekistan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Platinum monochrome brand identity (matches the Vanguard logo + site theme).
+// Brushed-platinum gradient (matches the logo mark + site theme).
 const PLATINUM = "linear-gradient(135deg, #eff3f7 0%, #bfc9d6 42%, #8995a6 72%, #dae0e7 100%)";
 
 export default function Image() {
@@ -24,20 +24,12 @@ export default function Image() {
           padding: 80,
         }}
       >
-        {/* Chevron mark */}
-        <div
-          style={{
-            display: "flex",
-            fontSize: 150,
-            fontWeight: 900,
-            lineHeight: 1,
-            letterSpacing: 8,
-            background: PLATINUM,
-            backgroundClip: "text",
-            color: "transparent",
-          }}
-        >
-          »
+        {/* Stepped-bars mark — skewed divs (Satori renders these reliably; an
+            inline SVG gradient fill does not). Full / 70% / full, sheared left. */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 20 }}>
+          <div style={{ width: 270, height: 42, background: PLATINUM, transform: "skewX(-20deg)" }} />
+          <div style={{ width: 189, height: 42, background: PLATINUM, transform: "skewX(-20deg)" }} />
+          <div style={{ width: 270, height: 42, background: PLATINUM, transform: "skewX(-20deg)" }} />
         </div>
         {/* Wordmark */}
         <div

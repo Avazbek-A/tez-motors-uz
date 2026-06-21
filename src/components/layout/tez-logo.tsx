@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-/** The chevron mark on its own (no wordmark) — for compact spots: admin chrome,
- *  loading states, avatars. Size via width/height or a wrapping `scale-*`. */
-export function TezMark({ className, width = 28, height = 32 }: { className?: string; width?: number; height?: number }) {
+/** The stepped-bars mark on its own (no wordmark) — for compact spots: admin
+ *  chrome, loading states, avatars. Size via width/height or a wrapping `scale-*`.
+ *  Square viewBox matches the app icon / favicon framing. */
+export function TezMark({ className, width = 28, height = 28 }: { className?: string; width?: number; height?: number }) {
   return (
-    <svg width={width} height={height} viewBox="0 8 90 88" fill="none" aria-hidden="true" className={className}>
+    <svg width={width} height={height} viewBox="0 0 120 120" fill="none" aria-hidden="true" className={className}>
       <defs>
         <linearGradient id="tez-mark" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#eff3f7" />
@@ -14,20 +15,24 @@ export function TezMark({ className, width = 28, height = 32 }: { className?: st
           <stop offset="1" stopColor="#dae0e7" />
         </linearGradient>
       </defs>
-      <path d="M12 18 L48 52 L12 86" stroke="url(#tez-mark)" strokeWidth="14" />
-      <path d="M46 18 L82 52 L46 86" stroke="url(#tez-mark)" strokeWidth="14" opacity="0.5" />
+      <path d="M27 34 H100 L93 46 H20 Z" fill="url(#tez-mark)" />
+      <path d="M27 54 H78 L71 66 H20 Z" fill="url(#tez-mark)" />
+      <path d="M27 74 H100 L93 86 H20 Z" fill="url(#tez-mark)" />
     </svg>
   );
 }
 
 /**
- * Tez Motors logo — the approved "Vanguard" inline lockup.
- * Double chevron (brushed-platinum gradient) + TEZ MOTORS wordmark on one line.
+ * Tez Motors logo — the stepped-bars mark + TEZ MOTORS wordmark on one line.
+ *
+ * The mark is the three sheared bars (the ≡ from the heritage mark, rebuilt
+ * sharp) — it reads as equal (transparent pricing), speed (*tez* = fast) and a
+ * road to the horizon.
  *
  * - Inline SVG so the mark stays razor-sharp at any size and needs no image request.
  * - The wordmark inherits the current text color (defaults to --foreground via the
  *   wrapper) so it works on the adaptive header AND the always-dark footer
- *   (pass `className="text-white"` there). The chevron keeps its platinum gradient.
+ *   (pass `className="text-white"` there). The mark keeps its platinum gradient.
  *
  * Usage:
  *   <TezLogo href={localizedPath(locale, "/")} />                 // header
@@ -60,24 +65,25 @@ export function TezLogo({
       aria-label="Tez Motors"
       className={cn("inline-flex items-center gap-2.5 text-foreground shrink-0 group", className)}
     >
-      {/* viewBox is cropped tight to the strokes (no dead padding); height is set
-          per placement via `size` so the mark fills its space without dominating. */}
+      {/* Square viewBox (matches the app icon); the bars sit centred with the
+          official clear space. Height is set per placement via `size`. */}
       <svg
-        viewBox="0 8 90 88"
+        viewBox="0 0 120 120"
         fill="none"
         aria-hidden="true"
         className={cn("w-auto shrink-0", s.mark)}
       >
         <defs>
-          <linearGradient id="tez-chevron" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="tez-bars" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="#eff3f7" />
             <stop offset="0.42" stopColor="#bfc9d6" />
             <stop offset="0.72" stopColor="#8995a6" />
             <stop offset="1" stopColor="#dae0e7" />
           </linearGradient>
         </defs>
-        <path d="M12 18 L48 52 L12 86" stroke="url(#tez-chevron)" strokeWidth="14" />
-        <path d="M46 18 L82 52 L46 86" stroke="url(#tez-chevron)" strokeWidth="14" opacity="0.5" />
+        <path d="M27 34 H100 L93 46 H20 Z" fill="url(#tez-bars)" />
+        <path d="M27 54 H78 L71 66 H20 Z" fill="url(#tez-bars)" />
+        <path d="M27 74 H100 L93 86 H20 Z" fill="url(#tez-bars)" />
       </svg>
       <span
         className={cn(
