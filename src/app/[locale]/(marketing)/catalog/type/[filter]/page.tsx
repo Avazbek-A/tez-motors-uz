@@ -5,6 +5,8 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
+import { ItemListSchema } from "@/components/shared/structured-data";
+import { fetchCollectionItems } from "@/lib/seo/collection";
 import CatalogContent from "../../_content";
 import type { CarFilters } from "@/types/car";
 
@@ -208,6 +210,7 @@ export default async function FilterPage(
     (getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value) as SeoLocale);
 
   const c = COPY[filter][locale];
+  const listItems = await fetchCollectionItems(filters, locale);
 
   return (
     <>
@@ -227,6 +230,7 @@ export default async function FilterPage(
           },
         ]}
       />
+      <ItemListSchema items={listItems} />
       <div className="pt-24">
         <div className="container-custom">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gradient">
