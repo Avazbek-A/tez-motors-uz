@@ -1,24 +1,72 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-/** The stepped-bars mark on its own (no wordmark) — for compact spots: admin
- *  chrome, loading states, avatars. Size via width/height or a wrapping `scale-*`.
- *  Square viewBox matches the app icon / favicon framing. */
-export function TezMark({ className, width = 28, height = 28 }: { className?: string; width?: number; height?: number }) {
+/** The stepped-bars mark on its own (no wordmark) — for compact spots: loading
+ *  states, inline glyphs. Tight viewBox cropped to the bars so the mark FILLS
+ *  the box you give it (no dead padding). `tone`:
+ *   - "platinum" (default) brushed-metal gradient — for dark surfaces
+ *   - "ink" solid #14151a — for light/platinum surfaces
+ *   - "mono" currentColor — inherits the surrounding text color (theme-adaptive)
+ *  For a finished brand badge on any surface, prefer <TezTile>. */
+export function TezMark({
+  className,
+  width = 30,
+  height = 20,
+  tone = "platinum",
+}: {
+  className?: string;
+  width?: number;
+  height?: number;
+  tone?: "platinum" | "ink" | "mono";
+}) {
+  const fill = tone === "ink" ? "#14151a" : tone === "mono" ? "currentColor" : "url(#tez-mark)";
   return (
-    <svg width={width} height={height} viewBox="0 0 120 120" fill="none" aria-hidden="true" className={className}>
-      <defs>
-        <linearGradient id="tez-mark" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#eff3f7" />
-          <stop offset="0.42" stopColor="#bfc9d6" />
-          <stop offset="0.72" stopColor="#8995a6" />
-          <stop offset="1" stopColor="#dae0e7" />
-        </linearGradient>
-      </defs>
-      <path d="M27 34 H100 L93 46 H20 Z" fill="url(#tez-mark)" />
-      <path d="M27 54 H78 L71 66 H20 Z" fill="url(#tez-mark)" />
-      <path d="M27 74 H100 L93 86 H20 Z" fill="url(#tez-mark)" />
+    <svg width={width} height={height} viewBox="20 34 80 52" fill="none" aria-hidden="true" className={className}>
+      {tone === "platinum" && (
+        <defs>
+          <linearGradient id="tez-mark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#eff3f7" />
+            <stop offset="0.42" stopColor="#bfc9d6" />
+            <stop offset="0.72" stopColor="#8995a6" />
+            <stop offset="1" stopColor="#dae0e7" />
+          </linearGradient>
+        </defs>
+      )}
+      <path d="M27 34 H100 L93 46 H20 Z" fill={fill} />
+      <path d="M27 54 H78 L71 66 H20 Z" fill={fill} />
+      <path d="M27 74 H100 L93 86 H20 Z" fill={fill} />
     </svg>
+  );
+}
+
+/**
+ * Finished brand badge — the app-icon: a brushed-platinum rounded tile with the
+ * ink stepped-bars filling it. High contrast on ANY surface (its own tile), so
+ * it's the right brand glyph for admin chrome, login, avatars, empty states.
+ * Size in px; the bars + radius scale with it.
+ */
+export function TezTile({ size = 64, className }: { size?: number; className?: string }) {
+  const barW = Math.round(size * 0.6);
+  const barH = Math.round(barW * (52 / 80));
+  return (
+    <span
+      className={cn("inline-flex items-center justify-center shrink-0", className)}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: Math.round(size * 0.26),
+        background: "linear-gradient(135deg,#f4f7fa 0%,#cdd6e1 46%,#a9b4c3 73%,#e1e6ec 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,.6), 0 1px 2px rgba(20,21,26,.18), 0 6px 18px -8px rgba(20,21,26,.35)",
+      }}
+      role="img"
+      aria-label="Tez Motors"
+    >
+      <svg width={barW} height={barH} viewBox="20 34 80 52" fill="none" aria-hidden="true">
+        <path d="M27 34 H100 L93 46 H20 Z" fill="#14151a" />
+        <path d="M27 54 H78 L71 66 H20 Z" fill="#14151a" />
+        <path d="M27 74 H100 L93 86 H20 Z" fill="#14151a" />
+      </svg>
+    </span>
   );
 }
 

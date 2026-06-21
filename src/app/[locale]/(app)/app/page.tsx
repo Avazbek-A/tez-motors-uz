@@ -82,7 +82,7 @@ export default function MiniAppPage() {
   return (
     <div className="px-4 py-5 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-1">
-        <TezMark width={18} height={20} />
+        <TezMark width={26} height={17} tone="mono" className="text-foreground" />
         <h1 className="text-xl font-bold text-foreground tracking-[0.12em] uppercase">Tez Motors</h1>
       </div>
       <p className="text-sm text-muted-foreground mb-5">

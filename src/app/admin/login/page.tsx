@@ -6,7 +6,7 @@ import { Lock, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLocale } from "@/i18n/locale-context";
-import { TezMark } from "@/components/layout/tez-logo";
+import { TezTile } from "@/components/layout/tez-logo";
 import type { Locale } from "@/i18n/config";
 
 const COPY: Record<Locale, {
@@ -78,14 +78,12 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-muted via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mx-auto mb-4">
-            <TezMark width={32} height={36} />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">{t.title}</h1>
-          <p className="text-muted-foreground text-sm mt-1">{t.subtitle}</p>
+          <TezTile size={76} className="mx-auto mb-5" />
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground text-sm mt-1.5">{t.subtitle}</p>
         </div>
 
         <form onSubmit={handleLogin} className="glass rounded-2xl p-8 space-y-5">

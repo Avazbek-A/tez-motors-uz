@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { TezMark } from "@/components/layout/tez-logo";
+import { TezTile } from "@/components/layout/tez-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useLocale } from "@/i18n/locale-context";
 import { locales, type Locale } from "@/i18n/config";
@@ -155,21 +155,36 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
-          {!collapsed && (
-            <Link href="/admin" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center">
-                <TezMark width={18} height={20} />
-              </div>
-              <span className="font-bold text-foreground">{c.admin}</span>
-            </Link>
+        <div
+          className={cn(
+            "h-16 flex items-center border-b border-border",
+            collapsed ? "justify-center px-2" : "justify-between px-4"
           )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
-          >
-            <ChevronLeft className={cn("w-4 h-4 transition-transform", collapsed && "rotate-180")} />
-          </button>
+        >
+          {collapsed ? (
+            // The brand tile doubles as the expand control when collapsed.
+            <button
+              onClick={() => setCollapsed(false)}
+              aria-label="Expand sidebar"
+              className="rounded-xl transition-transform hover:scale-105"
+            >
+              <TezTile size={34} />
+            </button>
+          ) : (
+            <>
+              <Link href="/admin" className="flex items-center gap-2.5 min-w-0">
+                <TezTile size={34} />
+                <span className="font-bold text-foreground truncate">{c.admin}</span>
+              </Link>
+              <button
+                onClick={() => setCollapsed(true)}
+                aria-label="Collapse sidebar"
+                className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Navigation */}
