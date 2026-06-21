@@ -164,11 +164,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
     const comparePages = [...comparePairs].slice(0, 80).flatMap((matchup) =>
       locales.map((locale) => ({
-        url: `${baseUrl}/${locale}/compare/${matchup}`,
+        url: `${baseUrl}/${locale}/compare/models/${matchup}`,
         lastModified: new Date(),
         changeFrequency: "monthly" as const,
         priority: 0.5,
-        alternates: alternatesFor(`/compare/${matchup}`),
+        alternates: alternatesFor(`/compare/models/${matchup}`),
       })),
     );
 

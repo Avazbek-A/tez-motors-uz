@@ -265,7 +265,7 @@ export default async function ModelPage(
                 {comparables.map((comp) => (
                   <Link
                     key={`${comp.brand}-${comp.model}`}
-                    href={`/${locale}/compare/${combinedModelSlug(m)}-vs-${combinedModelSlug(comp)}`}
+                    href={`/${locale}/compare/models/${combinedModelSlug(m)}-vs-${combinedModelSlug(comp)}`}
                     className="rounded-full border border-border bg-card px-4 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
                   >
                     {m.model} vs {comp.brand} {comp.model}

@@ -94,7 +94,7 @@ export async function generateMetadata(
   return {
     title: copy.title,
     description: copy.description,
-    alternates: localizedAlternates(`/compare/${canonicalMatchup}`, locale),
+    alternates: localizedAlternates(`/compare/models/${canonicalMatchup}`, locale),
     openGraph: { title: copy.title, description: copy.description },
   };
 }
@@ -190,7 +190,7 @@ export default async function ComparePage(
         items={[
           { name: locale === "ru" ? "Главная" : locale === "uz" ? "Bosh sahifa" : "Home", url: `${SITE_CONFIG.url}/${locale}` },
           { name: locale === "ru" ? "Сравнение" : locale === "uz" ? "Taqqoslash" : "Compare", url: `${SITE_CONFIG.url}/${locale}/compare` },
-          { name: L.h1, url: `${SITE_CONFIG.url}/${locale}/compare/${matchup}` },
+          { name: L.h1, url: `${SITE_CONFIG.url}/${locale}/compare/models/${matchup}` },
         ]}
       />
 
