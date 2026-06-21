@@ -18,6 +18,7 @@ export interface InventoryModel {
   brand: string;
   model: string;
   count: number; // live (non-sold) listings of this model
+  bodyType: string | null; // representative body_type (for "vs" competitor matching)
 }
 
 let cache: InventoryModel[] | null = null;
@@ -29,14 +30,18 @@ export async function getInventoryModels(): Promise<InventoryModel[]> {
   if (cache && Date.now() - cachedAt < TTL_MS) return cache;
   try {
     const supabase = createServiceClient();
-    const { data } = await supabase.from("cars").select("brand, model").neq("inventory_status", "sold");
+    const { data } = await supabase.from("cars").select("brand, model, body_type").neq("inventory_status", "sold");
     const counts = new Map<string, InventoryModel>();
-    for (const r of (data || []) as { brand: string | null; model: string | null }[]) {
+    for (const r of (data || []) as { brand: string | null; model: string | null; body_type: string | null }[]) {
       if (!r.brand || !r.model) continue;
       const key = `${r.brand}|||${r.model}`;
       const existing = counts.get(key);
-      if (existing) existing.count += 1;
-      else counts.set(key, { brand: r.brand, model: r.model, count: 1 });
+      if (existing) {
+        existing.count += 1;
+        if (!existing.bodyType && r.body_type) existing.bodyType = r.body_type;
+      } else {
+        counts.set(key, { brand: r.brand, model: r.model, count: 1, bodyType: r.body_type ?? null });
+      }
     }
     const models = [...counts.values()].sort(
       (a, b) => b.count - a.count || a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model),
@@ -61,4 +66,23 @@ export async function getModelsForBrand(brand: string): Promise<InventoryModel[]
 export async function modelFromSlug(bSlug: string, mSlug: string): Promise<InventoryModel | null> {
   const models = await getInventoryModels();
   return models.find((m) => brandSlug(m.brand) === bSlug && modelSlug(m.model) === mSlug) ?? null;
+}
+
+/** Combined "<brandSlug>-<modelSlug>" — one side of a comparison URL (e.g. "byd-han"). */
+export function combinedModelSlug(m: { brand: string; model: string }): string {
+  return `${brandSlug(m.brand)}-${modelSlug(m.model)}`;
+}
+
+/** Resolve a combined "<brandSlug>-<modelSlug>" back to its inventory model. */
+export async function modelFromCombinedSlug(combined: string): Promise<InventoryModel | null> {
+  const models = await getInventoryModels();
+  return models.find((m) => combinedModelSlug(m) === combined) ?? null;
+}
+
+/** Same-body-type competitors of a model (different model, busiest first) for "vs" links. */
+export async function getComparableModels(m: InventoryModel, limit = 4): Promise<InventoryModel[]> {
+  const models = await getInventoryModels();
+  return models
+    .filter((x) => x.model !== m.model && x.bodyType && x.bodyType === m.bodyType)
+    .slice(0, limit);
 }

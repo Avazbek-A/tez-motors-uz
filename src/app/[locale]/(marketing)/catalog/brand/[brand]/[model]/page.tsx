@@ -9,7 +9,7 @@ import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getUsdUzsRate } from "@/lib/fx-rate";
 import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
-import { modelSlug, modelFromSlug, getModelsForBrand } from "@/lib/models";
+import { modelSlug, modelFromSlug, getModelsForBrand, getComparableModels, combinedModelSlug } from "@/lib/models";
 import { computeCustomsUz, resolveVehicleKind, resolveVehicleAge } from "@/lib/customs-uz";
 import { formatPrice } from "@/lib/utils";
 import type { Car } from "@/types/car";
@@ -94,9 +94,10 @@ export default async function ModelPage(
   const cookieStore = await cookies();
   const locale = resolveLocale(requestHeaders, cookieStore.get("NEXT_LOCALE")?.value);
 
-  const [cars, siblings] = await Promise.all([
+  const [cars, siblings, comparables] = await Promise.all([
     fetchModelCars(m.brand, m.model),
     getModelsForBrand(m.brand),
+    getComparableModels(m),
   ]);
 
   // под-ключ landed cost from the cheapest real-priced listing, via the customs engine.
@@ -251,6 +252,25 @@ export default async function ModelPage(
                 >
                   {t.allBrand} →
                 </Link>
+              </div>
+            </div>
+          )}
+
+          {comparables.length > 0 && (
+            <div className="space-y-3 border-t border-border pt-8">
+              <h2 className="text-lg font-bold text-foreground">
+                {locale === "ru" ? "Сравнить с конкурентами" : locale === "uz" ? "Raqobatchilar bilan solishtirish" : "Compare with rivals"}
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {comparables.map((comp) => (
+                  <Link
+                    key={`${comp.brand}-${comp.model}`}
+                    href={`/${locale}/compare/${combinedModelSlug(m)}-vs-${combinedModelSlug(comp)}`}
+                    className="rounded-full border border-border bg-card px-4 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                  >
+                    {m.model} vs {comp.brand} {comp.model}
+                  </Link>
+                ))}
               </div>
             </div>
           )}

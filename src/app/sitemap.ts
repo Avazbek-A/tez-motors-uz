@@ -4,7 +4,7 @@ import { locales } from "@/i18n/config";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
 import { DELIVERY_CITIES } from "@/lib/constants";
 import { brandSlug, getInventoryBrands } from "@/lib/brands";
-import { getInventoryModels, modelSlug } from "@/lib/models";
+import { getInventoryModels, modelSlug, combinedModelSlug } from "@/lib/models";
 
 const CAR_FILTER_SLUGS = ["electric", "hybrid", "phev", "suv", "sedan", "crossover"];
 const IMPORT_COUNTRY_SLUGS = ["china", "korea", "usa", "germany"];
@@ -139,7 +139,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
     });
 
-    const modelPages = (await getInventoryModels()).flatMap((m) => {
+    const inventoryModels = await getInventoryModels();
+    const modelPages = inventoryModels.flatMap((m) => {
       const path = `/catalog/brand/${brandSlug(m.brand)}/${modelSlug(m.model)}`;
       return locales.map((locale) => ({
         url: `${baseUrl}/${locale}${path}`,
@@ -150,6 +151,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         alternates: alternatesFor(path),
       }));
     });
+
+    // Curated comparison pairs: same body type, deduped to sorted order, capped.
+    const comparePairs = new Set<string>();
+    for (const m of inventoryModels) {
+      const rivals = inventoryModels
+        .filter((x) => x.model !== m.model && x.bodyType && x.bodyType === m.bodyType)
+        .slice(0, 3);
+      for (const r of rivals) {
+        comparePairs.add([combinedModelSlug(m), combinedModelSlug(r)].sort().join("-vs-"));
+      }
+    }
+    const comparePages = [...comparePairs].slice(0, 80).flatMap((matchup) =>
+      locales.map((locale) => ({
+        url: `${baseUrl}/${locale}/compare/${matchup}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+        alternates: alternatesFor(`/compare/${matchup}`),
+      })),
+    );
 
     const filterPages = CAR_FILTER_SLUGS.flatMap((slug) =>
       locales.map((locale) => ({
@@ -185,6 +206,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticPages,
       ...brandPages,
       ...modelPages,
+      ...comparePages,
       ...filterPages,
       ...importPages,
       ...cityPages,
