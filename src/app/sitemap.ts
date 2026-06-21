@@ -4,6 +4,7 @@ import { locales } from "@/i18n/config";
 import { PART_CATEGORIES } from "@/lib/schemas/part";
 import { DELIVERY_CITIES } from "@/lib/constants";
 import { brandSlug, getInventoryBrands } from "@/lib/brands";
+import { getInventoryModels, modelSlug } from "@/lib/models";
 
 const CAR_FILTER_SLUGS = ["electric", "hybrid", "phev", "suv", "sedan", "crossover"];
 
@@ -137,6 +138,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
     });
 
+    const modelPages = (await getInventoryModels()).flatMap((m) => {
+      const path = `/catalog/brand/${brandSlug(m.brand)}/${modelSlug(m.model)}`;
+      return locales.map((locale) => ({
+        url: `${baseUrl}/${locale}${path}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        // Demand proxy: models we stock more of rank slightly higher in the sitemap.
+        priority: m.count >= 3 ? 0.7 : 0.6,
+        alternates: alternatesFor(path),
+      }));
+    });
+
     const filterPages = CAR_FILTER_SLUGS.flatMap((slug) =>
       locales.map((locale) => ({
         url: `${baseUrl}/${locale}/catalog/type/${slug}`,
@@ -160,6 +173,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [
       ...staticPages,
       ...brandPages,
+      ...modelPages,
       ...filterPages,
       ...cityPages,
       ...carPages,

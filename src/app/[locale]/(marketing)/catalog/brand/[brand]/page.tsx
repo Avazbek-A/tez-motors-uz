@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { SITE_CONFIG } from "@/lib/constants";
 import { brandFromSlug } from "@/lib/brands";
+import { getModelsForBrand, modelSlug } from "@/lib/models";
 import { getLocaleFromCookie } from "@/i18n/config";
 import { localizedAlternates, type SeoLocale } from "@/lib/seo/alternates";
 import { BreadcrumbSchema } from "@/components/shared/breadcrumb-schema";
@@ -81,6 +83,7 @@ export default async function BrandPage(
     (getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value) as SeoLocale);
 
   const c = COPY_BY_LOCALE[locale](brand);
+  const models = await getModelsForBrand(brand);
 
   return (
     <>
@@ -108,6 +111,20 @@ export default async function BrandPage(
           <p className="mt-4 text-base md:text-lg text-muted-foreground max-w-3xl">
             {c.intro}
           </p>
+          {models.length > 0 && (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {models.map((mo) => (
+                <Link
+                  key={mo.model}
+                  href={`/${locale}/catalog/brand/${slug}/${modelSlug(mo.model)}`}
+                  className="rounded-full border border-border bg-card px-4 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                >
+                  {mo.model}
+                  <span className="text-muted-foreground"> ({mo.count})</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       <CatalogContent

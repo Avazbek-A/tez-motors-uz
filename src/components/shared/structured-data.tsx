@@ -313,6 +313,29 @@ export function CalculatorSchema({ locale = "ru" }: { locale?: "ru" | "uz" | "en
   );
 }
 
+export function ItemListSchema({ items }: { items: Array<{ name: string; url: string }> }) {
+  // Marks a collection page (model / brand / filter / city) as an ordered list of
+  // products so Google/Yandex understand it's a listing and can surface a carousel.
+  if (!items || items.length === 0) return null;
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    numberOfItems: items.length,
+    itemListElement: items.map((it, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: it.name,
+      url: it.url,
+    })),
+  };
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
+    />
+  );
+}
+
 export function WebsiteSchema() {
   const schema = {
     "@context": "https://schema.org",
