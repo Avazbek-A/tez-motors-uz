@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tez Motors — tezmotors.uz
 
-## Getting Started
+Production website and lead engine for Tez Motors, an EV-import business in Tashkent (100+ vehicles imported from China, $2M+ cumulative revenue). Live at **[tezmotors.uz](https://tezmotors.uz)**.
 
-First, run the development server:
+The site is not a brochure — it is the company's inbound channel: SEO-focused catalog and content pages capture buyer and supplier requests, which are qualified and routed automatically.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Stack
+
+- **Next.js / TypeScript** (App Router), Tailwind CSS
+- **Supabase** (Postgres) — catalog, requests, content; migrations in `supabase/`, business logic partly in PLpgSQL
+- **Cron worker** (`cron-worker/`) — scheduled jobs: data refresh, notifications
+- **Docker + docker-compose**, deploy scripts in `deploy/`; self-hosted on the company's own Linux server
+- **Tests**: vitest (unit), Playwright (`e2e/`)
+- RU/UZ localization
+
+## Structure
+
+```
+src/            application code (App Router)
+supabase/       schema, migrations, PLpgSQL
+cron-worker/    scheduled background jobs
+e2e/            Playwright end-to-end tests
+deploy/         deployment scripts
+docs/           project docs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+cp .env.example .env   # fill in Supabase keys
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built and operated by [Avazbek Abdusaidov](https://github.com/Avazbek-A) — solo, end to end: requirements, code, deployment, operations.
