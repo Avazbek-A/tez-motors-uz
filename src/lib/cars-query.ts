@@ -4,7 +4,7 @@
  * params, computes any trigram search ids, and applies cache headers.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import { scopeToTenant } from "@/lib/tenant-context";
 
 interface Sortable {
@@ -65,9 +65,9 @@ export async function fetchCarsPage(
   const pageNum = Math.max(opts.page || 1, 1);
   const offset = (pageNum - 1) * size;
 
-  // Explicit column list (PUBLIC_CAR_COLUMNS) — never "*", so any internal
+  // Explicit column list (PUBLIC_CAR_LIST_COLUMNS) — never "*", so any internal
   // column added to `cars` doesn't leak through the catalog list.
-  let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS, { count: "exact" });
+  let query = supabase.from("cars").select(PUBLIC_CAR_LIST_COLUMNS, { count: "exact" });
 
   if (opts.tenantId) query = scopeToTenant(query, opts.tenantId);
   if (!opts.includeAll) query = query.neq("inventory_status", "sold");

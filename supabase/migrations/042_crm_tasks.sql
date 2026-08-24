@@ -27,9 +27,11 @@ CREATE TABLE IF NOT EXISTS public.crm_tasks (
   completed_at TIMESTAMPTZ
 );
 
--- One open task per auto-source (so the cron is idempotent).
+-- One open task per auto-source (so the cron is idempotent). Deliberately NOT
+-- a partial index: PostgREST upserts emit a bare ON CONFLICT (auto_source),
+-- which cannot infer a partial index (42P10). See 074.
 CREATE UNIQUE INDEX IF NOT EXISTS uniq_crm_tasks_auto_source
-  ON public.crm_tasks (auto_source) WHERE auto_source IS NOT NULL;
+  ON public.crm_tasks (auto_source);
 CREATE INDEX IF NOT EXISTS idx_crm_tasks_queue ON public.crm_tasks (status, due_at);
 CREATE INDEX IF NOT EXISTS idx_crm_tasks_assignee ON public.crm_tasks (assigned_to, status);
 

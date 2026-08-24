@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireCustomer } from "@/lib/customer-auth";
+import { UUID_RE } from "@/lib/uuid";
 
-const carIdSchema = z.object({ car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i) });
+const carIdSchema = z.object({ car_id: z.string().regex(UUID_RE) });
 // For the one-time localStorage -> account migration on login.
-const bulkSchema = z.object({ car_ids: z.array(z.string().regex(/^[a-f0-9-]{1,64}$/i)).max(200) });
+const bulkSchema = z.object({ car_ids: z.array(z.string().regex(UUID_RE)).max(200) });
 
 // GET — the logged-in customer's favorite car IDs.
 export async function GET(request: NextRequest) {

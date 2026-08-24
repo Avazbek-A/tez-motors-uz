@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getCustomerContext } from "@/lib/customer-auth";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/recommend";
+import { isUuid, parseUuidList } from "@/lib/uuid";
 
 /**
  * "Recommended for you" (Phase AO). Builds an affinity profile from the
@@ -13,16 +14,10 @@ import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/reco
  */
 export const dynamic = "force-dynamic";
 
-const idRe = /^[a-f0-9-]{1,64}$/i;
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const seedIds = (searchParams.get("ids") || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => idRe.test(s))
-      .slice(0, 20);
+    const seedIds = parseUuidList(searchParams.get("ids"), 20);
 
     const supabase = await createClient();
 
@@ -38,7 +33,7 @@ export async function GET(request: NextRequest) {
           .limit(20);
         for (const f of favs || []) {
           const id = f.car_id as string;
-          if (idRe.test(id) && !seedIds.includes(id)) seedIds.push(id);
+          if (isUuid(id) && !seedIds.includes(id)) seedIds.push(id);
         }
       }
     } catch {
@@ -51,7 +46,7 @@ export async function GET(request: NextRequest) {
     if (wantPersonalized) {
       const [{ data: seedCars }, { data: candidates }] = await Promise.all([
         supabase.from("cars").select("id, brand, body_type, fuel_type, price_usd").in("id", seedIds),
-        supabase.from("cars").select(PUBLIC_CAR_COLUMNS).neq("inventory_status", "sold").limit(300),
+        supabase.from("cars").select(PUBLIC_CAR_LIST_COLUMNS).neq("inventory_status", "sold").limit(300),
       ]);
       const profile = buildProfile((seedCars as unknown as ScorableCar[]) || []);
       const candidateRows = (candidates as unknown as Record<string, unknown>[]) || [];
@@ -72,7 +67,7 @@ export async function GET(request: NextRequest) {
       // Cold start: hot offers.
       const { data: hot } = await supabase
         .from("cars")
-        .select(PUBLIC_CAR_COLUMNS)
+        .select(PUBLIC_CAR_LIST_COLUMNS)
         .neq("inventory_status", "sold")
         .eq("is_hot_offer", true)
         .order("order_position", { ascending: true })

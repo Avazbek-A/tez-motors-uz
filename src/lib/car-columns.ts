@@ -48,3 +48,19 @@ export const PUBLIC_CAR_COLUMNS = [
   "created_at",
   "updated_at",
 ].join(", ");
+
+/**
+ * List/card variant: PUBLIC_CAR_COLUMNS minus `spec_data`.
+ *
+ * `spec_data` is the AutoHome capture (trims, colors, panorama + video ids) and
+ * is by far the largest column on the row — reading it for a whole page of cars
+ * pushed the unbounded list query to ~15 MB / 11 s and tripped Postgres
+ * `statement timeout` (57014) on /api/cars. No list/card UI reads it; only the
+ * car detail + /spec pages do, and those fetch a single row.
+ *
+ * Use this for anything that returns MANY cars; use PUBLIC_CAR_COLUMNS for a
+ * single-car read.
+ */
+export const PUBLIC_CAR_LIST_COLUMNS = PUBLIC_CAR_COLUMNS.split(", ")
+  .filter((c) => c !== "spec_data")
+  .join(", ");
