@@ -192,20 +192,53 @@ export function stripReasoningPreamble(text: string): string {
   return out;
 }
 
+/**
+ * Does this answer look like the model thinking out loud instead of replying?
+ *
+ * Tag-stripping is not enough: a probe against the live chain came back with
+ * "Here's a thinking process:\n\n1. **Analyze User Input:** - **Role:**
+ * Customer-service assistant for Tez Motors …" — the model's notes about the
+ * system prompt, no <think> tags anywhere, sent verbatim to a customer as the
+ * auto-reply to their inquiry. A leak is treated like an empty response: the
+ * caller moves to the next model, and the deterministic template is the floor.
+ *
+ * Deliberately narrow — these phrases are ones a customer reply would not open
+ * with, and only the opening of the message is examined.
+ */
+export function looksLikeReasoningLeak(text: string): boolean {
+  const head = text.trim().slice(0, 400);
+  if (!head) return false;
+  const tells = [
+    /^here'?s (a|my) (thinking|thought) process/i,
+    /^(okay|ok|alright|so),? (let me|i (need|should|will)|we need)/i,
+    /^(let me|i need to|i should|we need to|i'?ll) (think|analyze|consider|start|break)/i,
+    /^\s*\*\*(analyze|analysis|understand|plan|step 1)/i,
+    /^the user (is asking|wants|asks)/i,
+    /^we need to respond/i,
+  ];
+  if (tells.some((re) => re.test(head))) return true;
+  // A reply that quotes the system prompt back at us (role/language/length
+  // instructions) is the model narrating its brief, not answering the buyer.
+  const brief = /\*\*(role|language|length|task|instructions?|constraints?)\s*:?\*\*/gi;
+  return (head.match(brief) || []).length >= 2;
+}
+
 export function parseChatResponse(provider: LlmProvider, data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   if (provider === "openai") {
     const choices = (data as { choices?: { message?: { content?: unknown } }[] }).choices;
     const content = choices?.[0]?.message?.content;
     const text = typeof content === "string" ? stripReasoningPreamble(content) : "";
-    return text.length > 0 ? text : null;
+    if (text.length === 0 || looksLikeReasoningLeak(text)) return null;
+    return text;
   }
   const blocks = (data as { content?: { type?: string; text?: string }[] }).content || [];
   const text = stripReasoningPreamble(blocks
     .filter((b) => b?.type === "text" && typeof b.text === "string")
     .map((b) => b.text as string)
     .join("\n"));
-  return text.length > 0 ? text : null;
+  if (text.length === 0 || looksLikeReasoningLeak(text)) return null;
+  return text;
 }
 
 // Per-tier request timeout. The reason tier may run a 550B reasoner (~25s+), so it

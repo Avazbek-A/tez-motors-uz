@@ -7,6 +7,7 @@ import {
   parseChatResponse,
   buildVisionMessages,
   stripReasoningPreamble,
+  looksLikeReasoningLeak,
 } from "../llm";
 
 describe("resolveProvider", () => {
@@ -143,5 +144,39 @@ describe("stripReasoningPreamble", () => {
   it("strips the block before JSON so the payload still parses", () => {
     const out = stripReasoningPreamble('<think>need json</think>{"ok":true}');
     expect(() => JSON.parse(out)).not.toThrow();
+  });
+});
+
+describe("looksLikeReasoningLeak", () => {
+  it("catches the leak that actually reached a customer", () => {
+    // Live probe of POST /api/inquiry came back with this as the auto-reply.
+    const leak = "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - **Role:** Customer-service assistant for Tez Motors\n   - **Language:** ONLY Russian";
+    expect(looksLikeReasoningLeak(leak)).toBe(true);
+  });
+
+  it("catches other openings a reply would never start with", () => {
+    for (const s of [
+      "Okay, let me think about what the buyer needs here.",
+      "We need to respond in Russian with a short message.",
+      "The user is asking about the Tank 500 price.",
+      "**Analyze the request** before answering",
+    ]) {
+      expect(looksLikeReasoningLeak(s)).toBe(true);
+    }
+  });
+
+  it("passes a real customer reply through", () => {
+    for (const s of [
+      "Здравствуйте! Tank 500 под ключ — от $52 000, срок 6–8 недель. Менеджер свяжется с вами.",
+      "Hello! The Tank 500 lands at about $52,000 all-in. We'll call you shortly.",
+      "Спасибо за обращение! Мы уточним наличие и вернёмся с ответом сегодня.",
+    ]) {
+      expect(looksLikeReasoningLeak(s)).toBe(false);
+    }
+  });
+
+  it("makes parseChatResponse drop a leaking answer so the caller fails over", () => {
+    const leaked = { choices: [{ message: { content: "Here's a thinking process:\n1. **Role:** assistant" } }] };
+    expect(parseChatResponse("openai", leaked)).toBeNull();
   });
 });
