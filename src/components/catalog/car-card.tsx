@@ -125,13 +125,13 @@ export function CarCard({ car }: CarCardProps) {
 
         {/* Specs */}
         <div className="flex flex-wrap gap-4 mt-4">
-          {car.engine_volume && (
+          {!!car.engine_volume && car.engine_volume > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
               <Fuel className="w-4 h-4 text-foreground/40" />
               {car.engine_volume} {dictionary.common.l}
             </div>
           )}
-          {car.engine_power && (
+          {!!car.engine_power && car.engine_power > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium uppercase tracking-wide">
               <Gauge className="w-4 h-4 text-foreground/40" />
               {car.engine_power} {dictionary.common.hp}

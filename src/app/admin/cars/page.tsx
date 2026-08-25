@@ -818,7 +818,7 @@ export default function AdminCarsPage() {
                             <Badge variant="destructive">{t.sold}</Badge>
                           )}
                           {car.is_hot_offer && <Badge variant="default">{t.hot}</Badge>}
-                          {car.original_price_usd && car.original_price_usd > car.price_usd && (
+                          {!!car.original_price_usd && car.original_price_usd > car.price_usd && (
                             <Badge variant="outline">-{Math.round((1 - car.price_usd / car.original_price_usd) * 100)}%</Badge>
                           )}
                         </div>

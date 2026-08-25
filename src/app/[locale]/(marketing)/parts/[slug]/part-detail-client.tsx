@@ -245,7 +245,7 @@ export default function PartDetailClient({ part }: { part: Part }) {
               ) : (
                 <span className="text-xl text-muted-foreground">По запросу</span>
               )}
-              {part.original_price_usd && part.original_price_usd > (part.price_usd || 0) && (
+              {!!part.original_price_usd && part.original_price_usd > (part.price_usd || 0) && (
                 <span className="text-lg font-mono text-muted-foreground line-through">${part.original_price_usd}</span>
               )}
             </div>

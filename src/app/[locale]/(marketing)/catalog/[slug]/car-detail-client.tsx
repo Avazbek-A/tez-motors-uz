@@ -279,7 +279,9 @@ export default function CarDetailPage({ car }: { car: Car }) {
                 ) : (
                   <p className="text-3xl font-mono font-bold text-neon-blue">{car.price_usd > 0 ? formatPrice(car.price_usd) : dictionary.common.priceOnRequest}</p>
                 )}
-                {car.price_uzs && (
+                {/* `0 && …` renders a literal 0 in JSX — 13 cars carry price_uzs = 0
+                    and printed a stray "0" under "Цена по запросу". */}
+                {!!car.price_uzs && car.price_uzs > 0 && (
                   <p className="text-sm text-muted-foreground mt-1">
                     ~ {formatPrice(car.price_uzs, "UZS")}
                   </p>
