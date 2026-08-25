@@ -18,11 +18,15 @@ export async function PUT(
     if (!parsed.success) {
       return NextResponse.json({ success: false, errors: parsed.error.issues }, { status: 400 });
     }
+    // .partial() re-injects .default() values for omitted keys; keep only the
+    // fields actually sent so a single-field edit can't reset others to defaults.
+    const raw = (body ?? {}) as Record<string, unknown>;
+    const update = Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in raw));
     const supabase = createServiceClient();
 
     const { data, error } = await supabase
       .from("reviews")
-      .update(parsed.data)
+      .update(update)
       .eq("id", id)
       .select()
       .single();
@@ -35,7 +39,7 @@ export async function PUT(
       action: "update",
       entity: "review",
       entity_id: id,
-      diff: compactDiff(parsed.data as Record<string, unknown>),
+      diff: compactDiff(update),
     }).catch(() => {});
 
     return NextResponse.json({ success: true, review: data });

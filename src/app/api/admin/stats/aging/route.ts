@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { agingSuggestion, suggestIncreasePct, increasePrice } from "@/lib/inventory-aging";
+import { chunk } from "@/lib/supabase/paginate";
 
 /**
  * Aged-inventory repricing suggestions (same engine as the inventory-aging
@@ -27,17 +28,26 @@ export async function GET(request: NextRequest) {
     if (rows.length === 0) return NextResponse.json({ ok: true, markdowns: [], increases: [] });
 
     const ids = rows.map((c) => c.id as string);
-    const [favRes, watchRes, inqRes] = await Promise.all([
-      supabase.from("favorites").select("car_id").in("car_id", ids).limit(MAX * 5),
-      supabase.from("price_watches").select("car_id").is("notified_at", null).in("car_id", ids).limit(MAX * 5),
-      supabase.from("inquiries").select("car_id").in("car_id", ids).limit(MAX * 5),
+    // Batch the id list: a single .in() with up to 2000 ids builds a multi-KB GET
+    // URL that can hit PostgREST's length limit (HTTP 414) and blank the report.
+    const idChunks = chunk(ids, 200);
+    const fetchByCarIds = async (
+      build: (chunkIds: string[]) => PromiseLike<{ data: { car_id: unknown }[] | null }>,
+    ): Promise<{ car_id: unknown }[]> => {
+      const parts = await Promise.all(idChunks.map((c) => build(c).then((r) => r.data ?? [], () => [])));
+      return parts.flat();
+    };
+    const [favRows, watchRows, inqRows] = await Promise.all([
+      fetchByCarIds((c) => supabase.from("favorites").select("car_id").in("car_id", c)),
+      fetchByCarIds((c) => supabase.from("price_watches").select("car_id").is("notified_at", null).in("car_id", c)),
+      fetchByCarIds((c) => supabase.from("inquiries").select("car_id").in("car_id", c)),
     ]);
-    const tally = (rowsIn: { car_id: unknown }[] | null) => {
+    const tally = (rowsIn: { car_id: unknown }[]) => {
       const m = new Map<string, number>();
-      for (const r of rowsIn || []) { const id = r.car_id as string; if (id) m.set(id, (m.get(id) || 0) + 1); }
+      for (const r of rowsIn) { const id = r.car_id as string; if (id) m.set(id, (m.get(id) || 0) + 1); }
       return m;
     };
-    const fav = tally(favRes.data), watch = tally(watchRes.data), inq = tally(inqRes.data);
+    const fav = tally(favRows), watch = tally(watchRows), inq = tally(inqRows);
 
     const scored = rows.map((c) => {
       const id = c.id as string;

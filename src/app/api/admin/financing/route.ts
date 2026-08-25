@@ -48,8 +48,11 @@ export async function PATCH(request: NextRequest) {
   if (!allowed.includes(parsed.data.status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
-  const { error } = await supabase.from(table).update({ status: parsed.data.status }).eq("id", parsed.data.id);
+  const { data: updated, error } = await supabase.from(table).update({ status: parsed.data.status }).eq("id", parsed.data.id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // 0 rows → the id doesn't exist in the chosen table (e.g. kind/id mismatch);
+  // don't report success or write a status_change audit for a no-op.
+  if (!updated || updated.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
   logAdminAction(request, { action: "status_change", entity: parsed.data.kind, entity_id: parsed.data.id, diff: { status: parsed.data.status } }).catch(() => {});
   return NextResponse.json({ success: true });
 }

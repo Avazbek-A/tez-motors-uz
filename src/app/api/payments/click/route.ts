@@ -144,6 +144,27 @@ async function handlePrepare(supabase: Supabase, cb: ClickCallback): Promise<Nex
     );
   }
 
+  // Block a second prepare while an earlier one for this order is still pending
+  // (CREATED, under a DIFFERENT click_trans_id) — mirrors the Payme ORDER_BUSY
+  // guard so one order can't accumulate two collectable deposit rows. (Same
+  // click_trans_id re-sends are handled by the idempotent `existing` check above.)
+  const { data: pending } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("provider", "click")
+    .eq("order_id", order.id)
+    .eq("state", CLICK_STATE.CREATED)
+    .limit(1);
+  if (pending && pending.length > 0) {
+    return NextResponse.json(
+      clickResponse({
+        click_trans_id: cb.click_trans_id,
+        merchant_trans_id: cb.merchant_trans_id,
+        error: CLICK_ERROR.ALREADY_PAID,
+      }),
+    );
+  }
+
   const { data: inserted, error } = await supabase
     .from("payments")
     .insert({

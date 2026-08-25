@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { attributionLabel, type Attribution } from "@/lib/attribution";
 import { contactKey } from "@/lib/crm";
 
@@ -11,17 +12,18 @@ import { contactKey } from "@/lib/crm";
  * later appearing on an order. Shows which channels actually drive sales.
  * Read-only, admin-gated.
  */
-const MAX = 5000;
-
 export async function GET(request: NextRequest) {
   const guard = await requireAdmin(request);
   if (guard) return guard;
 
   try {
     const supabase = createServiceClient();
+    // Paginated so lead totals + conversions are computed over the full tables.
     const [inqRes, ordRes] = await Promise.all([
-      supabase.from("inquiries").select("phone, metadata, created_at").limit(MAX),
-      supabase.from("orders").select("customer_phone").limit(MAX),
+      fetchAllRows<{ phone: string; metadata: { attribution?: Attribution } | null; created_at: string }>((from, to) =>
+        supabase.from("inquiries").select("phone, metadata, created_at").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ customer_phone: string }>((from, to) =>
+        supabase.from("orders").select("customer_phone").range(from, to)).then((data) => ({ data })),
     ]);
 
     const orderPhones = new Set<string>();

@@ -26,20 +26,29 @@ export async function GET(request: NextRequest) {
     byReferrer.set(id, c);
   }
 
-  const ids = Array.from(byReferrer.keys());
-  const nameById = new Map<string, { name: string | null; phone: string | null }>();
-  if (ids.length) {
-    const { data: customers } = await supabase.from("customers").select("id, name, phone").in("id", ids);
-    for (const c of customers || []) nameById.set(c.id as string, { name: (c.name as string) ?? null, phone: (c.phone as string) ?? null });
-  }
-
-  const leaderboard = ids
-    .map((id) => ({ id, ...byReferrer.get(id)!, name: nameById.get(id)?.name ?? null, phone: nameById.get(id)?.phone ?? null }))
+  // Rank FIRST, then resolve names for only the top 100. Resolving all referrers
+  // would pass thousands of ids to .in(), whose GET URL can exceed PostgREST's
+  // length limit (HTTP 414) and drop every name. The leaderboard only shows 100.
+  const ranked = Array.from(byReferrer.entries())
+    .map(([id, c]) => ({ id, ...c }))
     .sort((a, b) => b.converted - a.converted || b.referred - a.referred)
     .slice(0, 100);
 
+  const topIds = ranked.map((r) => r.id);
+  const nameById = new Map<string, { name: string | null; phone: string | null }>();
+  if (topIds.length) {
+    const { data: customers } = await supabase.from("customers").select("id, name, phone").in("id", topIds);
+    for (const c of customers || []) nameById.set(c.id as string, { name: (c.name as string) ?? null, phone: (c.phone as string) ?? null });
+  }
+
+  const leaderboard = ranked.map((r) => ({
+    ...r,
+    name: nameById.get(r.id)?.name ?? null,
+    phone: nameById.get(r.id)?.phone ?? null,
+  }));
+
   const totals = {
-    referrers: ids.length,
+    referrers: byReferrer.size,
     referred: (refs || []).length,
     converted: (refs || []).filter((r) => r.status === "converted" || r.status === "rewarded").length,
   };

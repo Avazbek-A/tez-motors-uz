@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { requireAdmin } from "@/lib/auth";
 
 /**
@@ -29,13 +30,16 @@ export async function GET(request: Request) {
     since.setUTCDate(since.getUTCDate() - (days - 1));
 
     const [inqRes, ordersRes, paymentsRes] = await Promise.all([
-      supabase.from("inquiries").select("status, source_page, assigned_to").limit(10000),
-      supabase.from("orders").select("status").limit(10000),
-      supabase
-        .from("payments")
-        .select("order_id, amount_tiyin, created_at, state")
-        .eq("state", 2)
-        .limit(10000),
+      // Paginate so the funnel counts (inquiriesTotal, reservations) + per-source
+      // and per-rep breakdowns are computed over the full tables, not the first page.
+      fetchAllRows<{ status: string; source_page: string | null; assigned_to: string | null }>((from, to) =>
+        supabase.from("inquiries").select("status, source_page, assigned_to").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ status: string }>((from, to) =>
+        supabase.from("orders").select("status").range(from, to)).then((data) => ({ data })),
+      // Paginate so depositsPaid (distinct paid orders) and the chart see all rows.
+      fetchAllRows<{ order_id: string; amount_tiyin: number; created_at: string; state: number }>((from, to) =>
+        supabase.from("payments").select("order_id, amount_tiyin, created_at, state").eq("state", 2).range(from, to),
+      ).then((data) => ({ data })),
     ]);
 
     const inquiries = inqRes.data || [];
@@ -66,13 +70,18 @@ export async function GET(request: Request) {
       d.setUTCDate(since.getUTCDate() + i);
       buckets.set(d.toISOString().slice(0, 10), { count: 0, uzs: 0 });
     }
+    // depositsTotalUzs must match the per-day chart (the last-N-days window), so
+    // accumulate it INSIDE the window only. Summing every payment here made the
+    // headline an all-time figure presented next to (and contradicting) the
+    // N-day chart. (The unfiltered `payments` query is still needed for the
+    // lifetime depositsPaid funnel count above.)
     let depositsTotalUzs = 0;
     for (const p of payments) {
       const key = new Date(p.created_at as string).toISOString().slice(0, 10);
-      const uzs = Math.round(Number(p.amount_tiyin || 0) / 100);
-      depositsTotalUzs += uzs;
       const b = buckets.get(key);
       if (!b) continue;
+      const uzs = Math.round(Number(p.amount_tiyin || 0) / 100);
+      depositsTotalUzs += uzs;
       b.count += 1;
       b.uzs += uzs;
     }

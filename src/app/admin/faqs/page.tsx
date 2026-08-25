@@ -376,6 +376,7 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
   const t = COPY[locale];
   const isEditing = !!faq;
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [questionRu, setQuestionRu] = useState(faq?.question_ru || "");
   const [questionUz, setQuestionUz] = useState(faq?.question_uz || "");
   const [questionEn, setQuestionEn] = useState(faq?.question_en || "");
@@ -389,6 +390,7 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setError(null);
 
     const payload = {
       question_ru: questionRu,
@@ -413,8 +415,13 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
       if (res.ok) {
         onSaved();
         onClose();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Failed to save FAQ. Please try again.");
       }
-    } catch {} finally {
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
       setSaving(false);
     }
   };
@@ -470,6 +477,7 @@ function FAQFormModal({ faq, onClose, onSaved }: { faq: FAQ | null; onClose: () 
             />
             <span className="text-sm">{t.publishedLabel}</span>
           </label>
+          {error && <p className="text-sm text-red-400">{error}</p>}
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button type="button" variant="outline" onClick={onClose}>{t.cancel}</Button>
             <Button type="submit" disabled={saving}>

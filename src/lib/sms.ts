@@ -40,8 +40,15 @@ export async function sendSms(phone: string, message: string): Promise<SmsResult
   const password = process.env.ESKIZ_PASSWORD;
 
   if (!email || !password) {
-    // Dev / unconfigured: surface the message in logs so the flow is testable.
-    logEvent("sms.skipped", { phone, message }, "warn");
+    // Dev / unconfigured. The message body contains the login OTP, so never log
+    // it (or the full phone) in production — that would leak live codes + PII to
+    // anyone with log access. Keep full detail in dev so the flow stays testable.
+    if (process.env.NODE_ENV === "production") {
+      const masked = phone.length > 4 ? `${phone.slice(0, 3)}****${phone.slice(-2)}` : "****";
+      logEvent("sms.skipped", { phone: masked }, "warn");
+    } else {
+      logEvent("sms.skipped", { phone, message }, "warn");
+    }
     return { ok: false, skipped: true };
   }
 

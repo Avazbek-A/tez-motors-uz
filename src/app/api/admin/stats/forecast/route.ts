@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getFxRates } from "@/lib/fx-rate";
 import { arAging, bucketByAge, depositsHeldAsLiability, cashRunway, dealPnl, fxExposureScenarios } from "@/lib/finance-forecast";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 /**
  * Financial foresight (Phase AG) — forward-looking cash view. Admin-gated,
@@ -25,12 +26,18 @@ export async function GET(request: NextRequest) {
   const safe = <T>(p: PromiseLike<{ data: T | null }>, d: T) => p.then((r) => r.data ?? d, () => d);
 
   const [invoices, payments, orders, costs, expenses, pos, fx] = await Promise.all([
-    safe(supabase.from("invoices").select("total_usd, status, due_at, issued_at").limit(MAX), [] as { total_usd: number; status: string; due_at: string | null; issued_at: string | null }[]),
-    safe(supabase.from("payments").select("amount_tiyin, state, order_id").eq("state", 2).limit(MAX), [] as { amount_tiyin: number; state: number; order_id: string | null }[]),
-    safe(supabase.from("orders").select("id, reference_code, status, amount_usd, car_id, cars(brand, model, year)").order("created_at", { ascending: false }).limit(200), [] as { id: string; reference_code: string; status: string; amount_usd: number | null; car_id: string | null; cars: { brand: string; model: string; year: number }[] }[]),
-    safe(supabase.from("car_costs").select("car_id, cost_usd").limit(MAX), [] as { car_id: string; cost_usd: number }[]),
+    fetchAllRows<{ total_usd: number; status: string; due_at: string | null; issued_at: string | null }>((from, to) =>
+      supabase.from("invoices").select("total_usd, status, due_at, issued_at").range(from, to)),
+    // Paginate the deposit rows so cashNow / depositsByOrder don't undercount past the cap.
+    fetchAllRows<{ amount_tiyin: number; state: number; order_id: string | null }>((from, to) =>
+      supabase.from("payments").select("amount_tiyin, state, order_id").eq("state", 2).range(from, to)),
+    fetchAllRows<{ id: string; reference_code: string; status: string; amount_usd: number | null; car_id: string | null; cars: { brand: string; model: string; year: number }[] }>((from, to) =>
+      supabase.from("orders").select("id, reference_code, status, amount_usd, car_id, cars(brand, model, year)").order("created_at", { ascending: false }).range(from, to)),
+    fetchAllRows<{ car_id: string; cost_usd: number }>((from, to) =>
+      supabase.from("car_costs").select("car_id, cost_usd").range(from, to)),
     safe(supabase.from("expenses").select("amount_usd, spent_on").gte("spent_on", monthAgo.slice(0, 10)).limit(MAX), [] as { amount_usd: number; spent_on: string }[]),
-    safe(supabase.from("purchase_orders").select("status, qty, unit_cost_usd, eta_date, created_at").limit(MAX), [] as { status: string; qty: number; unit_cost_usd: number | null; eta_date: string | null; created_at: string }[]),
+    fetchAllRows<{ status: string; qty: number; unit_cost_usd: number | null; eta_date: string | null; created_at: string }>((from, to) =>
+      supabase.from("purchase_orders").select("status, qty, unit_cost_usd, eta_date, created_at").range(from, to)),
     getFxRates(supabase),
   ]);
 
@@ -41,7 +48,13 @@ export async function GET(request: NextRequest) {
   for (const p of payments) if (p.order_id) depositsByOrder.set(p.order_id, (depositsByOrder.get(p.order_id) || 0) + (fx.usd_uzs > 0 ? num(p.amount_tiyin) / 100 / fx.usd_uzs : 0));
 
   // Inflow run-rate: paid invoices over the last 30d. Outflow: expenses last 30d.
-  const inflow30 = invoices.filter((i) => i.status === "paid").reduce((a, i) => a + num(i.total_usd), 0); // gross approximation
+  // The `invoices` query is unfiltered by date (arAging needs all unpaid ones),
+  // so filter to the last 30 days HERE by issued_at — otherwise this sums ALL
+  // paid invoices ever as the "monthly" inflow, making net burn look positive
+  // and hiding a real cash crunch (runwayMonths → null/"not burning").
+  const inflow30 = invoices
+    .filter((i) => i.status === "paid" && i.issued_at && new Date(i.issued_at).getTime() >= now - 30 * 86_400_000)
+    .reduce((a, i) => a + num(i.total_usd), 0); // gross approximation
   const monthlyInflowUsd = Math.round(inflow30);
   const monthlyOutflowUsd = Math.round(expenses.reduce((a, e) => a + num(e.amount_usd), 0));
 

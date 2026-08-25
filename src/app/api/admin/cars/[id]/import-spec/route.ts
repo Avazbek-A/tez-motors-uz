@@ -98,6 +98,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const guard = await requireAdmin(request);
   if (guard) return guard;
   const { id } = await params;
+  // Validate the id and confirm the car exists BEFORE doing expensive work
+  // (extractor render + vision LLM + up to 30 image re-host fetches). Otherwise a
+  // malformed/stale id burned that cost and the final update().eq("id", id)
+  // matched 0 rows yet still returned ok:true.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return NextResponse.json({ ok: false, error: "Invalid car id" }, { status: 400 });
+  }
+  const supabase = createServiceClient();
+  const { data: carRow } = await supabase.from("cars").select("id").eq("id", id).maybeSingle();
+  if (!carRow) return NextResponse.json({ ok: false, error: "Car not found" }, { status: 404 });
 
   let body: unknown;
   try {
@@ -138,8 +148,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } else {
     return NextResponse.json({ ok: false, reason: "unsupported_url", message: "Paste a global.autohome.com config/spec URL (or a car.autohome.com.cn/config URL once the extractor is enabled)." }, { status: 422 });
   }
-
-  const supabase = createServiceClient();
 
   // Re-host the scraped gallery to our own Storage (AutoHome's CDN 403s hotlinks
   // without a Referer; ingestImageUrl sends one), then merge into images[].

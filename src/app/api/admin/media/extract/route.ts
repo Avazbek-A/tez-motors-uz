@@ -53,6 +53,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "A valid URL is required" }, { status: 400 });
   }
 
+  // SSRF guard up front: reject private/loopback/link-local/metadata targets
+  // before EITHER path runs. The static parse already revalidates internally,
+  // but the extractor service path (extractViaService) would otherwise forward
+  // the raw URL to the headless renderer and hit the internal network.
+  if (!isSafeRemoteUrl(parsed.data.url)) {
+    return NextResponse.json({ error: "URL not allowed" }, { status: 400 });
+  }
+
   // Rendered candidates (if an extractor is configured) rank first; static parse
   // is always merged so the route still works without the extractor. Dedup by URL.
   const [rendered, statics] = await Promise.all([

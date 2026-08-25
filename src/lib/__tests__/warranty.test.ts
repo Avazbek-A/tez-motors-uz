@@ -21,6 +21,14 @@ describe("warrantyStatus", () => {
     expect(warrantyStatus("2026-05-01", now)).toBe("expired");
     expect(warrantyStatus(null, now)).toBe("none");
   });
+  it("is still valid (not 'expired') during the whole of its final day", () => {
+    // Regression: a warranty expiring today must not flip to 'expired' in the
+    // morning of that day (UTC-midnight expiry vs a positive-offset local now).
+    const middayOfExpiry = Date.parse("2026-06-06T08:00:00Z"); // ~13:00 in UTC+5
+    expect(warrantyStatus("2026-06-06", middayOfExpiry)).toBe("expiring");
+    // The day after is expired.
+    expect(warrantyStatus("2026-06-06", Date.parse("2026-06-07T08:00:00Z"))).toBe("expired");
+  });
 });
 
 describe("daysLeft", () => {

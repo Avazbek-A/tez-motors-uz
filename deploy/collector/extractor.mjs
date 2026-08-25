@@ -18,11 +18,57 @@
  * Then in the app's env: EXTRACTOR_URL=http://localhost:8789  (+ EXTRACTOR_SECRET)
  */
 import { createServer } from "node:http";
+import dns from "node:dns/promises";
+import net from "node:net";
 import { chromium } from "playwright";
 
 const PORT = Number(process.env.EXTRACTOR_PORT || 8789);
 const SECRET = process.env.EXTRACTOR_SECRET || "";
 const NAV_TIMEOUT = 35_000;
+
+/** Constant-time string compare (avoids a timing oracle on the shared secret). */
+function timingSafeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** Is this resolved IP literal in a private / loopback / link-local / ULA range? */
+function isPrivateIp(ip) {
+  if (net.isIPv4(ip)) {
+    const p = ip.split(".").map(Number);
+    return p[0] === 0 || p[0] === 10 || p[0] === 127 ||
+      (p[0] === 169 && p[1] === 254) || (p[0] === 192 && p[1] === 168) ||
+      (p[0] === 172 && p[1] >= 16 && p[1] <= 31);
+  }
+  if (net.isIPv6(ip)) {
+    const l = ip.toLowerCase();
+    if (l === "::1" || /^f[cd]/.test(l) || /^fe[89ab]/.test(l)) return true;
+    const m = l.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/); // IPv4-mapped
+    return m ? isPrivateIp(m[1]) : false;
+  }
+  return true; // unknown form → treat as unsafe
+}
+
+/**
+ * SSRF guard: only http(s), and the host must NOT resolve to a private address.
+ * Resolving (not just string-checking) closes the DNS-rebinding bypass. This
+ * service renders arbitrary URLs in a real browser, so without this it is a full
+ * SSRF primitive against the box's internal network / cloud metadata.
+ */
+async function assertPublicUrl(raw) {
+  let u;
+  try { u = new URL(raw); } catch { throw new Error("invalid url"); }
+  if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("scheme not allowed");
+  const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (!host || host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || host.endsWith(".localhost")) {
+    throw new Error("private host");
+  }
+  if (net.isIP(host)) { if (isPrivateIp(host)) throw new Error("private ip"); return; }
+  const addrs = await dns.lookup(host, { all: true });
+  if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) throw new Error("resolves to private ip");
+}
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
 let browser;
@@ -135,9 +181,13 @@ const server = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/health") return json(200, { ok: true });
   const route = (req.url || "").split("?")[0];
   if (req.method !== "POST" || (route !== "/extract" && route !== "/render-pdf" && route !== "/spec")) return json(404, { error: "not found" });
-  if (SECRET) {
+  // Require the shared secret. An unconfigured service must be inert, not an open
+  // SSRF / render primitive — fail closed when EXTRACTOR_SECRET is unset.
+  if (!SECRET) return json(503, { error: "extractor not configured (EXTRACTOR_SECRET unset)" });
+  {
     const auth = req.headers["authorization"] || "";
-    if (auth !== `Bearer ${SECRET}`) return json(401, { error: "unauthorized" });
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!timingSafeEqual(token, SECRET)) return json(401, { error: "unauthorized" });
   }
   let body = "";
   // /render-pdf may carry a full HTML document (Phase AF) → allow a larger body.
@@ -150,6 +200,7 @@ const server = createServer((req, res) => {
     const html = typeof parsed.html === "string" ? parsed.html : null;
     if (route === "/render-pdf") {
       if (!html && (!url || !/^https?:\/\//.test(url))) return json(400, { error: "url or html required" });
+      if (!html) { try { await assertPublicUrl(url); } catch (e) { return json(400, { error: String(e?.message || "blocked url") }); } }
       try {
         const pdf = await renderPdf(url, html);
         res.writeHead(200, { "content-type": "application/pdf" });
@@ -161,6 +212,7 @@ const server = createServer((req, res) => {
       return;
     }
     if (!url || !/^https?:\/\//.test(url)) return json(400, { error: "valid url required" });
+    try { await assertPublicUrl(url); } catch (e) { return json(400, { error: String(e?.message || "blocked url") }); }
     if (route === "/spec") {
       try {
         json(200, await captureSpec(url));

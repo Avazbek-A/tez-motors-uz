@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail, winBackEmail, type EmailLocale } from "@/lib/email";
+import { isSuppressed } from "@/lib/automation/suppression";
 import { logEvent, reportServerError } from "@/lib/error-report";
 
 /**
@@ -38,12 +39,24 @@ async function handle(request: NextRequest) {
     let sent = 0;
     for (const o of orders || []) {
       const locale = localeOf(o.locale);
+      // Stamp permanently for suppressed (opt-out) and no-email orders so we don't
+      // reconsider them; on a real send, stamp only on success so a transient mail
+      // failure retries next run instead of silently dropping the message.
+      let stamp = true;
       if (o.customer_email) {
-        const tpl = winBackEmail(locale, { name: o.customer_name || undefined });
-        const { ok } = await sendEmail({ to: o.customer_email as string, subject: tpl.subject, html: tpl.html });
-        if (ok) sent += 1;
+        const email = o.customer_email as string;
+        if (await isSuppressed(supabase, email, "email")) {
+          // Win-back is a marketing re-engagement send — honor the opt-out list.
+        } else {
+          const tpl = winBackEmail(locale, { name: o.customer_name || undefined });
+          const { ok } = await sendEmail({ to: email, subject: tpl.subject, html: tpl.html });
+          if (ok) sent += 1;
+          else stamp = false;
+        }
       }
-      await supabase.from("orders").update({ winback_sent_at: new Date().toISOString() }).eq("id", o.id);
+      if (stamp) {
+        await supabase.from("orders").update({ winback_sent_at: new Date().toISOString() }).eq("id", o.id);
+      }
     }
 
     logEvent("cron.win_back", { orders: (orders || []).length, sent });

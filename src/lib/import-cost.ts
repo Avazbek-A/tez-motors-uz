@@ -172,7 +172,11 @@ export function resolveFuelKind(raw: string | null | undefined): FuelKind {
   const v = (raw || "").toLowerCase();
   // PHEV first: "插电混动" contains "电", which the electric test would catch.
   if (/(plug|phev|插)/.test(v)) return "phev";
-  if (/(electr|ev|bev|電|电)/.test(v)) return "electric";
+  // "ev"/"bev" must be standalone tokens — a bare substring match wrongly
+  // classified petrol/diesel strings containing those letters (e.g. "revised",
+  // "level", "seven-seat") as electric, zeroing customs duty + excise and
+  // quoting a list price far below true landed cost.
+  if (/electr|電|电/.test(v) || /\b(ev|bev)\b/.test(v)) return "electric";
   if (/(hybrid|混)/.test(v)) return "hybrid";
   if (/(diesel|柴)/.test(v)) return "diesel";
   return "petrol";

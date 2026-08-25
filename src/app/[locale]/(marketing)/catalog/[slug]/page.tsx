@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SITE_CONFIG } from "@/lib/constants";
 import CarDetailClient from "./car-detail-client";
@@ -98,7 +99,10 @@ export default async function Page(
     getLocaleFromCookie(cookieStore.get("NEXT_LOCALE")?.value);
   const { slug } = await params;
   const car = await fetchCar(slug);
-  const aggregate = await fetchAggregate(car?.id ?? null);
+  // Real 404 (not a 200 soft-404 shell) for a missing/sold/invalid slug, matching
+  // the parts and blog detail pages. Otherwise crawlers index an empty car page.
+  if (!car) notFound();
+  const aggregate = await fetchAggregate(car.id);
 
   return (
     <>

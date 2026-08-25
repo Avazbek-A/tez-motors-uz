@@ -74,6 +74,15 @@ export async function PUT(
       );
     }
 
+    // Zod's .partial() still injects .default() values for omitted keys, so
+    // writing result.data directly would reset body_type/fuel_type/transmission/
+    // mileage/listing_type/images/is_hot_offer/inventory_status/order_position/
+    // specs to defaults on a single-field edit — e.g. editing only the price
+    // would flip a sold car back to "available" and wipe its gallery. Keep only
+    // the fields actually present in the request body.
+    const raw = (body ?? {}) as Record<string, unknown>;
+    const update = Object.fromEntries(Object.entries(result.data).filter(([k]) => k in raw));
+
     const supabase = createServiceClient();
 
     // Capture the pre-update price so we can detect a drop after the write.
@@ -85,7 +94,7 @@ export async function PUT(
 
     const { data, error } = await supabase
       .from("cars")
-      .update({ ...result.data, updated_at: new Date().toISOString() })
+      .update({ ...update, updated_at: new Date().toISOString() })
       .eq("id", id)
       .select()
       .single();
@@ -127,7 +136,7 @@ export async function PUT(
       action: "update",
       entity: "car",
       entity_id: id,
-      diff: compactDiff(result.data as Record<string, unknown>),
+      diff: compactDiff(update),
     }).catch(() => {});
 
     return NextResponse.json({ success: true, car: data });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { channelKey, type Attribution } from "@/lib/attribution";
 import { getFxRates } from "@/lib/fx-rate";
 import { contactKey } from "@/lib/crm";
@@ -13,7 +14,6 @@ import { contactKey } from "@/lib/crm";
  * creation) with a phone-match fallback to the originating lead. Read-only,
  * admin-gated.
  */
-const MAX = 5000;
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
 
 interface Row {
@@ -34,12 +34,19 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceClient();
     const [inqRes, ordRes, payRes, costRes, carRes, expRes, fx] = await Promise.all([
-      supabase.from("inquiries").select("phone, metadata").limit(MAX),
-      supabase.from("orders").select("id, customer_phone, attribution, car_id, status").limit(MAX),
-      supabase.from("payments").select("order_id, amount_tiyin, state").eq("state", 2).limit(MAX),
-      supabase.from("car_costs").select("car_id, cost_usd").limit(MAX),
-      supabase.from("cars").select("id, price_usd").limit(MAX),
-      supabase.from("expenses").select("category, channel, amount_usd").eq("category", "marketing").limit(MAX),
+      // All aggregates paginated so per-channel ROI is accurate past the row cap.
+      fetchAllRows<{ phone: string; metadata: { attribution?: Attribution } | null }>((from, to) =>
+        supabase.from("inquiries").select("phone, metadata").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ id: string; customer_phone: string; attribution: Attribution | null; car_id: string | null; status: string }>((from, to) =>
+        supabase.from("orders").select("id, customer_phone, attribution, car_id, status").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ order_id: string; amount_tiyin: number; state: number }>((from, to) =>
+        supabase.from("payments").select("order_id, amount_tiyin, state").eq("state", 2).range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ car_id: string; cost_usd: number }>((from, to) =>
+        supabase.from("car_costs").select("car_id, cost_usd").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ id: string; price_usd: number }>((from, to) =>
+        supabase.from("cars").select("id, price_usd").range(from, to)).then((data) => ({ data })),
+      fetchAllRows<{ category: string; channel: string | null; amount_usd: number }>((from, to) =>
+        supabase.from("expenses").select("category, channel, amount_usd").eq("category", "marketing").range(from, to)).then((data) => ({ data })),
       getFxRates(supabase),
     ]);
 

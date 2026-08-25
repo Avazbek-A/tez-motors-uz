@@ -30,10 +30,16 @@ export async function PUT(
     return NextResponse.json({ error: "Validation failed", issues: parsed.error.issues }, { status: 400 });
   }
 
+  // Zod's .partial() still injects .default() values for keys the admin omitted,
+  // so writing parsed.data directly resets stock_qty/is_published/images/fitment
+  // to defaults on a single-field edit (data loss). Keep only fields actually sent.
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const update = Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in raw));
+
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("parts")
-    .update(parsed.data)
+    .update(update)
     .eq("id", id)
     .select()
     .single();
@@ -46,7 +52,7 @@ export async function PUT(
     action: "update",
     entity: "part",
     entity_id: id,
-    diff: compactDiff(parsed.data as Record<string, unknown>),
+    diff: compactDiff(update),
   }).catch(() => {});
 
   return NextResponse.json({ part: data });

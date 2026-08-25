@@ -30,10 +30,16 @@ export async function PUT(
     return NextResponse.json({ error: "Validation failed", issues: parsed.error.issues }, { status: 400 });
   }
 
+  // modelUpdateSchema is .partial(), which still injects .default() values for
+  // omitted keys; writing them would reset is_orderable/trims/images/lead times
+  // on a single-field edit. Keep only the fields actually present in the body.
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const update = Object.fromEntries(Object.entries(parsed.data).filter(([k]) => k in raw));
+
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("model_catalog")
-    .update(parsed.data)
+    .update(update)
     .eq("id", id)
     .select()
     .single();
@@ -49,7 +55,7 @@ export async function PUT(
     action: "update",
     entity: "model",
     entity_id: id,
-    diff: compactDiff(parsed.data as Record<string, unknown>),
+    diff: compactDiff(update),
   }).catch(() => {});
 
   return NextResponse.json({ model: data });

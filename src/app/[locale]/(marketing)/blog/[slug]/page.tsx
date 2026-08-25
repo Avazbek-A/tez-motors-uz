@@ -38,8 +38,11 @@ export async function generateMetadata(
     return { title: "Post not found" };
   }
 
-  const title = post.title_ru;
-  const description = post.body_ru.slice(0, 160);
+  // Localize the title/description to match the rendered body and the hreflang
+  // alternates — previously uz/en URLs got Russian <title>/description.
+  const title = (locale === "uz" && post.title_uz) || (locale === "en" && post.title_en) || post.title_ru;
+  const body = (locale === "uz" && post.body_uz) || (locale === "en" && post.body_en) || post.body_ru;
+  const description = body.slice(0, 160);
   return {
     title,
     description,

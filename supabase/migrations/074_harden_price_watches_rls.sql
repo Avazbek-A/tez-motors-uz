@@ -1,0 +1,22 @@
+-- 074_harden_price_watches_rls.sql
+-- Security hardening: remove the anonymous INSERT policy on price_watches.
+--
+-- Migration 009 created `price_watches_public_insert` with `WITH CHECK (true)`,
+-- making price_watches the only anon-writable application table. Any
+-- unauthenticated client can POST directly to PostgREST with an arbitrary
+-- email, target price, and customer_id — spoofing a link to another customer's
+-- account (no check ties customer_id to the inserter) and seeding unlimited
+-- rows with attacker-chosen addresses. The price-watch sweep (cron) later emails
+-- those stored addresses when a watched car drops in price, so this is an
+-- unauthenticated write / address-injection / spam vector with no rate limit at
+-- the RLS layer. (The old AFTER-UPDATE trigger that copied the email into
+-- `inquiries` was already removed in migration 016.)
+--
+-- The browser never inserts price_watches directly: the public "watch this
+-- price" form posts to /api/price-watches, which uses the service-role client
+-- (RLS-bypass) and validates input (src/lib/price-watch.ts). Dropping the anon
+-- policy therefore closes the hole with zero product impact — every write keeps
+-- flowing through the validated server route. With no INSERT policy and RLS
+-- enabled, anon/authenticated INSERTs are denied by default.
+
+DROP POLICY IF EXISTS "price_watches_public_insert" ON public.price_watches;

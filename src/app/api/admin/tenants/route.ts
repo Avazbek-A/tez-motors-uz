@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireRole } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAdminAction } from "@/lib/audit";
 import { DEFAULT_TENANT_ID, tenantsEnabled } from "@/lib/tenant";
@@ -31,7 +31,9 @@ const createSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const guard = await requireAdmin(request);
+  // Owner-only: provisioning a tenant is a super-admin action (mirrors user
+  // management). A low-trust 'rep' must not create/suspend dealers.
+  const guard = await requireRole(request, ["owner"]);
   if (guard) return guard;
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -61,7 +63,7 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(request: NextRequest) {
-  const guard = await requireAdmin(request);
+  const guard = await requireRole(request, ["owner"]);
   if (guard) return guard;
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -69,8 +71,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "The default tenant cannot be suspended" }, { status: 400 });
   }
   const supabase = createServiceClient();
-  const { error } = await supabase.from("tenants").update({ status: parsed.data.status }).eq("id", parsed.data.id);
+  const { data: updated, error } = await supabase.from("tenants").update({ status: parsed.data.status }).eq("id", parsed.data.id).select("id");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!updated || updated.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
   logAdminAction(request, { action: "status_change", entity: "tenant", entity_id: parsed.data.id, diff: { status: parsed.data.status } }).catch(() => {});
   return NextResponse.json({ success: true });
 }

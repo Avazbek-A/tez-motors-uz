@@ -35,10 +35,10 @@ export const partWriteSchema = z.object({
   stock_qty: z.number().int().min(0).default(0),
   // safeHttpUrl: rejects javascript:/data:/file: so a stored URL can't become
   // a DOM XSS when rendered as <img src> / <a href> on the storefront.
-  images: z.array(safeHttpUrl).default([]),
+  images: z.array(safeHttpUrl).max(40).default([]),
   is_published: z.boolean().default(false),
-  fits_brands: z.array(z.string().max(64)).default([]),
-  fits_models: z.array(z.string().max(128)).default([]),
+  fits_brands: z.array(z.string().max(64)).max(100).default([]),
+  fits_models: z.array(z.string().max(128)).max(200).default([]),
   fits_year_from: z.number().int().min(1990).max(2050).optional().nullable(),
   fits_year_to: z.number().int().min(1990).max(2050).optional().nullable(),
   order_position: z.number().int().min(0).default(0),

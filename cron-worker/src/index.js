@@ -72,10 +72,20 @@ export default {
     ctx.waitUntil(fire(path, env));
   },
 
-  // Optional manual trigger: GET /run?path=/api/cron/rates for ad-hoc testing.
+  // Optional manual trigger: GET/POST /run?path=/api/cron/rates for ad-hoc
+  // testing. MUST present the shared secret (Authorization: Bearer <CRON_SECRET>
+  // or ?secret=). Otherwise anyone who knows the worker URL could fire any
+  // data-mutating / cost-incurring cron job — fire() attaches CRON_SECRET on the
+  // caller's behalf, so an open /run is an auth-bypass-by-proxy of the
+  // assertCron-protected routes. Fail closed when CRON_SECRET is unset.
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/run") {
+      const auth = request.headers.get("authorization") || "";
+      const provided = auth.startsWith("Bearer ") ? auth.slice(7) : (url.searchParams.get("secret") || "");
+      if (!env.CRON_SECRET || !timingSafeEqual(provided, env.CRON_SECRET)) {
+        return new Response("unauthorized", { status: 401 });
+      }
       const path = url.searchParams.get("path");
       if (!path || !Object.values(ROUTES).includes(path)) {
         return new Response("unknown path", { status: 400 });
@@ -86,3 +96,11 @@ export default {
     return new Response("tez-motors cron worker", { status: 200 });
   },
 };
+
+// Constant-time string compare so /run auth can't be brute-forced via timing.
+function timingSafeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
