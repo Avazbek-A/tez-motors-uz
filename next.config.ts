@@ -74,7 +74,10 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
-      "upgrade-insecure-requests",
+      // NOTE: upgrade-insecure-requests is deliberately absent. The browser
+      // ignores it in a report-only policy and logs an error to every visitor's
+      // console for the trouble; HSTS above already forces https. Re-add it in
+      // the same change that flips this header to enforcing.
       // Collect violations so we can safely flip Report-Only → enforced once prod is clean.
       "report-uri /api/csp-report",
     ].join("; ");
