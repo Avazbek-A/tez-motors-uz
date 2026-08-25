@@ -39,15 +39,19 @@ export interface TierModels {
 
 /** Quality-max defaults (dealer choice 2026-06-15) — all OpenRouter free NVIDIA Nemotron. */
 export const DEFAULT_TIER_MODELS: TierModels = {
-  // Current, verified-live OpenRouter `:free` instruction models (the older Nemotron
-  // ids 404'd on OpenRouter's free pool). Instruction (not reasoning) models — they
-  // emit clean JSON instead of burning the token budget on <think> blocks.
-  chat: "openai/gpt-oss-20b:free",
-  chatFallback: "meta-llama/llama-3.3-70b-instruct:free",
-  reason: "meta-llama/llama-3.3-70b-instruct:free",
-  reasonFallback: "qwen/qwen3-next-80b-a3b-instruct:free",
-  vision: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  visionFallback: "nvidia/nemotron-nano-12b-v2-vl:free",
+  // OpenRouter retires `:free` ids constantly. Every id configured here before
+  // 2026-08-25 had been withdrawn ("This model is unavailable for free" /
+  // "No endpoints found"), so each LLM call walked the whole chain, 404'd on
+  // every hop, spammed the server log and fell back to the canned template.
+  // These are the ids OpenRouter's /models actually listed as free on
+  // 2026-08-25; re-check with that endpoint whenever the 404s reappear.
+  // Instruction-tuned first (they answer with JSON instead of a think-aloud).
+  chat: "google/gemma-4-31b-it:free",
+  chatFallback: "google/gemma-4-26b-a4b-it:free",
+  reason: "nvidia/nemotron-3-super-120b-a12b:free",
+  reasonFallback: "z-ai/glm-5.2:free",
+  vision: "google/gemma-4-31b-it:free",
+  visionFallback: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
 };
 
 function envOverrides(): Partial<TierModels> {
@@ -101,9 +105,9 @@ export function tierPair(tier: LlmTier, m: TierModels): [string, string] {
  * multimodal). Kept short so a total free-tier outage doesn't stack timeouts.
  */
 const EXTRA_FREE_FALLBACKS: Record<LlmTier, string[]> = {
-  chat: ["openai/gpt-oss-20b:free", "meta-llama/llama-3.3-70b-instruct:free", "qwen/qwen3-next-80b-a3b-instruct:free"],
-  reason: ["openai/gpt-oss-120b:free", "qwen/qwen3-coder:free", "meta-llama/llama-3.3-70b-instruct:free"],
-  vision: ["nvidia/nemotron-nano-12b-v2-vl:free", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"],
+  chat: ["google/gemma-4-26b-a4b-it:free", "nvidia/nemotron-3-super-120b-a12b:free", "nvidia/nemotron-3.5-lightning:free"],
+  reason: ["z-ai/glm-5.2:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "minimax/minimax-m3:free"],
+  vision: ["nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "dots-studio/dots-3-note-preview:free", "minimax/minimax-m3:free"],
 };
 
 /** Ordered model chain for a tier: configured primary + fallback, then the
