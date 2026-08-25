@@ -180,3 +180,14 @@ describe("looksLikeReasoningLeak", () => {
     expect(parseChatResponse("openai", leaked)).toBeNull();
   });
 });
+
+describe("looksLikeReasoningLeak — prompt recital", () => {
+  it("catches the second live leak: the model reciting our instructions", () => {
+    const leak = "We need to answer in Russian, 2-3 warm concrete sentences, no markdown, no bullet lists, no greeting line. Must not invent price, spec, delivery time.";
+    expect(looksLikeReasoningLeak(leak)).toBe(true);
+  });
+
+  it("does not trip on a buyer reply that happens to mention a language", () => {
+    expect(looksLikeReasoningLeak("Отвечаем на русском и английском — как вам удобнее?")).toBe(false);
+  });
+});

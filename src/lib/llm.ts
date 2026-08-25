@@ -214,13 +214,21 @@ export function looksLikeReasoningLeak(text: string): boolean {
     /^(let me|i need to|i should|we need to|i'?ll) (think|analyze|consider|start|break)/i,
     /^\s*\*\*(analyze|analysis|understand|plan|step 1)/i,
     /^the user (is asking|wants|asks)/i,
-    /^we need to respond/i,
+    // "We need to answer in Russian, 2-3 warm concrete sentences, no markdown…"
+    // — a second live leak, this one reciting the prompt instead of narrating.
+    /^(we|i) (need to|have to|should|must|will) (respond|answer|reply|write|produce|output)/i,
   ];
   if (tells.some((re) => re.test(head))) return true;
+
   // A reply that quotes the system prompt back at us (role/language/length
   // instructions) is the model narrating its brief, not answering the buyer.
   const brief = /\*\*(role|language|length|task|instructions?|constraints?)\s*:?\*\*/gi;
-  return (head.match(brief) || []).length >= 2;
+  if ((head.match(brief) || []).length >= 2) return true;
+
+  // Same idea without the markdown: the plain-prose recital of our own rules.
+  // A real answer to a car buyer does not talk about markdown or invented specs.
+  const rules = /\b(must not invent|must say|do not invent|no markdown|no bullet|bullet lists?|\d\s*-\s*\d (warm |short )?sentences|answer in (russian|uzbek|english))\b/gi;
+  return (head.match(rules) || []).length >= 2;
 }
 
 export function parseChatResponse(provider: LlmProvider, data: unknown): string | null {
