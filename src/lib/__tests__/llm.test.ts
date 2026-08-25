@@ -191,3 +191,21 @@ describe("looksLikeReasoningLeak — prompt recital", () => {
     expect(looksLikeReasoningLeak("Отвечаем на русском и английском — как вам удобнее?")).toBe(false);
   });
 });
+
+describe("buildChatRequest — Groq reasoning_format", () => {
+  it("asks Groq to hide the thinking so content is not empty", () => {
+    const req = buildChatRequest("openai", {
+      system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 100,
+      apiKey: "k", url: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b",
+    });
+    expect(JSON.parse(req.body).reasoning_format).toBe("hidden");
+  });
+
+  it("does not send the Groq-only field to other providers", () => {
+    const req = buildChatRequest("openai", {
+      system: "s", messages: [{ role: "user", content: "hi" }], maxTokens: 100,
+      apiKey: "k", url: "https://openrouter.ai/api/v1", model: "google/gemma-4-31b-it:free",
+    });
+    expect(JSON.parse(req.body).reasoning_format).toBeUndefined();
+  });
+});

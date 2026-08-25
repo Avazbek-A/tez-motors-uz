@@ -133,17 +133,20 @@ export function buildChatRequest(
     const model = args.model || "qwen2.5:7b-instruct";
     const headers: Record<string, string> = { "content-type": "application/json" };
     if (args.apiKey) headers["authorization"] = `Bearer ${args.apiKey}`;
-    return {
-      url: openaiChatUrl(args.url || OLLAMA_URL),
-      headers,
-      body: JSON.stringify({
-        model,
-        max_tokens: args.maxTokens,
-        temperature: 0.4,
-        stream: false,
-        messages: [{ role: "system", content: args.system }, ...args.messages],
-      }),
+    const url = openaiChatUrl(args.url || OLLAMA_URL);
+    const body: Record<string, unknown> = {
+      model,
+      max_tokens: args.maxTokens,
+      temperature: 0.4,
+      stream: false,
+      messages: [{ role: "system", content: args.system }, ...args.messages],
     };
+    // Groq's gpt-oss models put their whole answer in the separate `reasoning`
+    // field and return an EMPTY `content` unless told where to leave the
+    // thinking. This client reads `content` only, so without this the model
+    // looks like a miss on every call and the chain wastes the hop.
+    if (/api\.groq\.com/i.test(url)) body.reasoning_format = "hidden";
+    return { url, headers, body: JSON.stringify(body) };
   }
   // anthropic
   return {

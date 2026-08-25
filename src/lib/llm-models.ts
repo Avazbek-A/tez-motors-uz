@@ -161,7 +161,7 @@ const PROVIDER_TIER_MODEL: Record<string, Partial<Record<LlmTier, string>>> = {
   // are what /models listed on 2026-08-25. gpt-oss on Groq returns its answer in
   // the separate reasoning field and leaves content empty, which this client
   // treats as a miss, so the qwen id — which does fill content — leads.
-  groq:        { chat: "qwen/qwen3.6-27b", reason: "qwen/qwen3.6-27b" },
+  groq:        { chat: "openai/gpt-oss-120b", reason: "openai/gpt-oss-120b" },
   nvidia:      { chat: "meta/llama-3.3-70b-instruct", reason: "deepseek-ai/deepseek-r1", vision: "meta/llama-3.2-90b-vision-instruct" },
   gemini:      { chat: "gemini-2.5-flash", reason: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
   siliconflow: { chat: "Qwen/Qwen3-8B", reason: "Qwen/Qwen3-8B" }, // DeepSeek-R1-Distill is "disabled" on SiliconFlow free now (403); Qwen3-8B verified live
