@@ -159,20 +159,52 @@ export function buildChatRequest(
 }
 
 /** Pure: extract the reply text from a provider's response JSON. Unit-tested. */
+/**
+ * Strip a model's inner monologue from the answer.
+ *
+ * The free pools are now mostly reasoning-tuned models, and several of them
+ * narrate before answering — "<think>…</think>", "Here's a thinking process:",
+ * "We need to respond exactly with JSON …". `content` is what we hand to a
+ * customer (or parse as JSON), so the monologue has to come off first: a buyer
+ * asking about a car should never be read the model's notes about answering
+ * them. Only a leading block is removed, and only when real text follows, so a
+ * legitimate answer that merely mentions thinking survives intact.
+ */
+export function stripReasoningPreamble(text: string): string {
+  let out = text.trim();
+
+  // Closed <think>…</think> / <thinking>…</thinking> blocks at the start.
+  for (;;) {
+    const m = out.match(/^<(think|thinking|reasoning)>[\s\S]*?<\/\1>/i);
+    if (!m) break;
+    const rest = out.slice(m[0].length).trim();
+    if (!rest) break; // monologue was the whole answer — keep it over returning nothing
+    out = rest;
+  }
+
+  // An unterminated block (model hit the token cap mid-thought): drop the opening
+  // tag only. Skipped when a closing tag survives, which means the loop above
+  // deliberately kept a monologue-only answer rather than return nothing.
+  if (!/<\/(think|thinking|reasoning)>/i.test(out)) {
+    out = out.replace(/^<(think|thinking|reasoning)>\s*/i, "").trim();
+  }
+
+  return out;
+}
+
 export function parseChatResponse(provider: LlmProvider, data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   if (provider === "openai") {
     const choices = (data as { choices?: { message?: { content?: unknown } }[] }).choices;
     const content = choices?.[0]?.message?.content;
-    const text = typeof content === "string" ? content.trim() : "";
+    const text = typeof content === "string" ? stripReasoningPreamble(content) : "";
     return text.length > 0 ? text : null;
   }
   const blocks = (data as { content?: { type?: string; text?: string }[] }).content || [];
-  const text = blocks
+  const text = stripReasoningPreamble(blocks
     .filter((b) => b?.type === "text" && typeof b.text === "string")
     .map((b) => b.text as string)
-    .join("\n")
-    .trim();
+    .join("\n"));
   return text.length > 0 ? text : null;
 }
 

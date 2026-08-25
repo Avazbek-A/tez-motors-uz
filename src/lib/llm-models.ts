@@ -157,7 +157,11 @@ export const PROVIDERS: Record<string, ProviderInfo> = {
 // Model id per (provider, tier). OpenRouter is special — it pulls its ids from
 // the configured free chain (site_settings / defaults), not from here.
 const PROVIDER_TIER_MODEL: Record<string, Partial<Record<LlmTier, string>>> = {
-  groq:        { chat: "llama-3.3-70b-versatile", reason: "llama-3.3-70b-versatile" },
+  // llama-3.3-70b-versatile was retired ("The model ... does not exist"); these
+  // are what /models listed on 2026-08-25. gpt-oss on Groq returns its answer in
+  // the separate reasoning field and leaves content empty, which this client
+  // treats as a miss, so the qwen id — which does fill content — leads.
+  groq:        { chat: "qwen/qwen3.6-27b", reason: "qwen/qwen3.6-27b" },
   nvidia:      { chat: "meta/llama-3.3-70b-instruct", reason: "deepseek-ai/deepseek-r1", vision: "meta/llama-3.2-90b-vision-instruct" },
   gemini:      { chat: "gemini-2.5-flash", reason: "gemini-2.5-flash", vision: "gemini-2.5-flash" },
   siliconflow: { chat: "Qwen/Qwen3-8B", reason: "Qwen/Qwen3-8B" }, // DeepSeek-R1-Distill is "disabled" on SiliconFlow free now (403); Qwen3-8B verified live

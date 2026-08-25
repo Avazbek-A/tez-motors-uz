@@ -9,7 +9,9 @@ describe("buildChainEntries (multi-provider failover)", () => {
   it("chat: groq first, then OpenRouter chain, then nvidia — privacy gate drops gemini/siliconflow", () => {
     const chain = buildChainEntries("chat", OR, all);
     const labels = chain.map((e) => `${e.provider}:${e.model}`);
-    expect(labels[0]).toBe("groq:llama-3.3-70b-versatile");
+    // Provider order is the contract here — model ids churn as free pools retire them.
+    expect(chain[0].provider).toBe("groq");
+    expect(labels[0]).toMatch(/^groq:.+/);
     expect(labels).toContain("openrouter:openai/gpt-oss-20b:free");
     expect(labels).toContain("nvidia:meta/llama-3.3-70b-instruct");
     // privacy gate: no data-training providers on the customer chat tier

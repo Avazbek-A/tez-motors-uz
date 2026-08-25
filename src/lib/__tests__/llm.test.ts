@@ -6,6 +6,7 @@ import {
   buildChatRequest,
   parseChatResponse,
   buildVisionMessages,
+  stripReasoningPreamble,
 } from "../llm";
 
 describe("resolveProvider", () => {
@@ -112,5 +113,35 @@ describe("parseChatResponse", () => {
     expect(parseChatResponse("anthropic", { content: [{ type: "text", text: "a" }, { type: "text", text: "b" }] })).toBe("a\nb");
     expect(parseChatResponse("anthropic", { content: [] })).toBeNull();
     expect(parseChatResponse("anthropic", null)).toBeNull();
+  });
+});
+
+describe("stripReasoningPreamble", () => {
+  it("removes a closed think block and keeps the answer", () => {
+    expect(stripReasoningPreamble("<think>the buyer wants a price</think>\nЗдравствуйте! Цена $23,500.")).toBe(
+      "Здравствуйте! Цена $23,500.",
+    );
+  });
+
+  it("removes several stacked blocks", () => {
+    expect(stripReasoningPreamble("<think>a</think><thinking>b</thinking>Answer")).toBe("Answer");
+  });
+
+  it("drops an unterminated opening tag", () => {
+    expect(stripReasoningPreamble("<think>\nstill thinking about it")).toBe("still thinking about it");
+  });
+
+  it("keeps the monologue rather than returning nothing when there is no answer after it", () => {
+    expect(stripReasoningPreamble("<think>only thoughts</think>")).toBe("<think>only thoughts</think>");
+  });
+
+  it("leaves a normal answer untouched, including one that talks about thinking", () => {
+    const answer = "I was thinking about the Tank 500 — it lands in 6-8 weeks.";
+    expect(stripReasoningPreamble(answer)).toBe(answer);
+  });
+
+  it("strips the block before JSON so the payload still parses", () => {
+    const out = stripReasoningPreamble('<think>need json</think>{"ok":true}');
+    expect(() => JSON.parse(out)).not.toThrow();
   });
 });
