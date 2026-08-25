@@ -199,6 +199,8 @@ describe("buildChatRequest — Groq reasoning_format", () => {
       apiKey: "k", url: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b",
     });
     expect(JSON.parse(req.body).reasoning_format).toBe("hidden");
+    // hidden thinking still spends max_tokens — low effort keeps the answer whole
+    expect(JSON.parse(req.body).reasoning_effort).toBe("low");
   });
 
   it("does not send the Groq-only field to other providers", () => {
@@ -207,5 +209,6 @@ describe("buildChatRequest — Groq reasoning_format", () => {
       apiKey: "k", url: "https://openrouter.ai/api/v1", model: "google/gemma-4-31b-it:free",
     });
     expect(JSON.parse(req.body).reasoning_format).toBeUndefined();
+    expect(JSON.parse(req.body).reasoning_effort).toBeUndefined();
   });
 });

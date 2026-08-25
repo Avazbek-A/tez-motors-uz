@@ -144,8 +144,14 @@ export function buildChatRequest(
     // Groq's gpt-oss models put their whole answer in the separate `reasoning`
     // field and return an EMPTY `content` unless told where to leave the
     // thinking. This client reads `content` only, so without this the model
-    // looks like a miss on every call and the chain wastes the hop.
-    if (/api\.groq\.com/i.test(url)) body.reasoning_format = "hidden";
+    // looks like a miss on every call and the chain wastes the hop. Hidden
+    // thinking still bills against max_tokens, which truncated replies
+    // mid-sentence ("Спасибо за ваш интерес к BYD") — "low" effort leaves the
+    // budget to the answer.
+    if (/api\.groq\.com/i.test(url)) {
+      body.reasoning_format = "hidden";
+      body.reasoning_effort = "low";
+    }
     return { url, headers, body: JSON.stringify(body) };
   }
   // anthropic
