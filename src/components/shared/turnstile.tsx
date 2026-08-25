@@ -1,107 +1,69 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Script from "next/script";
 
 /**
- * Invisible Cloudflare Turnstile widget.
- * Only renders when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set; otherwise a no-op.
+ * Cloudflare Turnstile widget for the public forms.
+ *
+ * Renders declaratively: the `cf-turnstile` class plus `data-*` attributes are
+ * what api.js looks for, so Cloudflare mounts the widget itself and writes the
+ * token into the `cf-turnstile-response` input it creates inside the container.
+ * The previous version did its own explicit render from a useEffect and, in
+ * production, never even appended the script — the container div was in the
+ * form but no widget, no token, and (before the parameter fix) a thrown
+ * TurnstileError. Declarative rendering removes that whole moving part; the
+ * script tag is server-rendered by next/script, and the widget's presence is
+ * visible in the HTML rather than dependent on an effect having run.
+ *
+ * The callback has to be reachable by name from api.js, so it goes on window
+ * under a fixed key. Only renders when NEXT_PUBLIC_TURNSTILE_SITE_KEY is set.
  */
-type TurnstileWindow = Window & {
-  turnstile?: {
-    render: (el: HTMLElement, opts: Record<string, unknown>) => string;
-    reset: (id?: string) => void;
-    remove: (id: string) => void;
-  };
-};
+const CALLBACK = "__tezTurnstileToken";
+const EXPIRED = "__tezTurnstileExpired";
+const ERRORED = "__tezTurnstileError";
 
 declare global {
   interface Window {
-    __ts_loaded?: boolean;
+    [CALLBACK]?: (token: string) => void;
+    [EXPIRED]?: () => void;
+    [ERRORED]?: () => void;
   }
 }
 
-const SCRIPT_SRC =
-  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-function loadScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return resolve();
-    if (window.__ts_loaded) return resolve();
-    const existing = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
-    if (existing) {
-      window.__ts_loaded = true;
-      return resolve();
-    }
-    const s = document.createElement("script");
-    s.src = SCRIPT_SRC;
-    s.async = true;
-    s.defer = true;
-    s.onload = () => {
-      window.__ts_loaded = true;
-      resolve();
-    };
-    s.onerror = () => reject(new Error("turnstile load failed"));
-    document.head.appendChild(s);
-  });
-}
-
-export function Turnstile({
-  onToken,
-}: {
-  onToken: (token: string | null) => void;
-}) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const widgetIdRef = useRef<string | null>(null);
+export function Turnstile({ onToken }: { onToken: (token: string | null) => void }) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const onTokenRef = useRef(onToken);
 
   useEffect(() => {
-    if (!siteKey) return;
-    let cancelled = false;
+    onTokenRef.current = onToken;
+  }, [onToken]);
 
-    loadScript()
-      .then(() => {
-        if (cancelled) return;
-        const ts = (window as TurnstileWindow).turnstile;
-        if (!ts || !ref.current) return;
-        // NOTE: size:"invisible" is no longer accepted — Turnstile now takes
-        // "normal" | "compact" | "flexible" and THROWS on anything else, which
-        // killed the render, left every form tokenless, and made the server
-        // reject real customers with "Captcha verification failed". The modern
-        // way to stay out of the user's way is appearance:"interaction-only":
-        // the widget stays hidden unless Cloudflare actually wants interaction.
-        try {
-          widgetIdRef.current = ts.render(ref.current, {
-            sitekey: siteKey,
-            appearance: "interaction-only",
-            callback: (token: string) => onToken(token),
-            "error-callback": () => onToken(null),
-            "expired-callback": () => onToken(null),
-          });
-        } catch {
-          onToken(null);
-        }
-      })
-      .catch(() => {
-        // Script blocked/failed — let the form submit without a token;
-        // server is fail-open when secret is unset and will reject if the
-        // secret is set but token is missing.
-        onToken(null);
-      });
-
+  useEffect(() => {
+    window[CALLBACK] = (token: string) => onTokenRef.current(token);
+    window[EXPIRED] = () => onTokenRef.current(null);
+    window[ERRORED] = () => onTokenRef.current(null);
     return () => {
-      cancelled = true;
-      const ts = (window as TurnstileWindow).turnstile;
-      if (ts && widgetIdRef.current) {
-        try {
-          ts.remove(widgetIdRef.current);
-        } catch {
-          // ignore
-        }
-      }
+      delete window[CALLBACK];
+      delete window[EXPIRED];
+      delete window[ERRORED];
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [siteKey]);
+  }, []);
 
   if (!siteKey) return null;
-  return <div ref={ref} />;
+
+  return (
+    <>
+      <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+      <div
+        className="cf-turnstile"
+        data-sitekey={siteKey}
+        data-callback={CALLBACK}
+        data-expired-callback={EXPIRED}
+        data-error-callback={ERRORED}
+        data-appearance="interaction-only"
+        data-theme="auto"
+      />
+    </>
+  );
 }
