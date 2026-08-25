@@ -6,6 +6,7 @@ import {
   suggestIncreasePct,
   increasePrice,
   STALE_AFTER_DAYS,
+  isBulkImportArtifact,
 } from "../inventory-aging";
 
 describe("suggestMarkdownPct", () => {
@@ -71,5 +72,28 @@ describe("agingSuggestion", () => {
     const s = agingSuggestion({ price_usd: 25000, daysOnLot: 120, demandScore: 0 });
     expect(s.markdownPct).toBe(11); // 8 + 3
     expect(s.suggestedPriceUsd).toBeLessThan(25000);
+  });
+});
+
+describe("isBulkImportArtifact", () => {
+  const uniform = (n: number, day: number) => Array.from({ length: n }, () => day);
+
+  it("flags a seeded catalog: one import date, whole fleet marked down", () => {
+    // The real case: 586 cars imported the same day, all 70 days old.
+    expect(isBulkImportArtifact(uniform(586, 70), 586)).toBe(true);
+  });
+
+  it("still alerts when a real lot has genuinely gone cold", () => {
+    // Stock that arrived over many months — ages spread out, so the signal means something.
+    const spread = Array.from({ length: 100 }, (_, i) => 50 + i * 3);
+    expect(isBulkImportArtifact(spread, 100)).toBe(false);
+  });
+
+  it("still alerts when only part of the fleet is stale", () => {
+    expect(isBulkImportArtifact(uniform(100, 70), 40)).toBe(false);
+  });
+
+  it("is safe on an empty fleet", () => {
+    expect(isBulkImportArtifact([], 0)).toBe(false);
   });
 });

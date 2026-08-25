@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { assertCron } from "@/lib/cron/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { alertDealer, logEvent, reportServerError } from "@/lib/error-report";
-import { agingSuggestion, suggestIncreasePct, increasePrice } from "@/lib/inventory-aging";
+import { agingSuggestion, suggestIncreasePct, increasePrice, isBulkImportArtifact } from "@/lib/inventory-aging";
 
 /**
  * Aged-inventory autopilot. Finds available cars that have sat on the lot past
@@ -72,7 +72,11 @@ async function handle(request: NextRequest) {
     const markdowns = scored.filter((c) => c.down.markdownPct > 0).sort((a, b) => b.daysOnLot - a.daysOnLot);
     const increases = scored.filter((c) => c.upPct > 0).sort((a, b) => b.demandScore - a.demandScore);
 
-    if (markdowns.length > 0 || increases.length > 0) {
+    // Guard against the seeded-catalog case: when every car shares an import
+    // timestamp, "stale" fires fleet-wide and the alert carries no signal.
+    const importArtifact = isBulkImportArtifact(scored.map((c) => c.daysOnLot), markdowns.length);
+
+    if (!importArtifact && (markdowns.length > 0 || increases.length > 0)) {
       const lines: string[] = [];
       if (markdowns.length > 0) {
         lines.push("⬇ Aging + weak demand — consider a markdown:");
@@ -90,8 +94,20 @@ async function handle(request: NextRequest) {
       alertDealer("Dynamic repricing suggestions — Tez Motors", lines, { key: "inventory_aging" }).catch(() => {});
     }
 
-    logEvent("cron.inventory_aging", { scanned: rows.length, markdowns: markdowns.length, increases: increases.length });
-    return NextResponse.json({ ok: true, scanned: rows.length, markdowns: markdowns.length, increases: increases.length });
+    logEvent("cron.inventory_aging", {
+      scanned: rows.length,
+      markdowns: markdowns.length,
+      increases: increases.length,
+      alerted: !importArtifact,
+      ...(importArtifact ? { suppressed: "uniform_created_at" } : {}),
+    });
+    return NextResponse.json({
+      ok: true,
+      scanned: rows.length,
+      markdowns: markdowns.length,
+      increases: increases.length,
+      alerted: !importArtifact,
+    });
   } catch (error) {
     reportServerError("GET /api/cron/inventory-aging", error).catch(() => {});
     return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });

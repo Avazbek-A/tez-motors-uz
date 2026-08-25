@@ -68,3 +68,28 @@ export function agingSuggestion(input: AgingInput): AgingSuggestion {
     suggestedPriceUsd: pct > 0 ? markdownPrice(input.price_usd, pct) : Math.round(input.price_usd),
   };
 }
+
+/**
+ * Is the age signal an artifact of a bulk import rather than real lot age?
+ *
+ * The catalog was seeded by importing ~600 cars in one run, so every row shares
+ * a `created_at` within minutes of the others. Once that single date crosses
+ * STALE_AFTER_DAYS the engine flags the entire inventory at once and the dealer
+ * gets a Telegram alert telling them to discount every car they own — advice
+ * with no information in it, which is worse than silence because it teaches
+ * them to ignore the channel.
+ *
+ * Two conditions have to hold together, so a dealer whose stock genuinely went
+ * cold still gets alerted: nearly everything is flagged AND the fleet's ages are
+ * bunched together. Real inventory arrives over time, so its ages spread out.
+ */
+export const UNIFORM_AGE_SPREAD_DAYS = 14;
+export const DEGENERATE_FLAGGED_SHARE = 0.9;
+
+export function isBulkImportArtifact(daysOnLot: number[], flaggedCount: number): boolean {
+  if (daysOnLot.length === 0) return false;
+  if (flaggedCount / daysOnLot.length < DEGENERATE_FLAGGED_SHARE) return false;
+  const sorted = [...daysOnLot].sort((a, b) => a - b);
+  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  return at(0.9) - at(0.1) < UNIFORM_AGE_SPREAD_DAYS;
+}

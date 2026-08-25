@@ -1,42 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Calculator } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/i18n/locale-context";
 import { localizedPath } from "@/lib/locale-path";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 
 export function Hero() {
   const { dictionary, locale } = useLocale();
-  // Respect prefers-reduced-motion: skip the autoplay video entirely (the dark
-  // cinematic gradient below is a clean static fallback). Also avoids loading the
-  // heavy external clip for those users.
-  const [playVideo, setPlayVideo] = useState(false);
-  useEffect(() => {
-    if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) setPlayVideo(true);
-  }, []);
 
   return (
     <section className="dark relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] text-white">
-      {/* Cinematic background — video when motion is allowed; otherwise the layered
-          dark gradient alone (a clean, static premium fallback). */}
+      {/* Cinematic background — the layered dark gradient (a clean, static
+          premium backdrop). */}
       <div className="absolute inset-0 w-full h-full z-0">
-        {/* Base layer — always present, shows when the video is off / still loading. */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#101216] via-[#0a0a0c] to-[#07080a]" />
-        {playVideo && (
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            // TODO: replace this stock placeholder with self-hosted brand footage.
-            className="absolute inset-0 object-cover w-full h-full scale-105"
-          >
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-a-car-on-a-mountain-road-250-large.mp4" type="video/mp4" />
-          </video>
-        )}
+        {/* The stock mixkit clip that used to sit here now answers 403 to every
+            request (hotlinking is blocked), so it rendered nothing but a failed
+            fetch and a CSP report on every page view. The gradient below IS the
+            hero until we have self-hosted brand footage to drop in. */}
         {/* Dark elegant overlay to make text pop */}
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-black/30" />
