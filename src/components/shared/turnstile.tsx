@@ -63,13 +63,23 @@ export function Turnstile({
         if (cancelled) return;
         const ts = (window as TurnstileWindow).turnstile;
         if (!ts || !ref.current) return;
-        widgetIdRef.current = ts.render(ref.current, {
-          sitekey: siteKey,
-          size: "invisible",
-          callback: (token: string) => onToken(token),
-          "error-callback": () => onToken(null),
-          "expired-callback": () => onToken(null),
-        });
+        // NOTE: size:"invisible" is no longer accepted — Turnstile now takes
+        // "normal" | "compact" | "flexible" and THROWS on anything else, which
+        // killed the render, left every form tokenless, and made the server
+        // reject real customers with "Captcha verification failed". The modern
+        // way to stay out of the user's way is appearance:"interaction-only":
+        // the widget stays hidden unless Cloudflare actually wants interaction.
+        try {
+          widgetIdRef.current = ts.render(ref.current, {
+            sitekey: siteKey,
+            appearance: "interaction-only",
+            callback: (token: string) => onToken(token),
+            "error-callback": () => onToken(null),
+            "expired-callback": () => onToken(null),
+          });
+        } catch {
+          onToken(null);
+        }
       })
       .catch(() => {
         // Script blocked/failed — let the form submit without a token;
