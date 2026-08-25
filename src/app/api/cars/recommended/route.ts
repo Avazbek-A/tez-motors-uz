@@ -4,6 +4,7 @@ import { getCustomerContext } from "@/lib/customer-auth";
 import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
 import { scrubCarsForPublic } from "@/lib/cars-query";
 import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/recommend";
+import { isUuid, parseUuidList } from "@/lib/uuid";
 
 /**
  * "Recommended for you" (Phase AO). Builds an affinity profile from the
@@ -14,16 +15,10 @@ import { buildProfile, recommendFromProfile, type ScorableCar } from "@/lib/reco
  */
 export const dynamic = "force-dynamic";
 
-const idRe = /^[a-f0-9-]{1,64}$/i;
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const seedIds = (searchParams.get("ids") || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => idRe.test(s))
-      .slice(0, 20);
+    const seedIds = parseUuidList(searchParams.get("ids"), 20);
 
     const supabase = await createClient();
 
@@ -39,7 +34,7 @@ export async function GET(request: NextRequest) {
           .limit(20);
         for (const f of favs || []) {
           const id = f.car_id as string;
-          if (idRe.test(id) && !seedIds.includes(id)) seedIds.push(id);
+          if (isUuid(id) && !seedIds.includes(id)) seedIds.push(id);
         }
       }
     } catch {

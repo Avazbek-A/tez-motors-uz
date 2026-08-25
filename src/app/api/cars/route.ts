@@ -7,7 +7,8 @@ import { priceFromMonthly } from "@/lib/finance";
 import { logAdminAction } from "@/lib/audit";
 import { postCarToChannel } from "@/lib/telegram";
 import { applySort, fetchCarsPage } from "@/lib/cars-query";
-import { PUBLIC_CAR_COLUMNS } from "@/lib/car-columns";
+import { PUBLIC_CAR_LIST_COLUMNS } from "@/lib/car-columns";
+import { parseUuidList } from "@/lib/uuid";
 import { reportServerError } from "@/lib/error-report";
 import { fetchCarRatings } from "@/lib/reviews-aggregate";
 import { median } from "@/lib/market-intel";
@@ -147,9 +148,7 @@ export async function GET(request: NextRequest) {
     if (page !== null) {
       const size = Math.min(parseInt(pageSize || "12") || 12, 50);
       const pageNum = Math.max(parseInt(page) || 1, 1);
-      const idList = ids
-        ? ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100)
-        : null;
+      const idList = ids ? parseUuidList(ids) : null;
 
       try {
         const { cars, total } = await fetchCarsPage(supabase, {
@@ -189,9 +188,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Legacy mode (no pagination). Explicit column list (PUBLIC_CAR_COLUMNS) so
+    // Legacy mode (no pagination). Explicit column list (PUBLIC_CAR_LIST_COLUMNS) so
     // a future internal column added to `cars` doesn't silently leak.
-    let query = supabase.from("cars").select(PUBLIC_CAR_COLUMNS);
+    let query = supabase.from("cars").select(PUBLIC_CAR_LIST_COLUMNS);
     query = scopeToTenant(query, tenantId);
 
     if (!all) {
@@ -224,8 +223,13 @@ export async function GET(request: NextRequest) {
       }
     }
     if (ids) {
-      const idList = ids.split(",").map((s) => s.trim()).filter((s) => /^[a-f0-9-]{1,64}$/i.test(s)).slice(0, 100);
-      if (idList.length > 0) query = query.in("id", idList);
+      // An explicit id list that survives validation empty (all stale/invalid)
+      // must return nothing — not the whole catalog.
+      const idList = parseUuidList(ids);
+      if (idList.length === 0) {
+        return NextResponse.json({ cars: [], total: 0 }, { headers: all ? {} : publicCacheHeaders });
+      }
+      query = query.in("id", idList);
     }
 
     query = query.order("order_position", { ascending: true }).order("created_at", { ascending: false });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { UUID_RE } from "@/lib/uuid";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 import { notifyNewInquiry, confirmToCustomer } from "@/lib/notify";
@@ -26,7 +27,7 @@ const inquirySchema = z.object({
     .refine((s) => (s.match(/https?:\/\//gi) || []).length <= 2, "too many links")
     .optional(),
   type: z.enum(["general", "car_inquiry", "callback", "calculator", "reservation", "test_drive", "trade_in", "newsletter", "price_drop", "service", "part_inquiry"]).default("general"),
-  car_id: z.string().regex(/^[a-f0-9-]{1,64}$/i).optional(),
+  car_id: z.string().regex(UUID_RE).optional(),
   source_page: z.string().max(200).optional(),
   locale: z.enum(["ru", "uz", "en"]).optional(),
   metadata: z.record(z.string(), z.unknown()).refine(
