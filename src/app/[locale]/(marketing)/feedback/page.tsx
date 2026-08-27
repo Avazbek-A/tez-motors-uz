@@ -24,6 +24,7 @@ export default function FeedbackPage() {
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
     setCtx({ car_id: p.get("car_id") || undefined, car: p.get("car") || undefined, reference_code: p.get("ref") || p.get("code") || undefined });
   }, []);
 

@@ -11,6 +11,7 @@ export function useRecentlyViewed() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
       if (stored) setViewedIds(JSON.parse(stored));
     } catch {}
   }, []);

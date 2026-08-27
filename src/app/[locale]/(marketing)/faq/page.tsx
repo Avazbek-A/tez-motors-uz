@@ -41,9 +41,13 @@ export default function FAQPage() {
   const filteredFaqs = useMemo(() => {
     if (!searchQuery.trim()) return faqs;
     const q = searchQuery.toLowerCase();
+    // Inline the locale pickers so the memo depends only on [faqs, searchQuery,
+    // locale] rather than the per-render getQuestion/getAnswer closures.
+    const pickQ = (faq: FAQ) => (locale === "uz" ? faq.question_uz : locale === "en" ? faq.question_en : faq.question_ru);
+    const pickA = (faq: FAQ) => (locale === "uz" ? faq.answer_uz : locale === "en" ? faq.answer_en : faq.answer_ru);
     return faqs.filter((faq) => {
-      const question = (getQuestion(faq) || "").toLowerCase();
-      const answer = (getAnswer(faq) || "").toLowerCase();
+      const question = (pickQ(faq) || "").toLowerCase();
+      const answer = (pickA(faq) || "").toLowerCase();
       return question.includes(q) || answer.includes(q);
     });
   }, [faqs, searchQuery, locale]);

@@ -31,6 +31,7 @@ export function TypedText({
     // Mobile / reduced-motion: render the first tagline static. Saves
     // ~30 setTimeout/setState cycles per minute.
     if (reduced) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional on-mount sync (kick off a data load / read a browser-only value)
       setDisplayText(texts[0] || "");
       return;
     }
