@@ -38,15 +38,32 @@ async function handle(request: NextRequest) {
         await supabase.from("promotions").update({ status: "cancelled" }).eq("id", promo.id).then(() => {}, () => {});
         continue;
       }
-      await supabase.from("cars").update({ price_usd: sale, original_price_usd: pre }).eq("id", promo.car_id);
-      await supabase.from("promotions").update({ status: "active", pre_promo_price_usd: pre, announced: true }).eq("id", promo.id);
-      activated += 1;
 
-      if (!promo.announced) {
+      // Announce first so `announced` records whether the channel post actually
+      // landed — a Telegram outage leaves it false and the promo is retried on a
+      // later run instead of being silently marked announced.
+      let announced = Boolean(promo.announced);
+      if (!announced) {
         const pct = Math.round((1 - sale / pre) * 100);
         const text = `🔥 Скидка ${pct}%\n\n${car.brand} ${car.model}${car.year ? ` ${car.year}` : ""}\nБыло $${pre.toLocaleString("en-US")} → $${sale.toLocaleString("en-US")}\n\n${promo.label || "Ограниченное предложение от Tez Motors"}`;
-        await sendChannelMessage(text, { linkUrl: `${base}/ru/catalog/${car.slug}`, linkLabel: "Смотреть" }).catch(() => {});
+        announced = await sendChannelMessage(text, { linkUrl: `${base}/ru/catalog/${car.slug}`, linkLabel: "Смотреть" }).then(() => true, () => false);
       }
+
+      // Flip the promo active and snapshot the pre-promo price FIRST (guarded on
+      // status='scheduled' so concurrent/retried runs can't double-activate),
+      // THEN apply the sale price to the car. If the worker dies between the two
+      // writes the car keeps its ORIGINAL price (storefront shows no discount
+      // yet) rather than being stranded at the sale price with no active promo
+      // to ever revert it.
+      const { data: flipped } = await supabase
+        .from("promotions")
+        .update({ status: "active", pre_promo_price_usd: pre, announced })
+        .eq("id", promo.id)
+        .eq("status", "scheduled")
+        .select("id");
+      if (!flipped || flipped.length === 0) continue; // lost the activation race
+      await supabase.from("cars").update({ price_usd: sale, original_price_usd: pre }).eq("id", promo.car_id);
+      activated += 1;
     }
 
     // End active promos whose window has closed → revert the price.

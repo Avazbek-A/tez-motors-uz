@@ -72,6 +72,26 @@ describe("isSafeRemoteUrl (SSRF guard)", () => {
     expect(isSafeRemoteUrl("not a url")).toBe(false);
     expect(isSafeRemoteUrl("")).toBe(false);
   });
+
+  it("blocks octal- and hex-encoded dotted IPv4 (loopback/metadata bypass)", () => {
+    expect(isSafeRemoteUrl("http://0177.0.0.1/x")).toBe(false); // octal 127.0.0.1
+    expect(isSafeRemoteUrl("http://0x7f.0.0.1/x")).toBe(false); // hex-octet 127.0.0.1
+    expect(isSafeRemoteUrl("http://0251.0376.0251.0376/x")).toBe(false); // octal 169.254.169.254 (metadata)
+  });
+
+  it("blocks IPv4-mapped / embedded IPv6 (e.g. ::ffff:127.0.0.1)", () => {
+    expect(isSafeRemoteUrl("http://[::ffff:127.0.0.1]/x")).toBe(false);
+    expect(isSafeRemoteUrl("http://[::ffff:169.254.169.254]/x")).toBe(false);
+  });
+
+  it("blocks IPv6 link-local (fe80::/10)", () => {
+    expect(isSafeRemoteUrl("http://[fe80::1]/x")).toBe(false);
+  });
+
+  it("still allows ordinary public hosts after the added guards", () => {
+    expect(isSafeRemoteUrl("https://images.example.com/car.jpg")).toBe(true);
+    expect(isSafeRemoteUrl("http://203.0.113.7/x")).toBe(true);
+  });
 });
 
 describe("parseMediaFromHtml (AutoHome / lazy-load galleries)", () => {

@@ -41,13 +41,23 @@ export function isSafeRemoteUrl(raw: string): boolean {
   // Integer ("http://2130706433") and hex ("0x7f000001") IP encodings are
   // classic loopback/SSRF bypasses — block any all-numeric / 0x-prefixed host.
   if (/^\d+$/.test(host) || /^0x[0-9a-f]+$/i.test(host)) return false;
+  // Octal- or hex-encoded dotted IPv4 (e.g. "0177.0.0.1" = 127.0.0.1, or
+  // "0x7f.0.0.1") bypasses the decimal-prefix checks below — reject any numeric
+  // dotted host containing a leading-zero (octal) or 0x (hex) octet.
+  if (/^[0-9a-fx.]+$/i.test(host) && /(^|\.)(0\d+|0x[0-9a-f]+)/i.test(host)) return false;
   // IPv4 private / loopback / link-local / unspecified.
   if (/^(127\.|10\.|169\.254\.|0\.)/.test(host)) return false;
   if (/^192\.168\./.test(host)) return false;
   if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-  // IPv6 loopback (::1) and unique-local (fc00::/7) — only when it's truly IPv6
-  // (contains a colon), so domains like "fcbarcelona.com" aren't false-blocked.
-  if (host.includes(":") && (host === "::1" || /^f[cd]/.test(host))) return false;
+  // IPv4-mapped / embedded IPv6 (e.g. "::ffff:127.0.0.1", which the URL parser
+  // normalizes to "::ffff:7f00:1") embeds an IPv4 address the IPv6 rules below
+  // don't parse — reject any mapped or dotted-IPv6 host outright (no legitimate
+  // image host uses these literals).
+  if (host.includes(":") && (host.includes("::ffff:") || host.includes("."))) return false;
+  // IPv6 loopback (::1), unique-local (fc00::/7), and link-local (fe80::/10) —
+  // only when it's truly IPv6 (contains a colon), so domains like
+  // "fcbarcelona.com" aren't false-blocked.
+  if (host.includes(":") && (host === "::1" || /^f[cd]/.test(host) || /^fe[89ab]/.test(host))) return false;
   return true;
 }
 

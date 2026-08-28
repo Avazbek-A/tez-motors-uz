@@ -53,8 +53,14 @@ export async function isSuppressed(
       .eq("contact", c)
       .limit(20);
     if (!data || data.length === 0) return false;
-    // "all" suppression blocks everything; else block when the specific channel matches.
-    return data.some((r) => r.channel == null || (channel != null && r.channel === channel));
+    // An "all" suppression (channel null) blocks everything. A specific-channel
+    // query is blocked by a matching row. An untargeted query — channel null or
+    // "auto", as used by journey steps that fan out across telegram/push/email —
+    // is blocked by ANY suppression row for the contact: with an untargeted send
+    // we can't guarantee the message won't go out on the very channel the
+    // contact opted out of, so we err toward respecting the opt-out.
+    const untargeted = channel == null || channel === "auto";
+    return data.some((r) => r.channel == null || untargeted || r.channel === channel);
   } catch {
     return false; // don't let a transient DB error silently drop all sends
   }

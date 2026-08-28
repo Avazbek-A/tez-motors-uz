@@ -47,13 +47,20 @@ async function handle(request: NextRequest) {
     for (const o of rows) {
       const locale = localeOf(o.locale);
       const carName = o.car_id ? carById.get(o.car_id) : undefined;
+      // Stamp on success, or when there's no email to send (nothing to retry).
+      // On a transient send failure leave service_reminded_at NULL so the next
+      // run retries instead of silently dropping the reminder — matches the
+      // review-requests / saved-search-alerts crons.
+      let stamp = true;
       if (o.customer_email) {
         const tpl = serviceReminderEmail(locale, { name: o.customer_name || undefined, carName });
         const { ok } = await sendEmail({ to: o.customer_email as string, subject: tpl.subject, html: tpl.html });
         if (ok) sent += 1;
+        else stamp = false;
       }
-      // Stamp regardless so the scan doesn't churn on the same order.
-      await supabase.from("orders").update({ service_reminded_at: new Date().toISOString() }).eq("id", o.id);
+      if (stamp) {
+        await supabase.from("orders").update({ service_reminded_at: new Date().toISOString() }).eq("id", o.id);
+      }
     }
 
     logEvent("cron.service_reminders", { orders: rows.length, sent });

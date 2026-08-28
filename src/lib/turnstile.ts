@@ -25,7 +25,10 @@ export async function verifyTurnstile(
     const data = (await res.json()) as { success?: boolean };
     return Boolean(data.success);
   } catch {
-    // Network failure — fail open rather than blocking legit submissions.
-    return true;
+    // Network failure. The secret IS configured (checked above), so the operator
+    // opted into captcha enforcement — fail CLOSED. Failing open here would let
+    // an attacker who can induce siteverify failures bypass the bot gate on
+    // every protected endpoint. (When unconfigured we already returned true.)
+    return false;
   }
 }

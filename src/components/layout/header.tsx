@@ -64,7 +64,7 @@ export function Header() {
                   href={localizedPath(locale, link.href)}
                   className={cn(
                     "relative py-1 text-xs font-semibold tracking-[0.12em] uppercase transition-colors duration-300 after:absolute after:left-0 after:-bottom-0.5 after:h-px after:bg-[var(--accent)] after:transition-all after:duration-300",
-                    pathname === link.href
+                    pathname === localizedPath(locale, link.href)
                       ? "text-foreground after:w-4"
                       : "text-muted-foreground hover:text-foreground after:w-0 hover:after:w-4"
                   )}

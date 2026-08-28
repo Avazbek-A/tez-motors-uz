@@ -56,8 +56,24 @@ export function ReservationModal({
   const T = LABELS[locale as keyof typeof LABELS] || LABELS.ru;
 
   // Funnel: reservation modal opened (top of the reserve→deposit funnel).
+  // The parent keeps this component mounted and only toggles `open`, so reset
+  // success/form state on close — otherwise a reopened modal shows the previous
+  // success screen (old reference code) and blocks a second reservation.
   useEffect(() => {
-    if (open) track(FUNNEL.reserveOpen);
+    if (open) {
+      track(FUNNEL.reserveOpen);
+    } else {
+      setSuccess(false);
+      setReferenceCode(null);
+      setError(null);
+      setLoading(false);
+      setName("");
+      setPhone("");
+      setEmail("");
+      setAmountUsd("");
+      setNotes("");
+      setTurnstileToken(null);
+    }
   }, [open]);
 
   if (!open) return null;

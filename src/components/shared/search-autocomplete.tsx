@@ -22,6 +22,9 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
   const [searching, setSearching] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Monotonic request id: only the most recent in-flight search may apply its
+  // results, so a slow response for an earlier query can't overwrite a newer one.
+  const latestReq = useRef(0);
 
   const doSearch = useCallback((q: string) => {
     if (q.length < 2) {
@@ -29,15 +32,19 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
       setIsOpen(false);
       return;
     }
+    const reqId = ++latestReq.current;
     setSearching(true);
     fetch(`/api/cars?search=${encodeURIComponent(q)}&limit=6`)
       .then((r) => r.json())
       .then((data) => {
+        if (reqId !== latestReq.current) return; // superseded by a newer query
         setResults(data.cars || []);
         setIsOpen(true);
         setSearching(false);
       })
-      .catch(() => setSearching(false));
+      .catch(() => {
+        if (reqId === latestReq.current) setSearching(false);
+      });
   }, []);
 
   const handleChange = (value: string) => {
@@ -54,6 +61,13 @@ export function SearchAutocomplete({ placeholder = "Search cars...", className, 
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Cancel a pending debounced search if the component unmounts mid-window
+  // (e.g. the mobile menu closes), so it can't fetch + setState after teardown.
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    latestReq.current += 1; // invalidate any in-flight response
   }, []);
 
   return (
